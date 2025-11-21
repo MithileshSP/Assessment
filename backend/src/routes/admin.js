@@ -87,10 +87,7 @@ const getSubmissions = () => {
 //   }
 // });
 
-/**
- * GET /api/admin/challenges
- * Get all challenges with solutions (admin only)
- */
+
 router.get('/challenges', (req, res) => {
   try {
     // TODO: Add token verification middleware

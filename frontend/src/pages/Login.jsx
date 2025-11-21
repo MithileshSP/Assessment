@@ -105,8 +105,8 @@ export default function Login({ isAdmin = false, onLogin }) {
       if (err.response) {
         setError(
           err.response.data?.error ||
-            err.response.data?.message ||
-            "Login failed. Please try again."
+          err.response.data?.message ||
+          "Login failed. Please try again."
         );
       } else if (err.request) {
         setError(
@@ -195,14 +195,13 @@ export default function Login({ isAdmin = false, onLogin }) {
                 theme="outline"
                 size="large"
                 text="signin_with"
+                auto_select={false} // 🔥 FORCE disable auto login
                 onSuccess={async (credentialResponse) => {
                   try {
                     const googleToken = credentialResponse?.credential;
 
                     if (!googleToken) {
-                      setError(
-                        "Unable to read Google credentials. Please try again."
-                      );
+                      setError("Unable to read Google credentials. Please try again.");
                       return;
                     }
 
@@ -211,7 +210,8 @@ export default function Login({ isAdmin = false, onLogin }) {
 
                     const res = await axios.post(
                       `${import.meta.env.VITE_API_URL}/auth/google`,
-                      { token: googleToken }
+                      { token: googleToken },
+                      { params: { prompt: "select_account" } } // 👈 Add this
                     );
 
                     const { user, token } = res.data;
@@ -221,29 +221,21 @@ export default function Login({ isAdmin = false, onLogin }) {
                       return;
                     }
 
-                    // Save to localStorage
+                    // Save tokens & redirect logic remains the same...
                     localStorage.setItem("userToken", token);
                     localStorage.setItem("username", user.username);
                     localStorage.setItem("userId", user.id);
                     localStorage.setItem("userRole", user.role);
 
-                    console.log("Google login successful:", user);
-                    const normalizedRole =
-                      user.role?.toLowerCase?.() || user.role;
-
+                    const normalizedRole = user.role?.toLowerCase();
                     if (normalizedRole === "admin") {
                       localStorage.setItem("adminToken", token);
                       localStorage.setItem("adminUser", JSON.stringify(user));
                       notifySessionChange();
-                      if (onLogin) {
-                        onLogin({ role: normalizedRole, user, token });
-                      }
                       navigate("/admin/dashboard", { replace: true });
                     } else {
                       clearAdminSession();
-                      if (onLogin) {
-                        onLogin({ role: normalizedRole, user, token });
-                      }
+                      notifySessionChange();
                       navigate("/");
                     }
                   } catch (err) {
@@ -253,6 +245,7 @@ export default function Login({ isAdmin = false, onLogin }) {
                 }}
                 onError={() => setError("Google Sign-In was unsuccessful")}
               />
+
             </div>
           </div>
         </div>
