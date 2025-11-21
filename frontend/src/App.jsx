@@ -57,7 +57,7 @@ function App() {
             }
           />
           <Route
-            path="/admin/login"
+            path="/login"
             element={
               <Login
                 isAdmin={true}
@@ -128,19 +128,19 @@ function App() {
           <Route
             path="/admin/dashboard"
             element={
-              isAdmin ? <AdminDashboard /> : <Navigate to="/admin/login" />
+              isAdmin ? <AdminDashboard /> : <Navigate to="/login" />
             }
           />
           <Route
             path="/admin/courses"
             element={
-              isAdmin ? <CourseManager /> : <Navigate to="/admin/login" />
+              isAdmin ? <CourseManager /> : <Navigate to="/login" />
             }
           />
           <Route
             path="/admin/users"
             element={
-              isAdmin ? <UserManagement /> : <Navigate to="/admin/login" />
+              isAdmin ? <UserManagement /> : <Navigate to="/login" />
             }
           />
 

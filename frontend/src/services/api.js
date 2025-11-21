@@ -78,7 +78,7 @@ export const quickEvaluate = (code, challengeId) =>
 
 // Admin
 export const adminLogin = (credentials) => 
-  api.post('/admin/login', credentials);
+  api.post('/login', credentials);
 
 export const getAdminChallenges = () => 
   api.get('/admin/challenges');

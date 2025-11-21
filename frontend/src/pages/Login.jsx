@@ -25,7 +25,7 @@ export default function Login({ isAdmin = false, onLogin }) {
     setLoading(true);
 
     try {
-      const adminEndpoint = `${import.meta.env.VITE_API_URL}/auth/admin/login`;
+      const adminEndpoint = `${import.meta.env.VITE_API_URL}/auth/login`;
       const userEndpoint = `${import.meta.env.VITE_API_URL}/auth/login`;
       const endpoints = isAdmin
         ? [adminEndpoint, userEndpoint]

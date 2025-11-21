@@ -93,7 +93,7 @@ export default function CourseDetail() {
               ← Back to Courses
             </button>
             <button
-              onClick={() => navigate('/admin/login')}
+              onClick={() => navigate('/login')}
               className="text-gray-600 hover:text-gray-900 font-medium"
             >
               Admin Login

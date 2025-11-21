@@ -60,7 +60,7 @@ export default function AdminDashboard() {
 
   const handleLogout = () => {
     clearAdminSession();
-    navigate('/admin/login');
+    navigate('/login');
   };
 
   return (

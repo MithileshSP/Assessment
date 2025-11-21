@@ -99,7 +99,7 @@ export default function UserLogin() {
           {/* Admin Link */}
           <div className="mt-6 text-center">
             <button
-              onClick={() => navigate('/admin/login')}
+              onClick={() => navigate('/login')}
               className="text-sm text-indigo-600 hover:text-indigo-700 font-medium"
             >
               Admin Login →

@@ -40,7 +40,7 @@ export default function CandidateDashboard() {
               <p className="text-gray-600 mt-1">Master HTML, CSS & JavaScript through hands-on challenges</p>
             </div>
             {/* <button
-              onClick={() => navigate('/admin/login')}
+              onClick={() => navigate('/login')}
               className="text-gray-600 hover:text-gray-900 font-medium"
             >
               Admin Login

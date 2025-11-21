@@ -13,6 +13,7 @@ const coursesRouter = require("./routes/courses");
 const usersRouter = require("./routes/users");
 const levelCompletionRouter = require("./routes/levelCompletion");
 const assetsRouter = require("./routes/assets");
+const authRouter = require("./api/auth");
 
 const app = express();
 
@@ -44,7 +45,8 @@ app.use("/api/courses", coursesRouter);
 app.use("/api/challenges", challengesRouter);
 app.use("/api/submissions", submissionsRouter);
 app.use("/api/evaluate", evaluationRouter);
-app.use("/api/auth", usersRouter);
+app.use("/api/auth", authRouter);
+app.use("/api/users", usersRouter);
 app.use("/api/admin", adminRouter);
 app.use("/api/level-completion", levelCompletionRouter);
 app.use("/api/assets", assetsRouter);

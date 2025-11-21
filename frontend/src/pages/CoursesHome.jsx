@@ -85,7 +85,7 @@ export default function CoursesHome() {
                 </button>
               )}
               {/* <button
-                onClick={() => navigate('/admin/login')}
+                onClick={() => navigate('/login')}
                 className="px-4 py-2 text-gray-600 hover:text-gray-900 font-medium"
               >
                 Admin Login
