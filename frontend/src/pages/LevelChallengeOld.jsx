@@ -42,7 +42,7 @@ export default function LevelChallengeOld() {
 
   const loadLevelQuestions = async () => {
     try {
-      const response = await axios.get(`http://localhost:5000/api/challenges/level-questions`, {
+      const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/challenges/level-questions`, {
         params: { userId, courseId, level: parseInt(level) }
       });
       
@@ -82,7 +82,7 @@ export default function LevelChallengeOld() {
     const questionId = assignedQuestions[currentQuestionIndex].id;
     
     try {
-      const response = await axios.get(`http://localhost:5000/api/challenges/${questionId}`);
+      const response = await axios.get(`${import.meta.env.VITE_API_URL}/api/challenges/${questionId}`);
       const challengeData = response.data;
       setChallenge(challengeData);
       
@@ -145,7 +145,7 @@ export default function LevelChallengeOld() {
     try {
       // Step 1: Create submission
       setEvaluationStep('Creating submission...');
-      const submitResponse = await axios.post('http://localhost:5000/api/submissions', {
+      const submitResponse = await axios.post(`${import.meta.env.VITE_API_URL}/api/submissions`, {
         challengeId: questionId,
         candidateName: userId,
         code: {
@@ -166,7 +166,7 @@ export default function LevelChallengeOld() {
       setEvaluationStep('Comparing with expected solution...');
       
       // Step 2: Evaluate submission
-      const evalResponse = await axios.post('http://localhost:5000/api/evaluate', {
+      const evalResponse = await axios.post(`${import.meta.env.VITE_API_URL}/api/evaluate`, {
         submissionId: submissionId
       });
 
@@ -250,7 +250,7 @@ export default function LevelChallengeOld() {
       };
 
       // Save to backend
-      await axios.post('http://localhost:5000/api/level-completion', completionData);
+      await axios.post(`${import.meta.env.VITE_API_URL}/api/level-completion`, completionData);
 
       // Close modal and navigate
       setShowFinishModal(false);
@@ -435,7 +435,7 @@ export default function LevelChallengeOld() {
                   {challenge.assets.map((asset, index) => (
                     <div key={index} className="bg-white p-2 rounded border border-purple-100">
                       <a 
-                        href={`http://localhost:5000/${asset}`}
+                        href={`${import.meta.env.VITE_API_URL}/${asset}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-sm text-purple-700 hover:underline"

@@ -205,10 +205,7 @@ router.get('/submissions', async (req, res) => {
   }
 });
 
-/**
- * POST /api/admin/evaluate/:submissionId
- * Re-run evaluation for a submission
- */
+
 router.post('/evaluate/:submissionId', async (req, res) => {
   try {
     const evaluator = require('../services/evaluator');

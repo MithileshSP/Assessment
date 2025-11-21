@@ -174,7 +174,7 @@ export default function ChallengeView() {
           'Solutions:\n' +
           '1. Check the admin panel for your submission\n' +
           '2. Ask admin to re-evaluate\n' +
-          '3. Check if backend server is running (port 5000)\n' +
+          '3. Check if backend server is running (port 6000)\n' +
           '4. Check browser console for details'
         );
       }
@@ -182,7 +182,7 @@ export default function ChallengeView() {
     } catch (error) {
       console.error('Submission error:', error);
       const errorMessage = error.response?.data?.error || error.message || 'Unknown error occurred';
-      alert(`Failed to submit solution: ${errorMessage}\n\nPlease check:\n- Backend server is running on port 5000\n- Browser console for more details`);
+      alert(`Failed to submit solution: ${errorMessage}\n\nPlease check:\n- Backend server is running on port 6000\n- Browser console for more details`);
       setEvaluating(false);
       setEvaluationStep('');
     } finally {

@@ -146,7 +146,7 @@ export default function AdminDashboard() {
   const loadUsers = async () => {
     try {
       const token = localStorage.getItem('adminToken');
-      const res = await axios.get('${import.meta.env.VITE_API_URL}/users', {
+      const res = await axios.get(`${import.meta.env.VITE_API_URL}/users`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setUsers(res.data || []);
@@ -422,7 +422,7 @@ export default function AdminDashboard() {
       if (editingCourse?.id) {
         await axios.put(`${import.meta.env.VITE_API_URL}/courses/${editingCourse.id}`, courseData);
       } else {
-        await axios.post('${import.meta.env.VITE_API_URL}/courses', courseData);
+        await axios.post(`${import.meta.env.VITE_API_URL}/courses`, courseData);
       }
       await loadCourses();
       setShowCourseModal(false);
@@ -449,7 +449,7 @@ export default function AdminDashboard() {
       if (editingChallenge?.id) {
         await axios.put(`${import.meta.env.VITE_API_URL}/challenges/${editingChallenge.id}`, challengeData);
       } else {
-        await axios.post('${import.meta.env.VITE_API_URL}/challenges', challengeData);
+        await axios.post(`${import.meta.env.VITE_API_URL}/challenges`, challengeData);
       }
       await loadChallenges();
       setShowChallengeModal(false);

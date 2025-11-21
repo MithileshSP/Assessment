@@ -520,7 +520,7 @@ router.put("/:courseId", (req, res) => {
   try {
     const { courseId } = req.params;
     const updatedCourse = req.body;
-
+    log
     const courses = getCourses();
     const courseIndex = courses.findIndex((c) => c.id === courseId);
 
@@ -1212,7 +1212,7 @@ router.get("/:courseId/restrictions", (req, res) => {
     const course = courses.find((c) => c.id === courseId);
 
     if (!course) {
-      return res.status(404).json({ error: "Course not found" });
+      return res.status(204).json({ error: "Course not found" });
     }
 
     // Return restrictions or defaults
@@ -1242,7 +1242,7 @@ router.get("/:courseId/level-settings", (req, res) => {
     const course = courses.find((c) => c.id === courseId);
 
     if (!course) {
-      return res.status(404).json({ error: "Course not found" });
+      return res.status(204).json({ error: "Course not found" });
     }
 
     res.json(course.levelSettings || {});
