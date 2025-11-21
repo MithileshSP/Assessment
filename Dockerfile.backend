@@ -1,0 +1,27 @@
+FROM node:18-alpine AS backend
+
+WORKDIR /app
+
+COPY backend/package*.json ./
+RUN npm install
+COPY backend/ .
+
+FROM node:18-alpine AS frontend
+WORKDIR /app
+COPY frontend/package*.json ./
+RUN npm install
+COPY frontend/ .
+RUN npm run build
+
+FROM node:18-alpine
+WORKDIR /app
+
+# Copy backend
+COPY --from=backend /app .
+
+# # Copy frontend build into backend folder that server.js expects
+# COPY --from=frontend /app/dist ./frontend/dist
+
+EXPOSE 5000
+
+CMD ["node", "server.js"]
