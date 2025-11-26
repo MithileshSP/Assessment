@@ -1,4 +1,4 @@
-import { useImperativeHandle, forwardRef, useRef, useEffect } from 'react';
+import { useImperativeHandle, forwardRef, useRef, useEffect } from "react";
 
 const PreviewFrame = forwardRef(({ code }, ref) => {
   const iframeRef = useRef(null);
@@ -16,19 +16,14 @@ const PreviewFrame = forwardRef(({ code }, ref) => {
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <style>
-          * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-          }
-          ${codeToRender.css || ''}
+          ${codeToRender.css || ""}
         </style>
       </head>
       <body>
-        ${codeToRender.html || ''}
+        ${codeToRender.html || ""}
         <script>
           try {
-            ${codeToRender.js || ''}
+            ${codeToRender.js || ""}
           } catch (error) {
             console.error('JavaScript Error:', error);
           }
@@ -43,7 +38,7 @@ const PreviewFrame = forwardRef(({ code }, ref) => {
   };
 
   useImperativeHandle(ref, () => ({
-    updatePreview
+    updatePreview,
   }));
 
   useEffect(() => {
@@ -57,13 +52,13 @@ const PreviewFrame = forwardRef(({ code }, ref) => {
         ref={iframeRef}
         sandbox="allow-scripts allow-same-origin allow-modals allow-forms"
         className="w-full h-full"
-        style={{ minHeight: '400px' }}
+        style={{ minHeight: "400px" }}
         title="Preview"
       />
     </div>
   );
 });
 
-PreviewFrame.displayName = 'PreviewFrame';
+PreviewFrame.displayName = "PreviewFrame";
 
 export default PreviewFrame;

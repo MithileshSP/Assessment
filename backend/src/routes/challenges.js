@@ -3,21 +3,21 @@
  * Handles challenge retrieval for candidates
  */
 
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const fs = require('fs');
-const path = require('path');
-const ChallengeModel = require('../models/Challenge');
-const { query } = require('../database/connection');
+const fs = require("fs");
+const path = require("path");
+const ChallengeModel = require("../models/Challenge");
+const { query } = require("../database/connection");
 
-const challengesPath = path.join(__dirname, '../data/challenges-new.json');
-const assignmentsPath = path.join(__dirname, '../data/user-assignments.json');
+const challengesPath = path.join(__dirname, "../data/challenges-new.json");
+const assignmentsPath = path.join(__dirname, "../data/user-assignments.json");
 
 // Helper to load JSON files
 const loadJSON = (filePath) => {
   try {
     if (fs.existsSync(filePath)) {
-      const data = fs.readFileSync(filePath, 'utf8');
+      const data = fs.readFileSync(filePath, "utf8");
       return JSON.parse(data);
     }
     return [];
@@ -57,18 +57,18 @@ const saveAssignments = (assignments) => {
  * GET /api/challenges
  * Get all challenges (without solutions for candidates)
  */
-router.get('/', async (req, res) => {
+router.get("/", async (req, res) => {
   try {
     let challenges;
     try {
       challenges = await ChallengeModel.findAll();
     } catch (dbError) {
-      console.log('Database error, using JSON file:', dbError.message);
+      console.log("Database error, using JSON file:", dbError.message);
       challenges = loadJSON(challengesPath);
     }
-    
+
     // Remove expected solutions for candidate view
-    const publicChallenges = challenges.map(challenge => ({
+    const publicChallenges = challenges.map((challenge) => ({
       id: challenge.id,
       title: challenge.title,
       difficulty: challenge.difficulty,
@@ -78,13 +78,13 @@ router.get('/', async (req, res) => {
       timeLimit: challenge.timeLimit || challenge.time_limit,
       passingThreshold: challenge.passingThreshold || {},
       courseId: challenge.courseId || challenge.course_id,
-      level: challenge.level
+      level: challenge.level,
     }));
-    
+
     res.json(publicChallenges);
   } catch (error) {
-    console.error('Error fetching challenges:', error);
-    res.status(500).json({ error: 'Failed to fetch challenges' });
+    console.error("Error fetching challenges:", error);
+    res.status(500).json({ error: "Failed to fetch challenges" });
   }
 });
 
@@ -92,84 +92,124 @@ router.get('/', async (req, res) => {
  * GET /api/challenges/level-questions
  * Get assigned questions for a user's level with random assignment
  */
-router.get('/level-questions', (req, res) => {
+router.get("/level-questions", async (req, res) => {
   try {
     const { userId, courseId, level, forceNew } = req.query;
-    
+
     if (!userId || !courseId || !level) {
-      return res.status(400).json({ error: 'Missing required parameters' });
+      return res.status(400).json({ error: "Missing required parameters" });
+    }
+
+    const levelNumber = parseInt(level, 10);
+    if (Number.isNaN(levelNumber)) {
+      return res.status(400).json({ error: "Invalid level value" });
     }
 
     // Read user assignments
     let assignments = getAssignments();
 
     // Check if user already has assigned questions for this level
-    const assignmentKey = `${userId}-${courseId}-${level}`;
-    let userAssignment = assignments.find(a => a.key === assignmentKey);
-
-    // Get all questions for this course and level
-    const allChallenges = getAllChallenges();
-    const levelQuestions = allChallenges.filter(c => 
-      c.courseId === courseId && c.level === parseInt(level)
+    const legacyAssignmentKey = `${userId}-${courseId}-${level}`;
+    const assignmentKey = `${userId}-${courseId}-${levelNumber}`;
+    let userAssignment = assignments.find(
+      (a) => a.key === assignmentKey || a.key === legacyAssignmentKey
     );
 
+    // Try database first, then fallback to JSON file
+    let levelQuestions = [];
+    try {
+      levelQuestions = await ChallengeModel.findByCourseLevel(
+        courseId,
+        levelNumber
+      );
+    } catch (dbError) {
+      console.log(
+        "Database error, using JSON file for level questions:",
+        dbError.message
+      );
+    }
+
+    if (!levelQuestions.length) {
+      const allChallenges = getAllChallenges();
+      levelQuestions = allChallenges.filter(
+        (c) =>
+          (c.courseId === courseId || c.course_id === courseId) &&
+          parseInt(c.level, 10) === levelNumber
+      );
+    }
+
     if (levelQuestions.length === 0) {
-      return res.status(404).json({ error: 'No questions found for this level' });
+      return res
+        .status(404)
+        .json({ error: "No questions found for this level" });
     }
 
     // If forceNew=true or no assignment exists, create a new random assignment
-    if (forceNew === 'true' || !userAssignment) {
-      // Select 2 random questions (or all if less than 2)
+    if (forceNew === "true" || !userAssignment) {
       const shuffled = [...levelQuestions].sort(() => 0.5 - Math.random());
       const selectedQuestions = shuffled.slice(0, Math.min(2, shuffled.length));
-      
-      // Remove old assignment if it exists and forceNew is true
-      if (forceNew === 'true' && userAssignment) {
-        assignments = assignments.filter(a => a.key !== assignmentKey);
-      }
-      
+
+      assignments = assignments.filter(
+        (a) => a.key !== assignmentKey && a.key !== legacyAssignmentKey
+      );
+
       userAssignment = {
         key: assignmentKey,
         userId,
         courseId,
-        level: parseInt(level),
-        assignedQuestions: selectedQuestions.map(q => q.id),
+        level: levelNumber,
+        assignedQuestions: selectedQuestions.map((q) => q.id),
         completedQuestions: [],
         assignedAt: new Date().toISOString(),
-        totalAvailable: levelQuestions.length
+        totalAvailable: levelQuestions.length,
       };
-      
-      // Add or update assignment
-      if (forceNew === 'true') {
-        assignments.push(userAssignment);
-      } else {
-        assignments.push(userAssignment);
-      }
+
+      assignments.push(userAssignment);
       saveAssignments(assignments);
     }
 
     // Get the full question details for assigned questions
-    const assignedFullQuestions = userAssignment.assignedQuestions.map(qId => {
-      const question = allChallenges.find(c => c.id === qId);
-      return question ? {
-        id: question.id,
-        title: question.title,
-        description: question.description,
-        points: question.points,
-        level: question.level
-      } : null;
-    }).filter(q => q !== null);
+    const assignedFullQuestions = userAssignment.assignedQuestions
+      .map((qId) => {
+        const question = levelQuestions.find((c) => c.id === qId);
+        if (!question) return null;
+
+        const expectedSolution = question.expectedSolution || {
+          html: question.expected_html,
+          css: question.expected_css,
+          js: question.expected_js,
+        };
+
+        return {
+          id: question.id,
+          title: question.title,
+          description: question.description,
+          instructions: question.instructions || question.description,
+          hints: question.hints || [],
+          assets: question.assets || [],
+          tags: question.tags || [],
+          points: question.points,
+          level: question.level,
+          timeLimit: question.timeLimit || question.time_limit || 30,
+          passingThreshold:
+            question.passingThreshold || question.passing_threshold || {},
+          expectedSolution,
+          expectedScreenshotUrl:
+            question.expectedScreenshotUrl || question.expected_screenshot_url,
+          courseId: question.courseId || question.course_id,
+        };
+      })
+      .filter((q) => q !== null);
 
     res.json({
       assignedQuestions: assignedFullQuestions,
       totalAssigned: assignedFullQuestions.length,
       completedQuestions: userAssignment.completedQuestions || [],
-      isLevelComplete: userAssignment.isLevelComplete || false
+      isLevelComplete: userAssignment.isLevelComplete || false,
     });
-
   } catch (error) {
-    console.error('Error getting level questions:', error);
-    res.status(500).json({ error: 'Failed to get level questions' });
+    console.error("Error getting level questions:", error);
+    res.status(500).json({ error: "Failed to get level questions" });
   }
 });
 
@@ -177,22 +217,38 @@ router.get('/level-questions', (req, res) => {
  * GET /api/challenges/:id
  * Get specific challenge by ID (supports both old and new format)
  */
-router.get('/:id', (req, res) => {
+router.get("/:id", async (req, res) => {
   try {
-    const allChallenges = getAllChallenges();
-    const challenge = allChallenges.find(c => c.id === req.params.id);
-    
-    if (!challenge) {
-      return res.status(404).json({ error: 'Challenge not found' });
+    const challengeId = req.params.id;
+    let challenge;
+
+    try {
+      challenge = await ChallengeModel.findById(challengeId);
+    } catch (dbError) {
+      console.log(
+        "Database error, using JSON file for challenge details:",
+        dbError.message
+      );
     }
-    
-    // Check if it's a new format challenge (course-based)
-    if (challenge.courseId) {
-      // New format - return with assets
-      const publicChallenge = {
+
+    if (!challenge) {
+      const allChallenges = getAllChallenges();
+      challenge = allChallenges.find((c) => c.id === challengeId);
+    }
+
+    if (!challenge) {
+      return res.status(404).json({ error: "Challenge not found" });
+    }
+
+    const isCourseChallenge = Boolean(
+      challenge.courseId || challenge.course_id
+    );
+
+    if (isCourseChallenge) {
+      return res.json({
         id: challenge.id,
         title: challenge.title,
-        courseId: challenge.courseId,
+        courseId: challenge.courseId || challenge.course_id,
         level: challenge.level,
         questionNumber: challenge.questionNumber,
         description: challenge.description,
@@ -201,15 +257,18 @@ router.get('/:id', (req, res) => {
         hints: challenge.hints,
         assets: challenge.assets,
         tags: challenge.tags || [],
-        timeLimit: challenge.timeLimit || 60,
-        passingThreshold: challenge.passingThreshold || 80,
-        expectedSolution: challenge.expectedSolution
-      };
-      return res.json(publicChallenge);
+        timeLimit: challenge.timeLimit || challenge.time_limit || 60,
+        passingThreshold:
+          challenge.passingThreshold || challenge.passing_threshold || 80,
+        expectedSolution: challenge.expectedSolution || {
+          html: challenge.expected_html,
+          css: challenge.expected_css,
+          js: challenge.expected_js,
+        },
+      });
     }
-    
-    // Old format - return as before
-    const publicChallenge = {
+
+    return res.json({
       id: challenge.id,
       title: challenge.title,
       difficulty: challenge.difficulty,
@@ -218,13 +277,11 @@ router.get('/:id', (req, res) => {
       tags: challenge.tags,
       timeLimit: challenge.timeLimit,
       passingThreshold: challenge.passingThreshold,
-      expectedSolution: challenge.expectedSolution
-    };
-    
-    res.json(publicChallenge);
+      expectedSolution: challenge.expectedSolution,
+    });
   } catch (error) {
-    console.error('Error fetching challenge:', error);
-    res.status(500).json({ error: 'Failed to fetch challenge' });
+    console.error("Error fetching challenge:", error);
+    res.status(500).json({ error: "Failed to fetch challenge" });
   }
 });
 
@@ -232,18 +289,18 @@ router.get('/:id', (req, res) => {
  * GET /api/challenges/:id/solution (Internal use only for evaluation)
  * Get challenge with expected solution (supports both old and new format)
  */
-router.get('/:id/solution', (req, res) => {
+router.get("/:id/solution", (req, res) => {
   try {
     const allChallenges = getAllChallenges();
-    const challenge = allChallenges.find(c => c.id === req.params.id);
-    
+    const challenge = allChallenges.find((c) => c.id === req.params.id);
+
     if (!challenge) {
-      return res.status(404).json({ error: 'Challenge not found' });
+      return res.status(404).json({ error: "Challenge not found" });
     }
-    
+
     res.json(challenge);
   } catch (error) {
-    res.status(500).json({ error: 'Failed to fetch challenge solution' });
+    res.status(500).json({ error: "Failed to fetch challenge solution" });
   }
 });
 
@@ -251,22 +308,22 @@ router.get('/:id/solution', (req, res) => {
  * POST /api/challenges
  * Create a new challenge (Admin only)
  */
-router.post('/', (req, res) => {
+router.post("/", (req, res) => {
   try {
     const challenges = getChallenges();
     const newChallenge = {
       id: `challenge-${Date.now()}`,
       ...req.body,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
     };
-    
+
     challenges.push(newChallenge);
     saveChallenges(challenges);
-    
+
     res.status(201).json(newChallenge);
   } catch (error) {
-    console.error('Error creating challenge:', error);
-    res.status(500).json({ error: 'Failed to create challenge' });
+    console.error("Error creating challenge:", error);
+    res.status(500).json({ error: "Failed to create challenge" });
   }
 });
 
@@ -274,27 +331,27 @@ router.post('/', (req, res) => {
  * PUT /api/challenges/:id
  * Update an existing challenge (Admin only)
  */
-router.put('/:id', (req, res) => {
+router.put("/:id", (req, res) => {
   try {
     const challenges = getChallenges();
-    const index = challenges.findIndex(c => c.id === req.params.id);
-    
+    const index = challenges.findIndex((c) => c.id === req.params.id);
+
     if (index === -1) {
-      return res.status(404).json({ error: 'Challenge not found' });
+      return res.status(404).json({ error: "Challenge not found" });
     }
-    
+
     challenges[index] = {
       ...challenges[index],
       ...req.body,
       id: req.params.id,
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
     };
-    
+
     saveChallenges(challenges);
     res.json(challenges[index]);
   } catch (error) {
-    console.error('Error updating challenge:', error);
-    res.status(500).json({ error: 'Failed to update challenge' });
+    console.error("Error updating challenge:", error);
+    res.status(500).json({ error: "Failed to update challenge" });
   }
 });
 
@@ -302,22 +359,22 @@ router.put('/:id', (req, res) => {
  * DELETE /api/challenges/:id
  * Delete a challenge (Admin only)
  */
-router.delete('/:id', (req, res) => {
+router.delete("/:id", (req, res) => {
   try {
     const challenges = getChallenges();
-    const index = challenges.findIndex(c => c.id === req.params.id);
-    
+    const index = challenges.findIndex((c) => c.id === req.params.id);
+
     if (index === -1) {
-      return res.status(404).json({ error: 'Challenge not found' });
+      return res.status(404).json({ error: "Challenge not found" });
     }
-    
+
     challenges.splice(index, 1);
     saveChallenges(challenges);
-    
-    res.json({ message: 'Challenge deleted successfully' });
+
+    res.json({ message: "Challenge deleted successfully" });
   } catch (error) {
-    console.error('Error deleting challenge:', error);
-    res.status(500).json({ error: 'Failed to delete challenge' });
+    console.error("Error deleting challenge:", error);
+    res.status(500).json({ error: "Failed to delete challenge" });
   }
 });
 
