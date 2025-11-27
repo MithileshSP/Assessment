@@ -78,7 +78,7 @@ services:
     depends_on:
       - backend
     ports:
-      - "80:80"
+      - "100:100"
     networks:
       - app-network
     restart: always
