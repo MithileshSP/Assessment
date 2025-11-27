@@ -93,33 +93,33 @@ const mysql = require("mysql2/promise");
 // Check if we should use JSON files instead of MySQL
 const USE_JSON = process.env.USE_JSON === "true" || !process.env.DB_HOST;
 
-// Helper: normalize inline certificates ("\n" -> newline) or load from file
-function loadCertificate(certValue) {
-  if (!certValue) return undefined;
-  const trimmed = certValue.trim();
+// // Helper: normalize inline certificates ("\n" -> newline) or load from file
+// function loadCertificate(certValue) {
+//   if (!certValue) return undefined;
+//   const trimmed = certValue.trim();
 
-  if (trimmed.includes("BEGIN CERTIFICATE")) {
-    return trimmed.replace(/\\n/g, "\n");
-  }
+//   if (trimmed.includes("BEGIN CERTIFICATE")) {
+//     return trimmed.replace(/\\n/g, "\n");
+//   }
 
-  try {
-    return fs.readFileSync(trimmed, "utf8");
-  } catch (error) {
-    console.warn(
-      `⚠️ Unable to read DB_CA_CERT file at ${trimmed}: ${error.message}`
-    );
-    return undefined;
-  }
-}
+//   try {
+//     return fs.readFileSync(trimmed, "utf8");
+//   } catch (error) {
+//     console.warn(
+//       `⚠️ Unable to read DB_CA_CERT file at ${trimmed}: ${error.message}`
+//     );
+//     return undefined;
+//   }
+// }
 
-// Database configuration
-const sslCertificate = loadCertificate(process.env.DB_CA_CERT);
-const sslConfig = sslCertificate
-  ? {
-      ca: sslCertificate,
-      rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED === "true",
-    }
-  : undefined;
+// // Database configuration
+// const sslCertificate = loadCertificate(process.env.DB_CA_CERT);
+// const sslConfig = sslCertificate
+//   ? {
+//       ca: sslCertificate,
+//       rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED === "true",
+//     }
+//   : undefined;
 
 const dbConfig = {
   host: process.env.DB_HOST,
@@ -127,13 +127,13 @@ const dbConfig = {
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database:
-    process.env.DB_NAME || process.env.DB_DATABASE || "frontend_test_portal",
+    process.env.DB_NAME || process.env.DB_DATABASE || "fullstack_test_portal",
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,
   enableKeepAlive: true,
   keepAliveInitialDelay: 0,
-  ...(sslConfig ? { ssl: sslConfig } : {}),
+  // ...(sslConfig ? { ssl: sslConfig } : {}),
 };
 
 // Create connection pool
