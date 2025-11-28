@@ -46,6 +46,11 @@ services:
       MYSQL_PASSWORD: fullstack123@
     ports:
       - "3307:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
     volumes:
       - portal_mysql_data:/var/lib/mysql
     networks:
@@ -67,7 +72,9 @@ services:
     ports:
       - "6000:6000"
     depends_on:
-      - portal_mysql
+    portal_mysql:
+      condition: service_healthy
+
     networks:
       - app-network
     restart: always
