@@ -34,28 +34,23 @@
 version: "3.9"
 
 services:
-portal_mysql:
-  image: mysql:8
-  container_name: portal_mysql
-  restart: always
+  portal_mysql:
+    image: mysql:8
+    container_name: portal_mysql
+    restart: always
+    command: --bind-address=0.0.0.0
+    environment:
+      MYSQL_ROOT_PASSWORD: root123
+      MYSQL_DATABASE: fullstack_test_portal
+      MYSQL_USER: portal_user
+      MYSQL_PASSWORD: fullstack123@
+    ports:
+      - "3307:3306"
+    volumes:
+      - portal_mysql_data:/var/lib/mysql
+    networks:
+      - app-network
 
-  # FORCE MYSQL TO LISTEN ON IPv4 → FIXES ECONNREFUSED
-  command: --bind-address=0.0.0.0
-
-  environment:
-    MYSQL_ROOT_PASSWORD: root123
-    MYSQL_DATABASE: fullstack_test_portal
-    MYSQL_USER: portal_user
-    MYSQL_PASSWORD: fullstack123@
-
-  ports:
-    - "3307:3306"   # external 3307 → internal 3306
-
-  volumes:
-    - portal_mysql_data:/var/lib/mysql
-
-  networks:
-    - app-network
 
   backend:
     container_name: backend
