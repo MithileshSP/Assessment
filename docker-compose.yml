@@ -46,16 +46,10 @@ services:
       MYSQL_PASSWORD: fullstack123@
     ports:
       - "3307:3306"
-    healthcheck:
-      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost"]
-      interval: 5s
-      timeout: 3s
-      retries: 30
     volumes:
       - portal_mysql_data:/var/lib/mysql
     networks:
       - app-network
-
 
   backend:
     container_name: backend
@@ -63,12 +57,12 @@ services:
       context: ./backend
       dockerfile: Dockerfile.backend
     environment:
-      - PORT=6000
-      - DB_HOST=portal_mysql         # <--- IMPORTANT
-      - DB_PORT=3306                # internal container port
-      - DB_USER=portal_user
-      - DB_PASSWORD=fullstack123@
-      - DB_NAME=fullstack_test_portal
+      PORT: 6000
+      DB_HOST: portal_mysql
+      DB_PORT: 3306
+      DB_USER: portal_user
+      DB_PASSWORD: fullstack123@
+      DB_NAME: fullstack_test_portal
     ports:
       - "6000:6000"
     depends_on:
@@ -82,10 +76,10 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile.frontend
-    depends_on:
-      - backend
     ports:
       - "100:100"
+    depends_on:
+      - backend
     networks:
       - app-network
     restart: always
