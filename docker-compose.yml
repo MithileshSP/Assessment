@@ -53,7 +53,7 @@ services:
   healthcheck:
     test: ["CMD-SHELL", "mysqladmin ping -h localhost --silent"]
     timeout: 5s
-    retries: 20
+    
 
 
   backend:
