@@ -72,7 +72,7 @@ services:
     ports:
       - "6000:6000"
     depends_on:
-      - portal_mysql:
+      portal_mysql:
         condition: service_healthy
     networks:
       - app-network
