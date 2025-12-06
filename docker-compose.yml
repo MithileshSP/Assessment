@@ -50,6 +50,12 @@ services:
       - portal_mysql_data:/var/lib/mysql
     networks:
       - app-network
+  healthcheck:
+  test: ["CMD-SHELL", "mysqladmin ping -h localhost --silent"]
+  interval: 5s
+  timeout: 5s
+  retries: 20
+
 
   backend:
     container_name: backend
@@ -66,7 +72,8 @@ services:
     ports:
       - "6000:6000"
     depends_on:
-      - portal_mysql
+      - portal_mysql:
+        condition: service_healthy
     networks:
       - app-network
     restart: always
