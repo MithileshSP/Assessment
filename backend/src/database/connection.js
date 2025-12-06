@@ -141,19 +141,41 @@ const pool = mysql.createPool(dbConfig);
 
 let isConnected = false;
 
+async function waitForMySQL(retries = 15, delay = 2000) {
+  for (let i = 1; i <= retries; i++) {
+    try {
+      const conn = await pool.getConnection();
+      conn.release();
+      console.log("✅ MySQL Database connected successfully");
+      isConnected = true;
+      return;
+    } catch (err) {
+      console.log(`⏳ MySQL not ready yet... retrying (${i}/${retries})`);
+      await new Promise(res => setTimeout(res, delay));
+    }
+  }
+
+  console.error("❌ MySQL failed to connect after retries.");
+  console.log("📁 Using JSON file storage as fallback");
+  isConnected = false;
+}
+
+waitForMySQL();
+
+
 // Test connection
-pool
-  .getConnection()
-  .then((connection) => {
-    console.log("✅ MySQL Database connected successfully");
-    isConnected = true;
-    connection.release();
-  })
-  .catch((err) => {
-    console.error("❌ MySQL connection error:", err.message);
-    console.log("📁 Using JSON file storage as fallback");
-    isConnected = false;
-  });
+// pool
+//   .getConnection()
+//   .then((connection) => {
+//     console.log("✅ MySQL Database connected successfully");
+//     isConnected = true;
+//     connection.release();
+//   })
+//   .catch((err) => {
+//     console.error("❌ MySQL connection error:", err.message);
+//     console.log("📁 Using JSON file storage as fallback");
+//     isConnected = false;
+//   });
 
 // Helper function to execute queries
 async function query(sql, params) {
