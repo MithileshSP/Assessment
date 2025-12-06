@@ -50,11 +50,11 @@ services:
       - portal_mysql_data:/var/lib/mysql
     networks:
       - app-network
-  healthcheck:
-    test: ["CMD-SHELL", "mysqladmin ping -h localhost --silent"]
-    timeout: 5s
-    
-
+    healthcheck:                       # ✅ MUST BE INSIDE portal_mysql
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
 
   backend:
     container_name: backend
@@ -72,7 +72,7 @@ services:
       - "6000:6000"
     depends_on:
       portal_mysql:
-        condition: service_healthy
+        condition: service_healthy      # ✅ Docker waits until MySQL ready
     networks:
       - app-network
     restart: always
