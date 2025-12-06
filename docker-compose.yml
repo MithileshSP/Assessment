@@ -52,7 +52,6 @@ services:
       - app-network
   healthcheck:
     test: ["CMD-SHELL", "mysqladmin ping -h localhost --silent"]
-    interval: 5s
     timeout: 5s
     retries: 20
 
