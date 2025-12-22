@@ -1,4 +1,4 @@
-version: "3.8"
+version: "3.9"
 
 services:
   portal_mysql:
@@ -16,10 +16,11 @@ services:
     networks:
       - test-portal-network
     healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p$${MYSQL_ROOT_PASSWORD} --silent"]
-      interval: 5s
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 --silent"]
+      interval: 10s
       timeout: 5s
-      retries: 20
+      retries: 30
+      start_period: 60s
 
   backend:
     build:
