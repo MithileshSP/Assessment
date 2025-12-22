@@ -72,7 +72,7 @@ app.use('/api/admin/login', authLimiter);
 // CORS Configuration for production
 const allowedOrigins = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(',')
-  : ['http://localhost:3000', 'http://localhost:5173', 'http://localhost:80', 'http://192.168.10.3:100/'];
+  : ['*', 'http://localhost:3000', 'http://localhost:5173', 'http://localhost:80', 'http://192.168.10.3:100/'];
 
 const corsOptions = {
   origin: function (origin, callback) {
