@@ -26,6 +26,7 @@ const usersRouter = require("./routes/users");
 const levelCompletionRouter = require("./routes/levelCompletion");
 const assetsRouter = require("./routes/assets");
 const testSessionsRouter = require("./routes/testSessions");
+const { scheduleFallbackSync } = require("./services/submissionSync");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -237,6 +238,8 @@ app.listen(PORT, () => {
   console.log(`   POST /api/submissions`);
   console.log(`   POST /api/evaluate`);
   console.log(`   POST /api/admin/login`);
+  // Background sync to ensure JSON fallback submissions are persisted to MySQL when available
+  scheduleFallbackSync();
 });
 
 module.exports = app;

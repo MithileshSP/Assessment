@@ -132,6 +132,35 @@ class TestSession {
     return this.findById(sessionId);
   }
 
+  static async getSubmissionsByIds(submissionIds) {
+    if (!Array.isArray(submissionIds) || submissionIds.length === 0) {
+      return [];
+    }
+
+    const placeholders = submissionIds.map(() => "?").join(",");
+    const query = `
+      SELECT 
+        id, challenge_id, candidate_name, status, passed,
+        structure_score, visual_score, content_score, final_score,
+        submitted_at, evaluated_at, evaluation_result
+      FROM submissions
+      WHERE id IN (${placeholders})
+      ORDER BY submitted_at ASC
+    `;
+
+    let submissions = [];
+    try {
+      submissions = await db.query(query, submissionIds);
+    } catch (error) {
+      console.warn(
+        "Primary submissions query failed, reading from JSON fallback:",
+        error.message
+      );
+    }
+
+    return mergeWithFallbackSubmissions(submissions, submissionIds);
+  }
+
   static async complete(sessionId, feedbackData = {}) {
     const session = await this.findById(sessionId);
     if (!session) {
@@ -144,16 +173,7 @@ class TestSession {
       throw new Error("No submissions in this test session");
     }
 
-    // Query all submissions to calculate pass/fail
-    const placeholders = submissionIds.map(() => "?").join(",");
-    const submissionsQuery = `
-      SELECT id, status, passed 
-      FROM submissions 
-      WHERE id IN (${placeholders})
-    `;
-
-    let submissions = await db.query(submissionsQuery, submissionIds);
-    submissions = mergeWithFallbackSubmissions(submissions, submissionIds);
+    const submissions = await this.getSubmissionsByIds(submissionIds);
     if (!submissions.length) {
       throw new Error("Unable to locate submissions for this session");
     }
@@ -201,20 +221,7 @@ class TestSession {
       };
     }
 
-    // Get all submission details
-    const placeholders = submissionIds.map(() => "?").join(",");
-    const query = `
-      SELECT 
-        id, challenge_id, candidate_name, status, passed,
-        structure_score, visual_score, content_score, final_score,
-        submitted_at, evaluated_at, evaluation_result
-      FROM submissions 
-      WHERE id IN (${placeholders})
-      ORDER BY submitted_at ASC
-    `;
-
-    let submissions = await db.query(query, submissionIds);
-    submissions = mergeWithFallbackSubmissions(submissions, submissionIds);
+    const submissions = await this.getSubmissionsByIds(submissionIds);
 
     // Parse evaluation_result JSON
     const parsedSubmissions = submissions.map((sub) => ({
