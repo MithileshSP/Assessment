@@ -16,7 +16,7 @@ services:
     volumes:
       - portal_mysql_data:/var/lib/mysql
     networks:
-      - app-network
+      - test-portal-network
     healthcheck:                       # ✅ MUST BE INSIDE portal_mysql
       test: ["CMD-SHELL", "mysqladmin ping -h localhost --silent"]
       interval: 5s
@@ -41,8 +41,7 @@ services:
       - DB_PORT=${DB_PORT:-3306}
       - DB_USER=${DB_USER:-root}
       - DB_PASSWORD=${DB_PASSWORD}
-      - DB_NAME=${DB_NAME:-frontend_test_portal}
-      - DB_CA_CERT=${DB_CA_CERT}
+      - DB_NAME=${DB_NAME:-fullstack_test_portal}
       - DB_SSL_REJECT_UNAUTHORIZED=${DB_SSL_REJECT_UNAUTHORIZED:-false}
       - DB_SSL_REJECT_UNAUTHORIZED=${DB_SSL_REJECT_UNAUTHORIZED:-false}
       - USE_JSON=false
