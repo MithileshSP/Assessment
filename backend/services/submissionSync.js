@@ -1,7 +1,6 @@
 const fs = require("fs");
 const path = require("path");
 const SubmissionModel = require("../models/Submission");
-const { isConnected } = require("../database/connection");
 
 const submissionsPath = path.join(__dirname, "../data/submissions.json");
 
@@ -59,10 +58,6 @@ async function upsertSubmissionIntoDb(submission) {
 }
 
 async function syncFallbackSubmissions() {
-  if (!isConnected()) {
-    return false;
-  }
-
   const fallbackSubmissions = loadFallbackSubmissions();
   if (!fallbackSubmissions.length) {
     return true;
