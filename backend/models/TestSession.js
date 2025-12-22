@@ -56,6 +56,17 @@ const mergeWithFallbackSubmissions = (dbSubmissions, submissionIds) => {
       if (mapped) {
         submissionsMap.set(id, mapped);
       }
+    } else {
+      // If DB has it but it's pending/incomplete, check if fallback has better data
+      const dbSub = submissionsMap.get(id);
+      if (dbSub.status === 'pending') {
+        const fallback = fallbackData.find((s) => s.id === id);
+        if (fallback && (fallback.status === 'passed' || fallback.status === 'failed')) {
+          console.log(`⚠️ Merging better data from JSON fallback for submission ${id}`);
+          const mapped = mapFallbackSubmission(fallback);
+          if (mapped) submissionsMap.set(id, mapped);
+        }
+      }
     }
   });
 
@@ -129,6 +140,7 @@ class TestSession {
       sessionId,
     ]);
 
+    // Force refresh to ensure we return latest state
     return this.findById(sessionId);
   }
 

@@ -61,9 +61,19 @@ class SubmissionModel {
   static async updateEvaluation(id, evaluationData) {
     // Extract screenshot paths from evaluation result (visual.screenshots preferred)
     const screenshots = evaluationData.visual?.screenshots || evaluationData.pixel?.screenshots || {};
-    const userScreenshot = screenshots.candidate || null;
-    const expectedScreenshot = screenshots.expected || null;
-    
+    let userScreenshot = screenshots.candidate || null;
+    let expectedScreenshot = screenshots.expected || null;
+
+    // Truncate to match DB limit (500 chars)
+    if (userScreenshot && userScreenshot.length > 500) {
+      console.warn('Truncating user_screenshot path (length > 500)');
+      userScreenshot = userScreenshot.substring(0, 500);
+    }
+    if (expectedScreenshot && expectedScreenshot.length > 500) {
+      console.warn('Truncating expected_screenshot path (length > 500)');
+      expectedScreenshot = expectedScreenshot.substring(0, 500);
+    }
+
     await query(
       `UPDATE submissions SET
        status = ?,
@@ -132,8 +142,8 @@ class SubmissionModel {
       expected_screenshot: submission.expected_screenshot,
       total_score: submission.final_score,
       result: submission.evaluation_result ? (
-        typeof submission.evaluation_result === 'string' 
-          ? JSON.parse(submission.evaluation_result) 
+        typeof submission.evaluation_result === 'string'
+          ? JSON.parse(submission.evaluation_result)
           : submission.evaluation_result
       ) : {
         structureScore: submission.structure_score,

@@ -473,6 +473,7 @@ export default function LevelChallenge() {
           console.log("Added submission to test session");
         } catch (err) {
           console.error("Failed to add submission to session:", err);
+          alert("Warning: Failed to save progress to test session. Results may not be tracked correctly.");
         }
       }
 
@@ -718,10 +719,10 @@ export default function LevelChallenge() {
                       <div
                         key={q.id}
                         className={`w-10 h-10 rounded flex items-center justify-center font-semibold ${index === currentQuestionIndex
-                            ? "bg-blue-600 text-white ring-2 ring-blue-300"
-                            : isSubmitted
-                              ? "bg-green-500 text-white"
-                              : "bg-gray-200 text-gray-700"
+                          ? "bg-blue-600 text-white ring-2 ring-blue-300"
+                          : isSubmitted
+                            ? "bg-green-500 text-white"
+                            : "bg-gray-200 text-gray-700"
                           }`}
                         title={`Question ${index + 1} - ${isSubmitted ? "Submitted" : "Not Submitted"
                           }`}
