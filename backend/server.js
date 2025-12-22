@@ -70,9 +70,11 @@ app.use('/api/auth/google', authLimiter);
 app.use('/api/admin/login', authLimiter);
 
 // CORS Configuration for production
-const allowedOrigins = process.env.ALLOWED_ORIGINS
+const defaultOrigins = ['*', 'http://localhost:3000', 'http://localhost:5173', 'http://localhost:80', 'http://192.168.10.3:100/'];
+const allowedOrigins = (process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(',')
-  : ['*', 'http://localhost:3000', 'http://localhost:5173', 'http://localhost:80', 'http://192.168.10.3:100/'];
+  : defaultOrigins)
+  .map((origin) => origin.trim().replace(/\/$/, '')); // normalize to compare consistently
 
 const corsOptions = {
   origin: function (origin, callback) {
@@ -84,8 +86,10 @@ const corsOptions = {
       origin.startsWith('http://127.0.0.1') ||
       origin.startsWith('https://127.0.0.1');
 
+    const normalizedOrigin = origin.replace(/\/$/, '');
+
     if (
-      allowedOrigins.indexOf(origin) !== -1 ||
+      allowedOrigins.indexOf(normalizedOrigin) !== -1 ||
       isLocalhostOrigin ||
       process.env.NODE_ENV !== 'production'
     ) {
