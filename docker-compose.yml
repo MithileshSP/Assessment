@@ -1,0 +1,90 @@
+version: "3.8"
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: test-portal-backend
+    ports:
+      - "6000:6000"
+    volumes:
+      # Persist screenshots and data
+      - ./backend/screenshots:/app/screenshots
+      - ./backend/data:/app/data
+      - ./backend/assets:/app/assets
+    environment:
+      - NODE_ENV=production
+      - PORT=6000
+      - DB_HOST=${DB_HOST:-host.docker.internal}
+      - DB_PORT=${DB_PORT:-3306}
+      - DB_USER=${DB_USER:-root}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME:-frontend_test_portal}
+      - DB_CA_CERT=${DB_CA_CERT}
+      - DB_SSL_REJECT_UNAUTHORIZED=${DB_SSL_REJECT_UNAUTHORIZED:-false}
+      - DB_SSL_REJECT_UNAUTHORIZED=${DB_SSL_REJECT_UNAUTHORIZED:-false}
+      - USE_JSON=false
+      - JWT_SECRET=${JWT_SECRET:-CHANGE_THIS_IN_PRODUCTION}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+    restart: unless-stopped
+    networks:
+      - test-portal-network
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+    # Add shared memory for Chromium (prevents crashes)
+    shm_size: "2gb"
+    # Resource limits for production
+    mem_limit: 4g
+    mem_reservation: 2g
+    cpus: '2.0'
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G
+        reservations:
+          cpus: '1.0'
+          memory: 2G
+    healthcheck:
+      test: [ "CMD", "node", "-e", "require('http').get('http://localhost:6000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+      args:
+        - VITE_GOOGLE_CLIENT_ID=${VITE_GOOGLE_CLIENT_ID:-563618874909-386bpe7ig2keme4o0gvc6arsp5mh2anu.apps.googleusercontent.com}
+        - VITE_API_URL=${VITE_API_URL:-/api}
+    container_name: test-portal-frontend
+    ports:
+      - "100:100"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - test-portal-network
+    mem_limit: 512m
+    cpus: '0.5'
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+
+networks:
+  test-portal-network:
+    driver: bridge
+
+volumes:
+  screenshots:
+  data:
