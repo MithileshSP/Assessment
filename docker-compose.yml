@@ -11,6 +11,8 @@ services:
       MYSQL_DATABASE: fullstack_test_portal
       MYSQL_USER: portal_user
       MYSQL_PASSWORD: fullstack123@
+    ports:
+      - "3307:3306"
     volumes:
       - portal_mysql_data:/var/lib/mysql
     networks:
