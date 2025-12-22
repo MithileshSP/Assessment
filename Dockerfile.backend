@@ -36,5 +36,5 @@ ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
 
 COPY --from=backend-builder /app .
 COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
-EXPOSE 5000
+EXPOSE 6000
 CMD ["node", "server.js"]

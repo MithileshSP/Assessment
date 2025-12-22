@@ -1,6 +1,27 @@
 version: "3.8"
 
 services:
+  portal_mysql:
+    image: mysql:8
+    container_name: portal_mysql
+    restart: always
+    command: --bind-address=0.0.0.0
+    environment:
+      MYSQL_ROOT_PASSWORD: root123
+      MYSQL_DATABASE: fullstack_test_portal
+      MYSQL_USER: portal_user
+      MYSQL_PASSWORD: fullstack123@
+    ports:
+      - "3307:3306"
+    volumes:
+      - portal_mysql_data:/var/lib/mysql
+    networks:
+      - app-network
+    healthcheck:                       # ✅ MUST BE INSIDE portal_mysql
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
   backend:
     build:
       context: .
@@ -63,7 +84,7 @@ services:
         - VITE_API_URL=${VITE_API_URL:-/api}
     container_name: test-portal-frontend
     ports:
-      - "100:100"
+      - "100:80"
     depends_on:
       backend:
         condition: service_healthy
