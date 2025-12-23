@@ -21,6 +21,7 @@ export default function LevelChallengeNew() {
   const [error, setError] = useState(null);
   const [evaluating, setEvaluating] = useState(false);
   const [testSessionId, setTestSessionId] = useState(null);
+  const [latestSubmissions, setLatestSubmissions] = useState({});
 
   useEffect(() => {
     if (courseId && level) {
@@ -240,31 +241,14 @@ export default function LevelChallengeNew() {
         }
       }));
 
-      // Add submission to test session
-      if (testSessionId && result.submissionId) {
-        try {
-          await axios.post(`/api/test-sessions/${testSessionId}/submissions`, {
-            submission_id: result.submissionId
-          });
-          console.log('Added submission to test session');
-        } catch (err) {
-          console.error('Failed to add submission to session:', err);
-        }
+      if (result.submissionId) {
+        setLatestSubmissions((prev) => ({
+          ...prev,
+          [questionId]: result.submissionId
+        }));
       }
 
       setEvaluating(false);
-
-      // Check if all questions are submitted
-      const allSubmitted = assignedQuestions.every(q =>
-        q.id === questionId ? true : userAnswers[q.id]?.submitted
-      );
-
-      if (allSubmitted && testSessionId) {
-        // Navigate to results page
-        setTimeout(() => {
-          navigate(`/test-results/${testSessionId}`);
-        }, 1000);
-      }
     } catch (error) {
       console.error('Submission failed:', error);
       alert('Failed to submit. Please try again.');
@@ -272,12 +256,36 @@ export default function LevelChallengeNew() {
     }
   };
 
-  const handleFinishLevel = () => {
+  const handleFinishLevel = async () => {
+    if (!allQuestionsSubmitted()) {
+      alert('Please submit all questions before finishing the test.');
+      return;
+    }
+
     if (testSessionId) {
-      // Navigate to new test session results page
+      const submissionIds = Array.from(new Set(Object.values(latestSubmissions).filter(Boolean)));
+
+      if (submissionIds.length === 0) {
+        alert('No submissions found to finalize. Please submit your answers first.');
+        return;
+      }
+
+      try {
+        await Promise.all(
+          submissionIds.map((id) =>
+            axios.post(`/api/test-sessions/${testSessionId}/submissions`, {
+              submission_id: id
+            })
+          )
+        );
+      } catch (err) {
+        console.error('Failed to add final submissions to session:', err);
+        alert('Could not finalize submissions. Please try again.');
+        return;
+      }
+
       navigate(`/test-results/${testSessionId}`);
     } else {
-      // Fallback to old results page if no session
       navigate(`/level-results/${courseId}/${level}`, {
         state: { userAnswers, assignedQuestions }
       });

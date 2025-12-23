@@ -363,6 +363,11 @@ router.get("/submissions/grouped", async (req, res) => {
           submissionIds
         );
 
+        // Skip empty sessions (no submissions stored)
+        if (!submissions || submissions.length === 0) {
+          return null;
+        }
+
         return {
           session_id: session.session_id,
           user: {
@@ -394,7 +399,8 @@ router.get("/submissions/grouped", async (req, res) => {
       })
     );
 
-    res.json(groupedSessions);
+    // Remove nulls for empty sessions
+    res.json(groupedSessions.filter(Boolean));
   } catch (error) {
     console.error("Failed to fetch grouped submissions:", error);
     res.status(500).json({

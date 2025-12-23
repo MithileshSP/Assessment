@@ -122,10 +122,58 @@ class TestSession {
       throw new Error("Test session not found");
     }
 
-    const submissionIds = session.submission_ids || [];
-    if (!submissionIds.includes(submissionId)) {
-      submissionIds.push(submissionId);
+    // Fetch submission to know its challenge_id
+    const submissionRows = await db.query(
+      `SELECT id, challenge_id, submitted_at FROM submissions WHERE id = ?`,
+      [submissionId]
+    );
+
+    const submissionRecord = submissionRows[0];
+    if (!submissionRecord) {
+      throw new Error("Submission not found");
     }
+
+    const submissionChallengeId = submissionRecord.challenge_id;
+
+    // Keep only the latest submission per challenge
+    const submissionIds = Array.isArray(session.submission_ids)
+      ? [...session.submission_ids]
+      : [];
+
+    // Remove older submission for same challenge_id, if any
+    const filteredIds = [];
+    for (const id of submissionIds) {
+      if (id === submissionId) {
+        continue;
+      }
+
+      const existing = await db.query(
+        `SELECT challenge_id, submitted_at FROM submissions WHERE id = ?`,
+        [id]
+      );
+
+      const existingRecord = existing[0];
+      if (!existingRecord) continue;
+
+      if (existingRecord.challenge_id === submissionChallengeId) {
+        // Keep the newer one between existing and new
+        const existingTime = new Date(existingRecord.submitted_at || 0).getTime();
+        const newTime = new Date(submissionRecord.submitted_at || 0).getTime();
+        if (existingTime > newTime) {
+          // Existing is newer; keep it and skip adding new
+          return session;
+        }
+        // Existing is older; drop it
+        continue;
+      }
+
+      filteredIds.push(id);
+    }
+
+    filteredIds.push(submissionId);
+
+    // Ensure uniqueness just in case
+    const uniqueIds = Array.from(new Set(filteredIds));
 
     const query = `
       UPDATE test_sessions 
@@ -135,8 +183,8 @@ class TestSession {
     `;
 
     await db.query(query, [
-      JSON.stringify(submissionIds),
-      submissionIds.length,
+      JSON.stringify(uniqueIds),
+      uniqueIds.length,
       sessionId,
     ]);
 
@@ -170,7 +218,29 @@ class TestSession {
       );
     }
 
-    return mergeWithFallbackSubmissions(submissions, submissionIds);
+    const merged = mergeWithFallbackSubmissions(submissions, submissionIds);
+
+    // Deduplicate by challenge_id keeping the latest submitted_at
+    const byChallenge = new Map();
+
+    for (const sub of merged) {
+      const key = sub.challenge_id || 'unknown';
+      const existing = byChallenge.get(key);
+
+      if (!existing) {
+        byChallenge.set(key, sub);
+        continue;
+      }
+
+      const existingTime = new Date(existing.submitted_at || 0).getTime();
+      const currentTime = new Date(sub.submitted_at || 0).getTime();
+
+      if (currentTime >= existingTime) {
+        byChallenge.set(key, sub);
+      }
+    }
+
+    return Array.from(byChallenge.values());
   }
 
   static async complete(sessionId, feedbackData = {}) {
