@@ -500,6 +500,31 @@ export default function LevelChallenge() {
     };
   };
 
+  const saveCompletionProgress = async (summary, extra = {}) => {
+    const completionData = {
+      userId,
+      courseId,
+      level: parseInt(level),
+      completedAt: new Date().toISOString(),
+      finalScore: summary.avgScore,
+      passed: summary.allPassed,
+      questionsSubmitted: summary.submittedCount,
+      questionsPassed: summary.passedCount,
+      totalQuestions: summary.totalQuestions,
+      feedback: extra.feedback ?? null,
+      results: summary.results,
+      autoSubmitReason: extra.autoSubmitReason || null,
+    };
+
+    await axios.post("/api/level-completion", completionData);
+    await axios.post(`/api/courses/progress/${userId}/level-complete`, {
+      courseId,
+      level: parseInt(level),
+    });
+
+    return completionData;
+  };
+
   const navigateWithLocalResults = (reason = "manual") => {
     const summary = computeProgressSummary();
     const completionData = {
@@ -547,6 +572,16 @@ export default function LevelChallenge() {
         // Small delay to ensure database write is committed
         await new Promise((resolve) => setTimeout(resolve, 300));
 
+        // Persist completion and unlock next level
+        const summary = computeProgressSummary();
+        try {
+          await saveCompletionProgress(summary, {
+            autoSubmitReason: reason !== "manual" ? reason : null,
+          });
+        } catch (err) {
+          console.error("Failed to record level completion:", err);
+        }
+
         navigate(`/test-results/${testSessionId}`, {
           state:
             reason !== "manual"
@@ -555,6 +590,15 @@ export default function LevelChallenge() {
         });
       } else {
         // Fallback to old results page if no session
+        const summary = computeProgressSummary();
+        try {
+          await saveCompletionProgress(summary, {
+            autoSubmitReason: reason !== "manual" ? reason : null,
+          });
+        } catch (err) {
+          console.error("Failed to record level completion (no session):", err);
+        }
+
         navigateWithLocalResults(reason);
       }
     } catch (error) {
@@ -576,23 +620,9 @@ export default function LevelChallenge() {
 
   const handleSubmitFeedback = async () => {
     try {
-      // Save level completion data
-      const completionData = {
-        userId,
-        courseId,
-        level: parseInt(level),
-        completedAt: new Date().toISOString(),
-        finalScore: finalScore.avgScore,
-        passed: finalScore.allPassed,
-        questionsSubmitted: finalScore.submittedCount,
-        questionsPassed: finalScore.passedCount,
-        totalQuestions: finalScore.totalQuestions,
-        feedback: feedback,
-        results: finalScore.results,
-      };
-
-      // Save to backend
-      await axios.post("/api/level-completion", completionData);
+      const completionData = await saveCompletionProgress(finalScore, {
+        feedback,
+      });
 
       // Close modal and navigate
       setShowFinishModal(false);

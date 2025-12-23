@@ -256,11 +256,54 @@ export default function LevelChallengeNew() {
     }
   };
 
+  const buildCompletionPayload = () => {
+    const totalQuestions = assignedQuestions.length;
+    let submittedCount = 0;
+    let passedCount = 0;
+    let scoreSum = 0;
+    const results = [];
+
+    assignedQuestions.forEach((q) => {
+      const ans = userAnswers[q.id];
+      const res = ans?.result;
+      const submitted = Boolean(ans?.submitted);
+      if (submitted) submittedCount += 1;
+      const finalScore = typeof res?.finalScore === 'number' ? res.finalScore : 0;
+      const passed = Boolean(res?.passed || finalScore >= 70);
+      if (passed) passedCount += 1;
+      scoreSum += finalScore;
+      results.push({
+        challengeId: q.id,
+        passed,
+        finalScore,
+      });
+    });
+
+    const avgScore = submittedCount > 0 ? scoreSum / submittedCount : 0;
+    const allPassed = passedCount === totalQuestions && totalQuestions > 0;
+
+    return {
+      userId,
+      courseId,
+      level: parseInt(level),
+      completedAt: new Date().toISOString(),
+      finalScore: avgScore,
+      passed: allPassed,
+      questionsSubmitted: submittedCount,
+      questionsPassed: passedCount,
+      totalQuestions,
+      feedback: null,
+      results,
+    };
+  };
+
   const handleFinishLevel = async () => {
     if (!allQuestionsSubmitted()) {
       alert('Please submit all questions before finishing the test.');
       return;
     }
+
+    const completionData = buildCompletionPayload();
 
     if (testSessionId) {
       const submissionIds = Array.from(new Set(Object.values(latestSubmissions).filter(Boolean)));
@@ -284,8 +327,27 @@ export default function LevelChallengeNew() {
         return;
       }
 
+      try {
+        await axios.post('/api/level-completion', completionData);
+        await axios.post(`/api/courses/progress/${userId}/level-complete`, {
+          courseId,
+          level: parseInt(level)
+        });
+      } catch (err) {
+        console.error('Failed to record level completion:', err);
+      }
+
       navigate(`/test-results/${testSessionId}`);
     } else {
+      try {
+        await axios.post('/api/level-completion', completionData);
+        await axios.post(`/api/courses/progress/${userId}/level-complete`, {
+          courseId,
+          level: parseInt(level)
+        });
+      } catch (err) {
+        console.error('Failed to record level completion (no session):', err);
+      }
       navigate(`/level-results/${courseId}/${level}`, {
         state: { userAnswers, assignedQuestions }
       });

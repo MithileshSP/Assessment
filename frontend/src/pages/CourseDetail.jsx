@@ -47,8 +47,8 @@ export default function CourseDetail() {
       const courseProgress = userProgress.courses?.find(c => c.courseId === courseId);
       if (courseProgress) {
         const completedLevels = courseProgress.completedLevels || [];
-        // Level is unlocked if previous level is completed
-        if (completedLevels.includes(levelNumber - 1)) {
+        // Level is unlocked if previous level is completed or currentLevel already advanced
+        if (completedLevels.includes(levelNumber - 1) || (courseProgress.currentLevel || 1) >= levelNumber) {
           return 'unlocked';
         }
       }
@@ -231,11 +231,6 @@ export default function CourseDetail() {
                   <span className="text-gray-600">
                     📝 {level.totalQuestions} Question{level.totalQuestions !== 1 ? 's' : ''} Available
                   </span>
-                  {level.totalPoints > 0 && (
-                    <span className="text-indigo-600 font-semibold">
-                      ⭐ {level.totalPoints} pts
-                    </span>
-                  )}
                 </div>
 
                 {/* Progress Bar (if any questions completed) */}

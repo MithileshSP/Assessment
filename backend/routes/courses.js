@@ -343,13 +343,64 @@ router.get('/:courseId/levels/:level/questions/:questionId', (req, res) => {
  * GET /api/courses/progress/:userId
  * Get user's progress across all courses
  */
-router.get('/progress/:userId', (req, res) => {
+router.get('/progress/:userId', async (req, res) => {
   try {
-    const allProgress = getProgress();
-    const userProgress = allProgress.find(p => p.userId === req.params.userId);
+    let allProgress = getProgress();
+    let userProgress = allProgress.find(p => p.userId === req.params.userId);
+
+    // If no progress file entry, try to infer from completed test sessions
+    if (!userProgress) {
+      try {
+        const rows = await query(
+          `SELECT course_id, level, overall_status, passed_count, total_questions
+           FROM test_sessions
+           WHERE user_id = ?`,
+          [req.params.userId]
+        );
+
+        const completed = rows.filter(r => r.overall_status === 'passed' || (r.total_questions > 0 && r.passed_count === r.total_questions));
+        const coursesMap = new Map();
+
+        completed.forEach((r) => {
+          const courseId = r.course_id;
+          if (!coursesMap.has(courseId)) {
+            coursesMap.set(courseId, {
+              courseId,
+              completedLevels: [],
+              currentLevel: 1,
+              totalPoints: 0,
+            });
+          }
+          const course = coursesMap.get(courseId);
+          const lvl = parseInt(r.level);
+          if (!course.completedLevels.includes(lvl)) {
+            course.completedLevels.push(lvl);
+          }
+          course.currentLevel = Math.max(course.currentLevel, lvl + 1);
+        });
+
+        const inferredCourses = Array.from(coursesMap.values()).map(c => ({
+          ...c,
+          completedLevels: c.completedLevels.sort((a, b) => a - b),
+        }));
+
+        if (inferredCourses.length > 0) {
+          userProgress = {
+            userId: req.params.userId,
+            courses: inferredCourses,
+            totalPoints: 0,
+            achievements: [],
+          };
+
+          allProgress.push(userProgress);
+          saveProgress(allProgress);
+        }
+      } catch (inferErr) {
+        console.error('Failed to infer progress from test sessions:', inferErr.message);
+      }
+    }
 
     if (!userProgress) {
-      // Return empty progress for new user
       return res.json({
         userId: req.params.userId,
         courses: [],
@@ -466,6 +517,55 @@ router.post('/progress/:userId/complete', (req, res) => {
   } catch (error) {
     console.error('Progress update error:', error);
     res.status(500).json({ error: 'Failed to update progress' });
+  }
+});
+
+// Mark an entire level as completed (without needing assignment context)
+router.post('/progress/:userId/level-complete', (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { courseId, level } = req.body;
+
+    if (!courseId || !level) {
+      return res.status(400).json({ error: 'Missing courseId or level' });
+    }
+
+    const allProgress = getProgress();
+    let userProgress = allProgress.find((p) => p.userId === userId);
+
+    if (!userProgress) {
+      userProgress = { userId, courses: [], totalPoints: 0, achievements: [] };
+      allProgress.push(userProgress);
+    }
+
+    let courseProgress = userProgress.courses.find((c) => c.courseId === courseId);
+    if (!courseProgress) {
+      courseProgress = {
+        courseId,
+        completedLevels: [],
+        currentLevel: 1,
+        totalPoints: 0,
+      };
+      userProgress.courses.push(courseProgress);
+    }
+
+    const numericLevel = parseInt(level);
+    if (!courseProgress.completedLevels.includes(numericLevel)) {
+      courseProgress.completedLevels.push(numericLevel);
+      courseProgress.completedLevels.sort((a, b) => a - b);
+    }
+
+    courseProgress.currentLevel = Math.max(courseProgress.currentLevel || 1, numericLevel + 1);
+
+    saveProgress(allProgress);
+
+    res.json({
+      message: 'Level marked complete',
+      courseProgress,
+    });
+  } catch (error) {
+    console.error('Level complete progress error:', error);
+    res.status(500).json({ error: 'Failed to mark level complete' });
   }
 });
 
