@@ -36,8 +36,16 @@ const saveChallenges = (challenges) => {
 };
 
 const getSubmissions = () => {
-  const data = fs.readFileSync(submissionsPath, "utf8");
-  return JSON.parse(data);
+  try {
+    if (!fs.existsSync(submissionsPath)) {
+      return [];
+    }
+    const data = fs.readFileSync(submissionsPath, "utf8");
+    return data ? JSON.parse(data) : [];
+  } catch (error) {
+    console.warn("Failed to read submissions fallback JSON:", error.message);
+    return [];
+  }
 };
 
 /**
@@ -194,14 +202,37 @@ router.delete("/challenges/:id", (req, res) => {
  */
 router.get("/submissions", async (req, res) => {
   try {
-    if (USE_JSON) {
-      const submissions = getSubmissions();
-      res.json(submissions);
-    } else {
-      // Fetch from MySQL with user and challenge details
-      const submissions = await SubmissionModel.findAll();
-      res.json(submissions);
+    if (!USE_JSON) {
+      try {
+        const submissions = await SubmissionModel.findAll();
+        if (submissions && submissions.length) {
+          return res.json(submissions);
+        }
+
+        const fallbackSubmissions = getSubmissions();
+        if (fallbackSubmissions.length) {
+          console.warn(
+            "MySQL returned no submissions. Serving fallback JSON data instead."
+          );
+          return res.json(fallbackSubmissions);
+        }
+
+        return res.json(submissions || []);
+      } catch (dbError) {
+        console.error(
+          "Failed to fetch submissions from MySQL, attempting JSON fallback:",
+          dbError.message
+        );
+        const fallbackSubmissions = getSubmissions();
+        if (fallbackSubmissions.length) {
+          return res.json(fallbackSubmissions);
+        }
+        return res.status(500).json({ error: "Failed to fetch submissions" });
+      }
     }
+
+    const submissions = getSubmissions();
+    return res.json(submissions);
   } catch (error) {
     console.error("Failed to fetch submissions:", error);
     res.status(500).json({ error: "Failed to fetch submissions" });
@@ -366,12 +397,10 @@ router.get("/submissions/grouped", async (req, res) => {
     res.json(groupedSessions);
   } catch (error) {
     console.error("Failed to fetch grouped submissions:", error);
-    res
-      .status(500)
-      .json({
-        error: "Failed to fetch grouped submissions",
-        details: error.message,
-      });
+    res.status(500).json({
+      error: "Failed to fetch grouped submissions",
+      details: error.message,
+    });
   }
 });
 

@@ -19,8 +19,9 @@ export default function LevelChallenge() {
   const [evaluating, setEvaluating] = useState(false);
   const [evaluationStep, setEvaluationStep] = useState("");
   const [result, setResult] = useState(null);
-  const [showExpectedScreenshot, setShowExpectedScreenshot] = useState(false);
+  const [previewTab, setPreviewTab] = useState("live");
   const [showInstructions, setShowInstructions] = useState(true);
+  const [showEvaluationPanel, setShowEvaluationPanel] = useState(true);
   const [userAnswers, setUserAnswers] = useState({});
   const [showFinishModal, setShowFinishModal] = useState(false);
   const [finalScore, setFinalScore] = useState(null);
@@ -43,42 +44,7 @@ export default function LevelChallenge() {
   const [lastViolationTime, setLastViolationTime] = useState(0);
 
   const previewRef = useRef();
-
-  // Resizable Split View State
-  const [splitRatio, setSplitRatio] = useState(0.5);
-  const [isDragging, setIsDragging] = useState(false);
   const [fullScreenView, setFullScreenView] = useState(null); // 'live' | 'expected' | null
-  const splitContainerRef = useRef();
-
-  useEffect(() => {
-    const handleMouseMove = (e) => {
-      if (!isDragging || !splitContainerRef.current) return;
-      const containerRect = splitContainerRef.current.getBoundingClientRect();
-      const relativeY = e.clientY - containerRect.top;
-      const newRatio = Math.max(
-        0.2,
-        Math.min(0.8, relativeY / containerRect.height)
-      );
-      setSplitRatio(newRatio);
-    };
-
-    const handleMouseUp = () => {
-      setIsDragging(false);
-      document.body.style.cursor = "default";
-    };
-
-    if (isDragging) {
-      document.addEventListener("mousemove", handleMouseMove);
-      document.addEventListener("mouseup", handleMouseUp);
-      document.body.style.cursor = "row-resize";
-    }
-
-    return () => {
-      document.removeEventListener("mousemove", handleMouseMove);
-      document.removeEventListener("mouseup", handleMouseUp);
-      document.body.style.cursor = "default";
-    };
-  }, [isDragging]);
 
   useEffect(() => {
     if (courseId && level) {
@@ -340,7 +306,7 @@ export default function LevelChallenge() {
     // Auto-enter fullscreen on click if not in fullscreen
     const handleClickForFullscreen = () => {
       if (restrictions.forceFullscreen && !document.fullscreenElement) {
-        document.documentElement.requestFullscreen().catch(() => { });
+        document.documentElement.requestFullscreen().catch(() => {});
       }
     };
     document.addEventListener("click", handleClickForFullscreen);
@@ -384,7 +350,7 @@ export default function LevelChallenge() {
       }));
       setCurrentQuestionIndex(currentQuestionIndex - 1);
       setResult(null);
-      setShowExpectedScreenshot(false);
+      setPreviewTab("live");
     }
   };
 
@@ -403,7 +369,7 @@ export default function LevelChallenge() {
       }));
       setCurrentQuestionIndex(currentQuestionIndex + 1);
       setResult(null);
-      setShowExpectedScreenshot(false);
+      setPreviewTab("live");
     }
   };
 
@@ -473,7 +439,9 @@ export default function LevelChallenge() {
           console.log("Added submission to test session");
         } catch (err) {
           console.error("Failed to add submission to session:", err);
-          alert("Warning: Failed to save progress to test session. Results may not be tracked correctly.");
+          alert(
+            "Warning: Failed to save progress to test session. Results may not be tracked correctly."
+          );
         }
       }
 
@@ -482,7 +450,8 @@ export default function LevelChallenge() {
       console.error("Submission failed:", error);
       console.error("Error details:", error.response?.data || error.message);
       alert(
-        `Failed to submit: ${error.response?.data?.error || error.message || "Unknown error"
+        `Failed to submit: ${
+          error.response?.data?.error || error.message || "Unknown error"
         }`
       );
       setEvaluationStep("");
@@ -692,7 +661,11 @@ export default function LevelChallenge() {
               </button>
               <h1 className="text-2xl font-bold">{challenge.title}</h1>
               <p className="text-gray-600">
-                Level {level} {assignedQuestions.length > 1 && `• Question ${currentQuestionIndex + 1} of ${assignedQuestions.length}`}
+                Level {level}{" "}
+                {assignedQuestions.length > 1 &&
+                  `• Question ${currentQuestionIndex + 1} of ${
+                    assignedQuestions.length
+                  }`}
               </p>
             </div>
 
@@ -701,10 +674,11 @@ export default function LevelChallenge() {
               {/* Small Timer */}
               {restrictions.timeLimit > 0 && timeRemaining !== null && (
                 <div
-                  className={`px-3 py-2 rounded border font-mono font-bold ${timeRemaining <= 300
-                    ? "bg-red-50 border-red-300 text-red-600"
-                    : "bg-blue-50 border-blue-300 text-blue-600"
-                    }`}
+                  className={`px-3 py-2 rounded border font-mono font-bold ${
+                    timeRemaining <= 300
+                      ? "bg-red-50 border-red-300 text-red-600"
+                      : "bg-blue-50 border-blue-300 text-blue-600"
+                  }`}
                 >
                   ⏱️ {formatTime(timeRemaining)}
                 </div>
@@ -718,14 +692,16 @@ export default function LevelChallenge() {
                     return (
                       <div
                         key={q.id}
-                        className={`w-10 h-10 rounded flex items-center justify-center font-semibold ${index === currentQuestionIndex
-                          ? "bg-blue-600 text-white ring-2 ring-blue-300"
-                          : isSubmitted
+                        className={`w-10 h-10 rounded flex items-center justify-center font-semibold ${
+                          index === currentQuestionIndex
+                            ? "bg-blue-600 text-white ring-2 ring-blue-300"
+                            : isSubmitted
                             ? "bg-green-500 text-white"
                             : "bg-gray-200 text-gray-700"
-                          }`}
-                        title={`Question ${index + 1} - ${isSubmitted ? "Submitted" : "Not Submitted"
-                          }`}
+                        }`}
+                        title={`Question ${index + 1} - ${
+                          isSubmitted ? "Submitted" : "Not Submitted"
+                        }`}
                       >
                         {index + 1}
                       </div>
@@ -829,8 +805,9 @@ export default function LevelChallenge() {
                 : "📖 Show Instructions"}
             </span>
             <svg
-              className={`w-5 h-5 transition-transform ${showInstructions ? "rotate-180" : ""
-                }`}
+              className={`w-5 h-5 transition-transform ${
+                showInstructions ? "rotate-180" : ""
+              }`}
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -977,131 +954,126 @@ export default function LevelChallenge() {
 
         {/* Right Panel: Preview & Results */}
         <div className="flex flex-col h-full overflow-hidden relative">
-          {/* Split View Container */}
-          <div
-            ref={splitContainerRef}
-            className="flex-1 flex flex-col min-h-0 relative"
-          >
-            {/* Top Pane: Live Preview */}
-            <div
-              className="flex flex-col min-h-0"
-              style={{
-                height: showExpectedScreenshot
-                  ? `${splitRatio * 100}%`
-                  : "100%",
-              }}
-            >
-              <div className="card flex-1 flex flex-col min-h-0 p-0 overflow-hidden">
-                <div className="p-3 border-b flex justify-between items-center bg-gray-50">
-                  <h2 className="text-lg font-bold">Live Preview</h2>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setFullScreenView("live")}
-                      className="text-xs px-2 py-1 rounded bg-gray-200 hover:bg-gray-300 text-gray-700 flex items-center gap-1"
-                      title="Full Screen Preview"
-                    >
-                      ⤢ Full Screen
-                    </button>
-                    <button
-                      onClick={() =>
-                        setShowExpectedScreenshot(!showExpectedScreenshot)
+          <div className="flex-1 flex flex-col min-h-0">
+            <div className="card flex-1 flex flex-col min-h-0 p-0 overflow-hidden">
+              <div className="p-3 border-b flex flex-wrap gap-3 items-center justify-between bg-gray-50">
+                <div className="inline-flex rounded-md border bg-white p-1 shadow-sm">
+                  <button
+                    onClick={() => setPreviewTab("live")}
+                    className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${
+                      previewTab === "live"
+                        ? "bg-blue-600 text-white shadow"
+                        : "text-gray-600 hover:text-gray-900"
+                    }`}
+                  >
+                    Live Preview
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (challenge?.expectedSolution) {
+                        setPreviewTab("expected");
                       }
-                      className={`text-xs px-3 py-1 rounded transition-colors ${showExpectedScreenshot
-                        ? "bg-blue-100 text-blue-700"
-                        : "bg-gray-200 text-gray-700"
-                        }`}
-                      title="Toggle expected result view"
-                    >
-                      {showExpectedScreenshot
-                        ? "👁️ Hide Expected"
-                        : "🎯 Show Expected"}
-                    </button>
-                  </div>
+                    }}
+                    disabled={!challenge?.expectedSolution}
+                    className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${
+                      previewTab === "expected"
+                        ? "bg-green-600 text-white shadow"
+                        : "text-gray-600 hover:text-gray-900"
+                    } ${
+                      !challenge?.expectedSolution
+                        ? "opacity-50 cursor-not-allowed"
+                        : ""
+                    }`}
+                  >
+                    Expected Result
+                  </button>
                 </div>
-                <div className="flex-1 relative overflow-hidden">
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      if (
+                        previewTab === "expected" &&
+                        !challenge?.expectedSolution
+                      ) {
+                        return;
+                      }
+                      setFullScreenView(previewTab);
+                    }}
+                    className="text-xs px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 text-gray-700 flex items-center gap-1"
+                  >
+                    ⤢ Full Screen
+                  </button>
+                </div>
+              </div>
+              <div className="flex-1 relative overflow-auto bg-gray-100">
+                {previewTab === "live" ? (
                   <PreviewFrame ref={previewRef} code={code} />
-                </div>
+                ) : challenge?.expectedSolution ? (
+                  <PreviewFrame
+                    code={{
+                      html: challenge.expectedSolution.html || "",
+                      css: challenge.expectedSolution.css || "",
+                      js: challenge.expectedSolution.js || "",
+                    }}
+                  />
+                ) : (
+                  <div className="h-full flex items-center justify-center text-sm text-gray-500">
+                    Expected design not available for this challenge.
+                  </div>
+                )}
               </div>
             </div>
-
-            {/* Drag Handle */}
-            {showExpectedScreenshot && (
-              <div
-                className="h-2 bg-gray-200 hover:bg-blue-400 cursor-row-resize shrink-0 flex items-center justify-center transition-colors z-10"
-                onMouseDown={() => setIsDragging(true)}
-              >
-                <div className="w-8 h-1 bg-gray-400 rounded-full"></div>
-              </div>
-            )}
-
-            {/* Bottom Pane: Expected Screenshot */}
-            {showExpectedScreenshot && challenge?.expectedSolution && (
-              <div
-                className="flex flex-col min-h-0"
-                style={{ height: `${(1 - splitRatio) * 100}%` }}
-              >
-                <div className="card flex-1 flex flex-col min-h-0 p-0 overflow-hidden mt-0">
-                  <div className="p-3 border-b flex justify-between items-center bg-green-50">
-                    <div className="flex items-center gap-2">
-                      <h2 className="text-lg font-bold text-green-700">
-                        Expected Result
-                      </h2>
-                      <span className="text-xs text-gray-500 hidden sm:inline">
-                        Match this design
-                      </span>
-                    </div>
-                    <button
-                      onClick={() => setFullScreenView("expected")}
-                      className="text-xs px-2 py-1 rounded bg-green-200 hover:bg-green-300 text-green-800 flex items-center gap-1"
-                    >
-                      ⤢ Full Screen
-                    </button>
-                  </div>
-                  <div className="flex-1 relative overflow-auto bg-gray-100">
-                    <div className="h-full border-2 border-transparent">
-                      <PreviewFrame
-                        code={{
-                          html: challenge.expectedSolution.html || "",
-                          css: challenge.expectedSolution.css || "",
-                          js: challenge.expectedSolution.js || "",
-                        }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
 
           {/* Results (Below Split View) */}
           {(evaluating || result) && (
-            <div className="card mt-4 shrink-0 max-h-[40%] overflow-auto">
-              <h2 className="text-lg font-bold mb-3">Evaluation Results</h2>
-              {evaluating ? (
-                <div className="text-center py-8">
-                  <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
-                  <p className="text-lg font-semibold text-gray-700 mb-2">
-                    {evaluationStep || "Evaluating..."}
-                  </p>
-                  <p className="text-sm text-gray-500 mb-4">
-                    This may take 5-10 seconds
-                  </p>
-                  <div className="max-w-md mx-auto text-left bg-blue-50 p-4 rounded-lg">
-                    <p className="text-xs font-semibold text-blue-900 mb-2">
-                      🔄 Evaluation Process:
-                    </p>
-                    <ul className="text-xs text-blue-800 space-y-1">
-                      <li>• Launching headless browser (Chrome)</li>
-                      <li>• Rendering your code as screenshot</li>
-                      <li>• Rendering expected solution</li>
-                      <li>• Comparing DOM structure</li>
-                      <li>• Comparing visual appearance (pixels)</li>
-                      <li>• Calculating final score</li>
-                    </ul>
-                  </div>
+            <div
+              className={`card mt-4 shrink-0 transition-all duration-300 flex flex-col ${
+                showEvaluationPanel ? "max-h-[40%]" : "max-h-14 overflow-hidden"
+              }`}
+            >
+              <div
+                className={`flex items-center justify-between ${
+                  showEvaluationPanel ? "mb-3" : "mb-0"
+                }`}
+              >
+                <h2 className="text-lg font-bold">Evaluation Results</h2>
+                <button
+                  onClick={() => setShowEvaluationPanel((prev) => !prev)}
+                  className="text-xs px-3 py-1 rounded bg-gray-100 hover:bg-gray-200 text-gray-700"
+                >
+                  {showEvaluationPanel ? "Hide Panel" : "Show Panel"}
+                </button>
+              </div>
+              {showEvaluationPanel && (
+                <div className="flex-1 overflow-auto pr-2">
+                  {evaluating ? (
+                    <div className="text-center py-8">
+                      <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+                      <p className="text-lg font-semibold text-gray-700 mb-2">
+                        {evaluationStep || "Evaluating..."}
+                      </p>
+                      <p className="text-sm text-gray-500 mb-4">
+                        This may take 5-10 seconds
+                      </p>
+                      <div className="max-w-md mx-auto text-left bg-blue-50 p-4 rounded-lg">
+                        <p className="text-xs font-semibold text-blue-900 mb-2">
+                          🔄 Evaluation Process:
+                        </p>
+                        <ul className="text-xs text-blue-800 space-y-1">
+                          <li>• Launching headless browser (Chrome)</li>
+                          <li>• Rendering your code as screenshot</li>
+                          <li>• Rendering expected solution</li>
+                          <li>• Comparing DOM structure</li>
+                          <li>• Comparing visual appearance (pixels)</li>
+                          <li>• Calculating final score</li>
+                        </ul>
+                      </div>
+                    </div>
+                  ) : (
+                    <ResultsPanel result={result} />
+                  )}
                 </div>
-              ) : (
-                <ResultsPanel result={result} />
               )}
             </div>
           )}
@@ -1143,8 +1115,9 @@ export default function LevelChallenge() {
                             {idx + 1}. {r.questionTitle}
                           </div>
                           <div
-                            className={`text-sm font-semibold ${r.passed ? "text-green-600" : "text-red-600"
-                              }`}
+                            className={`text-sm font-semibold ${
+                              r.passed ? "text-green-600" : "text-red-600"
+                            }`}
                           >
                             {r.passed ? "Passed" : "Failed"} ({r.score}%)
                           </div>
@@ -1185,59 +1158,58 @@ export default function LevelChallenge() {
         </div>
       </div>
       {/* Full Screen Modal */}
-      {
-        fullScreenView && (
-          <div className="fixed inset-0 z-50 bg-white flex flex-col">
-            <div
-              className={`p-4 border-b flex justify-between items-center ${fullScreenView === "expected" ? "bg-green-50" : "bg-gray-50"
-                }`}
+      {fullScreenView && (
+        <div className="fixed inset-0 z-50 bg-white flex flex-col">
+          <div
+            className={`p-4 border-b flex justify-between items-center ${
+              fullScreenView === "expected" ? "bg-green-50" : "bg-gray-50"
+            }`}
+          >
+            <h2 className="text-xl font-bold flex items-center gap-2">
+              {fullScreenView === "live"
+                ? "🖥️ Live Preview (Full Screen)"
+                : "✅ Expected Result (Full Screen)"}
+              <span className="text-sm font-normal text-gray-500">
+                {fullScreenView === "live" ? "- Your Code" : "- Target Design"}
+              </span>
+            </h2>
+            <button
+              onClick={() => setFullScreenView(null)}
+              className="px-4 py-2 bg-gray-800 text-white rounded hover:bg-gray-700 flex items-center gap-2"
             >
-              <h2 className="text-xl font-bold flex items-center gap-2">
-                {fullScreenView === "live"
-                  ? "🖥️ Live Preview (Full Screen)"
-                  : "✅ Expected Result (Full Screen)"}
-                <span className="text-sm font-normal text-gray-500">
-                  {fullScreenView === "live" ? "- Your Code" : "- Target Design"}
-                </span>
-              </h2>
-              <button
-                onClick={() => setFullScreenView(null)}
-                className="px-4 py-2 bg-gray-800 text-white rounded hover:bg-gray-700 flex items-center gap-2"
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
               >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-                Exit Full Screen
-              </button>
-            </div>
-            <div className="flex-1 relative bg-gray-100 overflow-hidden p-4">
-              <div className="h-full w-full bg-white shadow-xl rounded-lg overflow-hidden border">
-                {fullScreenView === "live" ? (
-                  <PreviewFrame ref={previewRef} code={code} />
-                ) : (
-                  <PreviewFrame
-                    code={{
-                      html: challenge.expectedSolution.html || "",
-                      css: challenge.expectedSolution.css || "",
-                      js: challenge.expectedSolution.js || "",
-                    }}
-                  />
-                )}
-              </div>
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+              Exit Full Screen
+            </button>
+          </div>
+          <div className="flex-1 relative bg-gray-100 overflow-hidden p-4">
+            <div className="h-full w-full bg-white shadow-xl rounded-lg overflow-hidden border">
+              {fullScreenView === "live" ? (
+                <PreviewFrame ref={previewRef} code={code} />
+              ) : (
+                <PreviewFrame
+                  code={{
+                    html: challenge.expectedSolution.html || "",
+                    css: challenge.expectedSolution.css || "",
+                    js: challenge.expectedSolution.js || "",
+                  }}
+                />
+              )}
             </div>
           </div>
-        )
-      }
-    </div >
+        </div>
+      )}
+    </div>
   );
 }
