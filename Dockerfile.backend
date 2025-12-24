@@ -37,4 +37,12 @@ ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
 COPY --from=backend-builder /app .
 COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
 EXPOSE 6000
+
+# Create necessary directories and set permissions
+RUN mkdir -p /app/uploads /app/screenshots /app/assets /app/data && \
+    chown -R node:node /app
+
+# Security: Run as non-root user
+USER node
+
 CMD ["node", "server.js"]

@@ -56,11 +56,11 @@ const saveSubmissions = (submissions) => {
 router.post('/', async (req, res) => {
   try {
     const { challengeId, candidateName, code, userId } = req.body;
-    
+
     if (!challengeId || !code || !code.html) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
-    
+
     const submissionData = {
       id: uuidv4(),
       challengeId,
@@ -74,7 +74,7 @@ router.post('/', async (req, res) => {
       status: 'pending',
       submittedAt: new Date().toISOString()
     };
-    
+
     // Try to save to database first
     try {
       const dbSubmission = await SubmissionModel.create(submissionData);
@@ -94,7 +94,7 @@ router.post('/', async (req, res) => {
       };
       submissions.push(submission);
       saveSubmissions(submissions);
-      
+
       return res.status(201).json({
         message: 'Submission received',
         submissionId: submission.id,
@@ -126,11 +126,11 @@ router.get('/:id', async (req, res) => {
     // Fallback to JSON file storage
     const submissions = getSubmissions();
     const submission = submissions.find(s => s.id === req.params.id);
-    
+
     if (!submission) {
       return res.status(404).json({ error: 'Submission not found' });
     }
-    
+
     res.json(submission);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch submission' });
@@ -141,22 +141,43 @@ router.get('/:id', async (req, res) => {
  * GET /api/submissions/:id/result
  * Get evaluation result for a submission
  */
-router.get('/:id/result', (req, res) => {
+router.get('/:id/result', async (req, res) => {
   try {
+    // Try database first
+    try {
+      const dbSubmission = await SubmissionModel.findById(req.params.id);
+      if (dbSubmission) {
+        if (dbSubmission.status === 'pending') {
+          return res.json({
+            status: 'pending',
+            message: 'Evaluation in progress'
+          });
+        }
+
+        return res.json({
+          status: dbSubmission.status,
+          result: dbSubmission.result,
+          evaluatedAt: dbSubmission.evaluatedAt
+        });
+      }
+    } catch (dbError) {
+      console.log('Database fetch failed for result, using JSON fallback:', dbError.message);
+    }
+
     const submissions = getSubmissions();
     const submission = submissions.find(s => s.id === req.params.id);
-    
+
     if (!submission) {
       return res.status(404).json({ error: 'Submission not found' });
     }
-    
+
     if (submission.status === 'pending') {
       return res.json({
         status: 'pending',
         message: 'Evaluation in progress'
       });
     }
-    
+
     res.json({
       status: submission.status,
       result: submission.result,
@@ -196,14 +217,14 @@ router.delete('/:id', (req, res) => {
   try {
     const submissions = getSubmissions();
     const index = submissions.findIndex(s => s.id === req.params.id);
-    
+
     if (index === -1) {
       return res.status(404).json({ error: 'Submission not found' });
     }
-    
+
     submissions.splice(index, 1);
     saveSubmissions(submissions);
-    
+
     res.json({ message: 'Submission deleted successfully' });
   } catch (error) {
     res.status(500).json({ error: 'Failed to delete submission' });
