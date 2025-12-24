@@ -8,7 +8,6 @@ require("dotenv").config();
 
 const express = require("express");
 const cors = require("cors");
-const bodyParser = require("body-parser");
 const path = require("path");
 const fs = require("fs");
 const helmet = require("helmet");
@@ -116,8 +115,8 @@ const corsOptions = {
 
 // Middleware
 app.use(cors(corsOptions));
-app.use(bodyParser.json({ limit: "50mb" })); // Increased to 50mb
-app.use(bodyParser.urlencoded({ extended: true, limit: "50mb" }));
+app.use(express.json({ limit: "50mb" })); // Increased to 50mb
+app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 
 // Trust proxy (important for rate limiting behind reverse proxy)
 app.set("trust proxy", 1);
