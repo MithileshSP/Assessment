@@ -1,15 +1,8 @@
 # --- Base Stage ---
-FROM node:18-alpine AS base
+FROM node:18-slim AS base
 WORKDIR /app
 
 # --- Frontend Build Stage ---
-FROM base AS frontend-builder
-WORKDIR /app/frontend
-COPY frontend/package*.json ./
-RUN npm install
-COPY frontend/ ./
-RUN npm run build
-
 # --- Backend Build Stage ---
 FROM base AS backend-builder
 WORKDIR /app
@@ -18,23 +11,28 @@ RUN npm install
 COPY backend/ .
 
 # --- Final Production Stage ---
-FROM node:18-alpine
+FROM node:18-slim
 WORKDIR /app
 
 # Install Chromium and dependencies for Puppeteer
-RUN apk add --no-cache \
+RUN apt-get update && apt-get install -y \
     chromium \
-    nss \
-    freetype \
-    harfbuzz \
-    ca-certificates \
-    ttf-freefont
+    fonts-ipafont-gothic fonts-wqy-zenhei fonts-thai-tlwg fonts-kacst fonts-freefont-ttf libxss1 \
+    --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/*
 
 # Tell Puppeteer to use installed Chromium
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
-    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
 COPY --from=backend-builder /app .
-COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
 EXPOSE 6000
+
+# Create necessary directories and set permissions
+RUN mkdir -p /app/uploads /app/screenshots /app/assets /app/data && \
+    chown -R node:node /app
+
+# Security: Run as non-root user
+USER node
+
 CMD ["node", "server.js"]
