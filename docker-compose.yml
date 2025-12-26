@@ -1,28 +1,28 @@
 version: "3.9"
 
 services:
-  # portal_mysql:
-  #   image: mysql:8.0
-  #   container_name: portal_mysql
-  #   restart: always
-  #   command: --bind-address=0.0.0.0
-  #   environment:
-  #     MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
-  #     MYSQL_DATABASE: fullstack_test_portal
-  #     MYSQL_USER: ${DB_USER}
-  #     MYSQL_PASSWORD: ${DB_PASSWORD}
-  #   ports:
-  #     - "3307:3306"
-  #   volumes:
-  #     - portal_mysql_data:/var/lib/mysql
-  #   networks:
-  #     - test-portal-network
-  #   healthcheck:
-  #     test: [ "CMD-SHELL", "mysqladmin ping -h 127.0.0.1 --silent" ]
-  #     interval: 10s
-  #     timeout: 5s
-  #     retries: 30
-  #     start_period: 60s
+  portal_mysql:
+    image: mysql:8.0
+    container_name: portal_mysql
+    restart: always
+    command: --bind-address=0.0.0.0
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: fullstack_test_portal
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "3307:3306"
+    volumes:
+      - portal_mysql_data:/var/lib/mysql
+    networks:
+      - test-portal-network
+    healthcheck:
+      test: [ "CMD-SHELL", "mysqladmin ping -h 127.0.0.1 --silent" ]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
 
   backend:
     build:
@@ -30,22 +30,22 @@ services:
       dockerfile: Dockerfile.backend
     container_name: test-portal-backend
     restart: unless-stopped
-    #depends_on:
-    #   portal_mysql:
-    #     condition: service_healthy
-    # environment:
-    #   NODE_ENV: production
-    #   PORT: 6000 # 🔑 DATABASE (External TiDB)
-    #   DB_HOST: ${DB_HOST}
-    #   DB_PORT: ${DB_PORT}
-    #   DB_USER: ${DB_USER}
-    #   DB_PASSWORD: ${DB_PASSWORD}
-    #   DB_NAME: ${DB_NAME}
-    #   DB_CA_CERT: ${DB_CA_CERT}
-    #   USE_JSON: ${USE_JSON}
+    depends_on:
+      portal_mysql:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 6000 # 🔑 DATABASE (External TiDB)
+      DB_HOST: ${DB_HOST}
+      DB_PORT: ${DB_PORT}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+      DB_CA_CERT: ${DB_CA_CERT}
+      USE_JSON: ${USE_JSON}
 
-    #   JWT_SECRET: ${JWT_SECRET}
-    #   GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      JWT_SECRET: ${JWT_SECRET}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
     ports:
       - "6000:6000"
     volumes:
@@ -58,17 +58,7 @@ services:
     mem_limit: 4g
     cpus: "4.0"
     healthcheck:
-<<<<<<< HEAD
-      test:
-        [
-          "CMD",
-          "node",
-          "-e",
-          "require('http').get('http://localhost:6000/health', r => process.exit(r.statusCode === 200 ? 0 : 1))",
-        ]
-=======
       test: [ "CMD", "node", "-e", "require('http').get('http://localhost:6000/health', r => process.exit(r.statusCode === 200 ? 0 : 1))" ]
->>>>>>> 4abcbbc4511c75d6507e5492d9d4cf32b4a54f3f
       interval: 30s
       timeout: 10s
       retries: 3
