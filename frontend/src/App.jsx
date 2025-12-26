@@ -48,24 +48,17 @@ function App() {
   };
 
   return (
-    <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+    <Router
+      basename="/fullstack"
+      future={{ v7_startTransition: true, v7_relativeSplatPath: true }}
+    >
       <div className="min-h-screen bg-gray-50">
         <Routes>
           {/* Public Routes - Only Login Pages */}
-          <Route
-            path="/login"
-            element={
-              <Login onLogin={handleLogin} />
-            }
-          />
+          <Route path="/login" element={<Login onLogin={handleLogin} />} />
           <Route
             path="/admin/login"
-            element={
-              <Login
-                isAdmin={true}
-                onLogin={handleLogin}
-              />
-            }
+            element={<Login isAdmin={true} onLogin={handleLogin} />}
           />
 
           {/* Protected Student Routes - Require Login */}
@@ -133,7 +126,7 @@ function App() {
               </ProtectedRoute>
             }
           />
-          
+
           {/* Admin Routes - Require Admin Login */}
           <Route
             path="/admin/dashboard"
@@ -156,7 +149,11 @@ function App() {
           <Route
             path="/admin/submission/:submissionId"
             element={
-              isAdmin ? <AdminSubmissionDetails /> : <Navigate to="/admin/login" />
+              isAdmin ? (
+                <AdminSubmissionDetails />
+              ) : (
+                <Navigate to="/admin/login" />
+              )
             }
           />
 
