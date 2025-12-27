@@ -124,12 +124,12 @@ app.set("trust proxy", 1);
 // Create necessary directories
 const screenshotsDir = path.join(__dirname, "screenshots");
 const assetsDir = path.join(__dirname, "assets");
-if (!fs.existsSync(screenshotsDir)) {
-  fs.mkdirSync(screenshotsDir, { recursive: true });
-}
-if (!fs.existsSync(assetsDir)) {
-  fs.mkdirSync(assetsDir, { recursive: true });
-}
+// if (!fs.existsSync(screenshotsDir)) {
+//   fs.mkdirSync(screenshotsDir, { recursive: true });
+// }
+// if (!fs.existsSync(assetsDir)) {
+//   fs.mkdirSync(assetsDir, { recursive: true });
+// }
 
 // Static file serving for screenshots and assets
 app.use("/screenshots", express.static(screenshotsDir));

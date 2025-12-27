@@ -14,11 +14,11 @@ class ImageStorageService {
     this.assetsDir = path.join(__dirname, '../assets');
     
     // Ensure directories exist
-    [this.screenshotDir, this.assetsDir].forEach(dir => {
-      if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
-      }
-    });
+    // [this.screenshotDir, this.assetsDir].forEach(dir => {
+    //   if (!fs.existsSync(dir)) {
+    //     fs.mkdirSync(dir, { recursive: true });
+    //   }
+    // });
   }
 
   /**

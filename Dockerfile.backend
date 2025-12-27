@@ -28,10 +28,6 @@ ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
 COPY --from=backend-builder /app .
 EXPOSE 7000
 
-# Create necessary directories and set permissions
-RUN mkdir -p /app/uploads /app/screenshots /app/assets /app/data && \
-    chown -R node:node /app
-
 # Security: Run as non-root user
 USER node
 
