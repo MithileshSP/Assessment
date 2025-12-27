@@ -26,7 +26,7 @@ ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
     PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
 COPY --from=backend-builder /app .
-EXPOSE 6000
+EXPOSE 7000
 
 # Create necessary directories and set permissions
 RUN mkdir -p /app/uploads /app/screenshots /app/assets /app/data && \
