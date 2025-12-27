@@ -70,7 +70,7 @@ services:
     container_name: test-portal-frontend
     restart: unless-stopped
     ports:
-      - "8083:80"
+      - "8083:8083"
     networks:
       - test-portal-network
     mem_limit: 512m
