@@ -74,10 +74,10 @@ services:
   frontend:
     build:
       context: .
-      dockerfile: Dockerfile.frontend
+      dockerfile: Dockerfile
       args:
         VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID}
-        VITE_API_URL: /fullstack/api
+        VITE_API_URL: ${VITE_API_URL}
     container_name: test-portal-frontend
     restart: unless-stopped
     depends_on:
