@@ -26,8 +26,8 @@ services:
 
   backend:
     build:
-      context: .
-      dockerfile: Dockerfile.backend
+      context: ./backend
+      dockerfile: Dockerfile
     container_name: test-portal-backend
     restart: unless-stopped
     # Remove dependency on local MySQL if using external DB (TiDB)

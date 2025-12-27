@@ -1,17 +1,12 @@
-# --- Base Stage ---
-FROM node:18-slim AS base
+# --- Builder Stage ---
+FROM node:20-slim AS builder
 WORKDIR /app
-
-# --- Frontend Build Stage ---
-# --- Backend Build Stage ---
-FROM base AS backend-builder
-WORKDIR /app
-COPY backend/package*.json ./
-RUN npm install
-COPY backend/ .
+COPY package*.json ./
+RUN npm install --production=false
+COPY . .
 
 # --- Final Production Stage ---
-FROM node:18-slim
+FROM node:20-slim
 WORKDIR /app
 
 # Install Chromium and dependencies for Puppeteer
@@ -25,7 +20,10 @@ RUN apt-get update && apt-get install -y \
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
     PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
 
-COPY --from=backend-builder /app .
+# Copy only needed files from builder
+COPY --from=builder /app .
+RUN npm prune --production
+
 EXPOSE 7000
 
 # Security: Run as non-root user
