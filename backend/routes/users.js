@@ -666,3 +666,4 @@ router.post("/complete-level", (req, res) => {
 });
 
 module.exports = router;
+module.exports.verifyAdmin = verifyAdmin;

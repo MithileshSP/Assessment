@@ -140,9 +140,13 @@ CREATE TABLE assets (
     type VARCHAR(100),
     size INT,
     category VARCHAR(50) DEFAULT 'general',
+    checksum_sha256 CHAR(64) NULL,
     uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    last_modified TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_category (category),
-    INDEX idx_filename (filename)
+    INDEX idx_filename (filename),
+    INDEX idx_assets_uploaded_at (uploaded_at),
+    UNIQUE KEY idx_assets_checksum_category (checksum_sha256, category)
 );
 
 -- Level Completions Table (feedback and scores)

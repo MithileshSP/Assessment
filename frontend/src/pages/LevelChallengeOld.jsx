@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import axios from 'axios';
+import api from '../services/api';
 import CodeEditor from '../components/CodeEditor';
 import PreviewFrame from '../components/PreviewFrame';
 import ResultsPanel from '../components/ResultsPanel';
@@ -55,7 +55,7 @@ export default function LevelChallengeOld() {
 
   const loadLevelQuestions = async () => {
     try {
-      const response = await axios.get('/api/challenges/level-questions', {
+      const response = await api.get('/challenges/level-questions', {
         params: {
           userId,
           courseId,
@@ -100,7 +100,7 @@ export default function LevelChallengeOld() {
 
   const createTestSession = async () => {
     try {
-      const response = await axios.post('/api/test-sessions', {
+      const response = await api.post('/test-sessions', {
         user_id: userId,
         course_id: courseId,
         level: parseInt(level, 10)
@@ -127,7 +127,7 @@ export default function LevelChallengeOld() {
     const questionId = assignedQuestions[currentQuestionIndex].id;
 
     try {
-      const response = await axios.get(`/api/challenges/${questionId}`);
+      const response = await api.get(`/challenges/${questionId}`);
       const challengeData = response.data;
       setChallenge(challengeData);
 
@@ -146,7 +146,7 @@ export default function LevelChallengeOld() {
 
   const loadRestrictions = async () => {
     try {
-      const response = await axios.get(`/api/courses/${courseId}/restrictions`);
+      const response = await api.get(`/courses/${courseId}/restrictions`);
       if (response.data) {
         setRestrictions(response.data);
         if (response.data.timeLimit > 0) {
@@ -336,7 +336,7 @@ export default function LevelChallengeOld() {
 
     try {
       setEvaluationStep('Creating submission...');
-      const submitResponse = await axios.post('/api/submissions', {
+      const submitResponse = await api.post('/submissions', {
         challengeId: questionId,
         candidateName: userId,
         code: {
@@ -354,7 +354,7 @@ export default function LevelChallengeOld() {
       await new Promise(resolve => setTimeout(resolve, 500));
       setEvaluationStep('Comparing with expected solution...');
 
-      const evalResponse = await axios.post('/api/evaluate', {
+      const evalResponse = await api.post('/evaluate', {
         submissionId
       });
 
@@ -374,7 +374,7 @@ export default function LevelChallengeOld() {
 
       if (testSessionId && submissionId) {
         try {
-          await axios.post(`/api/test-sessions/${testSessionId}/submissions`, {
+          await api.post(`/test-sessions/${testSessionId}/submissions`, {
             submission_id: submissionId
           });
         } catch (err) {
@@ -403,7 +403,7 @@ export default function LevelChallengeOld() {
         console.log('Completing test session:', testSessionId);
 
         // MUST wait for completion before navigating
-        await axios.put(`/api/test-sessions/${testSessionId}/complete`, {
+        await api.put(`/test-sessions/${testSessionId}/complete`, {
           user_feedback: null
         });
 

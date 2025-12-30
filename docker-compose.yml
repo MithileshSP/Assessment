@@ -45,6 +45,8 @@ services:
       DB_CA_CERT: ${DB_CA_CERT}
       USE_JSON: ${USE_JSON}
 
+      ASSETS_ROOT: /var/www/portal-assets
+
       JWT_SECRET: ${JWT_SECRET}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
     ports:
@@ -52,7 +54,7 @@ services:
     volumes:
       - ./backend/screenshots:/app/screenshots
       - ./backend/data:/app/data
-      - ./backend/assets:/app/assets
+      - /var/www/portal-assets:/var/www/portal-assets
     networks:
       - test-portal-network
     shm_size: "2gb"
@@ -62,15 +64,16 @@ services:
 
   frontend:
     build:
-      context: ./frontend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./frontend/Dockerfile
       args:
         VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID}
-        VITE_API_URL: ${VITE_API_URL}
+        VITE_API_URL: http://localhost:7000/api
+        VITE_BACKEND_ORIGIN: http://localhost:7000
     container_name: test-portal-frontend
     restart: unless-stopped
     ports:
-      - "8083:80"
+      - "100:8083"
     networks:
       - test-portal-network
     mem_limit: 512m

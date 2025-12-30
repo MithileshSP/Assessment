@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../services/api';
 import QuestionManagerModal from '../components/QuestionManagerModal';
 import SubmissionList from '../components/SubmissionList';
 import GroupedSubmissionsList from '../components/GroupedSubmissionsList';
@@ -146,7 +146,7 @@ export default function AdminDashboard() {
   const handleToggleHidden = async (course) => {
     try {
       const newHiddenStatus = !course.isHidden;
-      await axios.put(`/api/courses/${course.id}`, { isHidden: newHiddenStatus });
+      await api.put(`/courses/${course.id}`, { isHidden: newHiddenStatus });
       alert(`Course ${newHiddenStatus ? 'hidden' : 'visible'} successfully!`);
       await loadCourses();
     } catch (error) {
@@ -174,7 +174,7 @@ export default function AdminDashboard() {
   const loadUsers = async () => {
     try {
       const token = localStorage.getItem('adminToken');
-      const res = await axios.get('/api/users', {
+      const res = await api.get('/users', {
         headers: { Authorization: `Bearer ${token}` }
       });
       setUsers(res.data || []);
@@ -187,7 +187,7 @@ export default function AdminDashboard() {
   const loadSubmissions = async () => {
     try {
       if (submissionViewMode === 'grouped') {
-        const res = await axios.get('/api/admin/submissions/grouped');
+        const res = await api.get('/admin/submissions/grouped');
         setGroupedSessions(res.data || []);
 
         // Calculate stats from sessions
@@ -197,7 +197,7 @@ export default function AdminDashboard() {
         });
         setStats(prev => ({ ...prev, totalSubmissions }));
       } else {
-        const res = await axios.get('/api/submissions');
+        const res = await api.get('/submissions');
         setSubmissions(res.data || []);
         setStats(prev => ({ ...prev, totalSubmissions: res.data?.length || 0 }));
       }
@@ -226,7 +226,7 @@ export default function AdminDashboard() {
     });
 
     try {
-      const res = await axios.get(`/api/submissions/${submissionId}`);
+      const res = await api.get(`/submissions/${submissionId}`);
       setDetailModal({
         open: true,
         loading: false,
@@ -569,7 +569,7 @@ export default function AdminDashboard() {
 
   const loadCourses = async () => {
     try {
-      const res = await axios.get('/api/courses');
+      const res = await api.get('/courses');
       setCourses(res.data || []);
       setStats(prev => ({ ...prev, totalCourses: res.data?.length || 0 }));
     } catch (error) {
@@ -587,7 +587,7 @@ export default function AdminDashboard() {
 
   const loadChallenges = async () => {
     try {
-      const res = await axios.get('/api/challenges');
+      const res = await api.get('/challenges');
       setChallenges(res.data || []);
       setStats(prev => ({ ...prev, totalChallenges: res.data?.length || 0 }));
     } catch (error) {
@@ -597,7 +597,7 @@ export default function AdminDashboard() {
 
   const loadAssets = async () => {
     try {
-      const res = await axios.get('/api/assets');
+      const res = await api.get('/assets');
       setAssets(res.data || []);
     } catch (error) {
       console.error('Failed to load assets:', error);
@@ -620,7 +620,7 @@ export default function AdminDashboard() {
     let deletedCount = 0;
     for (const filename of selectedAssets) {
       try {
-        await axios.delete(`/api/assets/${filename}`);
+        await api.delete(`/assets/${filename}`);
         deletedCount++;
       } catch (error) {
         console.error(`Failed to delete ${filename}:`, error);
@@ -644,7 +644,7 @@ export default function AdminDashboard() {
         formData.append('asset', file);
         formData.append('category', 'general'); // Can be changed to dropdown value
 
-        await axios.post('/api/assets/upload', formData, {
+        await api.post('/assets/upload', formData, {
           headers: { 'Content-Type': 'multipart/form-data' }
         });
       }
@@ -661,7 +661,7 @@ export default function AdminDashboard() {
   const handleDeleteAsset = async (filename) => {
     if (!confirm('Delete this asset? This cannot be undone.')) return;
     try {
-      await axios.delete(`/api/assets/${filename}`);
+      await api.delete(`/assets/${filename}`);
       await loadAssets();
       alert('Asset deleted successfully');
     } catch (error) {
@@ -760,7 +760,7 @@ export default function AdminDashboard() {
     }
 
     try {
-      const response = await axios.post('/api/ai/generate-question', payload, {
+      const response = await api.post('/ai/generate-question', payload, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       setAiGeneratedQuestion(response.data);
@@ -789,8 +789,8 @@ export default function AdminDashboard() {
   const handleChangeUserRole = async (userId, newRole) => {
     try {
       const token = localStorage.getItem('adminToken');
-      const response = await axios.put(
-        `/api/users/${userId}`,
+      const response = await api.put(
+        `/users/${userId}`,
         { role: newRole },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -830,7 +830,7 @@ export default function AdminDashboard() {
     if (!confirm('Delete this user? This will remove all their progress.')) return;
     try {
       const token = localStorage.getItem('adminToken');
-      await axios.delete(`/api/users/${userId}`, {
+      await api.delete(`/users/${userId}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       await loadUsers();
@@ -847,7 +847,7 @@ export default function AdminDashboard() {
   const handleDeleteSubmission = async (submissionId) => {
     if (!confirm('Delete this submission?')) return;
     try {
-      await axios.delete(`/api/submissions/${submissionId}`);
+      await api.delete(`/submissions/${submissionId}`);
       await loadSubmissions();
       alert('Submission deleted successfully');
     } catch (error) {
@@ -858,7 +858,7 @@ export default function AdminDashboard() {
   const handleReEvaluate = async (submissionId) => {
     if (!confirm('Re-evaluate this submission?')) return;
     try {
-      await axios.post(`/api/evaluate`, { submissionId });
+      await api.post(`/evaluate`, { submissionId });
       await loadSubmissions();
       alert('Re-evaluation complete!');
     } catch (error) {
@@ -869,9 +869,9 @@ export default function AdminDashboard() {
   const handleSaveCourse = async (courseData) => {
     try {
       if (editingCourse?.id) {
-        await axios.put(`/api/courses/${editingCourse.id}`, courseData);
+        await api.put(`/courses/${editingCourse.id}`, courseData);
       } else {
-        await axios.post('/api/courses', courseData);
+        await api.post('/courses', courseData);
       }
       await loadCourses();
       setShowCourseModal(false);
@@ -885,7 +885,7 @@ export default function AdminDashboard() {
   const handleDeleteCourse = async (courseId) => {
     if (!confirm('Delete this course? This will affect all users enrolled.')) return;
     try {
-      await axios.delete(`/api/courses/${courseId}`);
+      await api.delete(`/courses/${courseId}`);
       await loadCourses();
       alert('Course deleted successfully');
     } catch (error) {
@@ -896,9 +896,9 @@ export default function AdminDashboard() {
   const handleSaveChallenge = async (challengeData) => {
     try {
       if (editingChallenge?.id) {
-        await axios.put(`/api/challenges/${editingChallenge.id}`, challengeData);
+        await api.put(`/challenges/${editingChallenge.id}`, challengeData);
       } else {
-        await axios.post('/api/challenges', challengeData);
+        await api.post('/challenges', challengeData);
       }
       await loadChallenges();
       setShowChallengeModal(false);
@@ -912,7 +912,7 @@ export default function AdminDashboard() {
   const handleDeleteChallenge = async (challengeId) => {
     if (!confirm('Delete this challenge?')) return;
     try {
-      await axios.delete(`/api/challenges/${challengeId}`);
+      await api.delete(`/challenges/${challengeId}`);
       await loadChallenges();
       alert('Challenge deleted successfully');
     } catch (error) {

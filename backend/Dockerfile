@@ -22,7 +22,9 @@ ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
 
 # Copy only needed files from builder
 COPY --from=builder /app .
-RUN npm prune --production
+RUN npm prune --production \
+    && mkdir -p /app/uploads \
+    && chown -R node:node /app
 
 EXPOSE 7000
 

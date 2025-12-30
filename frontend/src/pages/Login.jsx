@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
 import { GoogleLogin } from "@react-oauth/google";
 import { jwtDecode } from "jwt-decode";
 import { clearAdminSession, notifySessionChange } from "../utils/session";
+import api from "../services/api";
 
 export default function Login({ isAdmin = false, onLogin }) {
   const navigate = useNavigate();
@@ -25,8 +25,9 @@ export default function Login({ isAdmin = false, onLogin }) {
     setLoading(true);
 
     try {
-      const adminEndpoint = "/api/auth/admin/login";
-      const userEndpoint = "/api/auth/login";
+      // Use API client so requests always hit the backend host
+      const adminEndpoint = "/auth/admin/login";
+      const userEndpoint = "/auth/login";
       const endpoints = isAdmin
         ? [adminEndpoint, userEndpoint]
         : [userEndpoint, adminEndpoint];
@@ -41,7 +42,7 @@ export default function Login({ isAdmin = false, onLogin }) {
         console.log("Attempting login to:", url);
 
         try {
-          response = await axios.post(url, credentials);
+          response = await api.post(url, credentials);
           break;
         } catch (err) {
           const isAuthError = err.response?.status === 401;
@@ -209,10 +210,9 @@ export default function Login({ isAdmin = false, onLogin }) {
                     const decoded = jwtDecode(googleToken);
                     console.log("Google user:", decoded);
 
-                    const res = await axios.post(
-                      "/api/auth/google",
-                      { token: googleToken }
-                    );
+                    const res = await api.post("/auth/google", {
+                      token: googleToken,
+                    });
 
                     const { user, token } = res.data;
 

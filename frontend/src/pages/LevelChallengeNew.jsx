@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import CodeEditor from '../components/CodeEditor';
 import PreviewFrame from '../components/PreviewFrame';
 import ResultsPanel from '../components/ResultsPanel';
-import axios from 'axios';
+import api from '../services/api';
 
 export default function LevelChallengeNew() {
   const { courseId, level } = useParams();
@@ -110,7 +110,7 @@ export default function LevelChallengeNew() {
   const loadLevelQuestions = async () => {
     try {
       // Use course-based endpoint which assigns 2 random questions per user/level
-      const response = await axios.get(`/api/courses/${courseId}/levels/${level}/questions`, {
+      const response = await api.get(`/courses/${courseId}/levels/${level}/questions`, {
         params: { userId }
       });
 
@@ -150,7 +150,7 @@ export default function LevelChallengeNew() {
 
   const createTestSession = async () => {
     try {
-      const response = await axios.post('/api/test-sessions', {
+      const response = await api.post('/test-sessions', {
         user_id: userId,
         course_id: courseId,
         level: parseInt(level)
@@ -190,7 +190,7 @@ export default function LevelChallengeNew() {
     const questionId = assignedQuestions[currentQuestionIndex].id;
 
     try {
-      const response = await axios.get(`/api/challenges/${questionId}`);
+      const response = await api.get(`/challenges/${questionId}`);
       setCurrentQuestion(response.data);
       setError(null);
     } catch (error) {
@@ -220,7 +220,7 @@ export default function LevelChallengeNew() {
     setEvaluating(true);
 
     try {
-      const response = await axios.post('/api/evaluate', {
+      const response = await api.post('/evaluate', {
         userId,
         challengeId: questionId,
         candidateCode: {
@@ -316,7 +316,7 @@ export default function LevelChallengeNew() {
       try {
         await Promise.all(
           submissionIds.map((id) =>
-            axios.post(`/api/test-sessions/${testSessionId}/submissions`, {
+            api.post(`/test-sessions/${testSessionId}/submissions`, {
               submission_id: id
             })
           )
@@ -328,8 +328,8 @@ export default function LevelChallengeNew() {
       }
 
       try {
-        await axios.post('/api/level-completion', completionData);
-        await axios.post(`/api/courses/progress/${userId}/level-complete`, {
+        await api.post('/level-completion', completionData);
+        await api.post(`/courses/progress/${userId}/level-complete`, {
           courseId,
           level: parseInt(level)
         });
@@ -340,8 +340,8 @@ export default function LevelChallengeNew() {
       navigate(`/test-results/${testSessionId}`);
     } else {
       try {
-        await axios.post('/api/level-completion', completionData);
-        await axios.post(`/api/courses/progress/${userId}/level-complete`, {
+        await api.post('/level-completion', completionData);
+        await api.post(`/courses/progress/${userId}/level-complete`, {
           courseId,
           level: parseInt(level)
         });

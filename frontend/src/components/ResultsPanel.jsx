@@ -1,6 +1,25 @@
 export default function ResultsPanel({ result }) {
   if (!result) return null;
 
+  // Build absolute URLs for screenshots so they load from the backend host
+  const backendOrigin = import.meta.env.VITE_BACKEND_ORIGIN;
+  const apiBase = import.meta.env.VITE_API_URL || '/api';
+  const assetOrigin = (() => {
+    if (backendOrigin) return backendOrigin.replace(/\/$/, '');
+    try {
+      return new URL(apiBase, window.location.origin).origin;
+    } catch (_) {
+      return window.location.origin;
+    }
+  })();
+
+  const resolveUrl = (url) => {
+    if (!url) return url;
+    if (/^https?:\/\//i.test(url)) return url;
+    const normalized = url.startsWith('/') ? url : `/${url}`;
+    return `${assetOrigin}${normalized}`;
+  };
+
   return (
     <div className="space-y-6">
       {/* Overall Score */}
@@ -253,7 +272,7 @@ export default function ResultsPanel({ result }) {
             <div>
               <p className="text-xs text-gray-600 mb-2 font-medium">Your Output</p>
               <img
-                src={`${result.visual.screenshots.candidate}`}
+                src={resolveUrl(result.visual.screenshots.candidate)}
                 alt="Candidate output"
                 className="w-full border-2 border-gray-300 rounded shadow-sm"
               />
@@ -261,7 +280,7 @@ export default function ResultsPanel({ result }) {
             <div>
               <p className="text-xs text-gray-600 mb-2 font-medium">Expected Output</p>
               <img
-                src={`${result.visual.screenshots.expected}`}
+                src={resolveUrl(result.visual.screenshots.expected)}
                 alt="Expected output"
                 className="w-full border-2 border-gray-300 rounded shadow-sm"
               />
@@ -270,7 +289,7 @@ export default function ResultsPanel({ result }) {
           <div className="mt-4">
             <p className="text-xs text-gray-600 mb-2 font-medium">Differences Highlighted</p>
             <img
-              src={`${result.visual.screenshots.diff}`}
+              src={resolveUrl(result.visual.screenshots.diff)}
               alt="Diff"
               className="w-full border-2 border-red-300 rounded shadow-sm"
             />
