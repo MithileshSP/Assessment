@@ -15,11 +15,11 @@ const imagesDir = path.join(assetsDir, 'images');
 const referencesDir = path.join(assetsDir, 'references');
 const coursesDir = path.join(assetsDir, 'courses');
 
-[assetsDir, imagesDir, referencesDir, coursesDir].forEach(dir => {
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-});
+// [assetsDir, imagesDir, referencesDir, coursesDir].forEach(dir => {
+//   if (!fs.existsSync(dir)) {
+//     fs.mkdirSync(dir, { recursive: true });
+//   }
+// });
 
 // Asset metadata storage
 const metadataPath = path.join(__dirname, '../data/assets-metadata.json');

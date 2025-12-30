@@ -128,7 +128,7 @@ const dbConfig = {
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
   database:
-    process.env.DB_NAME || process.env.DB_DATABASE || "frontend_test_portal",
+    process.env.DB_NAME || process.env.DB_DATABASE || "fullstack_test_portal",
   waitForConnections: true,
   connectionLimit: 50, // Increased from 10 for better concurrency (1000+ users)
   queueLimit: 0,
