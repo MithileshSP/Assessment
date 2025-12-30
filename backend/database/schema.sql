@@ -1,13 +1,11 @@
 -- Frontend Test Portal Database Schema
 -- MySQL Database Setup
 
--- Drop existing database if exists
-DROP DATABASE IF EXISTS frontend_test_portal;
+DROP DATABASE IF EXISTS fullstack_test_portal;
 
--- Create database
-CREATE DATABASE frontend_test_portal CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE fullstack_test_portal CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
-USE frontend_test_portal;
+USE fullstack_test_portal;
 
 -- Users Table
 CREATE TABLE users (

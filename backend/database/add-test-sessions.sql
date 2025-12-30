@@ -13,8 +13,8 @@ CREATE TABLE IF NOT EXISTS test_sessions (
     completed_at TIMESTAMP NULL,
     INDEX idx_user (user_id),
     INDEX idx_course_level (course_id, level),
-    CONSTRAINT fk_test_session_user FOREIGN KEY (user_id) REFERENCES frontend_test_portal.users(id) ON DELETE CASCADE
+    CONSTRAINT fk_test_session_user FOREIGN KEY (user_id) REFERENCES fullstack_test_portal.users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Add user_feedback column to submissions if not exists
-ALTER TABLE submissions ADD COLUMN IF NOT EXISTS user_feedback TEXT NULL AFTER expected_screenshot;
+ALTER TABLE submissions ADD COLUMN user_feedback TEXT NULL AFTER expected_screenshot;
