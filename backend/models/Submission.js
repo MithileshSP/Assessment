@@ -39,6 +39,22 @@ class SubmissionModel {
   // Create new submission
   static async create(submissionData) {
     const id = submissionData.id || `sub-${Date.now()}`;
+    
+    // Convert ISO datetime to MySQL format (YYYY-MM-DD HH:MM:SS)
+    const formatDateTime = (date) => {
+      if (!date) return new Date().toISOString().slice(0, 19).replace('T', ' ');
+      if (typeof date === 'string') {
+        // If already ISO, extract YYYY-MM-DD HH:MM:SS part
+        if (date.includes('T')) {
+          return date.slice(0, 19).replace('T', ' ');
+        }
+        return date;
+      }
+      return new Date(date).toISOString().slice(0, 19).replace('T', ' ');
+    };
+    
+    const submittedAt = formatDateTime(submissionData.submittedAt);
+    
     await query(
       `INSERT INTO submissions (id, challenge_id, user_id, candidate_name, html_code, css_code, js_code, status, submitted_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -51,7 +67,7 @@ class SubmissionModel {
         submissionData.code?.css || '',
         submissionData.code?.js || '',
         submissionData.status || 'pending',
-        submissionData.submittedAt || new Date()
+        submittedAt
       ]
     );
     return await this.findById(id);
@@ -125,6 +141,18 @@ class SubmissionModel {
 
   // Format submission for response
   static _formatSubmission(submission) {
+    // Convert relative screenshot paths to full URLs for frontend
+    const formatScreenshotUrl = (path) => {
+      if (!path) return null;
+      // If already a full URL, return as-is
+      if (path.startsWith('http://') || path.startsWith('https://')) {
+        return path;
+      }
+      // For relative paths, prepend the API base URL
+      const baseUrl = process.env.API_BASE_URL || 'http://localhost:7000';
+      return `${baseUrl}${path.startsWith('/') ? path : '/' + path}`;
+    };
+
     return {
       id: submission.id,
       challengeId: submission.challenge_id,
@@ -138,8 +166,8 @@ class SubmissionModel {
       status: submission.status,
       submittedAt: submission.submitted_at,
       evaluatedAt: submission.evaluated_at,
-      user_screenshot: submission.user_screenshot,
-      expected_screenshot: submission.expected_screenshot,
+      user_screenshot: formatScreenshotUrl(submission.user_screenshot),
+      expected_screenshot: formatScreenshotUrl(submission.expected_screenshot),
       total_score: submission.final_score,
       result: submission.evaluation_result ? (
         typeof submission.evaluation_result === 'string'

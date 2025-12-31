@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import axios from 'axios';
+import api from '../services/api';
 import { isAdminSessionActive } from '../utils/session';
 
 const API_BASE = '/api';
@@ -23,7 +23,7 @@ const TestResultsPage = () => {
   const fetchSessionResults = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API_BASE}/test-sessions/${sessionId}/details`);
+      const response = await api.get(`/test-sessions/${sessionId}/details`);
       setSessionData(response.data);
       setLoading(false);
     } catch (err) {
@@ -41,19 +41,14 @@ const TestResultsPage = () => {
 
     try {
       setSubmitting(true);
-      await axios.put(`${API_BASE}/test-sessions/${sessionId}/complete`, {
+      await api.put(`/test-sessions/${sessionId}/complete`, {
         user_feedback: feedback
       });
 
       alert('Thank you for your feedback!');
 
-      // Redirect back to course or dashboard
-      const courseId = sessionData?.course_id;
-      if (courseId) {
-        navigate(`/course/${courseId}`);
-      } else {
-        navigate('/courses');
-      }
+      // Redirect to home page
+      navigate('/');
     } catch (err) {
       console.error('Error submitting feedback:', err);
       alert('Failed to submit feedback: ' + (err.response?.data?.error || err.message));

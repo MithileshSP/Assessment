@@ -144,24 +144,24 @@ export default function UserManagement() {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Action Buttons */}
-        <div className="mb-6 flex gap-3">
+        <div className="mb-6 flex gap-3 flex-wrap">
           <button
             onClick={() => setShowAddModal(true)}
-            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-semibold flex items-center gap-2"
           >
-            + Add User
+            <span>➕</span> Add User
           </button>
           <button
             onClick={() => setShowUploadModal(true)}
-            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold flex items-center gap-2"
           >
-            📁 Upload CSV
+            <span>📁</span> Upload CSV
           </button>
           <button
             onClick={downloadSampleCsv}
-            className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
+            className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-semibold flex items-center gap-2"
           >
-            ⬇️ Download Sample CSV
+            <span>⬇️</span> Download Template
           </button>
         </div>
 
@@ -322,45 +322,72 @@ export default function UserManagement() {
       {/* CSV Upload Modal */}
       {showUploadModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full">
+          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
-              <h2 className="text-2xl font-bold mb-4">Upload Users CSV</h2>
+              <h2 className="text-2xl font-bold mb-4">Bulk Import Users via CSV</h2>
               
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-                <h3 className="font-semibold text-blue-900 mb-2">CSV Format:</h3>
-                <pre className="text-sm text-blue-800">
-username,password,fullName,email,role
-john_doe,pass123,John Doe,john@example.com,student
-jane_smith,pass456,Jane Smith,jane@example.com,student
-                </pre>
+              <div className="space-y-4 mb-6">
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <h3 className="font-semibold text-blue-900 mb-3">📋 CSV Format Requirements:</h3>
+                  <p className="text-sm text-blue-800 mb-3">Your CSV file must include the following columns:</p>
+                  <div className="bg-white border border-blue-100 rounded p-3 mb-3 font-mono text-xs overflow-x-auto">
+                    <pre>username,password,fullName,email,role</pre>
+                  </div>
+                  <div className="text-sm text-blue-800 space-y-2">
+                    <p><strong>• username:</strong> Unique identifier (required)</p>
+                    <p><strong>• password:</strong> User password (required)</p>
+                    <p><strong>• fullName:</strong> User's full name (optional)</p>
+                    <p><strong>• email:</strong> User's email address (optional)</p>
+                    <p><strong>• role:</strong> "student" or "admin" (optional, defaults to "student")</p>
+                  </div>
+                </div>
+
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <h3 className="font-semibold text-green-900 mb-2">✅ Example:</h3>
+                  <div className="bg-white border border-green-100 rounded p-3 font-mono text-xs overflow-x-auto">
+                    <pre>{`username,password,fullName,email,role
+john_doe,SecurePass123,John Doe,john@example.com,student
+jane_smith,AnotherPass456,Jane Smith,jane@example.com,student
+admin_user,AdminPass789,Admin User,admin@example.com,admin`}</pre>
+                  </div>
+                </div>
+
                 <button
                   onClick={downloadSampleCsv}
-                  className="mt-2 text-sm text-blue-600 hover:text-blue-700 font-medium"
+                  className="w-full px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-semibold flex items-center justify-center gap-2 transition-colors"
                 >
-                  ⬇️ Download sample CSV
+                  <span>⬇️</span> Download CSV Template
                 </button>
               </div>
 
-              <div className="mb-4">
+              <div className="border-t pt-4">
+                <label className="block text-sm font-semibold text-gray-700 mb-3">Select CSV File:</label>
                 <input
                   type="file"
                   accept=".csv"
                   onChange={(e) => setCsvFile(e.target.files[0])}
-                  className="w-full px-3 py-2 border rounded-lg"
+                  className="w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg hover:border-gray-400 transition-colors cursor-pointer"
                 />
+                {csvFile && (
+                  <p className="mt-2 text-sm text-gray-600">
+                    📄 Selected: <strong>{csvFile.name}</strong>
+                  </p>
+                )}
               </div>
 
               {uploadResult && (
-                <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-                  <p className="text-green-800 font-semibold">Upload Complete!</p>
-                  <p className="text-sm text-green-700">Added: {uploadResult.added}</p>
-                  <p className="text-sm text-green-700">Skipped: {uploadResult.skipped}</p>
+                <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                  <p className="text-green-800 font-semibold mb-2">✅ Upload Complete!</p>
+                  <p className="text-sm text-green-700 mb-1">✓ Added: {uploadResult.added} user(s)</p>
+                  <p className="text-sm text-green-700 mb-2">⊘ Skipped: {uploadResult.skipped} user(s)</p>
                   {uploadResult.errors && uploadResult.errors.length > 0 && (
-                    <details className="mt-2">
-                      <summary className="text-sm text-red-700 cursor-pointer">View Errors</summary>
-                      <ul className="text-xs text-red-600 mt-1">
+                    <details className="mt-3 cursor-pointer">
+                      <summary className="text-sm text-red-700 font-semibold hover:text-red-800">
+                        View Errors ({uploadResult.errors.length})
+                      </summary>
+                      <ul className="text-xs text-red-600 mt-2 space-y-1 max-h-48 overflow-y-auto">
                         {uploadResult.errors.map((err, idx) => (
-                          <li key={idx}>{err}</li>
+                          <li key={idx} className="py-1">• {err}</li>
                         ))}
                       </ul>
                     </details>
@@ -368,22 +395,23 @@ jane_smith,pass456,Jane Smith,jane@example.com,student
                 </div>
               )}
 
-              <div className="flex gap-3">
+              <div className="flex gap-3 mt-6">
                 <button
                   onClick={() => {
                     setShowUploadModal(false);
                     setCsvFile(null);
                     setUploadResult(null);
                   }}
-                  className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
+                  className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-semibold transition-colors"
                 >
                   Close
                 </button>
                 <button
                   onClick={handleCsvUpload}
-                  className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                  disabled={!csvFile}
+                  className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
                 >
-                  Upload CSV
+                  <span>📤</span> Import Users
                 </button>
               </div>
             </div>

@@ -30,14 +30,37 @@ const { scheduleFallbackSync } = require("./services/submissionSync");
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Security: Helmet for security headers
-app.use(
+// Create necessary directories for static files
+const screenshotsDir = path.join(__dirname, "screenshots");
+const assetsDir = path.join(__dirname, "assets");
+
+// Static file serving BEFORE security middleware (to set custom CORS headers)
+app.use("/screenshots", express.static(screenshotsDir, {
+  setHeaders: function(res, path, stat) {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+  }
+}));
+
+app.use("/assets", (req, res, next) => {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+  next();
+}, express.static(assetsDir));
+
+// Security: Helmet for security headers (after static files)
+app.use((req, res, next) => {
+  // Skip Helmet for static file routes to allow custom CORS
+  if (req.path.startsWith('/screenshots') || req.path.startsWith('/assets')) {
+    return next();
+  }
   helmet({
-    contentSecurityPolicy: false, // Disable for now as it may block inline scripts
+    contentSecurityPolicy: false,
     crossOriginEmbedderPolicy: false,
-    crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" }, // Allow OAuth popups
-  })
-);
+    crossOriginResourcePolicy: false,
+    crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" },
+  })(req, res, next);
+});
 
 // Compression for better performance
 app.use(compression());
@@ -120,20 +143,6 @@ app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 
 // Trust proxy (important for rate limiting behind reverse proxy)
 app.set("trust proxy", 1);
-
-// Create necessary directories
-const screenshotsDir = path.join(__dirname, "screenshots");
-const assetsDir = path.join(__dirname, "assets");
-// if (!fs.existsSync(screenshotsDir)) {
-//   fs.mkdirSync(screenshotsDir, { recursive: true });
-// }
-// if (!fs.existsSync(assetsDir)) {
-//   fs.mkdirSync(assetsDir, { recursive: true });
-// }
-
-// Static file serving for screenshots and assets
-app.use("/screenshots", express.static(screenshotsDir));
-app.use("/assets", express.static(assetsDir));
 
 // Health check endpoint with database status
 app.get("/health", async (req, res) => {

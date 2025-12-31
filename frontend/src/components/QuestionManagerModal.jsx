@@ -45,6 +45,7 @@ export default function QuestionManagerModal({ courseId, courseName, onClose, st
   const [editingQuestion, setEditingQuestion] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [expandedLevels, setExpandedLevels] = useState({});
+  const [selectedQuestions, setSelectedQuestions] = useState([]);
 
   const [showLevelUpload, setShowLevelUpload] = useState(false);
   const [selectedLevel, setSelectedLevel] = useState(1);
@@ -505,8 +506,80 @@ export default function QuestionManagerModal({ courseId, courseName, onClose, st
     return acc;
   }, {});
 
+  // Sort questions in each level by numeric ID (e.g., q1, q2, q10, q11 instead of q1, q10, q11, q2)
+  const extractNumericId = (questionId) => {
+    const match = questionId.match(/q(\d+)/i);
+    return match ? parseInt(match[1], 10) : 0;
+  };
+
+  Object.keys(questionsByLevel).forEach(level => {
+    questionsByLevel[level].sort((a, b) => extractNumericId(a.id) - extractNumericId(b.id));
+  });
+
   const toggleLevel = (level) => {
     setExpandedLevels(prev => ({ ...prev, [level]: !prev[level] }));
+  };
+
+  const handleSelectAll = (level) => {
+    const levelQuestions = questionsByLevel[level] || [];
+    const levelQuestionIds = levelQuestions.map(q => q.id);
+    const allSelected = levelQuestionIds.every(id => selectedQuestions.includes(id));
+    
+    if (allSelected) {
+      // Deselect all from this level
+      setSelectedQuestions(prev => prev.filter(id => !levelQuestionIds.includes(id)));
+    } else {
+      // Select all from this level
+      setSelectedQuestions(prev => [...new Set([...prev, ...levelQuestionIds])]);
+    }
+  };
+
+  const handleSelectQuestion = (questionId) => {
+    setSelectedQuestions(prev => {
+      if (prev.includes(questionId)) {
+        return prev.filter(id => id !== questionId);
+      } else {
+        return [...prev, questionId];
+      }
+    });
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedQuestions.length === 0) {
+      addToast('Please select questions to delete', 'error');
+      return;
+    }
+
+    if (!confirm(`Are you sure you want to delete ${selectedQuestions.length} selected question(s)? This cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      let successCount = 0;
+      let errorCount = 0;
+
+      for (const questionId of selectedQuestions) {
+        try {
+          await deleteQuestion(questionId);
+          successCount++;
+        } catch (error) {
+          console.error(`Failed to delete question ${questionId}:`, error);
+          errorCount++;
+        }
+      }
+
+      if (successCount > 0) {
+        addToast(`Successfully deleted ${successCount} question(s)`, 'success');
+        setSelectedQuestions([]);
+        loadQuestions();
+      }
+      
+      if (errorCount > 0) {
+        addToast(`Failed to delete ${errorCount} question(s)`, 'error');
+      }
+    } catch (error) {
+      addToast('Bulk delete failed: ' + error.message, 'error');
+    }
   };
 
   const header = (
@@ -551,6 +624,14 @@ export default function QuestionManagerModal({ courseId, courseName, onClose, st
           >
             <span>➕</span> Add New Question
           </button>
+          {selectedQuestions.length > 0 && (
+            <button
+              onClick={handleBulkDelete}
+              className="flex items-center gap-2 px-5 py-2.5 bg-red-600 text-white rounded-xl hover:bg-red-700 font-semibold transition-all transform hover:-translate-y-0.5 active:translate-y-0"
+            >
+              <span>🗑️</span> Delete Selected ({selectedQuestions.length})
+            </button>
+          )}
           <button
             onClick={() => setShowRestrictions(true)}
             className="flex items-center gap-2 px-5 py-2.5 bg-white text-gray-700 border border-gray-200 rounded-xl hover:bg-gray-50 font-semibold transition-all transform hover:-translate-y-0.5 active:translate-y-0"
@@ -583,15 +664,17 @@ export default function QuestionManagerModal({ courseId, courseName, onClose, st
               const levelQuestions = questionsByLevel[level] || [];
               const isExpanded = expandedLevels[level];
               const hasSettings = levelSettings[level];
+              const levelQuestionIds = levelQuestions.map(q => q.id);
+              const allLevelSelected = levelQuestionIds.length > 0 && levelQuestionIds.every(id => selectedQuestions.includes(id));
+              const someLevelSelected = levelQuestionIds.some(id => selectedQuestions.includes(id)) && !allLevelSelected;
 
               return (
                 <div key={level} className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-all duration-200">
                   <div
                     className={`p-5 cursor-pointer transition-colors duration-200 flex items-center justify-between ${isExpanded ? 'bg-gray-50' : 'hover:bg-gray-50'
                       }`}
-                    onClick={() => toggleLevel(level)}
                   >
-                    <div className="flex items-center gap-5">
+                    <div className="flex items-center gap-5" onClick={() => toggleLevel(level)}>
                       <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-xl shadow-sm ${isExpanded ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-500'
                         }`}>
                         {level}
@@ -614,6 +697,24 @@ export default function QuestionManagerModal({ courseId, courseName, onClose, st
                     </div>
 
                     <div className="flex items-center gap-3">
+                      {levelQuestions.length > 0 && (
+                        <div 
+                          onClick={(e) => { e.stopPropagation(); handleSelectAll(level); }}
+                          className="flex items-center gap-2 px-3 py-2 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
+                          title="Select all questions in this level"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={allLevelSelected}
+                            ref={input => {
+                              if (input) input.indeterminate = someLevelSelected;
+                            }}
+                            onChange={() => {}}
+                            className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                          />
+                          <span className="text-sm font-medium text-gray-600">Select All</span>
+                        </div>
+                      )}
                       <button
                         onClick={(e) => { e.stopPropagation(); handleDownloadTemplate(level); }}
                         className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
@@ -629,7 +730,10 @@ export default function QuestionManagerModal({ courseId, courseName, onClose, st
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
                       </button>
 
-                      <div className={`transform transition-transform duration-200 text-gray-400 ${isExpanded ? 'rotate-180' : ''}`}>
+                      <div 
+                        onClick={() => toggleLevel(level)}
+                        className={`transform transition-transform duration-200 text-gray-400 ${isExpanded ? 'rotate-180' : ''}`}
+                      >
                         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
                       </div>
                     </div>
@@ -656,60 +760,73 @@ export default function QuestionManagerModal({ courseId, courseName, onClose, st
                         </div>
                       ) : (
                         <div className="divide-y divide-gray-100">
-                          {levelQuestions.map((question, idx) => (
-                            <div key={question.id} className="p-5 hover:bg-gray-50/80 transition-colors group">
-                              <div className="flex items-start gap-4">
-                                <div className="flex-shrink-0 pt-1">
-                                  <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-50 text-indigo-700 text-sm font-bold">
-                                    {question.questionNumber || idx + 1}
-                                  </span>
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-2 mb-1">
-                                    <h5 className="font-bold text-gray-900 truncate">{question.title}</h5>
-                                    {question.isLocked && <span className="text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded border">Locked</span>}
+                          {levelQuestions.map((question, idx) => {
+                            const isSelected = selectedQuestions.includes(question.id);
+                            
+                            return (
+                              <div key={question.id} className="p-5 hover:bg-gray-50/80 transition-colors group">
+                                <div className="flex items-start gap-4">
+                                  <div className="flex items-center gap-3">
+                                    <input
+                                      type="checkbox"
+                                      checked={isSelected}
+                                      onChange={() => handleSelectQuestion(question.id)}
+                                      onClick={(e) => e.stopPropagation()}
+                                      className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer mt-2"
+                                    />
+                                    <div className="flex-shrink-0 pt-1">
+                                      <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-50 text-indigo-700 text-sm font-bold">
+                                        {question.questionNumber || idx + 1}
+                                      </span>
+                                    </div>
                                   </div>
-                                  <p className="text-sm text-gray-600 line-clamp-2 mb-3 leading-relaxed">{question.description}</p>
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <h5 className="font-bold text-gray-900 truncate">{question.title}</h5>
+                                      {question.isLocked && <span className="text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded border">Locked</span>}
+                                    </div>
+                                    <p className="text-sm text-gray-600 line-clamp-2 mb-3 leading-relaxed">{question.description}</p>
 
-                                  <div className="flex flex-wrap items-center gap-3 text-xs font-medium text-gray-500">
-                                    <span className="flex items-center gap-1.5 bg-blue-50 text-blue-700 px-2 py-1 rounded-md">
-                                      <span>⏱️</span> {question.timeLimit || 15} min
-                                    </span>
-                                    <span className="flex items-center gap-1.5 bg-amber-50 text-amber-700 px-2 py-1 rounded-md">
-                                      <span>⭐</span> {question.points || 100} pts
-                                    </span>
-                                    {question.tags?.length > 0 && (
-                                      <div className="flex gap-1 ml-1 border-l pl-3">
-                                        {question.tags.slice(0, 3).map((tag) => (
-                                          <span key={tag} className="px-2 py-1 bg-gray-100 text-gray-600 rounded-md">
-                                            {tag}
-                                          </span>
-                                        ))}
-                                        {question.tags.length > 3 && <span>+{question.tags.length - 3}</span>}
-                                      </div>
-                                    )}
+                                    <div className="flex flex-wrap items-center gap-3 text-xs font-medium text-gray-500">
+                                      <span className="flex items-center gap-1.5 bg-blue-50 text-blue-700 px-2 py-1 rounded-md">
+                                        <span>⏱️</span> {question.timeLimit || 15} min
+                                      </span>
+                                      <span className="flex items-center gap-1.5 bg-amber-50 text-amber-700 px-2 py-1 rounded-md">
+                                        <span>⭐</span> {question.points || 100} pts
+                                      </span>
+                                      {question.tags?.length > 0 && (
+                                        <div className="flex gap-1 ml-1 border-l pl-3">
+                                          {question.tags.slice(0, 3).map((tag) => (
+                                            <span key={tag} className="px-2 py-1 bg-gray-100 text-gray-600 rounded-md">
+                                              {tag}
+                                            </span>
+                                          ))}
+                                          {question.tags.length > 3 && <span>+{question.tags.length - 3}</span>}
+                                        </div>
+                                      )}
+                                    </div>
                                   </div>
-                                </div>
 
-                                <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                  <button
-                                    onClick={() => handleEdit(question)}
-                                    className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                                    title="Edit"
-                                  >
-                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
-                                  </button>
-                                  <button
-                                    onClick={() => handleDelete(question.id)}
-                                    className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                    title="Delete"
-                                  >
-                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                                  </button>
+                                  <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <button
+                                      onClick={() => handleEdit(question)}
+                                      className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                                      title="Edit"
+                                    >
+                                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                                    </button>
+                                    <button
+                                      onClick={() => handleDelete(question.id)}
+                                      className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                      title="Delete"
+                                    >
+                                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                    </button>
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       )}
                     </div>

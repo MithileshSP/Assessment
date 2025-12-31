@@ -4,8 +4,6 @@ node_modules
 npm-debug.log
 
 # Build artifacts
-dist
-build
 .vite
 
 # Environment files

@@ -300,6 +300,18 @@ router.get("/", verifyAdmin, async (req, res) => {
   }
 });
 
+// Download sample CSV template (Admin only)
+router.get("/sample-csv", verifyAdmin, (req, res) => {
+  const sampleCsv = `username,password,fullName,email,role
+student1,password123,John Doe,john@example.com,student
+student2,password456,Jane Smith,jane@example.com,student
+admin1,adminpass,Admin User,admin@example.com,admin`;
+
+  res.setHeader("Content-Type", "text/csv");
+  res.setHeader("Content-Disposition", "attachment; filename=users-sample.csv");
+  res.send(sampleCsv);
+});
+
 // Get user progress data (Admin only)
 router.get("/progress", verifyAdmin, async (req, res) => {
   try {
@@ -356,6 +368,115 @@ router.get("/:userId", async (req, res) => {
     res.status(500).json({ error: "Failed to fetch user" });
   }
 });
+
+// Upload CSV (Admin only) - MUST come before generic POST /
+router.post(
+  "/upload-csv",
+  verifyAdmin,
+  (req, res, next) => {
+    console.log('Before multer middleware');
+    upload.single("file")(req, res, (err) => {
+      if (err) {
+        console.error('Multer error:', err);
+        return res.status(500).json({ error: `File upload error: ${err.message}` });
+      }
+      console.log('Multer succeeded');
+      next();
+    });
+  },
+  async (req, res) => {
+    console.log('Upload CSV endpoint hit');
+    console.log('File:', req.file);
+    console.log('Body:', req.body);
+    
+    if (!req.file) {
+      console.error('No file in request');
+      return res.status(400).json({ error: "No file uploaded" });
+    }
+
+    const results = [];
+    const errors = [];
+    let added = 0;
+    let skipped = 0;
+
+    console.log('Reading CSV file:', req.file.path);
+
+    fs.createReadStream(req.file.path)
+      .pipe(csv())
+      .on("data", (row) => {
+        results.push(row);
+      })
+      .on("end", async () => {
+        console.log(`Processing ${results.length} rows from CSV`);
+        try {
+          for (let index = 0; index < results.length; index++) {
+            const row = results[index];
+            const lineNum = index + 2; // +2 because CSV header is line 1
+
+            // Validate required fields
+            if (!row.username || !row.password) {
+              errors.push(`Line ${lineNum}: Missing username or password`);
+              skipped++;
+              continue;
+            }
+
+            // Check if username exists
+            const existingUser = await UserModel.findByUsername(row.username);
+            if (existingUser) {
+              errors.push(
+                `Line ${lineNum}: Username "${row.username}" already exists`
+              );
+              skipped++;
+              continue;
+            }
+
+            // Create user
+            const newUser = {
+              id: `user-${Date.now()}-${Math.random()
+                .toString(36)
+                .substr(2, 9)}`,
+              username: row.username,
+              password: hashPassword(row.password),
+              email: row.email || "",
+              full_name: row.fullName || "",
+              role: row.role || "student",
+              created_at: new Date(),
+              last_login: null,
+            };
+
+            await UserModel.create(newUser);
+            added++;
+          }
+
+          // Clean up uploaded file
+          fs.unlinkSync(req.file.path);
+
+          console.log(`CSV processing complete: ${added} added, ${skipped} skipped`);
+          res.json({
+            added,
+            skipped,
+            total: results.length,
+            errors: errors.length > 0 ? errors : undefined,
+          });
+        } catch (error) {
+          // Clean up uploaded file
+          if (fs.existsSync(req.file.path)) {
+            fs.unlinkSync(req.file.path);
+          }
+          console.error("Error processing CSV:", error);
+          res.status(500).json({ error: "Failed to process CSV file" });
+        }
+      })
+      .on("error", (error) => {
+        // Clean up uploaded file
+        if (req.file && fs.existsSync(req.file.path)) {
+          fs.unlinkSync(req.file.path);
+        }
+        console.error("CSV parsing error:", error);
+        res.status(500).json({ error: "Failed to parse CSV file" });
+      });
+  }
+);
 
 // Create new user (Admin only)
 router.post("/", verifyAdmin, async (req, res) => {
@@ -473,107 +594,6 @@ router.delete("/:userId", verifyAdmin, async (req, res) => {
     console.error("Error deleting user:", error);
     res.status(500).json({ error: "Failed to delete user" });
   }
-});
-
-// Upload CSV (Admin only)
-router.post(
-  "/upload-csv",
-  verifyAdmin,
-  upload.single("file"),
-  async (req, res) => {
-    if (!req.file) {
-      return res.status(400).json({ error: "No file uploaded" });
-    }
-
-    const results = [];
-    const errors = [];
-    let added = 0;
-    let skipped = 0;
-
-    fs.createReadStream(req.file.path)
-      .pipe(csv())
-      .on("data", (row) => {
-        results.push(row);
-      })
-      .on("end", async () => {
-        try {
-          for (let index = 0; index < results.length; index++) {
-            const row = results[index];
-            const lineNum = index + 2; // +2 because CSV header is line 1
-
-            // Validate required fields
-            if (!row.username || !row.password) {
-              errors.push(`Line ${lineNum}: Missing username or password`);
-              skipped++;
-              continue;
-            }
-
-            // Check if username exists
-            const existingUser = await UserModel.findByUsername(row.username);
-            if (existingUser) {
-              errors.push(
-                `Line ${lineNum}: Username "${row.username}" already exists`
-              );
-              skipped++;
-              continue;
-            }
-
-            // Create user
-            const newUser = {
-              id: `user-${Date.now()}-${Math.random()
-                .toString(36)
-                .substr(2, 9)}`,
-              username: row.username,
-              password: hashPassword(row.password),
-              email: row.email || "",
-              full_name: row.fullName || "",
-              role: row.role || "student",
-              created_at: new Date(),
-              last_login: null,
-            };
-
-            await UserModel.create(newUser);
-            added++;
-          }
-
-          // Clean up uploaded file
-          fs.unlinkSync(req.file.path);
-
-          res.json({
-            added,
-            skipped,
-            total: results.length,
-            errors: errors.length > 0 ? errors : undefined,
-          });
-        } catch (error) {
-          // Clean up uploaded file
-          if (fs.existsSync(req.file.path)) {
-            fs.unlinkSync(req.file.path);
-          }
-          console.error("Error processing CSV:", error);
-          res.status(500).json({ error: "Failed to process CSV file" });
-        }
-      })
-      .on("error", (error) => {
-        // Clean up uploaded file
-        if (fs.existsSync(req.file.path)) {
-          fs.unlinkSync(req.file.path);
-        }
-        res.status(500).json({ error: "Failed to parse CSV file" });
-      });
-  }
-);
-
-// Download sample CSV
-router.get("/sample-csv", (req, res) => {
-  const sampleCsv = `username,password,fullName,email,role
-student1,password123,John Doe,john@example.com,student
-student2,password456,Jane Smith,jane@example.com,student
-admin1,adminpass,Admin User,admin@example.com,admin`;
-
-  res.setHeader("Content-Type", "text/csv");
-  res.setHeader("Content-Disposition", "attachment; filename=users-sample.csv");
-  res.send(sampleCsv);
 });
 
 // Mark level as complete

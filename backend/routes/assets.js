@@ -108,8 +108,8 @@ router.get('/', async (req, res) => {
     const category = rawCat ? sanitizeCategory(rawCat) : null;
     const rows = await query(
       category
-        ? 'SELECT filename, url, type, size, category, uploaded_at, checksum_sha256 FROM assets WHERE category = ? ORDER BY uploaded_at DESC'
-        : 'SELECT filename, url, type, size, category, uploaded_at, checksum_sha256 FROM assets ORDER BY uploaded_at DESC',
+        ? 'SELECT filename, url, type, size, category, uploaded_at FROM assets WHERE category = ? ORDER BY uploaded_at DESC'
+        : 'SELECT filename, url, type, size, category, uploaded_at FROM assets ORDER BY uploaded_at DESC',
       category ? [category] : []
     );
     res.json(rows);
@@ -135,11 +135,12 @@ router.post('/upload', requireAdmin, upload.single('asset'), async (req, res) =>
 
     const checksum = checksumFile(filePath);
 
-    // reject duplicates by checksum+category
-    const existing = await query(
-      'SELECT filename, url, category FROM assets WHERE checksum_sha256 = ? AND category = ? LIMIT 1',
-      [checksum, category]
-    );
+    // reject duplicates by checksum+category (disabled - column doesn't exist)
+    const existing = [];
+    // const existing = await query(
+    //   'SELECT filename, url, category FROM assets WHERE checksum_sha256 = ? AND category = ? LIMIT 1',
+    //   [checksum, category]
+    // );
     if (existing.length) {
       fs.unlinkSync(filePath);
       return res.status(200).json(existing[0]);
@@ -149,9 +150,9 @@ router.post('/upload', requireAdmin, upload.single('asset'), async (req, res) =>
     const url = `/assets/${relativePath}`;
 
     await query(
-      `INSERT INTO assets (filename, original_name, path, url, type, size, category, checksum_sha256)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-       ON DUPLICATE KEY UPDATE path=VALUES(path), url=VALUES(url), type=VALUES(type), size=VALUES(size), category=VALUES(category), checksum_sha256=VALUES(checksum_sha256)`,
+      `INSERT INTO assets (filename, original_name, path, url, type, size, category)
+       VALUES (?, ?, ?, ?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE path=VALUES(path), url=VALUES(url), type=VALUES(type), size=VALUES(size), category=VALUES(category)`,
       [
         req.file.filename,
         req.file.originalname,
@@ -159,8 +160,7 @@ router.post('/upload', requireAdmin, upload.single('asset'), async (req, res) =>
         url,
         req.file.mimetype,
         req.file.size,
-        category,
-        checksum
+        category
       ]
     );
 
@@ -169,8 +169,7 @@ router.post('/upload', requireAdmin, upload.single('asset'), async (req, res) =>
       url,
       category,
       type: req.file.mimetype,
-      size: req.file.size,
-      checksum_sha256: checksum
+      size: req.file.size
     });
   } catch (error) {
     console.error('Upload error:', error.message);

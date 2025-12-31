@@ -93,6 +93,9 @@ export default function AdminDashboard() {
   // Users data
   const [users, setUsers] = useState([]);
   const [userSearch, setUserSearch] = useState('');
+  const [showUserUploadModal, setShowUserUploadModal] = useState(false);
+  const [userCsvFile, setUserCsvFile] = useState(null);
+  const [userUploadResult, setUserUploadResult] = useState(null);
 
   // Submissions data
   const [submissions, setSubmissions] = useState([]);
@@ -840,6 +843,70 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleCsvUpload = async () => {
+    if (!userCsvFile) {
+      alert('Please select a CSV file');
+      return;
+    }
+
+    const csvFormData = new FormData();
+    csvFormData.append('file', userCsvFile);
+
+    try {
+      const token = localStorage.getItem('adminToken');
+      const response = await fetch(`${api.defaults.baseURL}/users/upload-csv`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: csvFormData
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Upload failed');
+      }
+
+      const data = await response.json();
+      setUserUploadResult(data);
+      alert(`Successfully added ${data.added} user(s)!`);
+      setUserCsvFile(null);
+      await loadUsers();
+    } catch (error) {
+      console.error('Upload error:', error);
+      alert('Failed to upload CSV: ' + error.message);
+    }
+  };
+
+  const downloadUsersCsvTemplate = async () => {
+    try {
+      const token = localStorage.getItem('adminToken');
+      const response = await fetch(`${api.defaults.baseURL}/users/sample-csv`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to download template');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'users-sample.csv';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Download error:', error);
+      alert('Failed to download template: ' + error.message);
+    }
+  };
+
   const handleViewSubmissionDetails = (submissionId) => {
     fetchSubmissionDetails(submissionId);
   };
@@ -1109,15 +1176,31 @@ export default function AdminDashboard() {
             {/* Users Tab */}
             {activeTab === 'users' && (
               <div>
-                <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-2xl font-bold">Users Management</h2>
-                  <input
-                    type="text"
-                    placeholder="Search users..."
-                    value={userSearch}
-                    onChange={(e) => setUserSearch(e.target.value)}
-                    className="px-4 py-2 border rounded-lg"
-                  />
+                <div className="mb-6">
+                  <div className="flex justify-between items-center mb-4">
+                    <h2 className="text-2xl font-bold">Users Management</h2>
+                    <input
+                      type="text"
+                      placeholder="Search users..."
+                      value={userSearch}
+                      onChange={(e) => setUserSearch(e.target.value)}
+                      className="px-4 py-2 border rounded-lg"
+                    />
+                  </div>
+                  <div className="flex gap-3 flex-wrap">
+                    <button
+                      onClick={() => setShowUserUploadModal(true)}
+                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold flex items-center gap-2"
+                    >
+                      <span>📁</span> Upload CSV
+                    </button>
+                    <button
+                      onClick={downloadUsersCsvTemplate}
+                      className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-semibold flex items-center gap-2"
+                    >
+                      <span>⬇️</span> Download Template
+                    </button>
+                  </div>
                 </div>
                 <div className="bg-white rounded-lg shadow overflow-hidden">
                   <table className="w-full">
@@ -1927,6 +2010,106 @@ function ChallengeModal({ challenge, courses, onSave, onClose }) {
           </form>
         </div>
       </div>
+
+      {/* CSV Upload Modal for Users */}
+      {showUserUploadModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <h2 className="text-2xl font-bold mb-4">Bulk Import Users via CSV</h2>
+              
+              <div className="space-y-4 mb-6">
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <h3 className="font-semibold text-blue-900 mb-3">📋 CSV Format Requirements:</h3>
+                  <p className="text-sm text-blue-800 mb-3">Your CSV file must include the following columns:</p>
+                  <div className="bg-white border border-blue-100 rounded p-3 mb-3 font-mono text-xs overflow-x-auto">
+                    <pre>username,password,fullName,email,role</pre>
+                  </div>
+                  <div className="text-sm text-blue-800 space-y-2">
+                    <p><strong>• username:</strong> Unique identifier (required)</p>
+                    <p><strong>• password:</strong> User password (required)</p>
+                    <p><strong>• fullName:</strong> User's full name (optional)</p>
+                    <p><strong>• email:</strong> User's email address (optional)</p>
+                    <p><strong>• role:</strong> "student" or "admin" (optional, defaults to "student")</p>
+                  </div>
+                </div>
+
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <h3 className="font-semibold text-green-900 mb-2">✅ Example:</h3>
+                  <div className="bg-white border border-green-100 rounded p-3 font-mono text-xs overflow-x-auto">
+                    <pre>{`username,password,fullName,email,role
+john_doe,SecurePass123,John Doe,john@example.com,student
+jane_smith,AnotherPass456,Jane Smith,jane@example.com,student
+admin_user,AdminPass789,Admin User,admin@example.com,admin`}</pre>
+                  </div>
+                </div>
+
+                <button
+                  onClick={downloadUsersCsvTemplate}
+                  className="w-full px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-semibold flex items-center justify-center gap-2 transition-colors"
+                >
+                  <span>⬇️</span> Download CSV Template
+                </button>
+              </div>
+
+              <div className="border-t pt-4">
+                <label className="block text-sm font-semibold text-gray-700 mb-3">Select CSV File:</label>
+                <input
+                  type="file"
+                  accept=".csv"
+                  onChange={(e) => setUserCsvFile(e.target.files[0])}
+                  className="w-full px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg hover:border-gray-400 transition-colors cursor-pointer"
+                />
+                {userCsvFile && (
+                  <p className="mt-2 text-sm text-gray-600">
+                    📄 Selected: <strong>{userCsvFile.name}</strong>
+                  </p>
+                )}
+              </div>
+
+              {userUploadResult && (
+                <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                  <p className="text-green-800 font-semibold mb-2">✅ Upload Complete!</p>
+                  <p className="text-sm text-green-700 mb-1">✓ Added: {userUploadResult.added} user(s)</p>
+                  <p className="text-sm text-green-700 mb-2">⊘ Skipped: {userUploadResult.skipped} user(s)</p>
+                  {userUploadResult.errors && userUploadResult.errors.length > 0 && (
+                    <details className="mt-3 cursor-pointer">
+                      <summary className="text-sm text-red-700 font-semibold hover:text-red-800">
+                        View Errors ({userUploadResult.errors.length})
+                      </summary>
+                      <ul className="text-xs text-red-600 mt-2 space-y-1 max-h-48 overflow-y-auto">
+                        {userUploadResult.errors.map((err, idx) => (
+                          <li key={idx} className="py-1">• {err}</li>
+                        ))}
+                      </ul>
+                    </details>
+                  )}
+                </div>
+              )}
+
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={() => {
+                    setShowUserUploadModal(false);
+                    setUserCsvFile(null);
+                    setUserUploadResult(null);
+                  }}
+                  className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 font-semibold transition-colors"
+                >
+                  Close
+                </button>
+                <button
+                  onClick={handleCsvUpload}
+                  disabled={!userCsvFile}
+                  className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
+                >
+                  <span>📤</span> Import Users
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

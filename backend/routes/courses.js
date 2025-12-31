@@ -617,43 +617,25 @@ router.put('/:courseId', async (req, res) => {
  * POST /api/courses
  * Create a new course (Admin only)
  */
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
   try {
-    const newCourse = req.body;
+    const courseData = req.body;
 
     // Validate required fields
-    if (!newCourse.id || !newCourse.title) {
-      return res.status(400).json({ error: 'Course ID and title are required' });
+    if (!courseData.title) {
+      return res.status(400).json({ error: 'Course title is required' });
     }
 
-    const courses = getCourses();
-
-    // Check if course ID already exists
-    if (courses.find(c => c.id === newCourse.id)) {
-      return res.status(400).json({ error: 'Course ID already exists' });
-    }
-
-    // Add default values
-    const course = {
-      totalLevels: 6,
-      estimatedTime: '10 hours',
-      difficulty: 'Beginner',
-      tags: [],
-      ...newCourse
-    };
-
-    courses.push(course);
-
-    // Save to file
-    fs.writeFileSync(coursesPath, JSON.stringify(courses, null, 2));
+    const Course = require('../models/Course');
+    const newCourse = await Course.create(courseData);
 
     res.status(201).json({
       message: 'Course created successfully',
-      course
+      course: newCourse
     });
   } catch (error) {
     console.error('Course creation error:', error);
-    res.status(500).json({ error: 'Failed to create course' });
+    res.status(500).json({ error: 'Failed to create course: ' + error.message });
   }
 });
 

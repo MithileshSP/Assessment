@@ -71,6 +71,11 @@ async function syncFallbackSubmissions() {
         syncedCount += 1;
       }
     } catch (error) {
+      // Skip submissions with missing references (challenge_id, user_id don't exist)
+      if (error.code === 'ER_NO_REFERENCED_ROW_2' || error.code === 'ER_NO_REFERENCED_ROW') {
+        console.log(`⚠️  Skipping submission ${fallback?.id} - referenced data not found`);
+        continue;
+      }
       console.error(
         `Failed to sync fallback submission ${fallback?.id}:`,
         error.message
