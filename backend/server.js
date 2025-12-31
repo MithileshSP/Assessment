@@ -185,9 +185,8 @@ app.use("/api/level-completion", levelCompletionRouter);
 app.use("/api/assets", assetsRouter);
 app.use("/api/test-sessions", testSessionsRouter);
 
-// Serve frontend static files
-// In Docker, frontend/dist is copied to the same directory as server.js
-// In development, it's in ../frontend/dist
+// Serve frontend static files (optional fallback if frontend container is unavailable)
+// In production with separate frontend container, this warning can be safely ignored
 const frontendDistPath = fs.existsSync(path.join(__dirname, "frontend/dist"))
   ? path.join(__dirname, "frontend/dist")
   : path.resolve(__dirname, "../frontend/dist");
@@ -209,13 +208,6 @@ if (fs.existsSync(frontendDistPath)) {
     }
     res.sendFile(path.join(frontendDistPath, "index.html"));
   });
-} else {
-  console.warn(
-    "⚠️ Frontend dist folder not found. API will run, but the frontend will not be served."
-  );
-  console.warn(
-    "   To build the frontend, run `npm install && npm run build` in the `frontend` directory."
-  );
 }
 
 // Error handling middleware
@@ -247,7 +239,8 @@ app.listen(PORT, () => {
   console.log(`   POST /api/evaluate`);
   console.log(`   POST /api/admin/login`);
   // Background sync to ensure JSON fallback submissions are persisted to MySQL when available
-  scheduleFallbackSync();
+  // DISABLED FOR PRODUCTION - Comment out to enable demo data syncing
+  // scheduleFallbackSync();
 });
 
 module.exports = app;
