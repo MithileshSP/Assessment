@@ -50,9 +50,6 @@ services:
       - /var/www/portal-assets:/var/www/portal-assets
     networks:
       - test-portal-network
-    shm_size: "2gb"
-    mem_limit: 4g
-    cpus: "4.0"
 
 
   frontend:
