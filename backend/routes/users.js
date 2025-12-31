@@ -374,23 +374,16 @@ router.post(
   "/upload-csv",
   verifyAdmin,
   (req, res, next) => {
-    console.log('Before multer middleware');
     upload.single("file")(req, res, (err) => {
       if (err) {
-        console.error('Multer error:', err);
+        console.error('CSV upload multer error:', err.message);
         return res.status(500).json({ error: `File upload error: ${err.message}` });
       }
-      console.log('Multer succeeded');
       next();
     });
   },
   async (req, res) => {
-    console.log('Upload CSV endpoint hit');
-    console.log('File:', req.file);
-    console.log('Body:', req.body);
-    
     if (!req.file) {
-      console.error('No file in request');
       return res.status(400).json({ error: "No file uploaded" });
     }
 
@@ -399,15 +392,12 @@ router.post(
     let added = 0;
     let skipped = 0;
 
-    console.log('Reading CSV file:', req.file.path);
-
     fs.createReadStream(req.file.path)
       .pipe(csv())
       .on("data", (row) => {
         results.push(row);
       })
       .on("end", async () => {
-        console.log(`Processing ${results.length} rows from CSV`);
         try {
           for (let index = 0; index < results.length; index++) {
             const row = results[index];
