@@ -14,6 +14,7 @@ services:
       - ./mysql-init:/docker-entrypoint-initdb.d
     networks:
       - test-portal-network
+      - reverse-proxy
     healthcheck:
       test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 --silent"]
       interval: 10s
@@ -37,6 +38,7 @@ services:
       - /var/www/portal-assets:/var/www/portal-assets
     networks:
       - test-portal-network
+      - reverse-proxy
 
 
   frontend:
@@ -55,12 +57,15 @@ services:
       - /envs/test-portal-frontend.env
     networks:
       - test-portal-network
+      - reverse-proxy
     mem_limit: 512m
     cpus: "0.5"
 
 networks:
   test-portal-network:
     driver: bridge
+  reverse-proxy:
+    external: true
 
 volumes:
   portal_mysql_data:
