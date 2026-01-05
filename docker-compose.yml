@@ -5,11 +5,10 @@ services:
     container_name: portal_mysql
     restart: always
     command: --bind-address=0.0.0.0
-    environment:
-      MYSQL_ROOT_PASSWORD: gokul
-      MYSQL_DATABASE: fullstack_test_portal
     ports:
       - "3307:3306"
+    env_file:
+      - /envs/test-portal-mysql.env
     volumes:
       - portal_mysql_data:/var/lib/mysql
       - ./mysql-init:/docker-entrypoint-initdb.d
@@ -28,22 +27,10 @@ services:
       dockerfile: Dockerfile
     container_name: test-portal-backend
     restart: unless-stopped
-    environment:
-      NODE_ENV: production
-      PORT: 7000
-      DB_HOST: host.docker.internal
-      DB_PORT: 3306
-      DB_USER: root
-      DB_PASSWORD: gokul
-      DB_NAME: fullstack_test_portal
-      USE_JSON: ${USE_JSON}
-
-      ASSETS_ROOT: /var/www/portal-assets
-
-      JWT_SECRET: ${JWT_SECRET}
-      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
     ports:
-      - "7000:7000"
+      - "5003:5000"
+    env_file:
+      - /envs/test-portal-backend.env
     volumes:
       - ./backend/screenshots:/app/screenshots
       - ./backend/data:/app/data
@@ -58,12 +45,14 @@ services:
       dockerfile: ./frontend/Dockerfile
       args:
         VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID}
-        VITE_API_URL: http://localhost:7000/api
-        VITE_BACKEND_ORIGIN: http://localhost:7000
+        VITE_API_URL: ${VITE_API_URL}
+        VITE_BACKEND_ORIGIN: ${VITE_BACKEND_ORIGIN}
     container_name: test-portal-frontend
     restart: unless-stopped
     ports:
-      - "100:8083"
+      - "8083:80"
+    env_file:
+      - /envs/test-portal-frontend.env
     networks:
       - test-portal-network
     mem_limit: 512m

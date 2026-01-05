@@ -44,3 +44,5 @@ docker-compose.override.yml
 backend/data/users.json
 backend/data/*.json
 !backend/data/.gitkeep
+
+.env
