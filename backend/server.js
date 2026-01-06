@@ -87,7 +87,7 @@ app.use("/api/", limiter);
 // Stricter rate limit for authentication endpoints
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 5, // 5 requests per 15 minutes
+  max: 1000, // Effectively removed limit as requested
   message: "Too many login attempts, please try again later.",
 });
 
@@ -103,12 +103,21 @@ const defaultOrigins = [
   "http://localhost:100",
   "http://192.168.10.5:100",
   "http://192.168.10.5:7000",
+  "https://fullstack.bitsathy.ac.in",
 ];
-const allowedOrigins = (
-  process.env.ALLOWED_ORIGINS
-    ? process.env.ALLOWED_ORIGINS.split(",")
-    : defaultOrigins
-).map((origin) => origin.trim().replace(/\/$/, "")); // normalize to compare consistently
+const criticalOrigins = [
+  "http://192.168.10.5:100",
+  "https://fullstack.bitsathy.ac.in"
+];
+
+let rawOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(",")
+  : defaultOrigins;
+
+// Merge critical origins to ensure access
+const allowedOrigins = [...rawOrigins, ...criticalOrigins].map((origin) =>
+  origin.trim().replace(/\/$/, "")
+);
 
 const corsOptions = {
   origin: function (origin, callback) {

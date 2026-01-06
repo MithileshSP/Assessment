@@ -1,20 +1,16 @@
 services:
   portal_mysql:
-    image: mysql:8.0
+    image: gokulv456/assessment-mysql
     container_name: portal_mysql
-    restart: always
+    restart: unless-stopped
     command: --bind-address=0.0.0.0
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: ${DB_NAME}
-    # ports:
-    #   - "3307:3306"
     volumes:
       - portal_mysql_data:/var/lib/mysql
-      - ./mysql-init:/docker-entrypoint-initdb.d
     networks:
       - test-portal-network
-      - reverse-proxy
     healthcheck:
       test: [ "CMD-SHELL", "mysqladmin ping -h 127.0.0.1 --silent" ]
       interval: 10s
@@ -24,7 +20,6 @@ services:
 
   backend:
     image: gokulv456/assessment-backend
-    container_name: test-portal-backend
     restart: unless-stopped
     depends_on:
       portal_mysql:
@@ -32,45 +27,29 @@ services:
     environment:
       NODE_ENV: production
       PORT: 7000
-      # Point to Host DB (User's data is here)
-      # Point to MySQL Container using service name
       DB_HOST: portal_mysql
       DB_PORT: 3306
       DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}
       DB_NAME: ${DB_NAME}
       USE_JSON: ${USE_JSON}
-
       ASSETS_ROOT: /var/www/portal-assets
-
       JWT_SECRET: ${JWT_SECRET}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
-    # ports:
-    #   - "7000:7000" # Expose backend directly on 7000 for debugging or direct API calls
     volumes:
+      # Persist generated files
       - ./backend/screenshots:/app/screenshots
-      # - ./frontend/dist:/app/public  <-- REMOVED: Backend no longer serves frontend
-      - ./backend/server.js:/app/server.js
-      - ./backend/routes:/app/routes
-      - ./backend/models:/app/models
-      - ./backend/database:/app/database
       - /var/www/portal-assets:/var/www/portal-assets
+    deploy:
+      replicas: 3
     networks:
       - test-portal-network
-      - reverse-proxy
-<<<<<<< HEAD
-=======
-
->>>>>>> 83a6bb7beadec8bccac9bc0d340b16dff14375d3
 
   frontend:
-    build:
-      context: ./frontend
-      args:
-        VITE_API_URL: /api
+    image: gokulv456/assessment-frontend
     container_name: portal_frontend
-    restart: always
+    restart: unless-stopped
     ports:
       - "100:80"
     depends_on:
@@ -81,8 +60,6 @@ services:
 networks:
   test-portal-network:
     driver: bridge
-  reverse-proxy:
-    external: true
 
 volumes:
   portal_mysql_data:

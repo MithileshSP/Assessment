@@ -115,8 +115,9 @@ router.post("/google", async (req, res) => {
       };
 
       try {
-        const userId = await UserModel.create(newUser);
-        user = await UserModel.findById(userId);
+        // UserModel.create returns the created user object, not just the ID
+        const createdUser = await UserModel.create(newUser);
+        user = createdUser || (await UserModel.findById(newUser.id));
       } catch (dbCreateError) {
         console.warn(
           "DB create error, persisting to JSON file:",
@@ -139,8 +140,16 @@ router.post("/google", async (req, res) => {
       }
     } else {
       try {
-        await UserModel.update(user.id, { last_login: new Date() });
-        user = await UserModel.findById(user.id);
+        // Use specific updateLastLogin method
+        if (UserModel.updateLastLogin) {
+          await UserModel.updateLastLogin(user.id);
+        } else {
+          // Fallback if method missing (shouldn't happen with correct User model)
+          await UserModel.update(user.id, { last_login: new Date() });
+        }
+
+        // Refresh user data (optional, but good for returning latest state)
+        // user = await UserModel.findById(user.id); 
       } catch (dbUpdateError) {
         console.log(
           "DB update failed, updating JSON fallback:",
@@ -241,7 +250,11 @@ router.post("/login", async (req, res) => {
 
     // Update last login (try database, fallback to JSON)
     try {
-      await UserModel.update(user.id, { last_login: new Date() });
+      if (UserModel.updateLastLogin) {
+        await UserModel.updateLastLogin(user.id);
+      } else {
+        await UserModel.update(user.id, { last_login: new Date() });
+      }
     } catch (dbError) {
       console.log("Database error, updating JSON file:", dbError.message);
       const users = loadJSON(usersPath);
@@ -264,7 +277,8 @@ router.post("/login", async (req, res) => {
     });
   } catch (error) {
     console.error("Login error:", error);
-    res.status(500).json({ error: "Login failed" });
+    console.error(error.stack);
+    res.status(500).json({ error: "Login failed", details: error.message });
   }
 });
 
