@@ -59,6 +59,10 @@ services:
     networks:
       - test-portal-network
       - reverse-proxy
+<<<<<<< HEAD
+=======
+
+>>>>>>> 83a6bb7beadec8bccac9bc0d340b16dff14375d3
 
   frontend:
     build:
