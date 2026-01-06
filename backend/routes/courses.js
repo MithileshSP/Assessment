@@ -526,10 +526,18 @@ router.post('/progress/:userId/complete', (req, res) => {
 router.post('/progress/:userId/level-complete', (req, res) => {
   try {
     const { userId } = req.params;
-    const { courseId, level } = req.body;
+    const { courseId, level, passed } = req.body;
 
     if (!courseId || !level) {
       return res.status(400).json({ error: 'Missing courseId or level' });
+    }
+
+    // If explicitly failed, do not mark as complete
+    if (passed === false) {
+      return res.json({
+        message: 'Level attempt recorded (not passed)',
+        courseProgress: null // No progress update
+      });
     }
 
     const allProgress = getProgress();

@@ -1,5 +1,7 @@
 {
   "dependencies": {
-    "lucide-react": "^0.562.0"
+    "dotenv": "^17.2.3",
+    "lucide-react": "^0.562.0",
+    "mysql2": "^3.16.0"
   }
 }

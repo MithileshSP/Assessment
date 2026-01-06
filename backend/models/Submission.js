@@ -39,7 +39,7 @@ class SubmissionModel {
   // Create new submission
   static async create(submissionData) {
     const id = submissionData.id || `sub-${Date.now()}`;
-    
+
     // Convert ISO datetime to MySQL format (YYYY-MM-DD HH:MM:SS)
     const formatDateTime = (date) => {
       if (!date) return new Date().toISOString().slice(0, 19).replace('T', ' ');
@@ -52,9 +52,9 @@ class SubmissionModel {
       }
       return new Date(date).toISOString().slice(0, 19).replace('T', ' ');
     };
-    
+
     const submittedAt = formatDateTime(submissionData.submittedAt);
-    
+
     await query(
       `INSERT INTO submissions (id, challenge_id, user_id, candidate_name, html_code, css_code, js_code, status, submitted_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -148,9 +148,9 @@ class SubmissionModel {
       if (path.startsWith('http://') || path.startsWith('https://')) {
         return path;
       }
-      // For relative paths, prepend the API base URL
-      const baseUrl = process.env.API_BASE_URL || 'http://localhost:7000';
-      return `${baseUrl}${path.startsWith('/') ? path : '/' + path}`;
+      // Return path as-is (relative path) so frontend uses its own origin
+      // Nginx will derive the correct full URL
+      return path;
     };
 
     return {

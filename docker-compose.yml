@@ -7,8 +7,8 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: ${DB_NAME}
-    ports:
-      - "3307:3306"
+    # ports:
+    #   - "3307:3306"
     volumes:
       - portal_mysql_data:/var/lib/mysql
       - ./mysql-init:/docker-entrypoint-initdb.d
@@ -30,7 +30,7 @@ services:
         condition: service_healthy
     environment:
       NODE_ENV: production
-      PORT: ${PORT}
+      PORT: 7000
       # Point to Host DB (User's data is here)
       # Point to MySQL Container using service name
       DB_HOST: portal_mysql
@@ -44,16 +44,31 @@ services:
 
       JWT_SECRET: ${JWT_SECRET}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
-    ports:
-      - "100:7000"
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
+    # ports:
+    #   - "7000:7000" # Expose backend directly on 7000 for debugging or direct API calls
     volumes:
       - ./backend/screenshots:/app/screenshots
-      - ./frontend/dist:/app/public
+      # - ./frontend/dist:/app/public  <-- REMOVED: Backend no longer serves frontend
       - ./backend/server.js:/app/server.js
       - ./backend/routes:/app/routes
       - ./backend/models:/app/models
       - ./backend/database:/app/database
       - /var/www/portal-assets:/var/www/portal-assets
+    networks:
+      - test-portal-network
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: /api
+    container_name: portal_frontend
+    restart: always
+    ports:
+      - "100:80"
+    depends_on:
+      - backend
     networks:
       - test-portal-network
 

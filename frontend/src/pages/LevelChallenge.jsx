@@ -520,6 +520,7 @@ export default function LevelChallenge() {
     await api.post(`/courses/progress/${userId}/level-complete`, {
       courseId,
       level: parseInt(level),
+      passed: summary.allPassed,
     });
 
     return completionData;
@@ -704,8 +705,8 @@ export default function LevelChallenge() {
               {restrictions.timeLimit > 0 && timeRemaining !== null && (
                 <div
                   className={`px-3 py-2 rounded border font-mono font-bold flex items-center gap-2 ${timeRemaining <= 300
-                      ? "bg-red-50 border-red-300 text-red-600"
-                      : "bg-blue-50 border-blue-300 text-blue-600"
+                    ? "bg-red-50 border-red-300 text-red-600"
+                    : "bg-blue-50 border-blue-300 text-blue-600"
                     }`}
                 >
                   <Clock size={16} /> {formatTime(timeRemaining)}
@@ -721,10 +722,10 @@ export default function LevelChallenge() {
                       <div
                         key={q.id}
                         className={`w-10 h-10 rounded flex items-center justify-center font-semibold ${index === currentQuestionIndex
-                            ? "bg-blue-600 text-white ring-2 ring-blue-300"
-                            : isSubmitted
-                              ? "bg-green-500 text-white"
-                              : "bg-gray-200 text-gray-700"
+                          ? "bg-blue-600 text-white ring-2 ring-blue-300"
+                          : isSubmitted
+                            ? "bg-green-500 text-white"
+                            : "bg-gray-200 text-gray-700"
                           }`}
                         title={`Question ${index + 1} - ${isSubmitted ? "Submitted" : "Not Submitted"
                           }`}
@@ -963,8 +964,8 @@ export default function LevelChallenge() {
                   <button
                     onClick={() => setPreviewTab("live")}
                     className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${previewTab === "live"
-                        ? "bg-blue-600 text-white shadow"
-                        : "text-gray-600 hover:text-gray-900"
+                      ? "bg-blue-600 text-white shadow"
+                      : "text-gray-600 hover:text-gray-900"
                       }`}
                   >
                     Live Preview
@@ -977,8 +978,8 @@ export default function LevelChallenge() {
                     }}
                     disabled={!challenge?.expectedSolution}
                     className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${previewTab === "expected"
-                        ? "bg-green-600 text-white shadow"
-                        : "text-gray-600 hover:text-gray-900"
+                      ? "bg-green-600 text-white shadow"
+                      : "text-gray-600 hover:text-gray-900"
                       } ${!challenge?.expectedSolution
                         ? "opacity-50 cursor-not-allowed"
                         : ""
