@@ -139,12 +139,12 @@ const dbConfig = {
   connectTimeout: 10000, // 10 second connection timeout
   ...(sslConfig ? { ssl: sslConfig } : {}),
 };
-console.log("Database configuration:", {
-  host: dbConfig.host,
-  port: dbConfig.port,
-  user: dbConfig.user,
-  database: dbConfig.database,
-});
+// console.log("Database configuration:", {
+//   host: dbConfig.host,
+//   port: dbConfig.port,
+//   user: dbConfig.user,
+//   database: dbConfig.database,
+// });
 // Create connection pool
 const pool = mysql.createPool(dbConfig);
 

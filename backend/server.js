@@ -248,8 +248,8 @@ app.use("/api/*", (req, res) => {
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
-  console.log(`📊 Environment: ${process.env.NODE_ENV || "development"}`);
+  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`📊 Environment: ${process.env.NODE_ENV}`);
   console.log(`\n📁 API Endpoints:`);
   console.log(`   GET  /api/challenges`);
   console.log(`   POST /api/submissions`);
