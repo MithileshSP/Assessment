@@ -25,33 +25,13 @@ export default function Login({ isAdmin = false, onLogin }) {
     setLoading(true);
 
     try {
-      // Use API client so requests always hit the backend host
-      const adminEndpoint = "/auth/admin/login";
-      const userEndpoint = "/auth/login";
-      const endpoints = isAdmin
-        ? [adminEndpoint, userEndpoint]
-        : [userEndpoint, adminEndpoint];
-      let response;
+      // Use API client to hit the centralized auth endpoint
+      const endpoint = "/auth/login";
 
       console.log("Is Admin:", isAdmin);
+      console.log("Attempting login to:", endpoint);
 
-      for (let i = 0; i < endpoints.length; i += 1) {
-        const url = endpoints[i];
-        const isLastAttempt = i === endpoints.length - 1;
-
-        console.log("Attempting login to:", url);
-
-        try {
-          response = await api.post(url, credentials);
-          break;
-        } catch (err) {
-          const isAuthError = err.response?.status === 401;
-          if (!isAuthError || isLastAttempt) {
-            throw err;
-          }
-          console.warn("Login attempt failed on:", url, err.response?.data);
-        }
-      }
+      const response = await api.post(endpoint, credentials);
 
       if (!response) {
         setError("Login failed. Please try again.");

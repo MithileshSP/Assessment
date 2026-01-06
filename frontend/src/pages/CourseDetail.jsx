@@ -2,6 +2,20 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getCourse, getCourseLevels, getUserProgress } from '../services/api';
 import { isAdminSessionActive } from '../utils/session';
+import {
+  ArrowLeft,
+  Clock,
+  Layers,
+  Lock,
+  CheckCircle,
+  Target,
+  FileText,
+  PlayCircle,
+  Award,
+  Code,
+  Zap,
+  Star
+} from 'lucide-react';
 
 export default function CourseDetail() {
   const { courseId } = useParams();
@@ -98,16 +112,10 @@ export default function CourseDetail() {
           <div className="flex items-center justify-between">
             <button
               onClick={() => navigate('/')}
-              className="text-gray-600 hover:text-gray-900 flex items-center"
+              className="text-gray-600 hover:text-gray-900 flex items-center gap-2 font-medium"
             >
-              ← Back to Courses
+              <ArrowLeft size={20} /> Back to Courses
             </button>
-            {/* <button
-              onClick={() => navigate('/admin/login')}
-              className="text-gray-600 hover:text-gray-900 font-medium"
-            >
-              Admin Login
-            </button> */}
           </div>
         </div>
       </header>
@@ -118,41 +126,42 @@ export default function CourseDetail() {
           <div className="flex items-center gap-8">
             {/* Course Icon/Thumbnail */}
             <div
-              className="w-32 h-32 rounded-xl flex items-center justify-center text-6xl font-bold text-white shadow-lg"
+              className="w-32 h-32 rounded-xl flex items-center justify-center text-6xl font-bold text-white shadow-lg overflow-hidden relative"
               style={{ backgroundColor: course.color }}
             >
+              <div className="absolute inset-0 bg-gradient-to-br from-transparent to-black opacity-20"></div>
               <img
                 src={course.thumbnail}
                 alt={course.title}
                 className="w-full h-full object-cover rounded-xl"
                 onError={(e) => {
                   e.target.style.display = 'none';
-                  e.target.parentElement.innerHTML = `<span class="text-6xl">${course.icon}</span>`;
+                  e.target.parentElement.innerHTML = `<span class="text-white opacity-90"><Code size={48} /></span>`;
                 }}
               />
             </div>
 
             {/* Course Info */}
             <div className="flex-1">
-              <h1 className="text-4xl font-bold text-gray-900 mb-2">
-                {course.icon} {course.title}
+              <h1 className="text-4xl font-bold text-gray-900 mb-2 flex items-center gap-3">
+                {course.title}
               </h1>
               <p className="text-xl text-gray-600 mb-4">{course.description}</p>
 
               <div className="flex gap-6 text-sm">
-                <span className="flex items-center gap-2">
-                  <span className="text-2xl">⏱️</span>
-                  <span className="text-gray-700">{course.estimatedTime}</span>
+                <span className="flex items-center gap-2 text-gray-600">
+                  <Clock class="text-indigo-600" size={20} />
+                  <span className="font-medium">{course.estimatedTime}</span>
                 </span>
-                <span className="flex items-center gap-2">
-                  <span className="text-2xl">📚</span>
-                  <span className="text-gray-700">{course.totalLevels} Levels</span>
+                <span className="flex items-center gap-2 text-gray-600">
+                  <Layers class="text-indigo-600" size={20} />
+                  <span className="font-medium">{course.totalLevels} Levels</span>
                 </span>
-                <span className={`px-3 py-1 rounded-full text-xs font-semibold ${course.difficulty === 'Beginner' ? 'bg-green-100 text-green-800' :
+                <span className={`px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1 ${course.difficulty === 'Beginner' ? 'bg-green-100 text-green-800' :
                   course.difficulty === 'Intermediate' ? 'bg-yellow-100 text-yellow-800' :
                     'bg-red-100 text-red-800'
                   }`}>
-                  {course.difficulty}
+                  <Zap size={14} /> {course.difficulty}
                 </span>
               </div>
 
@@ -161,7 +170,7 @@ export default function CourseDetail() {
                 {course.tags && course.tags.map((tag, idx) => (
                   <span
                     key={idx}
-                    className="px-3 py-1 bg-gray-100 text-gray-600 text-sm rounded-full"
+                    className="px-3 py-1 bg-gray-100 text-gray-600 text-sm rounded-full border border-gray-200"
                   >
                     {tag}
                   </span>
@@ -174,7 +183,9 @@ export default function CourseDetail() {
 
       {/* Levels Grid */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <h2 className="text-3xl font-bold text-gray-900 mb-8">Course Levels</h2>
+        <h2 className="text-3xl font-bold text-gray-900 mb-8 flex items-center gap-2">
+          <Layers size={28} className="text-gray-400" /> Course Levels
+        </h2>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {levels.map((level) => {
@@ -183,17 +194,15 @@ export default function CourseDetail() {
             const completed = isLevelCompleted(level.level);
             const isAdmin = isAdminSessionActive();
 
-            // Allow access if not locked, OR if user is admin
-            // Students cannot re-attempt if completed
             const canAccess = isAdmin || (!isLocked && !completed);
 
             return (
               <div
                 key={level.level}
                 onClick={() => canAccess && navigate(`/level/${courseId}/${level.level}`)}
-                className={`bg-white rounded-xl shadow-lg p-6 ${!canAccess
-                    ? 'opacity-75 cursor-not-allowed bg-gray-50'
-                    : 'cursor-pointer transform transition-all duration-300 hover:scale-105 hover:shadow-2xl'
+                className={`bg-white rounded-xl shadow-lg p-6 relative border border-gray-100 ${!canAccess
+                  ? 'opacity-75 cursor-not-allowed bg-gray-50'
+                  : 'cursor-pointer transform transition-all duration-300 hover:scale-105 hover:shadow-2xl'
                   }`}
               >
                 {/* Level Header */}
@@ -202,34 +211,36 @@ export default function CourseDetail() {
                     Level {level.level}
                   </h3>
                   {isLocked ? (
-                    <span className="text-3xl">🔒</span>
+                    <Lock size={28} className="text-gray-400" />
                   ) : completed ? (
-                    <span className="text-3xl">✅</span>
+                    <CheckCircle size={28} className="text-green-500" />
                   ) : (
-                    <span className="text-3xl">🎯</span>
+                    <Target size={28} className="text-indigo-500" />
                   )}
                 </div>
 
                 {isLocked && !isAdmin && (
-                  <div className="mb-4 bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                  <div className="mb-4 bg-yellow-50 border border-yellow-200 rounded-lg p-3 flex items-start gap-2">
+                    <Lock size={16} className="text-yellow-700 mt-0.5" />
                     <p className="text-sm text-yellow-800">
-                      🔒 Complete Level {level.level - 1} to unlock
+                      Complete Level {level.level - 1} to unlock
                     </p>
                   </div>
                 )}
 
                 {completed && !isAdmin && (
-                  <div className="mb-4 bg-green-50 border border-green-200 rounded-lg p-3">
+                  <div className="mb-4 bg-green-50 border border-green-200 rounded-lg p-3 flex items-start gap-2">
+                    <Award size={16} className="text-green-700 mt-0.5" />
                     <p className="text-sm text-green-800">
-                      🎉 Level Cleared!
+                      Level Cleared!
                     </p>
                   </div>
                 )}
 
                 {/* Questions Count */}
                 <div className="flex items-center justify-between mb-4">
-                  <span className="text-gray-600">
-                    📝 {level.totalQuestions} Question{level.totalQuestions !== 1 ? 's' : ''} Available
+                  <span className="text-gray-600 flex items-center gap-2">
+                    <FileText size={16} /> {level.totalQuestions} Question{level.totalQuestions !== 1 ? 's' : ''} Available
                   </span>
                 </div>
 
@@ -257,14 +268,16 @@ export default function CourseDetail() {
                 <div className="space-y-2">
                   {level.questions.slice(0, 3).map((q) => (
                     <div key={q.id} className="text-sm text-gray-600 flex items-center gap-2">
-                      <span className={q.completed ? '✅' : '⭕'}>
-                        {q.completed ? '✅' : '⭕'}
-                      </span>
+                      {q.completed ? (
+                        <CheckCircle size={14} className="text-green-500" />
+                      ) : (
+                        <div className="w-3.5 h-3.5 rounded-full border-2 border-gray-300" />
+                      )}
                       <span className="truncate">{q.title}</span>
                     </div>
                   ))}
                   {level.questions.length > 3 && (
-                    <div className="text-sm text-gray-500 italic">
+                    <div className="text-sm text-gray-500 italic pl-5">
                       +{level.questions.length - 3} more...
                     </div>
                   )}
@@ -273,15 +286,15 @@ export default function CourseDetail() {
                 {/* Action Button */}
                 <button
                   disabled={!canAccess}
-                  className={`w-full mt-4 py-2 rounded-lg font-semibold transition-colors ${!canAccess
-                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                      : 'bg-indigo-600 text-white hover:bg-indigo-700'
+                  className={`w-full mt-4 py-2 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2 ${!canAccess
+                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    : 'bg-indigo-600 text-white hover:bg-indigo-700'
                     }`}
                 >
-                  {isLocked && !isAdmin ? '🔒 Locked'
+                  {isLocked && !isAdmin ? <><Lock size={16} /> Locked</>
                     : completed && !isAdmin ? 'Level Cleared'
                       : isAdmin && completed ? 'Re-attempt (Admin)'
-                        : 'Start Level →'}
+                        : <><PlayCircle size={16} /> Start Level</>}
                 </button>
               </div>
             );
@@ -290,22 +303,24 @@ export default function CourseDetail() {
 
         {/* Info Box */}
         <div className="mt-12 bg-white rounded-xl shadow-md p-6">
-          <h3 className="text-lg font-bold text-gray-900 mb-2">How it works</h3>
-          <ul className="space-y-2 text-gray-600">
-            <li className="flex items-start gap-2">
-              <span>🎯</span>
+          <h3 className="text-lg font-bold text-gray-900 mb-2 flex items-center gap-2">
+            <Star size={20} className="text-yellow-500" /> How it works
+          </h3>
+          <ul className="space-y-3 text-gray-600">
+            <li className="flex items-start gap-3">
+              <Target size={20} className="text-indigo-500 mt-0.5" />
               <span>Complete challenges in Level 1 to unlock Level 2</span>
             </li>
-            <li className="flex items-start gap-2">
-              <span>💻</span>
+            <li className="flex items-start gap-3">
+              <Code size={20} className="text-blue-500 mt-0.5" />
               <span>Write HTML/CSS code and see instant visual results</span>
             </li>
-            <li className="flex items-start gap-2">
-              <span>⭐</span>
+            <li className="flex items-start gap-3">
+              <Star size={20} className="text-yellow-500 mt-0.5" />
               <span>Earn points for completing challenges</span>
             </li>
-            <li className="flex items-start gap-2">
-              <span>🏆</span>
+            <li className="flex items-start gap-3">
+              <Award size={20} className="text-purple-500 mt-0.5" />
               <span>Complete all levels to master this course</span>
             </li>
           </ul>

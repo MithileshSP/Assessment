@@ -320,6 +320,27 @@ class TestSession {
     };
   }
 
+  static async findAll(limit = 100) {
+    const query = `
+      SELECT t.*, u.username, u.full_name, c.title as course_title 
+      FROM test_sessions t
+      LEFT JOIN users u ON t.user_id = u.id
+      LEFT JOIN courses c ON t.course_id = c.id
+      ORDER BY t.started_at DESC
+      LIMIT ?
+    `;
+
+    const rows = await db.query(query, [limit]);
+
+    return rows.map((session) => ({
+      ...session,
+      submission_ids:
+        typeof session.submission_ids === "string"
+          ? JSON.parse(session.submission_ids)
+          : session.submission_ids,
+    }));
+  }
+
   static async findByUser(userId, limit = 20) {
     const query = `
       SELECT * FROM test_sessions 

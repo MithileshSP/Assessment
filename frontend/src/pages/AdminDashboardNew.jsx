@@ -5,7 +5,28 @@ import QuestionManagerModal from '../components/QuestionManagerModal';
 import SubmissionList from '../components/SubmissionList';
 import GroupedSubmissionsList from '../components/GroupedSubmissionsList';
 import AssetsTab from '../components/AssetsTab';
+import LevelAccessManager from '../components/LevelAccessManager';
 import { clearAdminSession, notifySessionChange } from '../utils/session';
+import {
+  BarChart2,
+  Users,
+  FileText,
+  Layers,
+  FolderOpen,
+  BookOpen,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+  HelpCircle,
+  Upload,
+  Trash2,
+  Copy,
+  ExternalLink,
+  Plus,
+  Shield,
+  Download,
+  Lock
+} from 'lucide-react';
 
 const OPEN_SOURCE_RESOURCES = [
   {
@@ -95,13 +116,29 @@ export default function AdminDashboard() {
   const [userSearch, setUserSearch] = useState('');
   const [showUserUploadModal, setShowUserUploadModal] = useState(false);
   const [userCsvFile, setUserCsvFile] = useState(null);
+  const [selectedUserForLevelAccess, setSelectedUserForLevelAccess] = useState(null);
+  const [renderKey, setRenderKey] = useState(0); // Force re-render
   const [userUploadResult, setUserUploadResult] = useState(null);
+  const [addUserMode, setAddUserMode] = useState('choose'); // 'choose', 'csv', 'manual'
+  const [newUser, setNewUser] = useState({
+    username: '',
+    password: '',
+    fullName: '',
+    email: '',
+    role: 'student'
+  });
+  const [creatingUser, setCreatingUser] = useState(false);
 
   // Submissions data
   const [submissions, setSubmissions] = useState([]);
   const [groupedSessions, setGroupedSessions] = useState([]);
   const [submissionSearch, setSubmissionSearch] = useState('');
   const [submissionViewMode, setSubmissionViewMode] = useState('grouped'); // 'grouped' or 'individual'
+
+  // Debug: Track selectedUserForLevelAccess changes
+  useEffect(() => {
+    console.log('[useEffect] selectedUserForLevelAccess changed to:', selectedUserForLevelAccess);
+  }, [selectedUserForLevelAccess]);
   const [detailModal, setDetailModal] = useState({
     open: false,
     loading: false,
@@ -136,6 +173,8 @@ export default function AdminDashboard() {
   const [aiError, setAiError] = useState('');
   const [aiGenerating, setAiGenerating] = useState(false);
 
+  // No explicit tab config found in state, looking for render method.
+  // Wait, I need to see the render code. I'll search for 'overview' or tab names.
   useEffect(() => {
     loadAllData();
   }, []);
@@ -853,21 +892,13 @@ export default function AdminDashboard() {
     csvFormData.append('file', userCsvFile);
 
     try {
-      const token = localStorage.getItem('adminToken');
-      const response = await fetch(`${api.defaults.baseURL}/users/upload-csv`, {
-        method: 'POST',
+      const response = await api.post('/users/upload-csv', csvFormData, {
         headers: {
-          'Authorization': `Bearer ${token}`
-        },
-        body: csvFormData
+          'Content-Type': 'multipart/form-data'
+        }
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Upload failed');
-      }
-
-      const data = await response.json();
+      const data = response.data;
       setUserUploadResult(data);
       alert(`Successfully added ${data.added} user(s)!`);
       setUserCsvFile(null);
@@ -880,19 +911,11 @@ export default function AdminDashboard() {
 
   const downloadUsersCsvTemplate = async () => {
     try {
-      const token = localStorage.getItem('adminToken');
-      const response = await fetch(`${api.defaults.baseURL}/users/sample-csv`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+      const response = await api.get('/users/sample-csv', {
+        responseType: 'blob'
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to download template');
-      }
-
-      const blob = await response.blob();
+      const blob = response.data; // Axis puts the blob body in response.data
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
@@ -904,6 +927,33 @@ export default function AdminDashboard() {
     } catch (error) {
       console.error('Download error:', error);
       alert('Failed to download template: ' + error.message);
+    }
+  };
+
+  const handleCreateUser = async () => {
+    if (!newUser.username || !newUser.password) {
+      alert('Username and password are required');
+      return;
+    }
+    try {
+      setCreatingUser(true);
+      await api.post('/users', {
+        username: newUser.username,
+        password: newUser.password,
+        fullName: newUser.fullName || null,
+        email: newUser.email || null,
+        role: newUser.role || 'student'
+      });
+      setNewUser({ username: '', password: '', fullName: '', email: '', role: 'student' });
+      fetchUsers();
+      alert(`User "${newUser.username}" created successfully!`);
+      setShowUserUploadModal(false);
+      setAddUserMode('choose');
+    } catch (error) {
+      console.error('User creation error:', error);
+      alert(error.response?.data?.error || 'Failed to create user');
+    } finally {
+      setCreatingUser(false);
     }
   };
 
@@ -1004,8 +1054,8 @@ export default function AdminDashboard() {
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-gray-900 rounded-lg flex items-center justify-center text-white text-lg">
-                🛡️
+              <div className="w-8 h-8 bg-gray-900 rounded-lg flex items-center justify-center text-white">
+                <Shield size={18} />
               </div>
               <div>
                 <h1 className="text-xl font-bold text-gray-900">Admin Dashboard</h1>
@@ -1036,13 +1086,13 @@ export default function AdminDashboard() {
         <div className="max-w-7xl mx-auto px-6">
           <div className="flex gap-6 overflow-x-auto">
             {[
-              { id: 'overview', label: 'Overview', icon: '📊' },
-              { id: 'users', label: 'Users', icon: '👥' },
-              { id: 'courses', label: 'Courses', icon: '📚' },
-              { id: 'questions', label: 'Questions', icon: '❓' },
-              { id: 'submissions', label: 'Submissions', icon: '📝' },
+              { id: 'overview', label: 'Overview', icon: <BarChart2 size={18} /> },
+              { id: 'users', label: 'Users', icon: <Users size={18} /> },
+              { id: 'courses', label: 'Courses', icon: <BookOpen size={18} /> },
+              { id: 'questions', label: 'Questions', icon: <HelpCircle size={18} /> },
+              { id: 'submissions', label: 'Submissions', icon: <FileText size={18} /> },
               // { id: 'ai-agent', label: 'AI Agent', icon: '🤖' },
-              { id: 'assets', label: 'Assets', icon: '📁' }
+              { id: 'assets', label: 'Assets', icon: <FolderOpen size={18} /> }
             ].map(tab => (
               <button
                 key={tab.id}
@@ -1109,7 +1159,7 @@ export default function AdminDashboard() {
                       className="group p-4 bg-white border border-gray-200 rounded-xl hover:border-gray-400 hover:shadow-sm transition-all text-left"
                     >
                       <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center mb-3 group-hover:bg-gray-100">
-                        <span className="text-lg">➕</span>
+                        <Plus size={20} className="text-gray-900" />
                       </div>
                       <div className="font-semibold text-gray-900">Add New Course</div>
                       <div className="text-xs text-gray-500 mt-1">Create a new learning path</div>
@@ -1120,7 +1170,7 @@ export default function AdminDashboard() {
                       className="group p-4 bg-white border border-gray-200 rounded-xl hover:border-gray-400 hover:shadow-sm transition-all text-left"
                     >
                       <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center mb-3 group-hover:bg-gray-100">
-                        <span className="text-lg">👥</span>
+                        <Users size={20} className="text-gray-900" />
                       </div>
                       <div className="font-semibold text-gray-900">Manage Users</div>
                       <div className="text-xs text-gray-500 mt-1">View registered students</div>
@@ -1131,7 +1181,7 @@ export default function AdminDashboard() {
                       className="group p-4 bg-white border border-gray-200 rounded-xl hover:border-gray-400 hover:shadow-sm transition-all text-left"
                     >
                       <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center mb-3 group-hover:bg-gray-100">
-                        <span className="text-lg">📝</span>
+                        <FileText size={20} className="text-gray-900" />
                       </div>
                       <div className="font-semibold text-gray-900">Review Submissions</div>
                       <div className="text-xs text-gray-500 mt-1">Grade student work</div>
@@ -1189,16 +1239,12 @@ export default function AdminDashboard() {
                   </div>
                   <div className="flex gap-3 flex-wrap">
                     <button
-                      onClick={() => setShowUserUploadModal(true)}
-                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold flex items-center gap-2"
+                      onClick={() => {
+                        navigate('/admin/add-users');
+                      }}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold flex items-center gap-2"
                     >
-                      <span>📁</span> Upload CSV
-                    </button>
-                    <button
-                      onClick={downloadUsersCsvTemplate}
-                      className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-semibold flex items-center gap-2"
-                    >
-                      <span>⬇️</span> Download Template
+                      <Plus size={16} /> Add Users
                     </button>
                   </div>
                 </div>
@@ -1235,12 +1281,25 @@ export default function AdminDashboard() {
                           </td>
                           <td className="px-6 py-4 text-sm text-gray-600">{user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}</td>
                           <td className="px-6 py-4 text-right">
-                            <button
-                              onClick={() => handleDeleteUser(user.id || user.userId)}
-                              className="text-red-600 hover:text-red-800 text-sm font-semibold"
-                            >
-                              Delete
-                            </button>
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                onClick={() => {
+                                  // Navigate to level management page
+                                  navigate(`/admin/level-management?userId=${user.id}&username=${user.username}`);
+                                }}
+                                className="px-3 py-1.5 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 text-sm font-semibold flex items-center gap-1"
+                                title="Manage Level Access"
+                              >
+                                <Lock size={14} />
+                                Manage Levels
+                              </button>
+                              <button
+                                onClick={() => handleDeleteUser(user.id || user.userId)}
+                                className="text-red-600 hover:text-red-800 text-sm font-semibold"
+                              >
+                                Delete
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       ))}
@@ -1269,7 +1328,7 @@ export default function AdminDashboard() {
                   {courses.map(course => (
                     <div key={course.id} className="bg-white rounded-xl border border-gray-200 overflow-hidden hover:border-gray-400 hover:shadow-sm transition-all group">
                       <div className="h-24 bg-gray-100 flex items-center justify-center border-b border-gray-100">
-                        <span className="text-4xl">📚</span>
+                        <BookOpen size={32} className="text-gray-400" />
                       </div>
                       <div className="p-5">
                         <div className="flex justify-between items-start mb-2">
@@ -2012,12 +2071,13 @@ function ChallengeModal({ challenge, courses, onSave, onClose }) {
       </div>
 
       {/* CSV Upload Modal for Users */}
+      {console.log('[Modal Render] showUserUploadModal:', showUserUploadModal)}
       {showUserUploadModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <h2 className="text-2xl font-bold mb-4">Bulk Import Users via CSV</h2>
-              
+
               <div className="space-y-4 mb-6">
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                   <h3 className="font-semibold text-blue-900 mb-3">📋 CSV Format Requirements:</h3>
@@ -2109,6 +2169,23 @@ admin_user,AdminPass789,Admin User,admin@example.com,admin`}</pre>
             </div>
           </div>
         </div>
+      )}
+
+      {/* Level Access Manager Modal */}
+      {console.log('[Render Check] selectedUserForLevelAccess:', selectedUserForLevelAccess)}
+      {console.log('[Render Check] renderKey:', renderKey)}
+      {selectedUserForLevelAccess ? (
+        <div key={`modal-${renderKey}`}>
+          <LevelAccessManager
+            user={selectedUserForLevelAccess}
+            onClose={() => {
+              console.log('[AdminDashboard] Closing modal');
+              setSelectedUserForLevelAccess(null);
+            }}
+          />
+        </div>
+      ) : (
+        <div key="no-modal">{console.log('[Render Check] No user selected')}</div>
       )}
     </div>
   );

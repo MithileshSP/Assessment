@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { CheckCircle, AlertTriangle, Info, AlertOctagon, X } from 'lucide-react';
 
 /**
  * Toast Component
@@ -37,10 +38,10 @@ function ToastItem({ toast, removeToast }) {
     };
 
     const icons = {
-        success: '✅',
-        error: '⚠️',
-        info: 'ℹ️',
-        warning: '🚧'
+        success: <CheckCircle size={24} />,
+        error: <AlertTriangle size={24} />,
+        info: <Info size={24} />,
+        warning: <AlertOctagon size={24} />
     };
 
     return (
@@ -51,7 +52,7 @@ function ToastItem({ toast, removeToast }) {
                 onClick={() => removeToast(toast.id)}
                 className="ml-auto text-white/60 hover:text-white"
             >
-                ✕
+                <X size={20} />
             </button>
         </div>
     );

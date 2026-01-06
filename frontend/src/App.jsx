@@ -19,6 +19,8 @@ import ChallengeView from "./pages/ChallengeView";
 import Login from "./pages/Login";
 import AdminDashboard from "./pages/AdminDashboardNew";
 import AdminSubmissionDetails from "./pages/AdminSubmissionDetails";
+import LevelManagement from "./pages/LevelManagement";
+import AddUsers from "./pages/AddUsers";
 import CourseManager from "./pages/CourseManager";
 import UserManagement from "./pages/UserManagement";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -151,6 +153,18 @@ function App() {
               ) : (
                 <Navigate to="/admin/login" />
               )
+            }
+          />
+          <Route
+            path="/admin/level-management"
+            element={
+              isAdmin ? <LevelManagement /> : <Navigate to="/admin/login" />
+            }
+          />
+          <Route
+            path="/admin/add-users"
+            element={
+              isAdmin ? <AddUsers /> : <Navigate to="/admin/login" />
             }
           />
 

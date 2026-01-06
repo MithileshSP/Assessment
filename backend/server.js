@@ -36,7 +36,7 @@ const assetsDir = path.join(__dirname, "assets");
 
 // Static file serving BEFORE security middleware (to set custom CORS headers)
 app.use("/screenshots", express.static(screenshotsDir, {
-  setHeaders: function(res, path, stat) {
+  setHeaders: function (res, path, stat) {
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
   }
@@ -92,7 +92,7 @@ const authLimiter = rateLimit({
 });
 
 app.use("/api/auth/google", authLimiter);
-app.use("/api/admin/login", authLimiter);
+app.use("/api/auth/login", authLimiter);
 
 // CORS Configuration for production
 const defaultOrigins = [
@@ -100,7 +100,9 @@ const defaultOrigins = [
   "http://localhost:3000",
   "http://localhost:5173",
   "http://localhost:80",
-  "http://192.168.10.3:100/",
+  "http://localhost:100",
+  "http://192.168.10.5:100",
+  "http://192.168.10.5:7000",
 ];
 const allowedOrigins = (
   process.env.ALLOWED_ORIGINS
@@ -117,7 +119,8 @@ const corsOptions = {
       origin.startsWith("http://localhost") ||
       origin.startsWith("https://localhost") ||
       origin.startsWith("http://127.0.0.1") ||
-      origin.startsWith("https://127.0.0.1");
+      origin.startsWith("https://127.0.0.1") ||
+      origin.startsWith("http://192.168");
 
     const normalizedOrigin = origin.replace(/\/$/, "");
 
@@ -184,14 +187,28 @@ app.use("/api/admin", adminRouter);
 app.use("/api/level-completion", levelCompletionRouter);
 app.use("/api/assets", assetsRouter);
 app.use("/api/test-sessions", testSessionsRouter);
+const levelAccessRouter = require("./routes/levelAccess");
+app.use("/api/level-access", levelAccessRouter);
 
 // Serve frontend static files (optional fallback if frontend container is unavailable)
 // In production with separate frontend container, this warning can be safely ignored
-const frontendDistPath = fs.existsSync(path.join(__dirname, "frontend/dist"))
-  ? path.join(__dirname, "frontend/dist")
-  : path.resolve(__dirname, "../frontend/dist");
+const frontendDistPath = [
+  path.join(__dirname, "public"),
+  path.join(__dirname, "frontend/dist"),
+  path.resolve(__dirname, "../frontend/dist")
+].find(p => fs.existsSync(p));
 
-if (fs.existsSync(frontendDistPath)) {
+console.log("📂 Checking for frontend files...");
+[
+  path.join(__dirname, "public"),
+  path.join(__dirname, "frontend/dist"),
+  path.resolve(__dirname, "../frontend/dist")
+].forEach(p => console.log(`   - checking ${p}: ${fs.existsSync(p) ? "FOUND" : "MISSING"}`));
+
+console.log("📂 frontendDistPath value:", frontendDistPath);
+console.log("📂 frontendDistPath exists?:", fs.existsSync(frontendDistPath));
+
+if (frontendDistPath && fs.existsSync(frontendDistPath)) {
   console.log("✅ Serving frontend from:", frontendDistPath);
   app.use(express.static(frontendDistPath));
 
@@ -237,7 +254,7 @@ app.listen(PORT, () => {
   console.log(`   GET  /api/challenges`);
   console.log(`   POST /api/submissions`);
   console.log(`   POST /api/evaluate`);
-  console.log(`   POST /api/admin/login`);
+  console.log(`   POST /api/auth/login`);
   // Background sync to ensure JSON fallback submissions are persisted to MySQL when available
   // DISABLED FOR PRODUCTION - Comment out to enable demo data syncing
   // scheduleFallbackSync();

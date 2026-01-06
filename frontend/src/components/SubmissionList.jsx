@@ -1,4 +1,30 @@
 import { useState } from 'react';
+import {
+  BarChart2,
+  Image as ImageIcon,
+  Camera,
+  CheckCircle,
+  Search,
+  TrendingUp,
+  Layout,
+  Palette,
+  Lightbulb,
+  MessageCircle,
+  User,
+  FileText,
+  Clock,
+  Hash,
+  Download,
+  Trash2,
+  Play,
+  ChevronDown,
+  ChevronRight,
+  RefreshCw,
+  AlertTriangle,
+  Info,
+  X,
+  XCircle
+} from 'lucide-react';
 
 export default function SubmissionList({ submissions, onReEvaluate, onDelete }) {
   const [expandedId, setExpandedId] = useState(null);
@@ -51,7 +77,7 @@ export default function SubmissionList({ submissions, onReEvaluate, onDelete }) 
               onClick={() => setScreenshotModal(null)}
               className="absolute top-4 right-4 bg-white text-gray-900 rounded-full w-10 h-10 flex items-center justify-center text-2xl font-bold hover:bg-gray-200 z-10"
             >
-              ×
+              <X size={24} />
             </button>
             <div className="bg-white rounded-lg overflow-hidden">
               <div className="bg-gray-900 text-white px-6 py-3 text-lg font-semibold">
@@ -114,21 +140,21 @@ export default function SubmissionList({ submissions, onReEvaluate, onDelete }) 
           <div className="flex gap-3">
             <button
               onClick={() => setExpandedId(expandedId === submission.id ? null : submission.id)}
-              className="text-blue-600 hover:text-blue-700 text-sm font-medium"
+              className="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center gap-1"
             >
-              {expandedId === submission.id ? '▼ Hide Details' : '▶ View Code & Screenshots'}
+              {expandedId === submission.id ? <><ChevronDown size={16} /> Hide Details</> : <><Play size={16} /> View Code & Screenshots</>}
             </button>
             <button
               onClick={() => onReEvaluate(submission.id)}
-              className="text-green-600 hover:text-green-700 text-sm font-medium"
+              className="text-green-600 hover:text-green-700 text-sm font-medium flex items-center gap-1"
             >
-              🔄 Re-evaluate
+              <RefreshCw size={16} /> Re-evaluate
             </button>
             <button
               onClick={() => onDelete(submission.id)}
-              className="text-red-600 hover:text-red-700 text-sm font-medium"
+              className="text-red-600 hover:text-red-700 text-sm font-medium flex items-center gap-1"
             >
-              🗑️ Delete
+              <Trash2 size={16} /> Delete
             </button>
           </div>
 
@@ -137,7 +163,7 @@ export default function SubmissionList({ submissions, onReEvaluate, onDelete }) 
               {/* Summary Card */}
               <div className="bg-white p-6 rounded-lg border border-gray-200 shadow-sm">
                 <h4 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                  📊 Submission Details
+                  <BarChart2 size={20} /> Submission Details
                 </h4>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="bg-white rounded-lg p-4 shadow-sm">
@@ -160,30 +186,30 @@ export default function SubmissionList({ submissions, onReEvaluate, onDelete }) 
                   </div>
                   <div className="bg-white rounded-lg p-4 shadow-sm">
                     <div className="text-xs text-gray-600 mb-1">Status</div>
-                    <div className="text-xl font-bold">
+                    <div className="text-xl font-bold flex items-center gap-2">
                       {submission.status === 'passed' ? (
-                        <span className="text-green-600">✅ PASSED</span>
+                        <span className="text-green-600 flex items-center gap-1"><CheckCircle size={20} /> PASSED</span>
                       ) : (
-                        <span className="text-red-600">❌ FAILED</span>
+                        <span className="text-red-600 flex items-center gap-1"><XCircle size={20} /> FAILED</span>
                       )}
                     </div>
                   </div>
                 </div>
                 <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
                   <div className="flex items-center gap-2">
-                    <span className="text-gray-600">👤 Candidate:</span>
+                    <span className="text-gray-600 flex items-center gap-1"><User size={14} /> Candidate:</span>
                     <span className="font-semibold text-gray-900">{submission.candidateName}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-gray-600">📝 Challenge:</span>
+                    <span className="text-gray-600 flex items-center gap-1"><FileText size={14} /> Challenge:</span>
                     <span className="font-semibold text-gray-900">{submission.challengeId}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-gray-600">🕐 Submitted:</span>
+                    <span className="text-gray-600 flex items-center gap-1"><Clock size={14} /> Submitted:</span>
                     <span className="font-semibold text-gray-900">{formatDate(submission.submittedAt)}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-gray-600">🆔 ID:</span>
+                    <span className="text-gray-600 flex items-center gap-1"><Hash size={14} /> ID:</span>
                     <span className="font-mono text-xs text-gray-600">{submission.id}</span>
                   </div>
                 </div>
@@ -194,7 +220,7 @@ export default function SubmissionList({ submissions, onReEvaluate, onDelete }) 
                 (submission.user_screenshot && submission.expected_screenshot)) && (
                   <div className="bg-gray-50 p-6 rounded-lg border border-gray-200">
                     <h4 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                      🖼️ Visual Comparison
+                      <ImageIcon size={20} /> Visual Comparison
                       <button
                         onClick={() => {
                           const userScreenshot = submission.user_screenshot || submission.result?.visual?.screenshots?.candidate;
@@ -205,9 +231,9 @@ export default function SubmissionList({ submissions, onReEvaluate, onDelete }) 
                           if (expectedScreenshot) downloadScreenshot(`${expectedScreenshot}`, `expected-output.png`);
                           if (diffScreenshot) downloadScreenshot(`${diffScreenshot}`, `diff-output.png`);
                         }}
-                        className="ml-auto text-xs bg-gray-700 hover:bg-gray-800 text-white px-3 py-1 rounded"
+                        className="ml-auto text-xs bg-gray-700 hover:bg-gray-800 text-white px-3 py-1 rounded flex items-center gap-1"
                       >
-                        ⬇️ Download All
+                        <Download size={14} /> Download All
                       </button>
                     </h4>
 
@@ -215,8 +241,8 @@ export default function SubmissionList({ submissions, onReEvaluate, onDelete }) 
                       {/* Candidate Output */}
                       {(submission.user_screenshot || submission.result?.visual?.screenshots?.candidate) && (
                         <div className="bg-white rounded-lg shadow-md overflow-hidden">
-                          <div className="bg-blue-600 text-white px-3 py-2 text-sm font-semibold">
-                            📸 Candidate's Output
+                          <div className="bg-blue-600 text-white px-3 py-2 text-sm font-semibold flex items-center gap-2">
+                            <Camera size={16} /> Candidate's Output
                           </div>
                           <div
                             className="p-2 cursor-pointer hover:opacity-80 transition-opacity"
@@ -241,8 +267,8 @@ export default function SubmissionList({ submissions, onReEvaluate, onDelete }) 
                       {/* Expected Output */}
                       {(submission.expected_screenshot || submission.result?.visual?.screenshots?.expected) && (
                         <div className="bg-white rounded-lg shadow-md overflow-hidden">
-                          <div className="bg-green-600 text-white px-3 py-2 text-sm font-semibold">
-                            ✅ Expected Output
+                          <div className="bg-green-600 text-white px-3 py-2 text-sm font-semibold flex items-center gap-2">
+                            <CheckCircle size={16} /> Expected Output
                           </div>
                           <div
                             className="p-2 cursor-pointer hover:opacity-80 transition-opacity"
@@ -267,8 +293,8 @@ export default function SubmissionList({ submissions, onReEvaluate, onDelete }) 
                       {/* Diff Image */}
                       {submission.result?.visual?.screenshots?.diff && (
                         <div className="bg-white rounded-lg shadow-md overflow-hidden">
-                          <div className="bg-red-600 text-white px-3 py-2 text-sm font-semibold">
-                            🔍 Difference Map
+                          <div className="bg-red-600 text-white px-3 py-2 text-sm font-semibold flex items-center gap-2">
+                            <Search size={16} /> Difference Map
                           </div>
                           <div
                             className="p-2 cursor-pointer hover:opacity-80 transition-opacity"
@@ -293,7 +319,7 @@ export default function SubmissionList({ submissions, onReEvaluate, onDelete }) 
 
                     {/* Pixel Match Statistics */}
                     <div className="mt-4 bg-white rounded-lg p-4 shadow-sm">
-                      <h5 className="font-semibold text-gray-800 mb-2">📊 Pixel Match Statistics:</h5>
+                      <h5 className="font-semibold text-gray-800 mb-2 flex items-center gap-2"><BarChart2 size={16} /> Pixel Match Statistics:</h5>
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
                         <div>
                           <span className="text-gray-600">Visual Score:</span>
@@ -331,7 +357,7 @@ export default function SubmissionList({ submissions, onReEvaluate, onDelete }) 
               {/* Code Section */}
               <div className="bg-white rounded-lg shadow-md p-6">
                 <h4 className="text-lg font-bold text-gray-900 flex items-center gap-2 mb-4">
-                  💻 Submitted Code
+                  <Play size={20} /> Submitted Code
                   <span className="ml-auto text-xs bg-gray-200 text-gray-700 px-3 py-1 rounded-full">
                     {submission.code.html ? 'HTML' : ''}
                     {submission.code.css ? ' • CSS' : ''}
@@ -391,7 +417,7 @@ export default function SubmissionList({ submissions, onReEvaluate, onDelete }) 
               {submission.result && (
                 <div className="bg-white rounded-lg shadow-md p-6">
                   <h4 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                    📈 Detailed Evaluation Results
+                    <TrendingUp size={20} /> Detailed Evaluation Results
                   </h4>
 
                   <div className="space-y-4">
@@ -399,7 +425,7 @@ export default function SubmissionList({ submissions, onReEvaluate, onDelete }) 
                     {submission.result.structure && (
                       <div className="border-l-4 border-green-500 pl-4">
                         <h5 className="font-semibold text-gray-800 mb-2 flex items-center gap-2">
-                          🏗️ Structure Analysis
+                          <Layout size={18} /> Structure Analysis
                           <span className="ml-2 text-sm font-bold text-green-600">
                             {submission.result.structureScore}%
                           </span>
@@ -437,7 +463,7 @@ export default function SubmissionList({ submissions, onReEvaluate, onDelete }) 
                     {submission.result.visual && (
                       <div className="border-l-4 border-purple-500 pl-4">
                         <h5 className="font-semibold text-gray-800 mb-2 flex items-center gap-2">
-                          🎨 Visual Analysis
+                          <Palette size={18} /> Visual Analysis
                           <span className="ml-2 text-sm font-bold text-purple-600">
                             {submission.result.visualScore}%
                           </span>
@@ -477,8 +503,8 @@ export default function SubmissionList({ submissions, onReEvaluate, onDelete }) 
 
                     {/* Raw Result Data (for debugging) */}
                     <details className="bg-gray-50 rounded p-3">
-                      <summary className="cursor-pointer text-sm font-semibold text-gray-700 hover:text-gray-900">
-                        🔍 View Raw Evaluation Data (JSON)
+                      <summary className="cursor-pointer text-sm font-semibold text-gray-700 hover:text-gray-900 flex items-center gap-2">
+                        <Search size={14} /> View Raw Evaluation Data (JSON)
                       </summary>
                       <pre className="mt-2 bg-gray-900 text-gray-100 p-3 rounded text-xs overflow-x-auto max-h-64 overflow-y-auto">
                         {JSON.stringify(submission.result, null, 2)}
@@ -492,12 +518,12 @@ export default function SubmissionList({ submissions, onReEvaluate, onDelete }) 
               {submission.result && submission.result.feedback && submission.result.feedback.length > 0 && (
                 <div className="bg-yellow-50 p-4 rounded-lg">
                   <h4 className="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
-                    💡 Evaluation Feedback
+                    <Lightbulb size={20} /> Evaluation Feedback
                   </h4>
                   <ul className="space-y-2">
                     {submission.result.feedback.map((item, idx) => (
                       <li key={idx} className="flex items-start gap-2 text-sm">
-                        <span className="text-lg">{item.type === 'success' ? '✅' : item.type === 'warning' ? '⚠️' : 'ℹ️'}</span>
+                        <span className="text-lg">{item.type === 'success' ? <CheckCircle size={16} /> : item.type === 'warning' ? <AlertTriangle size={16} /> : <Info size={16} />}</span>
                         <span className="text-gray-700">{item.message}</span>
                       </li>
                     ))}
@@ -509,7 +535,7 @@ export default function SubmissionList({ submissions, onReEvaluate, onDelete }) 
               {submission.user_feedback && (
                 <div className="bg-blue-50 p-4 rounded-lg border-2 border-blue-200">
                   <h4 className="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
-                    💬 User Feedback
+                    <MessageCircle size={20} /> User Feedback
                   </h4>
                   <p className="text-gray-700 whitespace-pre-wrap">{submission.user_feedback}</p>
                 </div>

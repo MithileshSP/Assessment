@@ -26,11 +26,23 @@ router.post('/', async (req, res) => {
   }
 });
 
+// Get all test sessions (for admin)
+router.get('/', async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 100;
+    const sessions = await TestSession.findAll(limit);
+    res.json(sessions);
+  } catch (error) {
+    console.error('Error fetching test sessions:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Get test session by ID
 router.get('/:id', async (req, res) => {
   try {
     const session = await TestSession.findById(req.params.id);
-    
+
     if (!session) {
       return res.status(404).json({ error: 'Test session not found' });
     }
@@ -46,7 +58,7 @@ router.get('/:id', async (req, res) => {
 router.get('/:id/details', async (req, res) => {
   try {
     const sessionWithSubmissions = await TestSession.getSessionWithSubmissions(req.params.id);
-    
+
     if (!sessionWithSubmissions) {
       return res.status(404).json({ error: 'Test session not found' });
     }
@@ -96,7 +108,7 @@ router.get('/user/:userId', async (req, res) => {
   try {
     const limit = parseInt(req.query.limit) || 20;
     const sessions = await TestSession.findByUser(req.params.userId, limit);
-    
+
     res.json(sessions);
   } catch (error) {
     console.error('Error fetching user test sessions:', error);

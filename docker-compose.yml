@@ -1,4 +1,3 @@
-
 services:
   portal_mysql:
     image: mysql:8.0
@@ -6,8 +5,8 @@ services:
     restart: always
     command: --bind-address=0.0.0.0
     environment:
-      MYSQL_ROOT_PASSWORD: gokul
-      MYSQL_DATABASE: fullstack_test_portal
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
     ports:
       - "3307:3306"
     volumes:
@@ -16,26 +15,29 @@ services:
     networks:
       - test-portal-network
     healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 --silent"]
+      test: [ "CMD-SHELL", "mysqladmin ping -h 127.0.0.1 --silent" ]
       interval: 10s
       timeout: 5s
       retries: 30
       start_period: 60s
 
   backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+    image: gokulv456/assessment-backend
     container_name: test-portal-backend
     restart: unless-stopped
+    depends_on:
+      portal_mysql:
+        condition: service_healthy
     environment:
       NODE_ENV: production
-      PORT: 7000
-      DB_HOST: host.docker.internal
+      PORT: ${PORT}
+      # Point to Host DB (User's data is here)
+      # Point to MySQL Container using service name
+      DB_HOST: portal_mysql
       DB_PORT: 3306
-      DB_USER: root
-      DB_PASSWORD: gokul
-      DB_NAME: fullstack_test_portal
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
       USE_JSON: ${USE_JSON}
 
       ASSETS_ROOT: /var/www/portal-assets
@@ -43,31 +45,17 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
     ports:
-      - "7000:7000"
+      - "100:7000"
     volumes:
       - ./backend/screenshots:/app/screenshots
-      - ./backend/data:/app/data
+      - ./frontend/dist:/app/public
+      - ./backend/server.js:/app/server.js
+      - ./backend/routes:/app/routes
+      - ./backend/models:/app/models
+      - ./backend/database:/app/database
       - /var/www/portal-assets:/var/www/portal-assets
     networks:
       - test-portal-network
-
-
-  frontend:
-    build:
-      context: .
-      dockerfile: ./frontend/Dockerfile
-      args:
-        VITE_GOOGLE_CLIENT_ID: ${VITE_GOOGLE_CLIENT_ID}
-        VITE_API_URL: http://localhost:7000/api
-        VITE_BACKEND_ORIGIN: http://localhost:7000
-    container_name: test-portal-frontend
-    restart: unless-stopped
-    ports:
-      - "100:8083"
-    networks:
-      - test-portal-network
-    mem_limit: 512m
-    cpus: "0.5"
 
 networks:
   test-portal-network:

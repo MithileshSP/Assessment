@@ -5,7 +5,7 @@
 
 import axios from 'axios';
 
-// Use environment variable for API URL, fallback to localhost for development
+// Use environment variable or relative path
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 // Create axios instance
@@ -82,7 +82,7 @@ export const quickEvaluate = (code, challengeId) =>
 
 // Admin
 export const adminLogin = (credentials) =>
-  api.post('/admin/login', credentials);
+  api.post('/auth/login', credentials);
 
 export const getAdminChallenges = () =>
   api.get('/admin/challenges');

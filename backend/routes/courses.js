@@ -345,7 +345,9 @@ router.get('/:courseId/levels/:level/questions/:questionId', (req, res) => {
  */
 router.get('/progress/:userId', async (req, res) => {
   try {
+    console.log('[DEBUG] GET /progress/', req.params.userId);
     let allProgress = getProgress();
+    console.log('[DEBUG] Total progress entries:', allProgress.length);
     let userProgress = allProgress.find(p => p.userId === req.params.userId);
 
     // If no progress file entry, try to infer from completed test sessions

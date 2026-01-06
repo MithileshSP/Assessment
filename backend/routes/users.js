@@ -393,7 +393,9 @@ router.post(
     let skipped = 0;
 
     fs.createReadStream(req.file.path)
-      .pipe(csv())
+      .pipe(csv({
+        mapHeaders: ({ header }) => header.trim().replace(/^\ufeff/, '')
+      }))
       .on("data", (row) => {
         results.push(row);
       })
@@ -427,15 +429,21 @@ router.post(
                 .substr(2, 9)}`,
               username: row.username,
               password: hashPassword(row.password),
-              email: row.email || "",
+              email: row.email || null,
               full_name: row.fullName || "",
               role: row.role || "student",
               created_at: new Date(),
               last_login: null,
             };
 
-            await UserModel.create(newUser);
-            added++;
+            try {
+              await UserModel.create(newUser);
+              added++;
+            } catch (createError) {
+              console.error(`Error creating user from CSV (Line ${lineNum}):`, createError.message);
+              errors.push(`Line ${lineNum}: Failed to create user - ${createError.message}`);
+              skipped++;
+            }
           }
 
           // Clean up uploaded file
@@ -672,6 +680,60 @@ router.post("/complete-level", (req, res) => {
   } catch (error) {
     console.error("Error completing level:", error);
     res.status(500).json({ error: "Failed to mark level as complete" });
+  }
+});
+
+// POST / - Create a single user
+router.post("/", async (req, res) => {
+  try {
+    const { username, password, fullName, email, role } = req.body;
+    console.log('Creating user:', { username, email, hasPassword: !!password, emailType: typeof email, emailValue: email });
+
+    // Validate required fields
+    if (!username || !password) {
+      return res.status(400).json({ error: "Username and password are required" });
+    }
+
+    // Check if user already exists
+    const existingUser = await query(
+      "SELECT id FROM users WHERE username = ?",
+      [username]
+    );
+
+    if (existingUser.length > 0) {
+      return res.status(400).json({ error: "Username already exists" });
+    }
+
+    // Generate user ID
+    const userId = `user-${Date.now()}-${crypto.randomBytes(4).toString("hex")}`;
+
+    // Hash password
+    const hashedPassword = hashPassword(password);
+
+    // Insert user into database
+    await query(
+      `INSERT INTO users (id, username, password, full_name, email, role, created_at) 
+       VALUES (?, ?, ?, ?, ?, ?, NOW())`,
+      [
+        userId,
+        username,
+        hashedPassword,
+        fullName || null,
+        email || null,
+        role || "student"
+      ]
+    );
+
+    res.status(201).json({
+      success: true,
+      message: "User created successfully",
+      userId: userId,
+      username: username
+    });
+
+  } catch (error) {
+    console.error("Error creating user:", error);
+    res.status(500).json({ error: "Failed to create user: " + error.message });
   }
 });
 

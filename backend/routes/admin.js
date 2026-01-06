@@ -48,59 +48,7 @@ const getSubmissions = () => {
   }
 };
 
-/**
- * POST /api/admin/login
- * Admin authentication
- * Body: { username, password }
- */
-router.post("/login", (req, res) => {
-  try {
-    const { username, password } = req.body;
 
-    if (!username || !password) {
-      return res.status(400).json({ error: "Username and password required" });
-    }
-
-    const users = getUsers();
-    const user = users.find((u) => u.username === username);
-
-    if (!user) {
-      return res.status(401).json({ error: "Invalid credentials" });
-    }
-
-    // Check if user is admin
-    if (user.role !== "admin") {
-      return res.status(403).json({ error: "Access denied. Admin only." });
-    }
-
-    // Hash the provided password and compare
-    const hashedPassword = crypto
-      .createHash("sha256")
-      .update(password)
-      .digest("hex");
-
-    if (user.password !== hashedPassword) {
-      return res.status(401).json({ error: "Invalid credentials" });
-    }
-
-    // Generate admin token
-    const token = crypto.randomBytes(32).toString("hex");
-
-    res.json({
-      message: "Login successful",
-      user: {
-        id: user.id,
-        username: user.username,
-        name: user.fullName || user.name,
-        role: user.role,
-      },
-      token: token,
-    });
-  } catch (error) {
-    console.error("Admin login error:", error);
-    res.status(500).json({ error: "Login failed" });
-  }
-});
 
 /**
  * GET /api/admin/challenges

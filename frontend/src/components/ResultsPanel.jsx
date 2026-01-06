@@ -1,3 +1,17 @@
+import {
+  Award,
+  FileText,
+  CheckCircle,
+  XCircle,
+  Check,
+  X,
+  List,
+  Camera,
+  Lightbulb,
+  AlertTriangle,
+  Info
+} from 'lucide-react';
+
 export default function ResultsPanel({ result }) {
   if (!result) return null;
 
@@ -24,11 +38,11 @@ export default function ResultsPanel({ result }) {
     <div className="space-y-6">
       {/* Overall Score */}
       <div className={`p-6 rounded-lg text-center ${result.passed
-          ? 'bg-green-100 border-2 border-green-500'
-          : 'bg-red-100 border-2 border-red-500'
+        ? 'bg-green-100 border-2 border-green-500'
+        : 'bg-red-100 border-2 border-red-500'
         }`}>
-        <h3 className="text-2xl font-bold mb-2">
-          {result.passed ? '🎉 Congratulations!' : '📝 Keep Trying!'}
+        <h3 className="text-2xl font-bold mb-2 flex items-center justify-center gap-2">
+          {result.passed ? <><Award size={28} className="text-green-600" /> Congratulations!</> : <><FileText size={28} className="text-red-600" /> Keep Trying!</>}
         </h3>
         <p className="text-4xl font-bold mb-2">
           {result.finalScore}%
@@ -56,8 +70,8 @@ export default function ResultsPanel({ result }) {
           <div className="text-2xl font-bold text-purple-600">
             {result.contentScore}%
           </div>
-          <div className="text-xs text-gray-500 mt-1">
-            {result.content?.passed ? '✓ Passed' : '✗ Failed'}
+          <div className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+            {result.content?.passed ? <span className="flex items-center gap-1 text-green-600"><Check size={12} /> Passed</span> : <span className="flex items-center gap-1 text-red-600"><X size={12} /> Failed</span>}
           </div>
           <div className="text-xs text-gray-400 mt-1">
             Weight: 50%
@@ -69,8 +83,8 @@ export default function ResultsPanel({ result }) {
           <div className="text-2xl font-bold text-green-600">
             {result.visualScore}%
           </div>
-          <div className="text-xs text-gray-500 mt-1">
-            {result.visual?.passed ? '✓ Passed' : '✗ Failed'}
+          <div className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+            {result.visual?.passed ? <span className="flex items-center gap-1 text-green-600"><Check size={12} /> Passed</span> : <span className="flex items-center gap-1 text-red-600"><X size={12} /> Failed</span>}
           </div>
           <div className="text-xs text-gray-400 mt-1">
             Weight: 50%
@@ -81,20 +95,20 @@ export default function ResultsPanel({ result }) {
       {/* Content Validation Results (NEW) */}
       {result.content && result.content.details && (
         <div className="space-y-4">
-          <h4 className="font-semibold text-lg">📝 Content Validation (Question-Specific)</h4>
+          <h4 className="font-semibold text-lg flex items-center gap-2"><FileText size={20} /> Content Validation (Question-Specific)</h4>
 
           <div className="space-y-3">
             {result.content.details.map((item, index) => (
               <div
                 key={index}
                 className={`p-4 rounded-lg border-2 ${item.passed
-                    ? 'bg-green-50 border-green-300'
-                    : 'bg-red-50 border-red-300'
+                  ? 'bg-green-50 border-green-300'
+                  : 'bg-red-50 border-red-300'
                   }`}
               >
                 <div className="flex items-start gap-3">
                   <span className="text-2xl">
-                    {item.passed ? '✅' : '❌'}
+                    {item.passed ? <CheckCircle size={24} className="text-green-500" /> : <XCircle size={24} className="text-red-500" />}
                   </span>
                   <div className="flex-1">
                     <h5 className="font-semibold mb-1">
@@ -126,7 +140,7 @@ export default function ResultsPanel({ result }) {
           {/* Content Feedback Summary */}
           {result.content.feedback && (
             <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-              <h5 className="font-semibold text-blue-900 mb-2">📋 Detailed Feedback:</h5>
+              <h5 className="font-semibold text-blue-900 mb-2 flex items-center gap-2"><List size={16} /> Detailed Feedback:</h5>
               <pre className="text-sm text-gray-800 whitespace-pre-wrap font-mono">
                 {result.content.feedback}
               </pre>
@@ -144,7 +158,7 @@ export default function ResultsPanel({ result }) {
           {result.feedback.categories.matching.length > 0 && (
             <div className="bg-green-50 p-4 rounded-lg border border-green-200">
               <h5 className="font-semibold text-green-900 mb-3 flex items-center gap-2">
-                <span>✅</span>
+                <CheckCircle size={20} />
                 <span>Correctly Implemented ({result.feedback.categories.matching.length})</span>
               </h5>
               <div className="space-y-2">
@@ -164,7 +178,7 @@ export default function ResultsPanel({ result }) {
           {result.feedback.categories.minorDifferences.length > 0 && (
             <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
               <h5 className="font-semibold text-yellow-900 mb-3 flex items-center gap-2">
-                <span>⚠️</span>
+                <AlertTriangle size={20} />
                 <span>Minor Improvements Needed ({result.feedback.categories.minorDifferences.length})</span>
               </h5>
               <div className="space-y-2">
@@ -173,7 +187,7 @@ export default function ResultsPanel({ result }) {
                     <p className="font-medium text-yellow-800">{item.message}</p>
                     {item.suggestion && (
                       <p className="text-sm text-gray-700 mt-2">
-                        <strong>💡 Suggestion:</strong> {item.suggestion}
+                        <strong><Lightbulb size={12} className="inline mr-1" /> Suggestion:</strong> {item.suggestion}
                       </p>
                     )}
                   </div>
@@ -186,7 +200,7 @@ export default function ResultsPanel({ result }) {
           {result.feedback.categories.missing.length > 0 && (
             <div className="bg-red-50 p-4 rounded-lg border border-red-200">
               <h5 className="font-semibold text-red-900 mb-3 flex items-center gap-2">
-                <span>❌</span>
+                <XCircle size={20} />
                 <span>Missing Elements ({result.feedback.categories.missing.length})</span>
               </h5>
               <div className="space-y-2">
@@ -195,7 +209,7 @@ export default function ResultsPanel({ result }) {
                     <p className="font-medium text-red-800">{item.message}</p>
                     {item.suggestion && (
                       <p className="text-sm text-gray-700 mt-2">
-                        <strong>💡 How to fix:</strong> {item.suggestion}
+                        <strong><Lightbulb size={12} className="inline mr-1" /> How to fix:</strong> {item.suggestion}
                       </p>
                     )}
                   </div>
@@ -209,7 +223,7 @@ export default function ResultsPanel({ result }) {
       {/* Improvement Suggestions */}
       {result.feedback?.improvements && result.feedback.improvements.length > 0 && (
         <div className="bg-indigo-50 p-4 rounded-lg border border-indigo-200">
-          <h4 className="font-semibold text-indigo-900 mb-3">📋 Action Items</h4>
+          <h4 className="font-semibold text-indigo-900 mb-3 flex items-center gap-2"><List size={18} /> Action Items</h4>
           <ul className="space-y-2">
             {result.feedback.improvements.map((improvement, index) => {
               const isObject = improvement && typeof improvement === 'object';
@@ -267,7 +281,7 @@ export default function ResultsPanel({ result }) {
       {/* Screenshots */}
       {result.visual?.screenshots && (
         <div className="bg-white p-4 rounded-lg border border-gray-200">
-          <h4 className="font-semibold mb-3">📸 Visual Comparison</h4>
+          <h4 className="font-semibold mb-3 flex items-center gap-2"><Camera size={20} /> Visual Comparison</h4>
           <div className="grid grid-cols-2 gap-4">
             <div>
               <p className="text-xs text-gray-600 mb-2 font-medium">Your Output</p>

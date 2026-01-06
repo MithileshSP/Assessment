@@ -4,6 +4,32 @@ import { getChallenge, submitSolution, evaluateSolution, getSubmissionResult, ge
 import CodeEditor from '../components/CodeEditor';
 import PreviewFrame from '../components/PreviewFrame';
 import ResultsPanel from '../components/ResultsPanel';
+import {
+  ArrowLeft,
+  ChevronLeft,
+  ChevronRight,
+  Play,
+  CheckCircle,
+  BookOpen,
+  FileText,
+  Image as ImageIcon,
+  Copy,
+  ExternalLink,
+  Lightbulb,
+  Maximize2,
+  Target,
+  Eye,
+  EyeOff,
+  Monitor,
+  X,
+  Rocket,
+  Camera,
+  Search,
+  Palette,
+  BarChart,
+  RefreshCw,
+  AlertCircle
+} from 'lucide-react';
 
 export default function ChallengeView() {
   const { id } = useParams();
@@ -259,9 +285,7 @@ export default function ChallengeView() {
               onClick={() => navigate('/')}
               className="text-gray-600 hover:text-gray-900 flex items-center gap-2"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
+              <ArrowLeft size={20} />
               Back
             </button>
             <div>
@@ -283,9 +307,7 @@ export default function ChallengeView() {
                   className="px-3 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
                   title="Previous Question"
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                  </svg>
+                  <ChevronLeft size={16} />
                   Previous
                 </button>
                 <button
@@ -295,21 +317,20 @@ export default function ChallengeView() {
                   title="Next Question"
                 >
                   Next
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
+                  <ChevronRight size={16} />
                 </button>
               </div>
             )}
-            <button onClick={handleRunCode} className="btn-secondary">
-              ▶ Run Code
+            <button onClick={handleRunCode} className="btn-secondary flex items-center gap-2">
+              <Play size={16} /> Run Code
             </button>
             <button
               onClick={handleSubmit}
               disabled={submitting || evaluating}
-              className="btn-success disabled:opacity-50 disabled:cursor-not-allowed"
+              className="btn-success disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
-              {submitting || evaluating ? 'Evaluating...' : '✓ Submit & Evaluate'}
+              {submitting || evaluating ? <RefreshCw size={16} className="animate-spin" /> : <CheckCircle size={16} />}
+              {submitting || evaluating ? 'Evaluating...' : 'Submit & Evaluate'}
             </button>
           </div>
         </div>
@@ -324,24 +345,23 @@ export default function ChallengeView() {
             onClick={() => setShowInstructions(!showInstructions)}
             className="flex items-center justify-between px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
           >
-            <span className="font-semibold">
-              {showInstructions ? '📖 Hide Instructions' : '📖 Show Instructions'}
+            <span className="font-semibold flex items-center gap-2">
+              <BookOpen size={18} />
+              {showInstructions ? 'Hide Instructions' : 'Show Instructions'}
             </span>
-            <svg
-              className={`w-5 h-5 transition-transform ${showInstructions ? 'rotate-180' : ''}`}
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
+            <ChevronRight
+              size={20}
+              className={`transition-transform ${showInstructions ? '-rotate-90' : 'rotate-90'}`}
+            />
           </button>
 
           {/* Instructions */}
           {showInstructions && (
             <div className="card">
               <div className="flex items-center justify-between mb-3">
-                <h2 className="text-lg font-bold">📝 Instructions</h2>
+                <h2 className="text-lg font-bold flex items-center gap-2">
+                  <FileText size={20} className="text-gray-600" /> Instructions
+                </h2>
               </div>
 
               {/* Course/Level Breadcrumb */}
@@ -366,9 +386,7 @@ export default function ChallengeView() {
               {challenge.assets && (challenge.assets.images?.length > 0 || (Array.isArray(challenge.assets) && challenge.assets.length > 0)) && (
                 <div className="mt-4 p-4 bg-purple-50 border border-purple-200 rounded-lg">
                   <h3 className="font-semibold text-purple-900 mb-3 flex items-center gap-2">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
+                    <ImageIcon size={20} />
                     Assets for this challenge:
                   </h3>
                   <div className="grid grid-cols-1 gap-2">
@@ -390,12 +408,12 @@ export default function ChallengeView() {
                           <div className="flex gap-2">
                             <button
                               onClick={() => { navigator.clipboard.writeText(assetPath); alert('Copied path: ' + assetPath); }}
-                              className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1 rounded border border-gray-300"
+                              className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1 rounded border border-gray-300 flex items-center gap-1"
                             >
-                              Copy Path
+                              <Copy size={12} /> Copy Path
                             </button>
-                            <a href={fullUrl} target="_blank" rel="noopener noreferrer" className="text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 px-2 py-1 rounded border border-blue-300">
-                              View
+                            <a href={fullUrl} target="_blank" rel="noopener noreferrer" className="text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 px-2 py-1 rounded border border-blue-300 flex items-center gap-1">
+                              <ExternalLink size={12} /> View
                             </a>
                           </div>
                         </div>
@@ -409,10 +427,8 @@ export default function ChallengeView() {
               {challenge.hints && challenge.hints.length > 0 && (
                 <details className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg cursor-pointer">
                   <summary className="font-semibold text-yellow-900 cursor-pointer flex items-center gap-2">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                    </svg>
-                    💡 Hints ({challenge.hints.length})
+                    <Lightbulb size={20} />
+                    Hints ({challenge.hints.length})
                   </summary>
                   <div className="mt-3 space-y-2">
                     {challenge.hints.map((hint, index) => (
@@ -466,14 +482,14 @@ export default function ChallengeView() {
                     className="text-xs px-2 py-1 rounded bg-gray-200 hover:bg-gray-300 text-gray-700 flex items-center gap-1"
                     title="Full Screen Preview"
                   >
-                    ⤢ Full Screen
+                    <Maximize2 size={14} /> Full Screen
                   </button>
                   <button
                     onClick={() => setShowExpectedScreenshot(!showExpectedScreenshot)}
-                    className={`text-xs px-3 py-1 rounded transition-colors ${showExpectedScreenshot ? 'bg-blue-100 text-blue-700' : 'bg-gray-200 text-gray-700'}`}
+                    className={`text-xs px-3 py-1 rounded transition-colors flex items-center gap-1 ${showExpectedScreenshot ? 'bg-blue-100 text-blue-700' : 'bg-gray-200 text-gray-700'}`}
                     title="Toggle expected result view"
                   >
-                    {showExpectedScreenshot ? '👁️ Hide Expected' : '🎯 Show Expected'}
+                    {showExpectedScreenshot ? <><EyeOff size={14} /> Hide Expected</> : <><Target size={14} /> Show Expected</>}
                   </button>
                 </div>
               </div>
@@ -509,7 +525,7 @@ export default function ChallengeView() {
                     onClick={() => setFullScreenView('expected')}
                     className="text-xs px-2 py-1 rounded bg-green-200 hover:bg-green-300 text-green-800 flex items-center gap-1"
                   >
-                    ⤢ Full Screen
+                    <Maximize2 size={14} /> Full Screen
                   </button>
                 </div>
                 <div className="flex-1 relative overflow-auto bg-gray-100">
@@ -534,7 +550,7 @@ export default function ChallengeView() {
         <div className="fixed inset-0 z-50 bg-white flex flex-col">
           <div className={`p-4 border-b flex justify-between items-center ${fullScreenView === 'expected' ? 'bg-green-50' : 'bg-gray-50'}`}>
             <h2 className="text-xl font-bold flex items-center gap-2">
-              {fullScreenView === 'live' ? '🖥️ Live Preview (Full Screen)' : '✅ Expected Result (Full Screen)'}
+              {fullScreenView === 'live' ? <><Monitor size={24} /> Live Preview (Full Screen)</> : <><CheckCircle size={24} className="text-green-600" /> Expected Result (Full Screen)</>}
               <span className="text-sm font-normal text-gray-500">
                 {fullScreenView === 'live' ? '- Your Code' : '- Target Design'}
               </span>
@@ -543,9 +559,7 @@ export default function ChallengeView() {
               onClick={() => setFullScreenView(null)}
               className="px-4 py-2 bg-gray-800 text-white rounded hover:bg-gray-700 flex items-center gap-2"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
+              <X size={20} />
               Exit Full Screen
             </button>
           </div>
@@ -579,7 +593,7 @@ export default function ChallengeView() {
                 This may take 5-10 seconds
               </p>
               <div className="max-w-md mx-auto text-left bg-blue-50 p-4 rounded-lg">
-                <p className="text-xs font-semibold text-blue-900 mb-2">🔄 Evaluation Process:</p>
+                <p className="text-xs font-semibold text-blue-900 mb-2 flex items-center gap-1"><RefreshCw size={12} /> Evaluation Process:</p>
                 <ul className="text-xs text-blue-800 space-y-1">
                   <li>• Launching headless browser (Chrome)</li>
                   <li>• Rendering your code as screenshot</li>

@@ -2,6 +2,15 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getCourses } from '../services/api';
 import {
+  BookOpen,
+  Clock,
+  BarChart,
+  Layers,
+  ArrowRight,
+  EyeOff,
+  Code
+} from 'lucide-react';
+import {
   isAdminSessionActive,
   subscribeToSessionChanges,
   clearAdminSession,
@@ -71,8 +80,8 @@ export default function CoursesHome() {
           <div className="flex justify-between items-center">
             <div>
               <h1 className="text-3xl font-bold text-gray-900">Frontend Test Portal</h1>
-              <p className="text-gray-600 mt-1">
-                Welcome, {localStorage.getItem('username') || 'Student'}! 👋
+              <p className="text-gray-600 mt-1 flex items-center gap-2">
+                Welcome, {localStorage.getItem('username') || 'Student'}! <span className="text-xl">👋</span>
               </p>
             </div>
             <div className="flex gap-3">
@@ -84,12 +93,6 @@ export default function CoursesHome() {
                   Admin Dashboard
                 </button>
               )}
-              {/* <button
-                onClick={() => navigate('/admin/login')}
-                className="px-4 py-2 text-gray-600 hover:text-gray-900 font-medium"
-              >
-                Admin Login
-              </button> */}
               <button
                 onClick={handleLogout}
                 className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium"
@@ -113,8 +116,8 @@ export default function CoursesHome() {
                 }`}
             >
               {course.isHidden && (
-                <div className="bg-yellow-400 text-yellow-900 text-xs font-bold text-center py-1">
-                  👁️ HIDDEN (Admin Only)
+                <div className="bg-yellow-400 text-yellow-900 text-xs font-bold text-center py-1 flex items-center justify-center gap-1">
+                  <EyeOff size={14} /> HIDDEN (Admin Only)
                 </div>
               )}
               {/* Course Thumbnail */}
@@ -129,7 +132,7 @@ export default function CoursesHome() {
                   className="w-full h-full object-cover"
                   onError={(e) => {
                     e.target.style.display = 'none';
-                    e.target.parentElement.innerHTML = `<span class="text-6xl relative z-10">${course.icon}</span>`;
+                    e.target.parentElement.innerHTML = `<span class="text-6xl relative z-10 opacity-50"><Code size={64} /></span>`;
                   }}
                 />
               </div>
@@ -137,8 +140,10 @@ export default function CoursesHome() {
               {/* Course Info */}
               <div className="p-6">
                 <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-xl font-bold text-gray-900">
-                    {course.icon} {course.title}
+                  <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                    {/* Fallback icon if course.icon is text emoji */}
+                    <BookOpen size={20} className="text-indigo-600" />
+                    {course.title}
                   </h3>
                 </div>
 
@@ -149,8 +154,8 @@ export default function CoursesHome() {
                 {/* Course Meta */}
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-500">
-                      ⏱️ {course.estimatedTime}
+                    <span className="text-gray-500 flex items-center gap-1">
+                      <Clock size={16} /> {course.estimatedTime}
                     </span>
                     <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getDifficultyColor(course.difficulty)}`}>
                       {course.difficulty}
@@ -158,11 +163,11 @@ export default function CoursesHome() {
                   </div>
 
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-500">
-                      📚 {course.totalLevels} Levels
+                    <span className="text-gray-500 flex items-center gap-1">
+                      <Layers size={16} /> {course.totalLevels} Levels
                     </span>
-                    <span className="text-indigo-600 font-semibold">
-                      Start Course →
+                    <span className="text-indigo-600 font-semibold flex items-center gap-1">
+                      Start Course <ArrowRight size={14} />
                     </span>
                   </div>
                 </div>

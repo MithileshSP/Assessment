@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { AlertTriangle, Clock, CheckCircle, ArrowLeft, ChevronLeft, ChevronRight, RefreshCw, Check } from "lucide-react";
 import CodeEditor from "../components/CodeEditor";
 import PreviewFrame from "../components/PreviewFrame";
 import ResultsPanel from "../components/ResultsPanel";
@@ -306,7 +307,7 @@ export default function LevelChallenge() {
     // Auto-enter fullscreen on click if not in fullscreen
     const handleClickForFullscreen = () => {
       if (restrictions.forceFullscreen && !document.fullscreenElement) {
-        document.documentElement.requestFullscreen().catch(() => {});
+        document.documentElement.requestFullscreen().catch(() => { });
       }
     };
     document.addEventListener("click", handleClickForFullscreen);
@@ -450,8 +451,7 @@ export default function LevelChallenge() {
       console.error("Submission failed:", error);
       console.error("Error details:", error.response?.data || error.message);
       alert(
-        `Failed to submit: ${
-          error.response?.data?.error || error.message || "Unknown error"
+        `Failed to submit: ${error.response?.data?.error || error.message || "Unknown error"
         }`
       );
       setEvaluationStep("");
@@ -672,7 +672,7 @@ export default function LevelChallenge() {
       {showViolationToast && (
         <div className="fixed top-4 right-4 z-50 animate-slide-in">
           <div className="bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2">
-            <span>⚠️</span>
+            <AlertTriangle size={24} />
             <span className="font-semibold">{violationMessage}</span>
           </div>
         </div>
@@ -685,16 +685,15 @@ export default function LevelChallenge() {
             <div>
               <button
                 onClick={() => navigate(`/course/${courseId}`)}
-                className="text-blue-600 hover:text-blue-800 mb-2"
+                className="text-blue-600 hover:text-blue-800 mb-2 flex items-center gap-1"
               >
-                ← Back to Course
+                <ArrowLeft size={16} /> Back to Course
               </button>
               <h1 className="text-2xl font-bold">{challenge.title}</h1>
               <p className="text-gray-600">
                 Level {level}{" "}
                 {assignedQuestions.length > 1 &&
-                  `• Question ${currentQuestionIndex + 1} of ${
-                    assignedQuestions.length
+                  `• Question ${currentQuestionIndex + 1} of ${assignedQuestions.length
                   }`}
               </p>
             </div>
@@ -704,13 +703,12 @@ export default function LevelChallenge() {
               {/* Small Timer */}
               {restrictions.timeLimit > 0 && timeRemaining !== null && (
                 <div
-                  className={`px-3 py-2 rounded border font-mono font-bold ${
-                    timeRemaining <= 300
+                  className={`px-3 py-2 rounded border font-mono font-bold flex items-center gap-2 ${timeRemaining <= 300
                       ? "bg-red-50 border-red-300 text-red-600"
                       : "bg-blue-50 border-blue-300 text-blue-600"
-                  }`}
+                    }`}
                 >
-                  ⏱️ {formatTime(timeRemaining)}
+                  <Clock size={16} /> {formatTime(timeRemaining)}
                 </div>
               )}
 
@@ -722,16 +720,14 @@ export default function LevelChallenge() {
                     return (
                       <div
                         key={q.id}
-                        className={`w-10 h-10 rounded flex items-center justify-center font-semibold ${
-                          index === currentQuestionIndex
+                        className={`w-10 h-10 rounded flex items-center justify-center font-semibold ${index === currentQuestionIndex
                             ? "bg-blue-600 text-white ring-2 ring-blue-300"
                             : isSubmitted
-                            ? "bg-green-500 text-white"
-                            : "bg-gray-200 text-gray-700"
-                        }`}
-                        title={`Question ${index + 1} - ${
-                          isSubmitted ? "Submitted" : "Not Submitted"
-                        }`}
+                              ? "bg-green-500 text-white"
+                              : "bg-gray-200 text-gray-700"
+                          }`}
+                        title={`Question ${index + 1} - ${isSubmitted ? "Submitted" : "Not Submitted"
+                          }`}
                       >
                         {index + 1}
                       </div>
@@ -748,9 +744,10 @@ export default function LevelChallenge() {
               <button
                 onClick={handleFinishLevel}
                 disabled={finishingLevel}
-                className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold disabled:opacity-60 disabled:cursor-not-allowed"
+                className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2"
               >
-                {finishingLevel ? "Finishing..." : "✓ Finish & View Results"}
+                {finishingLevel ? <RefreshCw size={20} className="animate-spin" /> : <CheckCircle size={20} />}
+                {finishingLevel ? "Finishing..." : "Finish & View Results"}
               </button>
             )}
             {assignedQuestions.length > 1 && (
@@ -761,19 +758,7 @@ export default function LevelChallenge() {
                   className="px-3 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
                   title="Previous Question"
                 >
-                  <svg
-                    className="w-4 h-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M15 19l-7-7 7-7"
-                    />
-                  </svg>
+                  <ChevronLeft size={16} />
                   Previous
                 </button>
                 <button
@@ -785,19 +770,7 @@ export default function LevelChallenge() {
                   title="Next Question"
                 >
                   Next
-                  <svg
-                    className="w-4 h-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9 5l7 7-7 7"
-                    />
-                  </svg>
+                  <ChevronRight size={16} />
                 </button>
               </div>
             )}
@@ -835,9 +808,8 @@ export default function LevelChallenge() {
                 : "📖 Show Instructions"}
             </span>
             <svg
-              className={`w-5 h-5 transition-transform ${
-                showInstructions ? "rotate-180" : ""
-              }`}
+              className={`w-5 h-5 transition-transform ${showInstructions ? "rotate-180" : ""
+                }`}
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -990,11 +962,10 @@ export default function LevelChallenge() {
                 <div className="inline-flex rounded-md border bg-white p-1 shadow-sm">
                   <button
                     onClick={() => setPreviewTab("live")}
-                    className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${
-                      previewTab === "live"
+                    className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${previewTab === "live"
                         ? "bg-blue-600 text-white shadow"
                         : "text-gray-600 hover:text-gray-900"
-                    }`}
+                      }`}
                   >
                     Live Preview
                   </button>
@@ -1005,15 +976,13 @@ export default function LevelChallenge() {
                       }
                     }}
                     disabled={!challenge?.expectedSolution}
-                    className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${
-                      previewTab === "expected"
+                    className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${previewTab === "expected"
                         ? "bg-green-600 text-white shadow"
                         : "text-gray-600 hover:text-gray-900"
-                    } ${
-                      !challenge?.expectedSolution
+                      } ${!challenge?.expectedSolution
                         ? "opacity-50 cursor-not-allowed"
                         : ""
-                    }`}
+                      }`}
                   >
                     Expected Result
                   </button>
@@ -1058,14 +1027,12 @@ export default function LevelChallenge() {
           {/* Results (Below Split View) */}
           {(evaluating || result) && (
             <div
-              className={`card mt-4 shrink-0 transition-all duration-300 flex flex-col ${
-                showEvaluationPanel ? "max-h-[40%]" : "max-h-14 overflow-hidden"
-              }`}
+              className={`card mt-4 shrink-0 transition-all duration-300 flex flex-col ${showEvaluationPanel ? "max-h-[40%]" : "max-h-14 overflow-hidden"
+                }`}
             >
               <div
-                className={`flex items-center justify-between ${
-                  showEvaluationPanel ? "mb-3" : "mb-0"
-                }`}
+                className={`flex items-center justify-between ${showEvaluationPanel ? "mb-3" : "mb-0"
+                  }`}
               >
                 <h2 className="text-lg font-bold">Evaluation Results</h2>
                 <button
@@ -1145,9 +1112,8 @@ export default function LevelChallenge() {
                             {idx + 1}. {r.questionTitle}
                           </div>
                           <div
-                            className={`text-sm font-semibold ${
-                              r.passed ? "text-green-600" : "text-red-600"
-                            }`}
+                            className={`text-sm font-semibold ${r.passed ? "text-green-600" : "text-red-600"
+                              }`}
                           >
                             {r.passed ? "Passed" : "Failed"} ({r.score}%)
                           </div>
@@ -1191,9 +1157,8 @@ export default function LevelChallenge() {
       {fullScreenView && (
         <div className="fixed inset-0 z-50 bg-white flex flex-col">
           <div
-            className={`p-4 border-b flex justify-between items-center ${
-              fullScreenView === "expected" ? "bg-green-50" : "bg-gray-50"
-            }`}
+            className={`p-4 border-b flex justify-between items-center ${fullScreenView === "expected" ? "bg-green-50" : "bg-gray-50"
+              }`}
           >
             <h2 className="text-xl font-bold flex items-center gap-2">
               {fullScreenView === "live"
