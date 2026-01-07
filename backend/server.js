@@ -107,7 +107,9 @@ const defaultOrigins = [
 ];
 const criticalOrigins = [
   "http://192.168.10.5:100",
-  "https://fullstack.bitsathy.ac.in"
+  "http://localhost:100",
+  "https://fullstack.bitsathy.ac.in",
+  "https://pcdp.bitsathy.ac.in",
 ];
 
 let rawOrigins = process.env.ALLOWED_ORIGINS

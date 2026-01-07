@@ -28,8 +28,7 @@ export default function Login({ isAdmin = false, onLogin }) {
       // Use API client to hit the centralized auth endpoint
       const endpoint = "/auth/login";
 
-      console.log("Is Admin:", isAdmin);
-      console.log("Attempting login to:", endpoint);
+
 
       const response = await api.post(endpoint, credentials);
 
@@ -42,8 +41,7 @@ export default function Login({ isAdmin = false, onLogin }) {
       const role = user?.role;
       const normalizedRole = typeof role === "string" ? role.toLowerCase() : "";
 
-      console.log("Login response:", response.data);
-      console.log("Resolved role:", role);
+
 
       if (!user || !token || !normalizedRole) {
         setError("Invalid response from server. Please try again.");
@@ -60,7 +58,7 @@ export default function Login({ isAdmin = false, onLogin }) {
         localStorage.setItem("username", user.username);
         notifySessionChange();
 
-        console.log("Admin token stored, calling onLogin");
+
 
         if (onLogin) {
           onLogin({ role: normalizedRole, user, token });
@@ -77,7 +75,7 @@ export default function Login({ isAdmin = false, onLogin }) {
       localStorage.setItem("username", user.username);
       localStorage.setItem("userToken", token);
 
-      console.log("User token stored");
+
       navigate("/");
     } catch (err) {
       console.error("Login error:", err);
@@ -188,7 +186,7 @@ export default function Login({ isAdmin = false, onLogin }) {
                     }
 
                     const decoded = jwtDecode(googleToken);
-                    console.log("Google user:", decoded);
+
 
                     const res = await api.post("/auth/google", {
                       token: googleToken,
@@ -207,7 +205,7 @@ export default function Login({ isAdmin = false, onLogin }) {
                     localStorage.setItem("userId", user.id);
                     localStorage.setItem("userRole", user.role);
 
-                    console.log("Google login successful:", user);
+
                     const normalizedRole =
                       user.role?.toLowerCase?.() || user.role;
 

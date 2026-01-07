@@ -50,7 +50,7 @@ function App() {
   };
 
   return (
-    <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+    <Router basename={window.location.pathname.startsWith('/fullstack') ? '/fullstack' : '/'} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <div className="min-h-screen bg-gray-50">
         <Routes>
           {/* Public Routes - Only Login Pages */}

@@ -6,7 +6,9 @@
 import axios from 'axios';
 
 // Use environment variable or relative path
-const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+// Universal API URL: detects if running under /fullstack or root
+const API_BASE_URL = import.meta.env.VITE_API_URL ||
+  (window.location.pathname.startsWith('/fullstack') ? '/fullstack/api' : '/api');
 
 // Create axios instance
 const api = axios.create({

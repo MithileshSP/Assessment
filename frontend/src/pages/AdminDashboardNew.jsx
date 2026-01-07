@@ -1092,7 +1092,7 @@ export default function AdminDashboard() {
               { id: 'questions', label: 'Questions', icon: <HelpCircle size={18} /> },
               { id: 'submissions', label: 'Submissions', icon: <FileText size={18} /> },
               // { id: 'ai-agent', label: 'AI Agent', icon: '🤖' },
-              { id: 'assets', label: 'Assets', icon: <FolderOpen size={18} /> }
+              // { id: 'assets', label: 'Assets', icon: <FolderOpen size={18} /> }
             ].map(tab => (
               <button
                 key={tab.id}
@@ -1735,13 +1735,14 @@ export default function AdminDashboard() {
               </div>
             )}
 
-            {/* Assets Tab */}
+            {/* Assets Tab - Hidden
             {activeTab === 'assets' && (
               <AssetsTab
                 assets={assets}
                 onLoadAssets={loadAssets}
               />
             )}
+            */}
           </div>
         )}
       </div>
