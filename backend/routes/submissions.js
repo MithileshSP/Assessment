@@ -77,7 +77,66 @@ router.post('/', async (req, res) => {
 
     // Try to save to database first
     try {
-      const dbSubmission = await SubmissionModel.create(submissionData);
+      // Get the course_id and level from the challenge
+      const challengeResult = await query(
+        "SELECT course_id, level FROM challenges WHERE id = ?",
+        [challengeId]
+      );
+      const courseId = challengeResult[0]?.course_id;
+      const level = challengeResult[0]?.level;
+
+      // Get user's real name if possible
+      let studentName = candidateName;
+      if (userId) {
+        const userResult = await query("SELECT full_name FROM users WHERE id = ?", [userId]);
+        if (userResult[0]?.full_name) {
+          studentName = userResult[0].full_name;
+        }
+      }
+
+      const dbSubmission = await SubmissionModel.create({
+        ...submissionData,
+        courseId,
+        level,
+        candidateName: studentName || candidateName
+      });
+
+      // Auto-assign to faculty for evaluation
+      try {
+        if (courseId) {
+          // Find a faculty assigned to this course, or any faculty
+          let faculty = await query(
+            `SELECT u.id FROM users u 
+             INNER JOIN faculty_course_assignments fca ON u.id = fca.faculty_id 
+             WHERE fca.course_id = ? AND u.role = 'faculty' 
+             ORDER BY RAND() LIMIT 1`,
+            [courseId]
+          );
+
+          // If no faculty assigned to course, get any faculty
+          if (faculty.length === 0) {
+            faculty = await query(
+              "SELECT id FROM users WHERE role = 'faculty' ORDER BY RAND() LIMIT 1"
+            );
+          }
+
+          if (faculty.length > 0) {
+            await query(
+              `INSERT INTO submission_assignments (submission_id, faculty_id, assigned_at, status) 
+               VALUES (?, ?, NOW(), 'pending')
+               ON DUPLICATE KEY UPDATE faculty_id = VALUES(faculty_id), assigned_at = NOW()`,
+              [dbSubmission.id, faculty[0].id]
+            );
+            console.log(`[Submissions] Auto-assigned submission ${dbSubmission.id} to faculty ${faculty[0].id}`);
+          } else {
+            console.log(`[Submissions] No faculty available to assign submission ${dbSubmission.id}`);
+          }
+        }
+      } catch (assignError) {
+        // Don't fail the submission if assignment fails
+        console.error('[Submissions] Faculty assignment error:', assignError.message);
+      }
+
       return res.status(201).json({
         message: 'Submission received',
         submissionId: dbSubmission.id,
@@ -185,6 +244,48 @@ router.get('/:id/result', async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch result' });
+  }
+});
+
+/**
+ * GET /api/submissions/user/:userId
+ * Get submissions for a specific user
+ */
+router.get('/user/:userId', async (req, res) => {
+  try {
+    const userId = req.params.userId;
+
+    // Try database first
+    try {
+      const submissions = await query(
+        `SELECT s.*, 
+                me.total_score as manual_score, 
+                me.comments as manual_feedback,
+                me.code_quality_score, 
+                me.requirements_score, 
+                me.expected_output_score,
+                ue.username as evaluator_name
+         FROM submissions s
+         LEFT JOIN manual_evaluations me ON s.id = me.submission_id
+         LEFT JOIN users ue ON me.faculty_id = ue.id
+         WHERE s.user_id = ? 
+         ORDER BY s.submitted_at DESC`,
+        [userId]
+      );
+      // Parse JSON evaluation_result if it's a string
+      const parsed = submissions.map(s => ({
+        ...s,
+        result: typeof s.evaluation_result === 'string' ? JSON.parse(s.evaluation_result) : s.evaluation_result
+      }));
+      return res.json(parsed);
+    } catch (dbError) {
+      console.log('Database error, using JSON file:', dbError.message);
+      const submissions = getSubmissions();
+      const userSubmissions = submissions.filter(s => s.userId === userId);
+      return res.json(userSubmissions);
+    }
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to fetch user submissions' });
   }
 });
 

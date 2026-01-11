@@ -1,12 +1,12 @@
--- Frontend Test Portal Database Schema
--- MySQL Database Setup
+-- Frontend Test Portal: Fresh Schema Initialization
+-- Consolidated Schema v1.1
 
 DROP DATABASE IF EXISTS fullstack_test_portal;
 CREATE DATABASE fullstack_test_portal CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE fullstack_test_portal;
 
 -- ==========================================
--- Users Table
+-- 1. Core Users & Authorization
 -- ==========================================
 CREATE TABLE users (
     id VARCHAR(100) PRIMARY KEY,
@@ -14,16 +14,17 @@ CREATE TABLE users (
     password VARCHAR(255) NULL,
     email VARCHAR(100) UNIQUE NOT NULL,
     full_name VARCHAR(100),
-    role ENUM('admin', 'student') DEFAULT 'student',
+    role ENUM('admin', 'faculty', 'student') DEFAULT 'student',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     last_login TIMESTAMP NULL,
+    picture VARCHAR(500) NULL,
     INDEX idx_username (username),
     INDEX idx_email (email),
     INDEX idx_role (role)
 );
 
 -- ==========================================
--- Courses Table
+-- 2. Curriculum Management
 -- ==========================================
 CREATE TABLE courses (
     id VARCHAR(100) PRIMARY KEY,
@@ -38,16 +39,13 @@ CREATE TABLE courses (
     tags JSON,
     is_locked BOOLEAN DEFAULT FALSE,
     is_hidden BOOLEAN DEFAULT FALSE,
+    restrictions JSON,
+    level_settings JSON,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    INDEX idx_difficulty (difficulty),
-    INDEX idx_is_locked (is_locked),
-    INDEX idx_is_hidden (is_hidden)
+    INDEX idx_difficulty (difficulty)
 );
 
--- ==========================================
--- Challenges Table
--- ==========================================
 CREATE TABLE challenges (
     id VARCHAR(100) PRIMARY KEY,
     title VARCHAR(255) NOT NULL,
@@ -66,18 +64,49 @@ CREATE TABLE challenges (
     assets JSON,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    INDEX idx_difficulty (difficulty),
     INDEX idx_course_level (course_id, level),
     FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE SET NULL
 );
 
 -- ==========================================
--- Submissions Table
+-- 3. Student Progress & Attendance
+-- ==========================================
+CREATE TABLE test_attendance (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id VARCHAR(100) NOT NULL,
+    test_identifier VARCHAR(255) NOT NULL COMMENT 'Composite: courseId_level',
+    status ENUM('requested', 'approved', 'rejected') DEFAULT 'requested',
+    requested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    approved_at TIMESTAMP NULL,
+    approved_by VARCHAR(100),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (approved_by) REFERENCES users(id) ON DELETE SET NULL,
+    INDEX idx_user_test (user_id, test_identifier),
+    INDEX idx_status (status)
+);
+
+CREATE TABLE user_progress (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id VARCHAR(100) NOT NULL,
+    course_id VARCHAR(100) NOT NULL,
+    current_level INT DEFAULT 1,
+    completed_levels JSON,
+    total_points INT DEFAULT 0,
+    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_user_course (user_id, course_id),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE
+);
+
+-- ==========================================
+-- 4. Submissions & Evaluations
 -- ==========================================
 CREATE TABLE submissions (
     id VARCHAR(100) PRIMARY KEY,
     challenge_id VARCHAR(100) NOT NULL,
     user_id VARCHAR(100) NOT NULL,
+    course_id VARCHAR(100),
+    level INT,
     candidate_name VARCHAR(100),
     html_code TEXT,
     css_code TEXT,
@@ -93,55 +122,53 @@ CREATE TABLE submissions (
     evaluation_result JSON,
     user_screenshot VARCHAR(500),
     expected_screenshot VARCHAR(500),
-    course_id VARCHAR(100),
-    level INT,
-    INDEX idx_challenge (challenge_id),
-    INDEX idx_user (user_id),
+    INDEX idx_user_challenge (user_id, challenge_id),
     INDEX idx_status (status),
-    INDEX idx_submitted_at (submitted_at),
-    INDEX idx_course_level (course_id, level),
     FOREIGN KEY (challenge_id) REFERENCES challenges(id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
--- ==========================================
--- User Progress Table
--- ==========================================
-CREATE TABLE user_progress (
+CREATE TABLE manual_evaluations (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id VARCHAR(100) NOT NULL,
-    course_id VARCHAR(100) NOT NULL,
-    current_level INT DEFAULT 1,
-    completed_levels JSON,
-    total_points INT DEFAULT 0,
-    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    UNIQUE KEY unique_user_course (user_id, course_id),
-    INDEX idx_user_course (user_id, course_id),
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE
+    submission_id VARCHAR(100) NOT NULL,
+    faculty_id VARCHAR(100) NOT NULL,
+    code_quality_score INT DEFAULT 0 COMMENT 'Max 40',
+    requirements_score INT DEFAULT 0 COMMENT 'Max 25',
+    expected_output_score INT DEFAULT 0 COMMENT 'Max 35',
+    total_score INT GENERATED ALWAYS AS (code_quality_score + requirements_score + expected_output_score) STORED,
+    comments TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (submission_id) REFERENCES submissions(id) ON DELETE CASCADE,
+    FOREIGN KEY (faculty_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_manual_evaluation (submission_id)
 );
 
 -- ==========================================
--- User Assignments Table
+-- 5. Faculty Workspace
 -- ==========================================
-CREATE TABLE user_assignments (
+CREATE TABLE faculty_course_assignments (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id VARCHAR(100) NOT NULL,
+    faculty_id VARCHAR(100) NOT NULL,
     course_id VARCHAR(100) NOT NULL,
-    level INT NOT NULL,
-    challenge_id VARCHAR(100) NOT NULL,
-    assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    completed BOOLEAN DEFAULT FALSE,
-    completed_at TIMESTAMP NULL,
-    UNIQUE KEY unique_user_level (user_id, course_id, level),
-    INDEX idx_user_course_level (user_id, course_id, level),
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (faculty_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE,
-    FOREIGN KEY (challenge_id) REFERENCES challenges(id) ON DELETE CASCADE
+    UNIQUE KEY unique_faculty_course (faculty_id, course_id)
+);
+
+CREATE TABLE submission_assignments (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    submission_id VARCHAR(100) NOT NULL,
+    faculty_id VARCHAR(100) NOT NULL,
+    assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    status ENUM('pending', 'evaluated') DEFAULT 'pending',
+    FOREIGN KEY (submission_id) REFERENCES submissions(id) ON DELETE CASCADE,
+    FOREIGN KEY (faculty_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_submission_assignment (submission_id)
 );
 
 -- ==========================================
--- Assets Table
+-- 6. Infrastructure & Logs
 -- ==========================================
 CREATE TABLE assets (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -154,35 +181,10 @@ CREATE TABLE assets (
     category VARCHAR(50) DEFAULT 'general',
     checksum_sha256 CHAR(64) NULL,
     uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    last_modified TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_category (category),
-    INDEX idx_filename (filename),
-    INDEX idx_assets_uploaded_at (uploaded_at),
-    UNIQUE KEY idx_assets_checksum_category (checksum_sha256, category)
+    INDEX idx_filename (filename)
 );
 
--- ==========================================
--- Level Completions Table
--- ==========================================
-CREATE TABLE level_completions (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id VARCHAR(100) NOT NULL,
-    course_id VARCHAR(100) NOT NULL,
-    level INT NOT NULL,
-    total_score DECIMAL(5,2) DEFAULT 0,
-    passed BOOLEAN DEFAULT FALSE,
-    feedback TEXT,
-    question_results JSON,
-    completed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_user_course (user_id, course_id),
-    INDEX idx_completed_at (completed_at),
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE
-);
-
--- ==========================================
--- Admin Activity Log
--- ==========================================
 CREATE TABLE activity_logs (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id VARCHAR(100),
@@ -192,66 +194,37 @@ CREATE TABLE activity_logs (
     details JSON,
     ip_address VARCHAR(50),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_user (user_id),
-    INDEX idx_action (action),
-    INDEX idx_created_at (created_at),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
 );
 
--- ==========================================
--- Test Sessions Table
--- ==========================================
-CREATE TABLE IF NOT EXISTS test_sessions (
-    id VARCHAR(100) PRIMARY KEY,
+CREATE TABLE student_feedback (
+    id INT AUTO_INCREMENT PRIMARY KEY,
     user_id VARCHAR(100) NOT NULL,
-    course_id VARCHAR(100) NOT NULL,
-    level INT NOT NULL,
-    submission_ids JSON,
-    total_questions INT DEFAULT 0,
-    passed_count INT DEFAULT 0,
-    overall_status ENUM('passed', 'failed', 'pending') DEFAULT 'pending',
-    started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    completed_at TIMESTAMP NULL,
-    user_feedback TEXT NULL,
-    INDEX idx_user (user_id),
-    INDEX idx_course_level (course_id, level),
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE
-);
-
--- ==========================================
--- Level Access Table
--- ==========================================
-CREATE TABLE IF NOT EXISTS level_access (
-    id VARCHAR(100) PRIMARY KEY,
-    user_id VARCHAR(100) NOT NULL,
-    course_id VARCHAR(100) NOT NULL,
-    level INT NOT NULL,
-    is_locked BOOLEAN DEFAULT FALSE,
-    locked_by VARCHAR(100),
-    locked_at TIMESTAMP NULL,
-    unlocked_at TIMESTAMP NULL,
+    submission_id VARCHAR(100) NOT NULL,
+    difficulty_rating INT,
+    clarity_rating INT,
+    comments TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE,
-    UNIQUE KEY unique_level_access (user_id, course_id, level),
-    INDEX idx_user_course (user_id, course_id),
-    INDEX idx_is_locked (is_locked)
+    UNIQUE KEY unique_feedback (user_id, submission_id)
 );
 
 -- ==========================================
--- Default Data
+-- 7. Default Seed Data
 -- ==========================================
 
--- Insert default admin user (password: admin123)
--- Hash: 240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9
-INSERT INTO users (id, username, password, email, full_name, role, created_at) VALUES
-('user-admin-1', 'admin', '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9', 'admin@example.com', 'Administrator', 'admin', '2024-01-01 00:00:00')
-ON DUPLICATE KEY UPDATE id=id;
+-- Admin User (Pass: admin123)
+INSERT INTO users (id, username, password, email, full_name, role) VALUES
+('user-admin-1', 'admin', '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9', 'admin@example.com', 'Administrator', 'admin');
 
--- Insert demo student (password: 123456)
--- Hash: 8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92
-INSERT INTO users (id, username, password, email, full_name, role, created_at) VALUES
-('user-demo-student', 'student1', '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92', 'student1@example.com', 'Demo Student', 'student', '2024-01-01 00:00:00')
-ON DUPLICATE KEY UPDATE id=id;
+-- Faculty User (Pass: 123456)
+INSERT INTO users (id, username, password, email, full_name, role) VALUES
+('user-faculty-1', 'faculty', '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92', 'faculty@example.com', 'Professor X', 'faculty');
+
+-- Demo Student (Pass: 123456)
+INSERT INTO users (id, username, password, email, full_name, role) VALUES
+('user-demo-student', 'student1', '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92', 'student1@example.com', 'Demo Student', 'student');
+
+-- Sample Course
+INSERT INTO courses (id, title, description, thumbnail, total_levels, difficulty) VALUES
+('course-fullstack', 'Fullstack Development', 'Master both frontend and backend technologies.', 'https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&q=80', 12, 'Advanced');

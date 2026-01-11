@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   getCourseQuestions,
   deleteQuestion,
@@ -524,7 +525,7 @@ export default function QuestionManagerModal({ courseId, courseName, onClose, st
     const levelQuestions = questionsByLevel[level] || [];
     const levelQuestionIds = levelQuestions.map(q => q.id);
     const allSelected = levelQuestionIds.every(id => selectedQuestions.includes(id));
-    
+
     if (allSelected) {
       // Deselect all from this level
       setSelectedQuestions(prev => prev.filter(id => !levelQuestionIds.includes(id)));
@@ -573,7 +574,7 @@ export default function QuestionManagerModal({ courseId, courseName, onClose, st
         setSelectedQuestions([]);
         loadQuestions();
       }
-      
+
       if (errorCount > 0) {
         addToast(`Failed to delete ${errorCount} question(s)`, 'error');
       }
@@ -698,7 +699,7 @@ export default function QuestionManagerModal({ courseId, courseName, onClose, st
 
                     <div className="flex items-center gap-3">
                       {levelQuestions.length > 0 && (
-                        <div 
+                        <div
                           onClick={(e) => { e.stopPropagation(); handleSelectAll(level); }}
                           className="flex items-center gap-2 px-3 py-2 hover:bg-gray-100 rounded-lg transition-colors cursor-pointer"
                           title="Select all questions in this level"
@@ -709,7 +710,7 @@ export default function QuestionManagerModal({ courseId, courseName, onClose, st
                             ref={input => {
                               if (input) input.indeterminate = someLevelSelected;
                             }}
-                            onChange={() => {}}
+                            onChange={() => { }}
                             className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
                           />
                           <span className="text-sm font-medium text-gray-600">Select All</span>
@@ -730,7 +731,7 @@ export default function QuestionManagerModal({ courseId, courseName, onClose, st
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
                       </button>
 
-                      <div 
+                      <div
                         onClick={() => toggleLevel(level)}
                         className={`transform transition-transform duration-200 text-gray-400 ${isExpanded ? 'rotate-180' : ''}`}
                       >
@@ -762,7 +763,7 @@ export default function QuestionManagerModal({ courseId, courseName, onClose, st
                         <div className="divide-y divide-gray-100">
                           {levelQuestions.map((question, idx) => {
                             const isSelected = selectedQuestions.includes(question.id);
-                            
+
                             return (
                               <div key={question.id} className="p-5 hover:bg-gray-50/80 transition-colors group">
                                 <div className="flex items-start gap-4">
@@ -807,20 +808,22 @@ export default function QuestionManagerModal({ courseId, courseName, onClose, st
                                     </div>
                                   </div>
 
-                                  <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <div className="flex items-center gap-2 mt-2 md:mt-0">
                                     <button
                                       onClick={() => handleEdit(question)}
-                                      className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-                                      title="Edit"
+                                      className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-600 hover:text-white transition-all font-bold text-xs"
+                                      title="Edit Question"
                                     >
-                                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                                      Edit
                                     </button>
                                     <button
                                       onClick={() => handleDelete(question.id)}
-                                      className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                      title="Delete"
+                                      className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 text-rose-600 rounded-lg hover:bg-rose-600 hover:text-white transition-all font-bold text-xs"
+                                      title="Delete Question"
                                     >
-                                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                      Delete
                                     </button>
                                   </div>
                                 </div>
@@ -846,14 +849,15 @@ export default function QuestionManagerModal({ courseId, courseName, onClose, st
       {body}
       <ToastContainer toasts={toasts} removeToast={removeToast} />
     </div>
-  ) : (
-    <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-6 animate-fade-in">
+  ) : createPortal(
+    <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center p-6 animate-fade-in" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 99999 }}>
       <div className="bg-white rounded-2xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-y-auto overflow-x-hidden relative">
         {header}
         {body}
         <ToastContainer toasts={toasts} removeToast={removeToast} />
       </div>
-    </div>
+    </div>,
+    document.body
   );
 
   return (

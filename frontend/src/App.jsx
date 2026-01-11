@@ -5,170 +5,99 @@ import {
   Navigate,
 } from "react-router-dom";
 import { useState, useEffect } from "react";
+
+// Student Portal
 import CoursesHome from "./pages/CoursesHome";
 import CourseDetail from "./pages/CourseDetail";
 import LevelPage from "./pages/LevelPage";
 import LevelChallenge from "./pages/LevelChallenge";
-import LevelChallengeNew from "./pages/LevelChallengeNew";
-import LevelChallengeOld from "./pages/LevelChallengeOld";
-import LevelChallengeTest from "./pages/LevelChallengeTest";
 import LevelResults from "./pages/LevelResults";
 import TestResultsPage from "./pages/TestResultsPage";
 import CandidateDashboard from "./pages/CandidateDashboard";
 import ChallengeView from "./pages/ChallengeView";
-import Login from "./pages/Login";
-import AdminDashboard from "./pages/AdminDashboardNew";
+import StudentFeedback from "./pages/StudentFeedback";
+import UserProfile from "./pages/UserProfile";
+import StudentResults from "./pages/StudentResults";
+import Logout from "./pages/Logout";
+
+// Faculty Portal
+import FacultyDashboard from "./pages/FacultyDashboard";
+import FacultyEvaluation from "./pages/FacultyEvaluation";
+import FacultyHistory from "./pages/FacultyHistory";
+
+// Admin Portal
+import AdminDashboard from "./pages/AdminDashboard";
+import AdminAttendance from "./pages/AdminAttendance";
+import AdminAssignment from "./pages/AdminAssignment";
+import AdminResults from "./pages/AdminResults";
 import AdminSubmissionDetails from "./pages/AdminSubmissionDetails";
-import LevelManagement from "./pages/LevelManagement";
-import AddUsers from "./pages/AddUsers";
 import CourseManager from "./pages/CourseManager";
 import UserManagement from "./pages/UserManagement";
+import LevelManagement from "./pages/LevelManagement";
+import QuestionBank from "./pages/QuestionBank";
+import AdminLevelReset from "./pages/AdminLevelReset";
+
+// Auth & Components
+import Login from "./pages/Login";
 import ProtectedRoute from "./components/ProtectedRoute";
-import {
-  isAdminSessionActive,
-  subscribeToSessionChanges,
-} from "./utils/session";
+import { getUserRole } from "./utils/session";
 
 function App() {
-  const [isAdmin, setIsAdmin] = useState(() => isAdminSessionActive());
+  const [role, setRole] = useState(() => getUserRole());
 
   useEffect(() => {
-    const unsubscribe = subscribeToSessionChanges(setIsAdmin);
+    const handleSessionChange = () => setRole(getUserRole());
+    window.addEventListener('portal-session-change', handleSessionChange);
     return () => {
-      if (typeof unsubscribe === "function") {
-        unsubscribe();
-      }
+      window.removeEventListener('portal-session-change', handleSessionChange);
     };
   }, []);
 
   const handleLogin = (session) => {
-    if (session?.role === "admin") {
-      setIsAdmin(true);
-    } else {
-      setIsAdmin(isAdminSessionActive());
-    }
+    setRole(session?.role || getUserRole());
   };
 
   return (
     <Router basename={window.location.pathname.startsWith('/fullstack') ? '/fullstack' : '/'} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-slate-50">
         <Routes>
-          {/* Public Routes - Only Login Pages */}
+          {/* Authentication */}
           <Route path="/login" element={<Login onLogin={handleLogin} />} />
-          <Route
-            path="/admin/login"
-            element={<Login isAdmin={true} onLogin={handleLogin} />}
-          />
+          <Route path="/admin/login" element={<Login isAdmin={true} onLogin={handleLogin} />} />
 
-          {/* Protected Student Routes - Require Login */}
-          <Route
-            path="/"
-            element={
-              <ProtectedRoute>
-                <CoursesHome />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/course/:courseId"
-            element={
-              <ProtectedRoute>
-                <CourseDetail />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/course/:courseId/level/:level"
-            element={
-              <ProtectedRoute>
-                <LevelPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/level/:courseId/:level"
-            element={
-              <ProtectedRoute>
-                <LevelChallenge />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/level-results/:courseId/:level"
-            element={
-              <ProtectedRoute>
-                <LevelResults />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/test-results/:sessionId"
-            element={
-              <ProtectedRoute>
-                <TestResultsPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/old-challenges"
-            element={
-              <ProtectedRoute>
-                <CandidateDashboard />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/challenge/:id"
-            element={
-              <ProtectedRoute>
-                <ChallengeView />
-              </ProtectedRoute>
-            }
-          />
+          {/* Student Portal */}
+          <Route path="/" element={<ProtectedRoute><CoursesHome /></ProtectedRoute>} />
+          <Route path="/course/:courseId" element={<ProtectedRoute><CourseDetail /></ProtectedRoute>} />
+          <Route path="/course/:courseId/level/:level" element={<ProtectedRoute><LevelPage /></ProtectedRoute>} />
+          <Route path="/level/:courseId/:level" element={<ProtectedRoute><LevelChallenge /></ProtectedRoute>} />
+          <Route path="/level-results/:courseId/:level" element={<ProtectedRoute><LevelResults /></ProtectedRoute>} />
+          <Route path="/test-results/:sessionId" element={<ProtectedRoute><TestResultsPage /></ProtectedRoute>} />
+          <Route path="/challenges" element={<ProtectedRoute><CandidateDashboard /></ProtectedRoute>} />
+          <Route path="/challenge/:id" element={<ProtectedRoute><ChallengeView /></ProtectedRoute>} />
+          <Route path="/student/feedback/:submissionId" element={<ProtectedRoute><StudentFeedback /></ProtectedRoute>} />
+          <Route path="/profile" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
+          <Route path="/results" element={<ProtectedRoute><StudentResults /></ProtectedRoute>} />
+          <Route path="/logout" element={<Logout />} />
 
-          {/* Admin Routes - Require Admin Login */}
-          <Route
-            path="/admin/dashboard"
-            element={
-              isAdmin ? <AdminDashboard /> : <Navigate to="/admin/login" />
-            }
-          />
-          <Route
-            path="/admin/courses"
-            element={
-              isAdmin ? <CourseManager /> : <Navigate to="/admin/login" />
-            }
-          />
-          <Route
-            path="/admin/users"
-            element={
-              isAdmin ? <UserManagement /> : <Navigate to="/admin/login" />
-            }
-          />
-          <Route
-            path="/admin/submission/:submissionId"
-            element={
-              isAdmin ? (
-                <AdminSubmissionDetails />
-              ) : (
-                <Navigate to="/admin/login" />
-              )
-            }
-          />
-          <Route
-            path="/admin/level-management"
-            element={
-              isAdmin ? <LevelManagement /> : <Navigate to="/admin/login" />
-            }
-          />
-          <Route
-            path="/admin/add-users"
-            element={
-              isAdmin ? <AddUsers /> : <Navigate to="/admin/login" />
-            }
-          />
+          {/* Faculty Portal */}
+          <Route path="/faculty/dashboard" element={role === 'faculty' ? <FacultyDashboard /> : <Navigate to="/login" />} />
+          <Route path="/faculty/submissions" element={role === 'faculty' ? <FacultyDashboard /> : <Navigate to="/login" />} />
+          <Route path="/faculty/history" element={role === 'faculty' ? <FacultyHistory /> : <Navigate to="/login" />} />
+          <Route path="/faculty/evaluate/:submissionId" element={role === 'faculty' ? <FacultyEvaluation /> : <Navigate to="/login" />} />
 
-          {/* Fallback - Redirect to login */}
+          {/* Admin Portal */}
+          <Route path="/admin/dashboard" element={role === 'admin' ? <AdminDashboard /> : <Navigate to="/admin/login" />} />
+          <Route path="/admin/attendance" element={role === 'admin' ? <AdminAttendance /> : <Navigate to="/admin/login" />} />
+          <Route path="/admin/courses" element={role === 'admin' ? <CourseManager /> : <Navigate to="/admin/login" />} />
+          <Route path="/admin/users" element={role === 'admin' ? <UserManagement /> : <Navigate to="/admin/login" />} />
+          <Route path="/admin/results" element={role === 'admin' ? <AdminResults /> : <Navigate to="/admin/login" />} />
+          <Route path="/admin/assignment" element={role === 'admin' ? <AdminAssignment /> : <Navigate to="/admin/login" />} />
+          <Route path="/admin/submission/:submissionId" element={role === 'admin' ? <AdminSubmissionDetails /> : <Navigate to="/admin/login" />} />
+          <Route path="/admin/level-management" element={role === 'admin' ? <LevelManagement /> : <Navigate to="/admin/login" />} />
+          <Route path="/admin/course/:courseId/questions" element={role === 'admin' ? <QuestionBank /> : <Navigate to="/admin/login" />} />
+          <Route path="/admin/reset-level" element={role === 'admin' ? <AdminLevelReset /> : <Navigate to="/admin/login" />} />
+
+          {/* Fallback */}
           <Route path="*" element={<Navigate to="/login" />} />
         </Routes>
       </div>

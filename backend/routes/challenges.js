@@ -89,17 +89,37 @@ router.get('/', async (req, res) => {
   }
 });
 
+const { verifyToken } = require('../middleware/auth');
+
 /**
  * GET /api/challenges/level-questions
  * Get assigned questions for a user's level with random assignment
+ * ENFORCES ATTENDANCE CHECK
  */
-router.get('/level-questions', async (req, res) => {
+router.get('/level-questions', verifyToken, async (req, res) => {
   try {
-    const { userId, courseId, level, forceNew } = req.query;
+    const { courseId, level, forceNew } = req.query;
+    const userId = req.user.id; // Use ID from token for security
 
-    if (!userId || !courseId || !level) {
+    if (!courseId || !level) {
       return res.status(400).json({ error: 'Missing required parameters' });
     }
+
+    // --- ENFORCE ATTENDANCE CHECK ---
+    const testIdentifier = `${courseId}_${level}`;
+    const attendance = await query(
+      "SELECT status FROM test_attendance WHERE user_id = ? AND test_identifier = ?",
+      [userId, testIdentifier]
+    );
+
+    if (attendance.length === 0 || attendance[0].status !== 'approved') {
+      return res.status(403).json({
+        error: 'Access Denied',
+        message: 'You have not been authorized to attend this test. Please request authorization from the security checkpoint.',
+        status: attendance.length > 0 ? attendance[0].status : 'none'
+      });
+    }
+    // --------------------------------
 
     // Read user assignments
     let assignments = getAssignments();

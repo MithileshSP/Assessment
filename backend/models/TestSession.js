@@ -78,6 +78,16 @@ class TestSession {
     const id = uuidv4();
     const { user_id, course_id, level, submission_ids = [] } = sessionData;
 
+    // Check for existing active session
+    const existingRows = await db.query(
+      "SELECT * FROM test_sessions WHERE user_id = ? AND course_id = ? AND level = ? AND completed_at IS NULL",
+      [user_id, course_id, level]
+    );
+
+    if (existingRows.length > 0) {
+      return this.findById(existingRows[0].id);
+    }
+
     const query = `
       INSERT INTO test_sessions (
         id, user_id, course_id, level, submission_ids,

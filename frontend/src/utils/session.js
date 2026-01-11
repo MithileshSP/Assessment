@@ -1,7 +1,11 @@
 const SESSION_EVENT = 'portal-session-change';
 
+export const getUserRole = () => {
+  return (localStorage.getItem('userRole') || '').toLowerCase();
+};
+
 export const isAdminSessionActive = () => {
-  const role = (localStorage.getItem('userRole') || '').toLowerCase();
+  const role = getUserRole();
   const adminToken = localStorage.getItem('adminToken');
   return role === 'admin' && !!adminToken;
 };
@@ -19,7 +23,7 @@ export const clearAdminSession = () => {
 };
 
 export const subscribeToSessionChanges = (callback) => {
-  if (typeof window === 'undefined') return () => {};
+  if (typeof window === 'undefined') return () => { };
   const handler = () => callback(isAdminSessionActive());
   window.addEventListener(SESSION_EVENT, handler);
   window.addEventListener('storage', handler);

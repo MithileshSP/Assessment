@@ -39,6 +39,12 @@ class CourseModel {
       return courses.map(course => ({
         ...course,
         tags: Array.isArray(course.tags) ? course.tags : JSON.parse(course.tags || '[]'),
+        restrictions: Array.isArray(course.restrictions) || typeof course.restrictions === 'object'
+          ? course.restrictions
+          : JSON.parse(course.restrictions || '{}'),
+        levelSettings: Array.isArray(course.level_settings) || typeof course.level_settings === 'object'
+          ? course.level_settings
+          : JSON.parse(course.level_settings || '{}'),
         isLocked: Boolean(course.is_locked),
         isHidden: Boolean(course.is_hidden),
         totalLevels: course.total_levels,
@@ -58,6 +64,12 @@ class CourseModel {
       return {
         ...course,
         tags: Array.isArray(course.tags) ? course.tags : JSON.parse(course.tags || '[]'),
+        restrictions: Array.isArray(course.restrictions) || typeof course.restrictions === 'object'
+          ? course.restrictions
+          : JSON.parse(course.restrictions || '{}'),
+        levelSettings: Array.isArray(course.level_settings) || typeof course.level_settings === 'object'
+          ? course.level_settings
+          : JSON.parse(course.level_settings || '{}'),
         isLocked: Boolean(course.is_locked),
         isHidden: Boolean(course.is_hidden),
         totalLevels: course.total_levels,
@@ -100,8 +112,8 @@ class CourseModel {
 
     try {
       await query(
-        `INSERT INTO courses (id, title, description, thumbnail, icon, color, total_levels, estimated_time, difficulty, tags, is_locked, is_hidden, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO courses (id, title, description, thumbnail, icon, color, total_levels, estimated_time, difficulty, tags, is_locked, is_hidden, restrictions, level_settings, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           id,
           courseData.title,
@@ -115,6 +127,8 @@ class CourseModel {
           JSON.stringify(courseData.tags || []),
           courseData.isLocked || false,
           courseData.isHidden || false,
+          JSON.stringify(courseData.restrictions || {}),
+          JSON.stringify(courseData.levelSettings || {}),
           courseData.createdAt || new Date()
         ]
       );
@@ -183,6 +197,8 @@ class CourseModel {
       const tags = courseData.tags !== undefined ? JSON.stringify(courseData.tags) : JSON.stringify(existing.tags);
       const isLocked = courseData.isLocked !== undefined ? courseData.isLocked : existing.isLocked;
       const isHidden = courseData.isHidden !== undefined ? courseData.isHidden : existing.isHidden;
+      const restrictions = courseData.restrictions !== undefined ? JSON.stringify(courseData.restrictions) : JSON.stringify(existing.restrictions);
+      const levelSettings = courseData.levelSettings !== undefined ? JSON.stringify(courseData.levelSettings) : JSON.stringify(existing.levelSettings);
 
       console.log('[DEBUG] CourseModel.update executing SQL with isHidden:', isHidden);
 
@@ -200,12 +216,14 @@ class CourseModel {
          tags = ?,
          is_locked = ?,
          is_hidden = ?,
+         restrictions = ?,
+         level_settings = ?,
          updated_at = NOW()
          WHERE id = ?`,
         [
           title, description, thumbnail, icon, color,
           totalLevels, estimatedTime, difficulty, tags,
-          isLocked, isHidden, id
+          isLocked, isHidden, restrictions, levelSettings, id
         ]
       );
 

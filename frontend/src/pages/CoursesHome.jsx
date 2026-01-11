@@ -1,19 +1,18 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import SaaSLayout from '../components/SaaSLayout';
 import { getCourses } from '../services/api';
 import {
   BookOpen,
   Clock,
-  BarChart,
   Layers,
   ArrowRight,
   EyeOff,
-  Code
+  Code,
+  Layout
 } from 'lucide-react';
 import {
   isAdminSessionActive,
-  subscribeToSessionChanges,
-  clearAdminSession,
 } from '../utils/session';
 
 export default function CoursesHome() {
@@ -23,13 +22,12 @@ export default function CoursesHome() {
   const navigate = useNavigate();
 
   useEffect(() => {
+    const role = localStorage.getItem('userRole');
+    if (role === 'faculty') {
+      navigate('/faculty/dashboard');
+      return;
+    }
     loadCourses();
-    const unsubscribe = subscribeToSessionChanges(setIsAdmin);
-    return () => {
-      if (typeof unsubscribe === 'function') {
-        unsubscribe();
-      }
-    };
   }, []);
 
   const loadCourses = async () => {
@@ -43,152 +41,111 @@ export default function CoursesHome() {
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('userId');
-    localStorage.removeItem('username');
-    localStorage.removeItem('userToken');
-    localStorage.removeItem('userRole');
-    clearAdminSession();
-    navigate('/login');
-  };
-
   const getDifficultyColor = (difficulty) => {
     const colors = {
-      'Beginner': 'bg-green-100 text-green-800',
-      'Intermediate': 'bg-yellow-100 text-yellow-800',
-      'Advanced': 'bg-red-100 text-red-800'
+      'Beginner': 'bg-emerald-100 text-emerald-800',
+      'Intermediate': 'bg-amber-100 text-amber-800',
+      'Advanced': 'bg-rose-100 text-rose-800'
     };
-    return colors[difficulty] || 'bg-gray-100 text-gray-800';
+    return colors[difficulty] || 'bg-slate-100 text-slate-800';
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-indigo-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading courses...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      {/* Header */}
-      <header className="bg-white shadow-md">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Fullstack Test Portal</h1>
-              <p className="text-gray-600 mt-1 flex items-center gap-2">
-                Welcome, {localStorage.getItem('username') || 'Student'}! <span className="text-xl">👋</span>
-              </p>
-            </div>
-            <div className="flex gap-3">
-              {isAdmin && (
-                <button
-                  onClick={() => navigate('/admin/dashboard')}
-                  className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium"
-                >
-                  Admin Dashboard
-                </button>
-              )}
-              <button
-                onClick={handleLogout}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium"
-              >
-                Logout
-              </button>
-            </div>
+    <SaaSLayout>
+      <div className="space-y-8">
+        {/* Welcome Header */}
+        <div className="flex justify-between items-end">
+          <div>
+            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Available Courses</h1>
+            <p className="text-slate-500 mt-1">Select a learning path to begin your assessment.</p>
+          </div>
+          <div className="hidden sm:flex items-center gap-3 bg-white px-4 py-2 rounded-xl border border-slate-200 shadow-sm">
+            <span className="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]" />
+            <span className="text-sm font-bold text-slate-700">{courses.length} Courses Active</span>
           </div>
         </div>
-      </header>
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Courses Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
           {courses.filter(c => !c.isHidden || isAdmin).map((course) => (
             <div
               key={course.id}
               onClick={() => navigate(`/course/${course.id}`)}
-              className={`bg-white rounded-xl shadow-lg overflow-hidden cursor-pointer transform transition-all duration-300 hover:scale-105 hover:shadow-2xl ${course.isHidden ? 'opacity-75 ring-2 ring-yellow-400' : ''
-                }`}
+              className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden cursor-pointer group hover:shadow-xl hover:shadow-slate-200 hover:-translate-y-1 transition-all duration-300 relative"
             >
               {course.isHidden && (
-                <div className="bg-yellow-400 text-yellow-900 text-xs font-bold text-center py-1 flex items-center justify-center gap-1">
-                  <EyeOff size={14} /> HIDDEN (Admin Only)
+                <div className="absolute top-4 right-4 z-10 bg-amber-400 text-amber-900 text-[10px] font-bold px-2 py-1 rounded-lg flex items-center gap-1 shadow-lg">
+                  <EyeOff size={12} /> PRIVATE
                 </div>
               )}
+
               {/* Course Thumbnail */}
               <div
-                className="h-48 flex items-center justify-center text-6xl font-bold text-white relative overflow-hidden"
-                style={{ backgroundColor: course.color }}
+                className="h-44 flex items-center justify-center relative overflow-hidden bg-slate-100"
               >
-                <div className="absolute inset-0 bg-gradient-to-br from-transparent to-black opacity-20"></div>
-                <img
-                  src={course.thumbnail}
-                  alt={course.title}
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    e.target.style.display = 'none';
-                    e.target.parentElement.innerHTML = `<span class="text-6xl relative z-10 opacity-50"><Code size={64} /></span>`;
-                  }}
-                />
+                {course.thumbnail ? (
+                  <img
+                    src={course.thumbnail}
+                    alt={course.title}
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
+                    <Code size={48} className="text-white/40" />
+                  </div>
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
               </div>
 
               {/* Course Info */}
               <div className="p-6">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                    {/* Fallback icon if course.icon is text emoji */}
-                    <BookOpen size={20} className="text-indigo-600" />
+                <div className="flex items-start justify-between mb-4">
+                  <h3 className="text-lg font-bold text-slate-800 group-hover:text-blue-600 transition-colors leading-tight">
                     {course.title}
                   </h3>
                 </div>
 
-                <p className="text-gray-600 mb-4 line-clamp-2">
+                <p className="text-slate-500 text-sm mb-6 line-clamp-2 leading-relaxed">
                   {course.description}
                 </p>
 
                 {/* Course Meta */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-500 flex items-center gap-1">
-                      <Clock size={16} /> {course.estimatedTime}
-                    </span>
-                    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getDifficultyColor(course.difficulty)}`}>
-                      {course.difficulty}
-                    </span>
+                <div className="flex items-center justify-between text-[11px] font-bold tracking-wider uppercase mb-6">
+                  <div className="flex items-center gap-1.5 text-slate-400">
+                    <Layers size={14} className="text-blue-500" />
+                    <span>{course.totalLevels} Levels</span>
                   </div>
-
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-500 flex items-center gap-1">
-                      <Layers size={16} /> {course.totalLevels} Levels
-                    </span>
-                    <span className="text-indigo-600 font-semibold flex items-center gap-1">
-                      Start Course <ArrowRight size={14} />
-                    </span>
-                  </div>
+                  <span className={`px-2.5 py-1 rounded-lg ${getDifficultyColor(course.difficulty)}`}>
+                    {course.difficulty}
+                  </span>
                 </div>
 
-                {/* Tags */}
-                <div className="flex flex-wrap gap-2 mt-4">
-                  {course.tags && course.tags.slice(0, 3).map((tag, idx) => (
-                    <span
-                      key={idx}
-                      className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded"
-                    >
-                      {tag}
-                    </span>
-                  ))}
+                <div className="flex items-center justify-between pt-4 border-t border-slate-50">
+                  <div className="flex -space-x-2">
+                    {[1, 2, 3].map(i => (
+                      <div key={i} className={`w-6 h-6 rounded-full border-2 border-white bg-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-500`}>
+                        {i}
+                      </div>
+                    ))}
+                  </div>
+                  <span className="text-blue-600 font-bold text-sm flex items-center gap-1 group-hover:gap-2 transition-all">
+                    Enter <ArrowRight size={14} />
+                  </span>
                 </div>
               </div>
             </div>
           ))}
-        </div>
 
-      </main>
-    </div>
+          {courses.length === 0 && !loading && (
+            <div className="col-span-full py-20 bg-white rounded-3xl border border-dashed border-slate-300 flex flex-col items-center gap-4 text-slate-400">
+              <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center text-slate-200">
+                <Layout size={32} />
+              </div>
+              <p className="font-medium">No courses available at the moment.</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </SaaSLayout>
   );
 }

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { AlertTriangle, Clock, CheckCircle, ArrowLeft, ChevronLeft, ChevronRight, RefreshCw, Check } from "lucide-react";
+import { AlertTriangle, Clock, CheckCircle, ArrowLeft, ChevronLeft, ChevronRight, RefreshCw, Check, Layout } from "lucide-react";
 import CodeEditor from "../components/CodeEditor";
 import PreviewFrame from "../components/PreviewFrame";
 import ResultsPanel from "../components/ResultsPanel";
@@ -47,18 +47,98 @@ export default function LevelChallenge() {
   const previewRef = useRef();
   const [fullScreenView, setFullScreenView] = useState(null); // 'live' | 'expected' | null
 
-  useEffect(() => {
-    if (courseId && level) {
-      loadLevelQuestions();
-      loadRestrictions();
-    }
-  }, [courseId, level]);
+  // Attendance State
+  const [attendanceStatus, setAttendanceStatus] = useState('loading'); // loading, none, requested, approved, rejected
+  const [attendanceTimer, setAttendanceTimer] = useState(null);
+  const [startedAt, setStartedAt] = useState(null);
+
+
 
   useEffect(() => {
     if (assignedQuestions.length > 0) {
       loadCurrentQuestion();
     }
   }, [currentQuestionIndex, assignedQuestions]);
+
+  // Check Attendance on Mount
+  useEffect(() => {
+    if (courseId && level) {
+      checkAttendance();
+    }
+    return () => clearInterval(attendanceTimer);
+  }, [courseId, level]);
+
+  const checkAttendance = async () => {
+    // Admin bypass - skip attendance check entirely
+    const userRole = localStorage.getItem('userRole');
+    if (userRole === 'admin') {
+      setAttendanceStatus('started');
+      setLoading(false);
+      startTest();
+      return;
+    }
+
+    try {
+      const res = await api.get('/attendance/status', { params: { courseId, level } });
+      const status = res.data.status;
+
+      setAttendanceStatus(status);
+
+      // Check for active test session to auto-resume
+      const sessionRes = await api.post("/test-sessions", {
+        user_id: userId,
+        course_id: courseId,
+        level: parseInt(level),
+      });
+
+      if (sessionRes.data && !sessionRes.data.completed_at) {
+        setTestSessionId(sessionRes.data.id);
+        if (sessionRes.data.started_at) setStartedAt(sessionRes.data.started_at);
+
+        if (status === 'approved') {
+          // If approved AND session exists, auto-start
+          startTest();
+        }
+      }
+
+      if (status === 'requested' && !attendanceTimer) {
+        // Start polling
+        const timer = setInterval(async () => {
+          const pollRes = await api.get('/attendance/status', { params: { courseId, level } });
+          if (pollRes.data.status === 'approved') {
+            setAttendanceStatus('approved');
+            clearInterval(timer);
+          } else if (pollRes.data.status === 'rejected') {
+            setAttendanceStatus('rejected');
+            clearInterval(timer);
+          }
+        }, 3000);
+        setAttendanceTimer(timer);
+      } else {
+        setLoading(false);
+      }
+    } catch (error) {
+      console.error("Attendance check failed", error);
+      setAttendanceStatus('error');
+      setLoading(false);
+    }
+  };
+
+  const requestAttendance = async () => {
+    try {
+      await api.post('/attendance/request', { courseId, level });
+      setAttendanceStatus('requested');
+      checkAttendance(); // Start polling
+    } catch (err) {
+      alert('Failed to request attendance');
+    }
+  };
+
+  const startTest = () => {
+    loadLevelQuestions();
+    loadRestrictions();
+    setAttendanceStatus('started'); // distinct state to hide the wall
+  };
 
   const loadLevelQuestions = async () => {
     try {
@@ -67,7 +147,7 @@ export default function LevelChallenge() {
           userId,
           courseId,
           level: parseInt(level),
-          forceNew: "true", // Always get new random questions on each test entry
+          // Removed forceNew: "true" to allow persistence
         },
       });
 
@@ -79,9 +159,39 @@ export default function LevelChallenge() {
         return;
       }
 
-      // Shuffle questions array to randomize order every time
-      questions = shuffleArray(questions);
+      // Restore from localStorage if possible - BUT only if questions match
+      const storageKey = `assessment_${userId}_${courseId}_${level}`;
+      const savedState = localStorage.getItem(storageKey);
 
+      if (savedState) {
+        try {
+          const { questions: savedQs, answers, currentIndex, code: savedCode } = JSON.parse(savedState);
+
+          // Compare question IDs from API with saved state
+          // If they differ, a reset has happened - use fresh questions
+          const apiQuestionIds = questions.map(q => q.id).sort().join(',');
+          const savedQuestionIds = savedQs.map(q => q.id).sort().join(',');
+
+          if (apiQuestionIds === savedQuestionIds) {
+            // Same questions - restore saved state
+            setAssignedQuestions(savedQs);
+            setUserAnswers(answers);
+            setCurrentQuestionIndex(currentIndex);
+            setCode(savedCode);
+            setLoading(false);
+            return;
+          } else {
+            // Questions have changed (reset occurred) - clear old state
+            console.log('Questions reassigned, clearing old localStorage state');
+            localStorage.removeItem(storageKey);
+          }
+        } catch (e) {
+          console.error("Failed to restore state", e);
+          localStorage.removeItem(storageKey);
+        }
+      }
+
+      // If no saved state, initialize new
       setAssignedQuestions(questions);
 
       // Initialize answers
@@ -100,6 +210,17 @@ export default function LevelChallenge() {
       // Create test session
       await createTestSession();
 
+      // Fetch and apply restrictions
+      try {
+        const restrictionsRes = await api.get(`/courses/${courseId}/restrictions`);
+        if (restrictionsRes.data) {
+          setRestrictions(restrictionsRes.data);
+          console.log('Loaded restrictions:', restrictionsRes.data);
+        }
+      } catch (e) {
+        console.warn('Failed to load restrictions, using defaults:', e.message);
+      }
+
       setLoading(false);
     } catch (error) {
       console.error("Failed to load level questions:", error);
@@ -116,12 +237,110 @@ export default function LevelChallenge() {
         level: parseInt(level),
       });
 
-      console.log("Test session created:", response.data.id);
+      console.log("Session sync:", response.data.id);
       setTestSessionId(response.data.id);
+      if (response.data.started_at) {
+        setStartedAt(response.data.started_at);
+      }
     } catch (error) {
-      console.error("Failed to create test session:", error);
-      // Don't block the test if session creation fails
+      console.error("Failed to sync session:", error);
     }
+  };
+
+  // Auto-save to localStorage
+  useEffect(() => {
+    if (assignedQuestions.length > 0) {
+      const storageKey = `assessment_${userId}_${courseId}_${level}`;
+      localStorage.setItem(storageKey, JSON.stringify({
+        questions: assignedQuestions,
+        answers: userAnswers,
+        currentIndex: currentQuestionIndex,
+        code
+      }));
+    }
+  }, [code, userAnswers, currentQuestionIndex, assignedQuestions]);
+
+  // Restrictions Enforcement - Copy/Paste blocking
+  useEffect(() => {
+    if (!restrictions.blockCopy) return;
+
+    const handleCopy = (e) => {
+      e.preventDefault();
+      recordViolation('Copy attempt blocked');
+    };
+
+    const handlePaste = (e) => {
+      if (restrictions.blockPaste) {
+        e.preventDefault();
+        recordViolation('Paste attempt blocked');
+      }
+    };
+
+    const handleCut = (e) => {
+      e.preventDefault();
+      recordViolation('Cut attempt blocked');
+    };
+
+    document.addEventListener('copy', handleCopy);
+    document.addEventListener('paste', handlePaste);
+    document.addEventListener('cut', handleCut);
+
+    return () => {
+      document.removeEventListener('copy', handleCopy);
+      document.removeEventListener('paste', handlePaste);
+      document.removeEventListener('cut', handleCut);
+    };
+  }, [restrictions.blockCopy, restrictions.blockPaste]);
+
+  // Restrictions Enforcement - Fullscreen
+  useEffect(() => {
+    if (!restrictions.forceFullscreen) return;
+
+    const handleFullscreenChange = () => {
+      if (!document.fullscreenElement) {
+        recordViolation('Exited fullscreen mode');
+        // Try to re-enter fullscreen
+        document.documentElement.requestFullscreen?.().catch(() => { });
+      }
+    };
+
+    // Request fullscreen on mount
+    document.documentElement.requestFullscreen?.().catch(() => {
+      console.warn('Could not enter fullscreen - user interaction may be required');
+    });
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      // Exit fullscreen on unmount
+      if (document.fullscreenElement) {
+        document.exitFullscreen?.().catch(() => { });
+      }
+    };
+  }, [restrictions.forceFullscreen]);
+
+  // Record violation helper
+  const recordViolation = (message) => {
+    const now = Date.now();
+    // Debounce - only record if at least 1 second has passed
+    if (now - lastViolationTime < 1000) return;
+
+    setLastViolationTime(now);
+    setViolations(prev => {
+      const newCount = prev + 1;
+      if (newCount >= restrictions.maxViolations) {
+        // Auto-submit and lock out
+        alert(`You have exceeded the maximum allowed violations (${restrictions.maxViolations}). Your test will be submitted.`);
+        handleFinishLevel();
+      }
+      return newCount;
+    });
+
+    // Show toast notification
+    setViolationMessage(message);
+    setShowViolationToast(true);
+    setTimeout(() => setShowViolationToast(false), 3000);
   };
 
   // Fisher-Yates shuffle algorithm for randomizing question order
@@ -146,7 +365,7 @@ export default function LevelChallenge() {
 
       // Load saved answer if exists
       const savedAnswer = userAnswers[questionId];
-      if (savedAnswer) {
+      if (savedAnswer && (savedAnswer.html || savedAnswer.css || savedAnswer.js)) {
         setCode({
           html: savedAnswer.html,
           css: savedAnswer.css,
@@ -154,8 +373,7 @@ export default function LevelChallenge() {
         });
         setResult(savedAnswer.result);
       } else {
-        setCode({ html: "", css: "", js: "" });
-        setResult(null);
+        // Fallback to localStorage or keep current
       }
     } catch (error) {
       console.error("Failed to load question:", error);
@@ -177,6 +395,19 @@ export default function LevelChallenge() {
       console.error("Failed to load restrictions:", error);
     }
   };
+
+  // Sync Timer with Server Session
+  useEffect(() => {
+    if (startedAt && restrictions.timeLimit > 0) {
+      const start = new Date(startedAt).getTime();
+      const limitSec = restrictions.timeLimit * 60;
+      const now = Date.now();
+      const elapsedSec = (now - start) / 1000;
+      const remaining = Math.max(0, limitSec - elapsedSec);
+      // Only update if significantly different (prevention of loops, though dependencies handle it)
+      setTimeRemaining(Math.ceil(remaining));
+    }
+  }, [startedAt, restrictions.timeLimit]);
 
   // Timer countdown
   useEffect(() => {
@@ -273,16 +504,19 @@ export default function LevelChallenge() {
       }
     };
     const handleVisibilityChange = () => {
-      if (restrictions.forceFullscreen && document.hidden)
-        handleViolation("Tab switched");
+      // Detection: tab switch, window minimize, or backgrounding
+      if (document.hidden) {
+        handleViolation("Security Threat: Unauthorized Window Switch Detected");
+      }
     };
+
     const handleFullscreenChange = () => {
       if (
         restrictions.forceFullscreen &&
         !document.fullscreenElement &&
         violations < restrictions.maxViolations
       ) {
-        handleViolation("Exited fullscreen");
+        handleViolation("Security Bypass: User attempted to exit secure mode");
         // Aggressively try to re-enter fullscreen
         const reenterFullscreen = () => {
           if (!document.fullscreenElement) {
@@ -313,15 +547,6 @@ export default function LevelChallenge() {
     document.addEventListener("click", handleClickForFullscreen);
 
     if (restrictions.blockCopy) document.body.style.userSelect = "none";
-
-    // Initial fullscreen entry
-    if (restrictions.forceFullscreen && !document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch(() => {
-        console.log(
-          "Initial fullscreen request failed - user must interact first"
-        );
-      });
-    }
 
     return () => {
       document.removeEventListener("click", handleClickForFullscreen);
@@ -393,7 +618,7 @@ export default function LevelChallenge() {
       setEvaluationStep("Creating submission...");
       const submitResponse = await api.post("/submissions", {
         challengeId: questionId,
-        candidateName: userId,
+        userId: userId,
         code: {
           html: code.html,
           css: code.css,
@@ -417,7 +642,8 @@ export default function LevelChallenge() {
       });
 
       const evalResult = evalResponse.data.result;
-      setResult(evalResult);
+      // HIDE RESULT: Do not show immediate pass/fail modal
+      // setResult(evalResult); 
 
       // Save result
       setUserAnswers((prev) => ({
@@ -428,6 +654,7 @@ export default function LevelChallenge() {
           js: code.js,
           submitted: true,
           result: evalResult,
+          submissionId: submissionId // Store ID for feedback redirect
         },
       }));
 
@@ -440,118 +667,20 @@ export default function LevelChallenge() {
           console.log("Added submission to test session");
         } catch (err) {
           console.error("Failed to add submission to session:", err);
-          alert(
-            "Warning: Failed to save progress to test session. Results may not be tracked correctly."
-          );
         }
       }
 
       setEvaluationStep("");
+      alert("Solution submitted! Proceed to next question or finish test.");
+
     } catch (error) {
       console.error("Submission failed:", error);
-      console.error("Error details:", error.response?.data || error.message);
-      alert(
-        `Failed to submit: ${error.response?.data?.error || error.message || "Unknown error"
-        }`
-      );
+      alert("Failed to submit solution.");
       setEvaluationStep("");
     } finally {
       setSubmitting(false);
       setEvaluating(false);
     }
-  };
-
-  const computeProgressSummary = () => {
-    const results = assignedQuestions.map((q) => ({
-      questionId: q.id,
-      questionTitle: q.title,
-      submitted: userAnswers[q.id]?.submitted || false,
-      passed: userAnswers[q.id]?.result?.passed || false,
-      score: userAnswers[q.id]?.result?.finalScore || 0,
-    }));
-
-    const totalQuestions = results.length;
-    if (totalQuestions === 0) {
-      return {
-        submittedCount: 0,
-        passedCount: 0,
-        totalQuestions: 0,
-        avgScore: 0,
-        allSubmitted: true,
-        allPassed: true,
-        results: [],
-      };
-    }
-
-    const submittedCount = results.filter((r) => r.submitted).length;
-    const passedCount = results.filter((r) => r.passed).length;
-    const avgScore = Math.round(
-      results.reduce((sum, r) => sum + r.score, 0) / totalQuestions
-    );
-
-    return {
-      submittedCount,
-      passedCount,
-      totalQuestions,
-      avgScore,
-      allSubmitted: submittedCount === totalQuestions,
-      allPassed: passedCount === totalQuestions,
-      results,
-    };
-  };
-
-  const saveCompletionProgress = async (summary, extra = {}) => {
-    const completionData = {
-      userId,
-      courseId,
-      level: parseInt(level),
-      completedAt: new Date().toISOString(),
-      finalScore: summary.avgScore,
-      passed: summary.allPassed,
-      questionsSubmitted: summary.submittedCount,
-      questionsPassed: summary.passedCount,
-      totalQuestions: summary.totalQuestions,
-      feedback: extra.feedback ?? null,
-      results: summary.results,
-      autoSubmitReason: extra.autoSubmitReason || null,
-    };
-
-    await api.post("/level-completion", completionData);
-    await api.post(`/courses/progress/${userId}/level-complete`, {
-      courseId,
-      level: parseInt(level),
-      passed: summary.allPassed,
-    });
-
-    return completionData;
-  };
-
-  const navigateWithLocalResults = (reason = "manual") => {
-    const summary = computeProgressSummary();
-    const completionData = {
-      userId,
-      courseId,
-      level: parseInt(level),
-      completedAt: new Date().toISOString(),
-      finalScore: summary.avgScore,
-      passed: summary.allPassed,
-      questionsSubmitted: summary.submittedCount,
-      questionsPassed: summary.passedCount,
-      totalQuestions: summary.totalQuestions,
-      feedback: null,
-      results: summary.results,
-      autoSubmitReason: reason !== "manual" ? reason : null,
-    };
-
-    navigate(`/level-results/${courseId}/${level}`, {
-      state: {
-        userAnswers,
-        assignedQuestions,
-        completionData,
-        forcedExit: reason !== "manual",
-        exitReason: reason,
-      },
-    });
   };
 
   const handleFinishLevel = async ({ reason = "manual" } = {}) => {
@@ -560,56 +689,26 @@ export default function LevelChallenge() {
     setFinishingLevel(true);
 
     try {
-      if (testSessionId) {
-        console.log("Completing test session:", testSessionId);
+      // Get the last submission ID for feedback
+      const lastQuestionId = assignedQuestions[assignedQuestions.length - 1]?.id;
+      const lastSubmissionId = userAnswers[lastQuestionId]?.submissionId;
 
-        // MUST wait for completion before navigating
+      if (testSessionId) {
         await api.put(`/test-sessions/${testSessionId}/complete`, {
           user_feedback: null,
         });
-
-        console.log("Test session completed successfully");
-
-        // Small delay to ensure database write is committed
-        await new Promise((resolve) => setTimeout(resolve, 300));
-
-        // Persist completion and unlock next level
-        const summary = computeProgressSummary();
-        try {
-          await saveCompletionProgress(summary, {
-            autoSubmitReason: reason !== "manual" ? reason : null,
-          });
-        } catch (err) {
-          console.error("Failed to record level completion:", err);
-        }
-
-        navigate(`/test-results/${testSessionId}`, {
-          state:
-            reason !== "manual"
-              ? { forcedExit: true, exitReason: reason }
-              : undefined,
-        });
-      } else {
-        // Fallback to old results page if no session
-        const summary = computeProgressSummary();
-        try {
-          await saveCompletionProgress(summary, {
-            autoSubmitReason: reason !== "manual" ? reason : null,
-          });
-        } catch (err) {
-          console.error("Failed to record level completion (no session):", err);
-        }
-
-        navigateWithLocalResults(reason);
       }
+
+      // Redirect to feedback if we have a submission, else dashboard
+      if (lastSubmissionId) {
+        navigate(`/student/feedback/${lastSubmissionId}`);
+      } else {
+        navigate(`/course/${courseId}`);
+      }
+
     } catch (error) {
       console.error("Error finishing level:", error);
-      if (reason === "manual") {
-        alert(
-          "Unable to finalize test session on the server. Showing local results instead."
-        );
-      }
-      navigateWithLocalResults(reason);
+      navigate(`/course/${courseId}`);
     }
   };
 
@@ -648,21 +747,93 @@ export default function LevelChallenge() {
     return assignedQuestions.every((q) => userAnswers[q.id]?.submitted);
   };
 
-  if (loading) {
+  if (loading && attendanceStatus === 'loading') {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
-          <p className="text-lg">Loading challenge...</p>
+      <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50">
+        <div className="w-12 h-12 border-4 border-slate-200 border-t-blue-600 rounded-full animate-spin mb-4" />
+        <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Verifying Credentials...</p>
+      </div>
+    );
+  }
+
+  if (attendanceStatus !== 'started') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6">
+        <div className="bg-white p-10 rounded-[2.5rem] shadow-2xl shadow-slate-200 text-center max-w-lg w-full border border-slate-100 animate-fade-in">
+          <div className="w-20 h-20 bg-blue-50 text-blue-600 rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-xl shadow-blue-500/10">
+            <Layout size={40} />
+          </div>
+          <h2 className="text-3xl font-black text-slate-900 mb-4 tracking-tight">Security Checkpoint</h2>
+          <p className="text-slate-500 font-medium mb-10 leading-relaxed">
+            Standard protocol requires administrative approval for this assessment sequence.
+          </p>
+
+          {attendanceStatus === 'none' && (
+            <div className="space-y-4">
+              <button
+                onClick={requestAttendance}
+                className="w-full py-4 bg-slate-900 text-white rounded-2xl font-bold hover:bg-blue-600 transition-all shadow-xl shadow-slate-900/10"
+              >
+                Request Authorization
+              </button>
+              <button
+                onClick={() => navigate(`/course/${courseId}`)}
+                className="w-full py-3 bg-white text-slate-400 font-bold text-[11px] uppercase tracking-widest hover:text-slate-600 transition-colors"
+              >
+                Return to Curriculum
+              </button>
+            </div>
+          )}
+
+          {attendanceStatus === 'requested' && (
+            <div className="space-y-6">
+              <div className="bg-blue-50 border border-blue-100 rounded-2xl p-6 text-blue-700 text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-3">
+                <Clock size={16} className="animate-spin" />
+                Wait for verification...
+              </div>
+              <p className="text-sm text-slate-400 font-medium">
+                Sequence queued. An administrator will review your credentials shortly.
+              </p>
+            </div>
+          )}
+
+          {attendanceStatus === 'rejected' && (
+            <div className="space-y-6">
+              <div className="bg-rose-50 border border-rose-100 rounded-2xl p-6 text-rose-700 text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-3">
+                <AlertTriangle size={16} /> Access Denied
+              </div>
+              <button
+                onClick={() => navigate(`/course/${courseId}`)}
+                className="w-full py-4 bg-slate-900 text-white rounded-2xl font-bold"
+              >
+                Return to Base
+              </button>
+            </div>
+          )}
+
+          {attendanceStatus === 'approved' && (
+            <div className="space-y-8 animate-fade-in">
+              <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-6 text-emerald-700 text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-3">
+                <CheckCircle size={16} /> Verified & Cleared
+              </div>
+              <button
+                onClick={startTest}
+                className="w-full py-5 bg-blue-600 text-white rounded-[1.5rem] font-bold text-lg hover:bg-blue-700 transition-all shadow-2xl shadow-blue-600/20 hover:scale-[1.02] active:scale-[0.98]"
+              >
+                Initialize Logic Test
+              </button>
+            </div>
+          )}
         </div>
       </div>
     );
   }
 
-  if (!challenge) {
+  if (loading || !challenge) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <p>Loading...</p>
+      <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50">
+        <div className="w-12 h-12 border-4 border-slate-200 border-t-blue-600 rounded-full animate-spin mb-4" />
+        <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Assembling Challenge Module...</p>
       </div>
     );
   }

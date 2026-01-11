@@ -14,7 +14,26 @@ class SubmissionModel {
 
   // Get submission by ID
   static async findById(id) {
-    const submission = await queryOne('SELECT * FROM submissions WHERE id = ?', [id]);
+    const submission = await queryOne(`
+        SELECT s.*, 
+               u.full_name as real_name,
+               me.total_score as manual_score,
+               me.comments as manual_feedback,
+               me.code_quality_score,
+               me.requirements_score,
+               me.expected_output_score,
+               fu.full_name as evaluator_name
+        FROM submissions s 
+        LEFT JOIN users u ON s.user_id = u.id 
+        LEFT JOIN manual_evaluations me ON s.id = me.submission_id
+        LEFT JOIN users fu ON me.faculty_id = fu.id
+        WHERE s.id = ?
+    `, [id]);
+
+    if (submission && submission.real_name) {
+      submission.candidate_name = submission.real_name;
+    }
+
     return submission ? this._formatSubmission(submission) : null;
   }
 
@@ -56,12 +75,14 @@ class SubmissionModel {
     const submittedAt = formatDateTime(submissionData.submittedAt);
 
     await query(
-      `INSERT INTO submissions (id, challenge_id, user_id, candidate_name, html_code, css_code, js_code, status, submitted_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO submissions (id, challenge_id, user_id, course_id, level, candidate_name, html_code, css_code, js_code, status, submitted_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id,
         submissionData.challengeId,
         submissionData.userId || 'user-demo-student',
+        submissionData.courseId || null,
+        submissionData.level || null,
         submissionData.candidateName || 'Anonymous',
         submissionData.code?.html || '',
         submissionData.code?.css || '',
@@ -157,6 +178,8 @@ class SubmissionModel {
       id: submission.id,
       challengeId: submission.challenge_id,
       userId: submission.user_id,
+      courseId: submission.course_id,
+      level: submission.level,
       candidateName: submission.candidate_name,
       code: {
         html: submission.html_code,
@@ -169,16 +192,29 @@ class SubmissionModel {
       user_screenshot: formatScreenshotUrl(submission.user_screenshot),
       expected_screenshot: formatScreenshotUrl(submission.expected_screenshot),
       total_score: submission.final_score,
+      manual_score: submission.manual_score,
+      manual_feedback: submission.manual_feedback,
+      code_quality_score: submission.code_quality_score,
+      requirements_score: submission.requirements_score,
+      expected_output_score: submission.expected_output_score,
+      evaluator_name: submission.evaluator_name,
       result: submission.evaluation_result ? (
         typeof submission.evaluation_result === 'string'
-          ? JSON.parse(submission.evaluation_result)
+          ? (() => {
+            try {
+              return JSON.parse(submission.evaluation_result);
+            } catch (e) {
+              return { error: 'Invalid result format', raw: submission.evaluation_result };
+            }
+          })()
           : submission.evaluation_result
       ) : {
-        structureScore: submission.structure_score,
-        visualScore: submission.visual_score,
-        contentScore: submission.content_score,
-        finalScore: submission.final_score,
-        passed: Boolean(submission.passed)
+        structureScore: submission.structure_score || 0,
+        visualScore: submission.visual_score || 0,
+        contentScore: submission.content_score || 0,
+        finalScore: submission.final_score || 0,
+        passed: Boolean(submission.passed),
+        feedback: "No automated feedback available."
       }
     };
   }

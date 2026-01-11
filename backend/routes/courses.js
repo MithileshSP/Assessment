@@ -882,10 +882,10 @@ router.delete('/questions/:questionId', async (req, res) => {
 
 /**
  * POST /api/courses/:courseId/questions/bulk
- * Bulk upload questions from JSON
+ * Bulk upload questions from JSON/CSV
  * Body: { questions: [...] }
  */
-router.post('/:courseId/questions/bulk', (req, res) => {
+router.post('/:courseId/questions/bulk', async (req, res) => {
   try {
     const { courseId } = req.params;
     const { questions } = req.body;
@@ -895,53 +895,110 @@ router.post('/:courseId/questions/bulk', (req, res) => {
     }
 
     // Validate course exists
-    const courses = getCourses();
-    const course = courses.find(c => c.id === courseId);
+    let course;
+    try {
+      course = await CourseModel.findById(courseId);
+    } catch (e) {
+      const courses = getCourses();
+      course = courses.find(c => c.id === courseId);
+    }
     if (!course) {
       return res.status(404).json({ error: 'Course not found' });
     }
 
-    const challenges = getChallenges();
     let addedCount = 0;
     let skippedCount = 0;
     const errors = [];
 
-    questions.forEach((question, index) => {
+    for (let i = 0; i < questions.length; i++) {
+      const question = questions[i];
       try {
+        // Flexible field mapping - handle different CSV column names
+        const title = question.title || question.Title || question.TITLE;
+        const description = question.description || question.Description || question.DESCRIPTION || '';
+        const instructions = question.instructions || question.Instructions || question.INSTRUCTIONS || '';
+        const level = parseInt(question.level || question.Level || question.LEVEL || 1);
+        const courseIdField = question.courseId || question.course_id || courseId; // Use field if provided, else path param
+
         // Validate required fields
-        if (!question.id || !question.title || !question.level) {
-          errors.push(`Question ${index + 1}: Missing required fields (id, title, level)`);
+        if (!title) {
+          errors.push(`Question ${i + 1}: Missing required field 'title'`);
           skippedCount++;
-          return;
+          continue;
         }
 
-        // Check if question ID already exists
-        if (challenges.find(c => c.id === question.id)) {
-          errors.push(`Question ${index + 1}: ID "${question.id}" already exists`);
-          skippedCount++;
-          return;
+        // Auto-generate ID if not provided
+        const id = question.id || question.Id || `q-${courseIdField}-${level}-${Date.now()}-${i}`;
+
+        // Handle Tags (pipe separated or array)
+        let tags = [];
+        if (question.tags) {
+          if (Array.isArray(question.tags)) {
+            tags = question.tags;
+          } else if (typeof question.tags === 'string') {
+            tags = question.tags.split('|').map(t => t.trim()).filter(t => t);
+          }
         }
 
-        // Add courseId if not present
-        const newQuestion = {
-          ...question,
-          courseId: courseId,
-          createdAt: question.createdAt || new Date().toISOString(),
-          updatedAt: new Date().toISOString()
+        // Handle Assets (pipe separated or object)
+        let assets = { images: [], reference: '' };
+        if (question.assets) {
+          if (typeof question.assets === 'string') {
+            const paths = question.assets.split('|').map(p => p.trim()).filter(p => p);
+            assets.images = paths.map(p => ({
+              name: p.split('/').pop(),
+              path: p,
+              description: 'Imported asset'
+            }));
+          } else if (typeof question.assets === 'object') {
+            assets = question.assets;
+          }
+        }
+
+        // Build question data (removing legacy difficulty/timeLimit)
+        const questionData = {
+          id,
+          title,
+          description,
+          instructions,
+          level,
+          courseId: courseIdField,
+          tags,
+          assets,
+          passingThreshold: question.passingThreshold || { structure: 80, visual: 80, overall: 75 },
+          expectedHtml: question.expectedHtml || question.expected_html || question['expectedSolution/html'] || '',
+          expectedCss: question.expectedCss || question.expected_css || question['expectedSolution/css'] || '',
+          expectedJs: question.expectedJs || question.expected_js || question['expectedSolution/js'] || ''
         };
 
-        challenges.push(newQuestion);
+        // Create in MySQL using ChallengeModel
+        await ChallengeModel.create(questionData);
+
         addedCount++;
       } catch (err) {
-        errors.push(`Question ${index + 1}: ${err.message}`);
+        console.error(`Bulk import question ${i + 1} error:`, err.message);
+        errors.push(`Question ${i + 1}: ${err.message}`);
         skippedCount++;
       }
-    });
-
-    // Save to file
-    if (addedCount > 0) {
-      fs.writeFileSync(challengesPath, JSON.stringify(challenges, null, 2));
     }
+
+    // Also update JSON file for legacy sync
+    if (addedCount > 0) {
+      try {
+        const challenges = getChallenges();
+        const newQuestions = questions.slice(0, addedCount).map((q, i) => ({
+          id: q.id || `q-${courseId}-${q.level || 1}-${Date.now()}-${i}`,
+          courseId,
+          ...q
+        }));
+        challenges.push(...newQuestions);
+        fs.writeFileSync(challengesPath, JSON.stringify(challenges, null, 2));
+      } catch (e) {
+        console.warn('JSON sync failed:', e.message);
+      }
+    }
+
+    console.log(`Bulk import: ${addedCount} added, ${skippedCount} skipped for course ${courseId}`);
 
     res.json({
       message: 'Bulk upload completed',
@@ -952,7 +1009,60 @@ router.post('/:courseId/questions/bulk', (req, res) => {
     });
   } catch (error) {
     console.error('Bulk upload error:', error);
-    res.status(500).json({ error: 'Failed to upload questions' });
+    res.status(500).json({ error: 'Failed to upload questions: ' + error.message });
+  }
+});
+
+/**
+ * POST /api/courses/:courseId/questions/bulk-delete
+ * Bulk delete questions
+ * Body: { questionIds: [...] }
+ */
+router.post('/:courseId/questions/bulk-delete', async (req, res) => {
+  try {
+    const { courseId } = req.params;
+    const { questionIds } = req.body;
+
+    if (!questionIds || !Array.isArray(questionIds) || questionIds.length === 0) {
+      return res.status(400).json({ error: 'questionIds array required' });
+    }
+
+    let deletedCount = 0;
+    const errors = [];
+
+    // Delete from MySQL
+    for (const questionId of questionIds) {
+      try {
+        await query('DELETE FROM challenges WHERE id = ? AND course_id = ?', [questionId, courseId]);
+        deletedCount++;
+      } catch (err) {
+        console.error(`Failed to delete question ${questionId}:`, err.message);
+        errors.push(`${questionId}: ${err.message}`);
+      }
+    }
+
+    // Also update JSON file for legacy sync
+    try {
+      const challenges = getChallenges();
+      const filteredChallenges = challenges.filter(c => !questionIds.includes(c.id));
+      if (filteredChallenges.length < challenges.length) {
+        fs.writeFileSync(challengesPath, JSON.stringify(filteredChallenges, null, 2));
+      }
+    } catch (e) {
+      console.warn('JSON sync failed:', e.message);
+    }
+
+    console.log(`Bulk delete: ${deletedCount} deleted from course ${courseId}`);
+
+    res.json({
+      message: 'Bulk delete completed',
+      deleted: deletedCount,
+      total: questionIds.length,
+      errors: errors.length > 0 ? errors : undefined
+    });
+  } catch (error) {
+    console.error('Bulk delete error:', error);
+    res.status(500).json({ error: 'Failed to delete questions: ' + error.message });
   }
 });
 
@@ -1079,44 +1189,54 @@ router.get('/sample/csv', (req, res) => {
   try {
     const { courseId, level } = req.query;
 
-    // Complex Simplified Schema Headers
+    // Simplified flat schema - only essential fields
     const headers = [
-      'id', 'courseId', 'level', 'questionNumber', 'title', 'description', 'instructions',
-      'assets/reference', 'hints/0', 'hints/1', 'hints/2', 'tags/0', 'tags/1',
-      'timeLimit', 'points', 'passingThreshold/structure', 'passingThreshold/style', 'passingThreshold/functionality',
-      'isLocked', 'prerequisite', 'expectedSolution/html', 'expectedSolution/css', 'expectedSolution/js'
+      'courseId',
+      'level',
+      'title',
+      'description',
+      'instructions',
+      'tags',
+      'assets',
+      'expectedHtml',
+      'expectedCss',
+      'expectedJs'
     ];
 
     // Smart ID generation
-    const cId = courseId || 'course-full';
+    const cId = courseId || 'fullstack';
     const lId = level || '1';
-    const qCount = 5; // Generate 5 sample rows
+    const qCount = 2; // Generate 2 sample rows
 
     const rows = [];
 
     for (let i = 1; i <= qCount; i++) {
       rows.push([
-        `${cId}-l${lId}-q${i}`,
         cId,
         lId,
-        i,
-        `Level ${lId} - Question ${i}`,
-        `Design an interface...`,
-        `Use semantic HTML...`,
-        '', // assets/reference
-        `Hint 1: Use Flexbox`,
-        `Hint 2: Apply padding`,
-        `Hint 3: Test responsiveness`,
-        'HTML',
-        'CSS',
-        '60',
-        '100',
-        '70', '80', '75',
-        'FALSE',
-        i > 1 ? `${cId}-l${lId}-q${i - 1}` : '', // prerequisite
-        '<!DOCTYPE html>...',
-        '.container { display: flex; }',
-        '' // js
+        `Level ${lId} Question ${i}: Build a Modern Landing Page`,
+        `Create a clean, responsive hero section with a navigation bar and CTA button.`,
+        `1. Use semantic HTML5 elements.\n2. Ensure the layout is responsive.\n3. Add smooth transitions.`,
+        'HTML|CSS|Flexbox|Responsive',
+        '/assets/images/logo.png|/assets/images/hero-bg.jpg',
+        `<!DOCTYPE html>
+<html>
+<head>
+  <style>
+    .hero { background: #f8fafc; padding: 60px; text-align: center; }
+    .cta { padding: 12px 24px; background: #6366f1; color: white; border: none; border-radius: 8px; }
+  </style>
+</head>
+<body>
+  <nav>Logo</nav>
+  <div class="hero">
+    <h1>Transform Your Workflow</h1>
+    <button class="cta">Get Started</button>
+  </div>
+</body>
+</html>`,
+        `.hero { padding: 80px; } .cta { cursor: pointer; }`,
+        ''
       ]);
     }
 
@@ -1135,7 +1255,7 @@ router.get('/sample/csv', (req, res) => {
       rows.map(row => row.map(quote).join(',')).join('\n');
 
     res.setHeader('Content-Type', 'text/csv');
-    res.setHeader('Content-Disposition', `attachment; filename=${cId}-level-${lId}-template.csv`);
+    res.setHeader('Content-Disposition', `attachment; filename=questions-template-level-${lId}.csv`);
     res.send(csvContent);
   } catch (error) {
     console.error('CSV Template download error:', error);

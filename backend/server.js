@@ -25,10 +25,14 @@ const usersRouter = require("./routes/users");
 const levelCompletionRouter = require("./routes/levelCompletion");
 const assetsRouter = require("./routes/assets");
 const testSessionsRouter = require("./routes/testSessions");
+const attendanceRouter = require("./routes/attendance");
+const facultyRouter = require("./routes/faculty");
+const feedbackRouter = require("./routes/feedback");
 const { scheduleFallbackSync } = require("./services/submissionSync");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+const { applyMigrations } = require("./services/dbMigration");
 
 // Create necessary directories for static files
 const screenshotsDir = path.join(__dirname, "screenshots");
@@ -200,6 +204,9 @@ app.use("/api/assets", assetsRouter);
 app.use("/api/test-sessions", testSessionsRouter);
 const levelAccessRouter = require("./routes/levelAccess");
 app.use("/api/level-access", levelAccessRouter);
+app.use("/api/attendance", attendanceRouter);
+app.use("/api/faculty", facultyRouter);
+app.use("/api/feedback", feedbackRouter);
 
 // Serve frontend static files (optional fallback if frontend container is unavailable)
 // In production with separate frontend container, this warning can be safely ignored
@@ -258,7 +265,10 @@ app.use("/api/*", (req, res) => {
 });
 
 // Start server
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
+  // Apply DB migrations
+  await applyMigrations();
+
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📊 Environment: ${process.env.NODE_ENV}`);
   console.log(`\n📁 API Endpoints:`);

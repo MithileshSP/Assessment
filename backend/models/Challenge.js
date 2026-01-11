@@ -36,24 +36,22 @@ class ChallengeModel {
   static async create(challengeData) {
     const id = challengeData.id || `challenge-${Date.now()}`;
     await query(
-      `INSERT INTO challenges (id, title, difficulty, description, instructions, tags, time_limit, passing_threshold, expected_html, expected_css, expected_js, expected_screenshot_url, course_id, level, assets, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO challenges (id, title, description, instructions, tags, passing_threshold, expected_html, expected_css, expected_js, expected_screenshot_url, course_id, level, assets, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id,
         challengeData.title,
-        challengeData.difficulty || 'Medium',
         challengeData.description,
         challengeData.instructions,
         JSON.stringify(challengeData.tags || []),
-        challengeData.timeLimit || 30,
-        JSON.stringify(challengeData.passingThreshold || {}),
+        JSON.stringify(challengeData.passingThreshold || { structure: 80, visual: 80, overall: 75 }),
         challengeData.expectedHtml || challengeData.expectedSolution?.html || '',
         challengeData.expectedCss || challengeData.expectedSolution?.css || '',
         challengeData.expectedJs || challengeData.expectedSolution?.js || '',
         challengeData.expectedScreenshotUrl || null,
         challengeData.courseId || null,
         challengeData.level || 1,
-        JSON.stringify(challengeData.assets || {}),
+        JSON.stringify(challengeData.assets || { images: [], reference: '' }),
         challengeData.createdAt || new Date()
       ]
     );
@@ -65,11 +63,9 @@ class ChallengeModel {
     await query(
       `UPDATE challenges SET
        title = COALESCE(?, title),
-       difficulty = COALESCE(?, difficulty),
        description = COALESCE(?, description),
        instructions = COALESCE(?, instructions),
        tags = COALESCE(?, tags),
-       time_limit = COALESCE(?, time_limit),
        passing_threshold = COALESCE(?, passing_threshold),
        expected_html = COALESCE(?, expected_html),
        expected_css = COALESCE(?, expected_css),
@@ -82,11 +78,9 @@ class ChallengeModel {
        WHERE id = ?`,
       [
         challengeData.title !== undefined ? challengeData.title : null,
-        challengeData.difficulty !== undefined ? challengeData.difficulty : null,
         challengeData.description !== undefined ? challengeData.description : null,
         challengeData.instructions !== undefined ? challengeData.instructions : null,
         challengeData.tags ? JSON.stringify(challengeData.tags) : null,
-        challengeData.timeLimit !== undefined ? challengeData.timeLimit : null,
         challengeData.passingThreshold ? JSON.stringify(challengeData.passingThreshold) : null,
         (challengeData.expectedHtml !== undefined ? challengeData.expectedHtml : (challengeData.expectedSolution?.html !== undefined ? challengeData.expectedSolution.html : null)),
         (challengeData.expectedCss !== undefined ? challengeData.expectedCss : (challengeData.expectedSolution?.css !== undefined ? challengeData.expectedSolution.css : null)),
@@ -117,14 +111,12 @@ class ChallengeModel {
     return {
       id: challenge.id,
       title: challenge.title,
-      difficulty: challenge.difficulty,
       description: challenge.description,
       instructions: challenge.instructions,
       tags: Array.isArray(challenge.tags) ? challenge.tags : JSON.parse(challenge.tags || '[]'),
-      timeLimit: challenge.time_limit,
       passingThreshold: (typeof challenge.passing_threshold === 'object' && challenge.passing_threshold !== null)
         ? challenge.passing_threshold
-        : JSON.parse(challenge.passing_threshold || '{}'),
+        : JSON.parse(challenge.passing_threshold || '{"structure":80,"visual":80,"overall":75}'),
       hints: Array.isArray(challenge.hints) ? challenge.hints : JSON.parse(challenge.hints || '[]'),
       points: challenge.points || 100,
       expectedSolution: {

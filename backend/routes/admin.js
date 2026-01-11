@@ -1,412 +1,330 @@
-/**
- * Admin Routes
- * Handles admin authentication and challenge management
- */
-
-const express = require("express");
+const express = require('express');
 const router = express.Router();
-const fs = require("fs");
-const path = require("path");
-const { v4: uuidv4 } = require("uuid");
-const crypto = require("crypto");
+const db = require('../database/connection');
+const { verifyAdmin } = require('../middleware/auth');
 
-// Import models for MySQL support
-const SubmissionModel = require("../models/Submission");
-const UserModel = require("../models/User");
-const TestSession = require("../models/TestSession");
-const { USE_JSON } = require("../database/connection");
-
-const usersPath = path.join(__dirname, "../data/users.json");
-const challengesPath = path.join(__dirname, "../data/challenges.json");
-const submissionsPath = path.join(__dirname, "../data/submissions.json");
-
-// Helper functions
-const getUsers = () => {
-  const data = fs.readFileSync(usersPath, "utf8");
-  return JSON.parse(data);
-};
-
-const getChallenges = () => {
-  const data = fs.readFileSync(challengesPath, "utf8");
-  return JSON.parse(data);
-};
-
-const saveChallenges = (challenges) => {
-  fs.writeFileSync(challengesPath, JSON.stringify(challenges, null, 2));
-};
-
-const getSubmissions = () => {
+// Get Platform Stats
+router.get('/stats', verifyAdmin, async (req, res) => {
   try {
-    if (!fs.existsSync(submissionsPath)) {
-      return [];
-    }
-    const data = fs.readFileSync(submissionsPath, "utf8");
-    return data ? JSON.parse(data) : [];
-  } catch (error) {
-    console.warn("Failed to read submissions fallback JSON:", error.message);
-    return [];
-  }
-};
-
-
-
-/**
- * GET /api/admin/challenges
- * Get all challenges with solutions (admin only)
- */
-router.get("/challenges", (req, res) => {
-  try {
-    // TODO: Add token verification middleware
-    const challenges = getChallenges();
-    res.json(challenges);
-  } catch (error) {
-    res.status(500).json({ error: "Failed to fetch challenges" });
-  }
-});
-
-/**
- * POST /api/admin/challenges
- * Create new challenge
- * Body: { challenge object }
- */
-router.post("/challenges", (req, res) => {
-  try {
-    const challenges = getChallenges();
-
-    const newChallenge = {
-      id: `ch-${uuidv4().slice(0, 8)}`,
-      ...req.body,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    challenges.push(newChallenge);
-    saveChallenges(challenges);
-
-    res.status(201).json({
-      message: "Challenge created",
-      challenge: newChallenge,
-    });
-  } catch (error) {
-    res.status(500).json({ error: "Failed to create challenge" });
-  }
-});
-
-/**
- * PUT /api/admin/challenges/:id
- * Update existing challenge
- */
-router.put("/challenges/:id", (req, res) => {
-  try {
-    const challenges = getChallenges();
-    const index = challenges.findIndex((c) => c.id === req.params.id);
-
-    if (index === -1) {
-      return res.status(404).json({ error: "Challenge not found" });
-    }
-
-    challenges[index] = {
-      ...challenges[index],
-      ...req.body,
-      id: req.params.id, // Prevent ID change
-      updatedAt: new Date().toISOString(),
-    };
-
-    saveChallenges(challenges);
+    const [userCount] = await db.query("SELECT COUNT(*) as count FROM users");
+    const [courseCount] = await db.query("SELECT COUNT(*) as count FROM courses");
+    const [submissionCount] = await db.query("SELECT COUNT(*) as count FROM submissions");
+    const [pendingAttendance] = await db.query("SELECT COUNT(*) as count FROM test_attendance WHERE status = 'pending'");
+    const [pendingEvaluations] = await db.query("SELECT COUNT(*) as count FROM submission_assignments WHERE status = 'pending'");
 
     res.json({
-      message: "Challenge updated",
-      challenge: challenges[index],
+      totalUsers: userCount[0].count,
+      totalCourses: courseCount[0].count,
+      totalSubmissions: submissionCount[0].count,
+      pendingAttendance: pendingAttendance[0].count,
+      pendingEvaluations: pendingEvaluations[0].count
     });
   } catch (error) {
-    res.status(500).json({ error: "Failed to update challenge" });
+    console.error("Error fetching stats:", error);
+    res.status(500).json({ error: error.message });
   }
 });
 
-/**
- * DELETE /api/admin/challenges/:id
- * Delete challenge
- */
-router.delete("/challenges/:id", (req, res) => {
+// Get all faculty members with work load stats
+router.get('/faculty-load', verifyAdmin, async (req, res) => {
   try {
-    const challenges = getChallenges();
-    const filtered = challenges.filter((c) => c.id !== req.params.id);
+    // Get all faculty users
+    const facultyUsers = await db.query(
+      "SELECT id, username, full_name, email FROM users WHERE role = 'faculty'"
+    );
 
-    if (filtered.length === challenges.length) {
-      return res.status(404).json({ error: "Challenge not found" });
-    }
+    // Get submission counts for each faculty
+    const facultyStart = {};
+    facultyUsers.forEach(f => {
+      facultyStart[f.id] = { ...f, pending: 0, completed: 0, total: 0 };
+    });
 
-    saveChallenges(filtered);
+    const assignments = await db.query(
+      `SELECT faculty_id, status, COUNT(*) as count 
+             FROM submission_assignments 
+             GROUP BY faculty_id, status`
+    );
 
-    res.json({ message: "Challenge deleted" });
-  } catch (error) {
-    res.status(500).json({ error: "Failed to delete challenge" });
-  }
-});
-
-/**
- * GET /api/admin/submissions
- * Get all submissions with results
- */
-router.get("/submissions", async (req, res) => {
-  try {
-    if (!USE_JSON) {
-      try {
-        const submissions = await SubmissionModel.findAll();
-        if (submissions && submissions.length) {
-          return res.json(submissions);
-        }
-
-        const fallbackSubmissions = getSubmissions();
-        if (fallbackSubmissions.length) {
-          console.warn(
-            "MySQL returned no submissions. Serving fallback JSON data instead."
-          );
-          return res.json(fallbackSubmissions);
-        }
-
-        return res.json(submissions || []);
-      } catch (dbError) {
-        console.error(
-          "Failed to fetch submissions from MySQL, attempting JSON fallback:",
-          dbError.message
-        );
-        const fallbackSubmissions = getSubmissions();
-        if (fallbackSubmissions.length) {
-          return res.json(fallbackSubmissions);
-        }
-        return res.status(500).json({ error: "Failed to fetch submissions" });
+    assignments.forEach(row => {
+      if (facultyStart[row.faculty_id]) {
+        if (row.status === 'pending') facultyStart[row.faculty_id].pending += row.count;
+        if (row.status === 'evaluated') facultyStart[row.faculty_id].completed += row.count;
+        facultyStart[row.faculty_id].total += row.count;
       }
-    }
+    });
 
-    const submissions = getSubmissions();
-    return res.json(submissions);
+    res.json(Object.values(facultyStart));
   } catch (error) {
-    console.error("Failed to fetch submissions:", error);
-    res.status(500).json({ error: "Failed to fetch submissions" });
+    console.error("Error fetching faculty load:", error);
+    res.status(500).json({ error: error.message });
   }
 });
 
-/**
- * POST /api/admin/evaluate/:submissionId
- * Re-run evaluation for a submission
- */
-router.post("/evaluate/:submissionId", async (req, res) => {
+// Auto-Assign Round Robin
+router.post('/assign/auto', verifyAdmin, async (req, res) => {
   try {
-    const evaluator = require("../services/evaluator");
-    const submissions = getSubmissions();
-    const challenges = getChallenges();
+    // 1. Get all unassigned pending submissions
+    const unassignedQuery = `
+            SELECT s.id 
+            FROM submissions s
+            LEFT JOIN submission_assignments sa ON s.id = sa.submission_id
+            WHERE s.status = 'pending' AND sa.id IS NULL
+            ORDER BY s.submitted_at ASC
+        `;
+    const unassignedSubmissions = await db.query(unassignedQuery);
 
-    const submission = submissions.find(
-      (s) => s.id === req.params.submissionId
-    );
-    if (!submission) {
-      return res.status(404).json({ error: "Submission not found" });
+    if (unassignedSubmissions.length === 0) {
+      return res.json({ message: "No unassigned submissions found.", assignedCount: 0 });
     }
 
-    const challenge = challenges.find((c) => c.id === submission.challengeId);
-    if (!challenge) {
-      return res.status(404).json({ error: "Challenge not found" });
+    // 2. Get all faculty
+    const facultyUsers = await db.query("SELECT id FROM users WHERE role = 'faculty'");
+    if (facultyUsers.length === 0) {
+      return res.status(400).json({ error: "No faculty members found to assign to." });
     }
 
-    // Re-evaluate
-    const result = await evaluator.evaluate(
-      submission.code,
-      challenge.expectedSolution,
-      challenge.passingThreshold,
-      submission.id
-    );
+    // 3. Round Robin Distribution
+    let assignments = [];
+    let facultyIndex = 0;
 
-    // Update submission
-    submission.result = result;
-    submission.status = result.passed ? "passed" : "failed";
-    submission.evaluatedAt = new Date().toISOString();
+    for (const sub of unassignedSubmissions) {
+      const facultyId = facultyUsers[facultyIndex].id;
+      assignments.push([sub.id, facultyId]);
+      facultyIndex = (facultyIndex + 1) % facultyUsers.length;
+    }
 
-    const index = submissions.findIndex(
-      (s) => s.id === req.params.submissionId
-    );
-    submissions[index] = submission;
-    fs.writeFileSync(submissionsPath, JSON.stringify(submissions, null, 2));
+    // 4. Bulk Insert
+    // Note: mysql2/promise execute doesnt support bulk insert easily with placeholder array of arrays
+    // We will loop for simplicity or construct a big query. Loop is safer for now.
+    let assignedCount = 0;
+    for (const [subId, facId] of assignments) {
+      await db.query(
+        "INSERT INTO submission_assignments (submission_id, faculty_id) VALUES (?, ?)",
+        [subId, facId]
+      );
+      assignedCount++;
+    }
 
-    res.json({ message: "Re-evaluation complete", result });
+    res.json({ message: "Auto-assignment complete", assignedCount });
+
   } catch (error) {
-    res
-      .status(500)
-      .json({ error: "Re-evaluation failed", details: error.message });
+    console.error("Error running auto-assign:", error);
+    res.status(500).json({ error: error.message });
   }
 });
 
-/**
- * GET /api/admin/submissions/grouped
- * Get submissions grouped by test session with user details
- */
-router.get("/submissions/grouped", async (req, res) => {
+// Get Aggregated Results (Auto + Manual)
+router.get('/results', verifyAdmin, async (req, res) => {
   try {
-    if (USE_JSON) {
-      // When running in JSON-only mode we cannot group by test sessions reliably
-      return res.json([]);
-    }
-
-    const db = require("../database/connection");
-
     const query = `
-      SELECT 
-        ts.id as session_id,
-        ts.user_id,
-        ts.course_id,
-        ts.level,
-        ts.started_at,
-        ts.completed_at,
-        ts.total_questions,
-        ts.passed_count,
-        ts.overall_status,
-        ts.user_feedback,
-        COALESCE(u.full_name, u.username, ts.user_id) as user_name,
-        u.email as user_email,
-        ts.submission_ids
-      FROM test_sessions ts
-      LEFT JOIN users u ON ts.user_id = u.id
-      ORDER BY ts.started_at DESC
-    `;
+            SELECT 
+                s.id, s.candidate_name, s.submitted_at, s.status as final_status,
+                s.structure_score, s.visual_score, s.content_score, s.final_score as auto_score,
+                me.total_score as manual_score,
+                me.code_quality_score, me.requirements_score, me.expected_output_score,
+                u.username as evaluator_name,
+                c.title as course_title,
+                t.level
+            FROM submissions s
+            LEFT JOIN manual_evaluations me ON s.id = me.submission_id
+            LEFT JOIN users u ON me.faculty_id = u.id
+            LEFT JOIN courses c ON s.course_id = c.id
+            LEFT JOIN test_sessions t ON s.id = JSON_UNQUOTE(JSON_EXTRACT(t.submission_ids, '$[0]')) -- Approximation if 1 sub per session
+            ORDER BY s.submitted_at DESC
+        `;
 
-    const sessions = await db.query(query);
+    // Note: test_sessions join is tricky with JSON arrays. 
+    // Better to just show course/level from submission table if available (it is).
+    const simplerQuery = `
+            SELECT 
+                s.id, u.full_name as candidate_name, s.submitted_at, s.status as final_status,
+                s.final_score as auto_score,
+                me.total_score as manual_score,
+                me.code_quality_score, me.requirements_score, me.expected_output_score,
+                ue.username as evaluator_name,
+                c.title as course_title,
+                s.level
+            FROM submissions s
+            JOIN users u ON s.user_id = u.id
+            LEFT JOIN manual_evaluations me ON s.id = me.submission_id
+            LEFT JOIN users ue ON me.faculty_id = ue.id
+            LEFT JOIN courses c ON s.course_id = c.id
+            ORDER BY s.submitted_at DESC
+        `;
 
-    const normalizeSubmissionIds = (rawSubmissionIds) => {
-      if (!rawSubmissionIds) return [];
-
-      if (Array.isArray(rawSubmissionIds)) {
-        return rawSubmissionIds.filter(Boolean);
-      }
-      if (typeof rawSubmissionIds === "string") {
-        try {
-          const parsed = JSON.parse(rawSubmissionIds);
-          return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
-        } catch (error) {
-          console.error("Error parsing submission_ids string:", error);
-          return [];
-        }
-      }
-      if (Buffer.isBuffer(rawSubmissionIds)) {
-        try {
-          const parsed = JSON.parse(rawSubmissionIds.toString("utf8"));
-          return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
-        } catch (error) {
-          console.error("Error parsing submission_ids buffer:", error);
-          return [];
-        }
-      }
-      if (typeof rawSubmissionIds === "object") {
-        const values = Array.isArray(rawSubmissionIds)
-          ? rawSubmissionIds
-          : Object.values(rawSubmissionIds);
-        return values.filter(Boolean);
-      }
-      return [];
-    };
-
-    const groupedSessions = await Promise.all(
-      sessions.map(async (session) => {
-        const submissionIds = normalizeSubmissionIds(session.submission_ids);
-        const submissions = await TestSession.getSubmissionsByIds(
-          submissionIds
-        );
-
-        // Skip empty sessions (no submissions stored)
-        if (!submissions || submissions.length === 0) {
-          return null;
-        }
-
-        return {
-          session_id: session.session_id,
-          user: {
-            id: session.user_id,
-            name: session.user_name,
-            email: session.user_email || "N/A",
-          },
-          course_id: session.course_id,
-          level: session.level,
-          started_at: session.started_at,
-          completed_at: session.completed_at,
-          total_questions: session.total_questions || submissions.length,
-          passed_count:
-            session.passed_count ||
-            submissions.filter(
-              (sub) => sub.passed === 1 || sub.status === "passed"
-            ).length,
-          overall_status: session.overall_status,
-          user_feedback: session.user_feedback,
-          submissions: submissions.map((s) => ({
-            id: s.id,
-            challenge_id: s.challenge_id,
-            status: s.status,
-            passed: s.passed === 1 || s.status === "passed",
-            final_score: s.final_score || 0,
-            submitted_at: s.submitted_at,
-          })),
-        };
-      })
-    );
-
-    // Remove nulls for empty sessions
-    res.json(groupedSessions.filter(Boolean));
+    const results = await db.query(simplerQuery);
+    res.json(results);
   } catch (error) {
-    console.error("Failed to fetch grouped submissions:", error);
-    res.status(500).json({
-      error: "Failed to fetch grouped submissions",
-      details: error.message,
-    });
+    console.error("Error fetching results:", error);
+    res.status(500).json({ error: error.message });
   }
 });
 
 /**
- * DELETE /api/admin/submissions/:id
- * Delete a submission
+ * POST /reset-level
+ * Reset a user's level progress for re-testing
+ * Body: { userId, courseId, level }
  */
-router.delete("/submissions/:id", async (req, res) => {
+router.post('/reset-level', verifyAdmin, async (req, res) => {
+  const { userId, courseId, level } = req.body;
+
+  if (!userId || !courseId || level === undefined) {
+    return res.status(400).json({ error: 'userId, courseId, and level are required' });
+  }
+
+  const fs = require('fs');
+  const path = require('path');
+  const progressPath = path.join(__dirname, '../data/user-progress.json');
+
   try {
-    if (USE_JSON) {
-      const submissions = getSubmissions();
-      const filtered = submissions.filter((s) => s.id !== req.params.id);
+    const levelNum = parseInt(level);
 
-      if (filtered.length === submissions.length) {
-        return res.status(404).json({ error: "Submission not found" });
-      }
+    // 1. Delete submissions for this user/course/level
+    const deletedSubs = await db.query(
+      `SELECT id FROM submissions WHERE user_id = ? AND course_id = ? AND level = ?`,
+      [userId, courseId, levelNum]
+    );
 
-      // Save updated submissions
-      fs.writeFileSync(submissionsPath, JSON.stringify(filtered, null, 2));
-    } else {
-      // Delete from MySQL
-      const submission = await SubmissionModel.findById(req.params.id);
-      if (!submission) {
-        return res.status(404).json({ error: "Submission not found" });
-      }
+    const submissionIds = deletedSubs.map(s => s.id);
 
-      await SubmissionModel.delete(req.params.id);
+    if (submissionIds.length > 0) {
+      // 2. Delete related manual evaluations
+      await db.query(
+        `DELETE FROM manual_evaluations WHERE submission_id IN (?)`,
+        [submissionIds]
+      );
+
+      // 3. Delete related submission assignments
+      await db.query(
+        `DELETE FROM submission_assignments WHERE submission_id IN (?)`,
+        [submissionIds]
+      );
+
+      // 4. Delete the submissions themselves
+      await db.query(
+        `DELETE FROM submissions WHERE user_id = ? AND course_id = ? AND level = ?`,
+        [userId, courseId, levelNum]
+      );
     }
 
-    // Optional: Delete associated screenshot files
-    const screenshotDir = path.join(__dirname, "../screenshots");
+    // 5. Delete user_assignments (question-to-user mapping) for this level
     try {
-      const screenshotFiles = [
-        `${req.params.id}-candidate.png`,
-        `${req.params.id}-expected.png`,
-        `${req.params.id}-diff.png`,
-      ];
-
-      screenshotFiles.forEach((file) => {
-        const filePath = path.join(screenshotDir, file);
-        if (fs.existsSync(filePath)) {
-          fs.unlinkSync(filePath);
-        }
-      });
-    } catch (screenshotError) {
-      console.warn("Failed to delete screenshots:", screenshotError.message);
-      // Don't fail the request if screenshot deletion fails
+      await db.query(
+        `DELETE FROM user_assignments WHERE user_id = ? AND course_id = ? AND level = ?`,
+        [userId, courseId, levelNum]
+      );
+    } catch (e) {
+      console.warn('user_assignments cleanup skipped:', e.message);
     }
 
-    res.json({ message: "Submission deleted successfully" });
+    // 6. Delete test_sessions for this level
+    try {
+      await db.query(
+        `DELETE FROM test_sessions WHERE user_id = ? AND course_id = ? AND level = ?`,
+        [userId, courseId, levelNum]
+      );
+    } catch (e) {
+      console.warn('test_sessions cleanup skipped:', e.message);
+    }
+
+    // 7. Delete test_attendance for this level
+    try {
+      const testIdentifier = `${courseId}_${levelNum}`;
+      await db.query(
+        `DELETE FROM test_attendance WHERE user_id = ? AND test_identifier = ?`,
+        [userId, testIdentifier]
+      );
+    } catch (e) {
+      console.warn('test_attendance cleanup skipped:', e.message);
+    }
+
+    // 8. Clear user-assignments.json (JSON file used by challenges.js)
+    const assignmentsPath = path.join(__dirname, '../data/user-assignments.json');
+    if (fs.existsSync(assignmentsPath)) {
+      try {
+        const rawAssignments = fs.readFileSync(assignmentsPath, 'utf8');
+        let assignments = JSON.parse(rawAssignments);
+
+        // Remove assignment for this user/course/level
+        const assignmentKey = `${userId}-${courseId}-${levelNum}`;
+        const beforeCount = assignments.length;
+        assignments = assignments.filter(a => a.key !== assignmentKey);
+
+        if (assignments.length < beforeCount) {
+          fs.writeFileSync(assignmentsPath, JSON.stringify(assignments, null, 2));
+          console.log(`Removed assignment ${assignmentKey} from user-assignments.json`);
+        }
+      } catch (jsonErr) {
+        console.warn('user-assignments.json cleanup failed:', jsonErr.message);
+      }
+    }
+
+    // 9. Update user_progress in MySQL if it exists
+    const existingProgress = await db.queryOne(
+      `SELECT id, completed_levels FROM user_progress WHERE user_id = ? AND course_id = ?`,
+      [userId, courseId]
+    );
+
+    if (existingProgress) {
+      let completedLevels = [];
+      try {
+        completedLevels = JSON.parse(existingProgress.completed_levels || '[]');
+      } catch (e) {
+        completedLevels = [];
+      }
+
+      // Remove the target level from completed_levels
+      completedLevels = completedLevels.filter(lv => lv !== levelNum);
+
+      // Recalculate current_level (should be max of completed + 1, or just the target level if empty)
+      const newCurrentLevel = completedLevels.length > 0 ? Math.max(...completedLevels) + 1 : 1;
+
+      await db.query(
+        `UPDATE user_progress SET completed_levels = ?, current_level = ? WHERE id = ?`,
+        [JSON.stringify(completedLevels), Math.min(newCurrentLevel, levelNum), existingProgress.id]
+      );
+    }
+
+    // 6. Update user-progress.json (legacy sync)
+    if (fs.existsSync(progressPath)) {
+      try {
+        const rawData = fs.readFileSync(progressPath, 'utf8');
+        const allProgress = JSON.parse(rawData);
+
+        const userProgress = allProgress.find(p => p.userId === userId);
+        if (userProgress) {
+          const courseProgress = userProgress.courses?.find(c => c.courseId === courseId);
+          if (courseProgress && courseProgress.completedLevels) {
+            courseProgress.completedLevels = courseProgress.completedLevels.filter(lv => lv !== levelNum);
+            courseProgress.currentLevel = Math.min(courseProgress.currentLevel || 1, levelNum);
+
+            // Remove related question results
+            if (courseProgress.completedQuestions) {
+              courseProgress.completedQuestions = courseProgress.completedQuestions.filter(
+                q => q.level !== levelNum
+              );
+            }
+
+            fs.writeFileSync(progressPath, JSON.stringify(allProgress, null, 2));
+          }
+        }
+      } catch (jsonErr) {
+        console.warn('JSON progress update failed:', jsonErr.message);
+      }
+    }
+
+    console.log(`Level ${levelNum} reset for user ${userId} in course ${courseId}`);
+    res.json({
+      message: 'Level reset successfully',
+      userId,
+      courseId,
+      level: levelNum,
+      submissionsDeleted: submissionIds.length
+    });
+
   } catch (error) {
-    res.status(500).json({ error: "Failed to delete submission" });
+    console.error('Error resetting level:', error);
+    res.status(500).json({ error: 'Failed to reset level: ' + error.message });
   }
 });
 

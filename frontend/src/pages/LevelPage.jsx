@@ -1,18 +1,18 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import SaaSLayout from '../components/SaaSLayout';
 import { getCourse, getLevelQuestions } from '../services/api';
 import {
-  ArrowLeft,
   Dices,
   FileText,
   CheckCircle,
   Star,
-  Image,
+  Image as ImageIcon,
   Paperclip,
   Lightbulb,
   PlayCircle,
   AlertCircle,
-  HelpCircle
+  ChevronRight
 } from 'lucide-react';
 
 export default function LevelPage() {
@@ -29,13 +29,12 @@ export default function LevelPage() {
   const loadLevelData = async () => {
     try {
       const userId = localStorage.getItem('userId') || 'default-user';
-
       const [courseRes, questionsRes] = await Promise.all([
         getCourse(courseId),
-        getLevelQuestions(courseId, level, userId) // Pass userId to get assigned questions
+        getLevelQuestions(courseId, level, userId)
       ]);
       setCourse(courseRes.data);
-      setQuestions(questionsRes.data); // Will be only 2 random questions
+      setQuestions(questionsRes.data);
     } catch (error) {
       console.error('Failed to load level:', error);
     } finally {
@@ -43,202 +42,159 @@ export default function LevelPage() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-indigo-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading level...</p>
-        </div>
+  if (loading) return (
+    <SaaSLayout>
+      <div className="flex flex-col items-center justify-center py-40">
+        <div className="w-12 h-12 border-4 border-slate-200 border-t-slate-900 rounded-full animate-spin mb-4" />
+        <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Loading Module Manifest...</p>
       </div>
-    );
-  }
+    </SaaSLayout>
+  );
+
+  const completedCount = questions.filter(q => q.isCompleted).length;
+  const isAllCompleted = questions.length > 0 && completedCount === questions.length;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      {/* Header */}
-      <header className="bg-white shadow-md">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center justify-between">
-            <button
-              onClick={() => navigate(`/course/${courseId}`)}
-              className="text-gray-600 hover:text-gray-900 flex items-center gap-2 font-medium"
-            >
-              <ArrowLeft size={20} /> Back to {course?.title}
-            </button>
-            <div className="text-xl font-bold text-gray-900">
-              Level {level}
+    <SaaSLayout>
+      <div className="space-y-8 text-left">
+        {/* Breadcrumb replacement / Module Info */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <span className="px-2 py-0.5 bg-blue-50 text-blue-600 rounded text-[10px] font-bold uppercase tracking-widest">Stage {level}</span>
+              <span className="text-slate-300">/</span>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{course?.title}</span>
+            </div>
+            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Practical Assessments</h1>
+          </div>
+          <div className="flex items-center gap-4 bg-white p-2 border border-slate-100 rounded-2xl shadow-sm">
+            <div className="px-4">
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Completion</p>
+              <p className="text-sm font-bold text-slate-900">{completedCount} / {questions.length} Solved</p>
+            </div>
+            <div className="w-12 h-12 rounded-xl bg-blue-600 flex items-center justify-center text-white">
+              <CheckCircle size={20} />
             </div>
           </div>
         </div>
-      </header>
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2 flex items-center gap-3">
-            {/* Note: course.icon is still likely text emoji if from DB, but we wrap it carefully or replace in future DB updates */}
-            {course?.icon} Level {level} Challenges
-          </h1>
-          <p className="text-gray-600 mb-2">
-            Complete both challenges to unlock the next level
-          </p>
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-4 flex items-start gap-3">
-            <Dices className="text-blue-600 mt-0.5" size={20} />
-            <p className="text-sm text-blue-800">
-              <strong>Randomized Questions:</strong> You've been assigned <strong>{questions.length} random questions</strong> from the question bank for this level.
-              Complete both to progress!
+        {/* Algorithm Alert */}
+        <div className="bg-slate-900 rounded-3xl p-6 text-white flex items-center gap-6 relative overflow-hidden group">
+          <div className="absolute inset-0 bg-blue-600/10 group-hover:bg-blue-600/20 transition-colors" />
+          <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center text-blue-400 flex-shrink-0 relative z-10">
+            <Dices size={24} />
+          </div>
+          <div className="relative z-10 flex-1">
+            <h3 className="text-sm font-bold mb-1">Randomized Logic Distribution</h3>
+            <p className="text-slate-400 text-xs leading-relaxed max-w-2xl">
+              Our platform has dynamically allocated {questions.length} unique challenges from the curriculum bank for your profile.
+              These assessments must be successfully validated to unlock **Stage {parseInt(level) + 1}**.
             </p>
           </div>
         </div>
 
         {/* Questions Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {questions.map((question, index) => {
-            const isCompleted = question.isCompleted || false;
-
-            return (
-              <div
-                key={question.id}
-                onClick={() => navigate(`/challenge/${question.id}`)}
-                className="bg-white rounded-xl shadow-lg overflow-hidden cursor-pointer transform transition-all duration-300 hover:scale-105 hover:shadow-2xl"
-              >
-                {/* Question Header */}
-                <div
-                  className="h-3"
-                  style={{ backgroundColor: course?.color }}
-                ></div>
-
-                <div className="p-6">
-                  {/* Title and Status */}
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-lg font-bold text-gray-500">
-                          #{index + 1}
-                        </span>
-                        {isCompleted ? (
-                          <span className="flex items-center gap-1 text-green-600 text-sm font-semibold bg-green-50 px-2 py-0.5 rounded-full">
-                            <CheckCircle size={14} /> Completed
-                          </span>
-                        ) : (
-                          <span className="flex items-center gap-1 text-gray-500 text-sm font-semibold bg-gray-100 px-2 py-0.5 rounded-full">
-                            <FileText size={14} /> Not Started
-                          </span>
-                        )}
-                      </div>
-                      <h3 className="text-xl font-bold text-gray-900">
-                        {question.title}
-                      </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {questions.map((question, index) => (
+            <div
+              key={question.id}
+              onClick={() => navigate(`/challenge/${question.id}`)}
+              className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden group hover:shadow-2xl hover:shadow-slate-200 transition-all cursor-pointer relative"
+            >
+              <div className="p-8">
+                <div className="flex justify-between items-start mb-6">
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl font-black text-slate-100 group-hover:text-slate-200 transition-colors">#{index + 1}</span>
+                    {question.isCompleted ? (
+                      <span className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 text-emerald-600 rounded-lg text-[10px] font-bold uppercase tracking-wider">
+                        <CheckCircle size={12} /> Validated
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1.5 px-2.5 py-1 bg-blue-50 text-blue-600 rounded-lg text-[10px] font-bold uppercase tracking-wider">
+                        <PlayCircle size={12} /> Pending
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex gap-1">
+                    <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400 hover:text-blue-500 transition-colors">
+                      <Star size={14} />
                     </div>
                   </div>
-
-                  {/* Description */}
-                  <p className="text-gray-600 mb-4 line-clamp-2">
-                    {question.description}
-                  </p>
-
-                  {/* Meta Info */}
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex gap-4 text-sm text-gray-600">
-                      <span className="flex items-center gap-1"><Star size={16} className="text-yellow-500" /> {question.points} pts</span>
-                      {question.assets?.images?.length > 0 && (
-                        <span className="flex items-center gap-1"><Image size={16} className="text-indigo-500" /> {question.assets.images.length} asset{question.assets.images.length !== 1 ? 's' : ''}</span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Assets Preview */}
-                  {question.assets?.images?.length > 0 && (
-                    <div className="mb-4">
-                      <div className="text-sm text-gray-600 mb-2 font-medium">Assets included:</div>
-                      <div className="flex flex-wrap gap-2">
-                        {question.assets.images.map((img, idx) => (
-                          <div key={idx} className="px-2 py-1 bg-gray-50 border border-gray-200 text-xs text-gray-600 rounded flex items-center gap-1">
-                            <Paperclip size={12} /> {img.name}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Hints */}
-                  {question.hints?.length > 0 && (
-                    <div className="mb-4">
-                      <div className="text-sm text-gray-500 flex items-center gap-1">
-                        <Lightbulb size={16} className="text-yellow-500" /> {question.hints.length} hint{question.hints.length !== 1 ? 's' : ''} available
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Action Button */}
-                  <button
-                    className={`w-full py-3 rounded-lg font-semibold transition-colors flex items-center justify-center gap-2 ${isCompleted
-                        ? 'bg-green-600 text-white hover:bg-green-700'
-                        : 'bg-indigo-600 text-white hover:bg-indigo-700'
-                      }`}
-                  >
-                    {isCompleted
-                      ? <><CheckCircle size={18} /> Completed - Review</>
-                      : <><PlayCircle size={18} /> Start Challenge</>
-                    }
-                  </button>
                 </div>
+
+                <h3 className="text-xl font-bold text-slate-900 mb-2 truncate group-hover:text-blue-600 transition-colors">{question.title}</h3>
+                <p className="text-slate-500 text-sm mb-8 line-clamp-2 leading-relaxed font-medium">
+                  {question.description || 'Simulated professional environment requiring specific structural implementations.'}
+                </p>
+
+                <div className="flex flex-wrap gap-4 mb-8">
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 rounded-xl">
+                    <Star size={14} className="text-amber-500" />
+                    <span className="text-xs font-bold text-slate-600">{question.points} Unit Points</span>
+                  </div>
+                  {question.assets?.images?.length > 0 && (
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 rounded-xl">
+                      <ImageIcon size={14} className="text-indigo-500" />
+                      <span className="text-xs font-bold text-slate-600">{question.assets.images.length} Media Assets</span>
+                    </div>
+                  )}
+                </div>
+
+                <button className={`w-full py-4 rounded-2xl font-bold text-sm transition-all flex items-center justify-center gap-2
+                    ${question.isCompleted ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-900 text-white group-hover:bg-blue-600 shadow-xl shadow-slate-900/10'}
+                `}>
+                  {question.isCompleted ? 'Enter Review Lounge' : 'Initialize Challenge'}
+                  {!question.isCompleted && <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform" />}
+                </button>
               </div>
-            );
-          })}
+            </div>
+          ))}
+
+          {questions.length === 0 && (
+            <div className="col-span-full py-20 bg-slate-50/50 rounded-[2rem] border-2 border-dashed border-slate-200 flex flex-col items-center">
+              <AlertCircle size={48} className="text-slate-300 mb-4" />
+              <p className="text-slate-500 font-bold uppercase tracking-widest text-xs">No Assessments Assigned</p>
+            </div>
+          )}
         </div>
 
-        {/* Empty State */}
-        {questions.length === 0 && (
-          <div className="text-center py-12">
-            <div className="inline-block p-4 bg-gray-100 rounded-full mb-4">
-              <HelpCircle size={48} className="text-gray-400" />
-            </div>
-            <p className="text-xl text-gray-600 mb-4">No challenges in this level yet</p>
-            <button
-              onClick={() => navigate(`/course/${courseId}`)}
-              className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-medium"
-            >
-              Back to Course
-            </button>
-          </div>
-        )}
-
-        {/* Progress Summary */}
+        {/* Level Logic Info */}
         {questions.length > 0 && (
-          <div className="mt-8 bg-white rounded-xl shadow-md p-6">
-            <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-              <Start size={20} className="text-indigo-600" /> Level Progress
-            </h3>
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-gray-600">Completed</span>
-              <span className="font-semibold text-gray-900">
-                {questions.filter(q => q.isCompleted).length} / {questions.length}
-              </span>
-            </div>
-            <div className="w-full bg-gray-200 rounded-full h-3">
-              <div
-                className="bg-indigo-600 h-3 rounded-full transition-all duration-300"
-                style={{
-                  width: `${(questions.filter(q => q.isCompleted).length / questions.length) * 100}%`
-                }}
-              ></div>
-            </div>
-            <div className="mt-4 text-sm text-gray-600">
-              {questions.filter(q => q.isCompleted).length === questions.length ? (
-                <span className="text-green-600 font-semibold flex items-center gap-1">
-                  <CheckCircle size={16} /> Level Complete! Next level unlocked.
-                </span>
-              ) : (
-                <span className="flex items-center gap-1">
-                  <AlertCircle size={16} /> Complete all challenges to unlock Level {parseInt(level) + 1}
-                </span>
-              )}
+          <div className="bg-white p-10 rounded-[2.5rem] border border-slate-200 shadow-sm">
+            <div className="flex flex-col lg:flex-row items-center justify-between gap-10">
+              <div className="max-w-xl">
+                <h2 className="text-2xl font-bold text-slate-900 mb-2">Advance to Logic Block {parseInt(level) + 1}</h2>
+                <p className="text-slate-500 font-medium leading-relaxed">
+                  To unlock the next sequence in your curriculum, you must achieve 100% validation on the current distributed challenges.
+                  Manual evaluations may be required for specific complex implementations.
+                </p>
+              </div>
+
+              <div className="w-full lg:w-72">
+                <div className="flex justify-between items-end mb-3">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Sequence Progress</span>
+                  <span className="text-xl font-bold text-slate-900">{Math.round((completedCount / questions.length) * 100)}%</span>
+                </div>
+                <div className="h-3 w-full bg-slate-100 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-blue-600 transition-all duration-1000 ease-out shadow-[0_0_12px_rgba(37,99,235,0.4)]"
+                    style={{ width: `${(completedCount / questions.length) * 100}%` }}
+                  />
+                </div>
+                {isAllCompleted ? (
+                  <p className="mt-4 text-[10px] font-bold text-emerald-500 uppercase tracking-widest flex items-center gap-2">
+                    <CheckCircle size={14} /> Full Module Mastered
+                  </p>
+                ) : (
+                  <p className="mt-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                    <Lightbulb size={14} className="text-amber-500" /> Complete all above to proceed
+                  </p>
+                )}
+              </div>
             </div>
           </div>
         )}
-      </main>
-    </div>
+      </div>
+    </SaaSLayout>
   );
 }

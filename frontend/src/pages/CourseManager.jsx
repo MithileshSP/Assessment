@@ -1,16 +1,30 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import SaaSLayout from '../components/SaaSLayout';
 import { getCourses, updateCourse, createCourse, deleteCourse } from '../services/api';
 import CourseEditModal from '../components/CourseEditModal';
-import QuestionManagerModal from '../components/QuestionManagerModal';
-import { clearAdminSession } from '../utils/session';
+import {
+  Plus,
+  Settings,
+  Eye,
+  EyeOff,
+  Edit,
+  Trash2,
+  Database,
+  BookOpen,
+  Clock,
+  Layers,
+  HelpCircle,
+  ExternalLink,
+  Briefcase // Added Briefcase icon
+} from 'lucide-react';
 
 export default function CourseManager() {
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editingCourse, setEditingCourse] = useState(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [managingQuestions, setManagingQuestions] = useState(null);
+  // Removed [managingQuestions, setManagingQuestions] state
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -19,6 +33,7 @@ export default function CourseManager() {
 
   const loadCourses = async () => {
     try {
+      setLoading(true);
       const response = await getCourses();
       setCourses(response.data);
     } catch (error) {
@@ -49,7 +64,6 @@ export default function CourseManager() {
     try {
       const newHiddenStatus = !course.isHidden;
       await updateCourse(course.id, { isHidden: newHiddenStatus });
-      alert(`Course ${newHiddenStatus ? 'hidden' : 'visible'} successfully!`);
       await loadCourses();
     } catch (error) {
       alert('Failed to update visibility: ' + error.message);
@@ -57,197 +71,172 @@ export default function CourseManager() {
   };
 
   const handleDeleteCourse = async (courseId, courseTitle) => {
-    if (!confirm(`Are you sure you want to delete "${courseTitle}"? This action cannot be undone.`)) {
+    if (!window.confirm(`Are you sure you want to delete "${courseTitle}"? This action cannot be undone.`)) {
       return;
     }
 
     try {
       await deleteCourse(courseId);
-      alert('Course deleted successfully!');
       await loadCourses();
     } catch (error) {
       alert('Failed to delete course: ' + error.message);
     }
   };
 
-  const handleLogout = () => {
-    clearAdminSession();
-    navigate('/admin/login');
-  };
-
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Course Manager</h1>
-              <p className="text-sm text-gray-600">Manage courses, levels, and questions</p>
-            </div>
-            <div className="flex gap-3">
-              <button
-                onClick={() => navigate('/admin/dashboard')}
-                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-              >
-                ← Back to Dashboard
-              </button>
-              <button
-                onClick={handleLogout}
-                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-              >
-                Logout
-              </button>
-            </div>
+    <SaaSLayout>
+      <div className="space-y-8 text-left">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Course Architecture</h1>
+            <p className="text-slate-500 mt-1">Design curricula, establish levels, and manage assessment banks.</p>
           </div>
-        </div>
-      </header>
-
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        {/* Action Buttons */}
-        <div className="mb-6 flex gap-3">
-          <button
-            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-            onClick={() => setShowCreateModal(true)}
-          >
-            + Add New Course
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="flex items-center gap-2 px-6 py-2 bg-slate-900 text-white rounded-xl text-sm font-bold hover:bg-blue-600 transition-all shadow-lg shadow-slate-900/10"
+            >
+              <Plus size={16} /> Architect New Course
+            </button>
+          </div>
         </div>
 
         {/* Courses Grid */}
-        {loading ? (
-          <div className="text-center py-12">
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-            <p className="mt-4 text-gray-600">Loading courses...</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 gap-6">
-            {courses.map((course) => (
-              <div key={course.id} className="bg-white rounded-lg shadow-lg overflow-hidden">
-                {/* Course Header */}
-                <div
-                  className="p-6 text-white"
-                  style={{ backgroundColor: course.color }}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className="text-6xl">{course.icon}</div>
-                      <div>
-                        <h2 className="text-2xl font-bold">{course.title}</h2>
-                        <p className="opacity-90">{course.description}</p>
+        <div className="grid grid-cols-1 gap-8">
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-20 bg-white rounded-3xl border border-slate-100 italic text-slate-400">
+              <Database size={48} className="animate-bounce mb-4 opacity-10" />
+              Querying course registry...
+            </div>
+          ) : (
+            courses.map((course) => (
+              <div key={course.id} className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden group hover:shadow-xl transition-all duration-300">
+                <div className="flex flex-col lg:flex-row">
+                  {/* Visual Side */}
+                  <div
+                    className="lg:w-72 h-48 lg:h-auto flex items-center justify-center relative overflow-hidden text-white"
+                    style={{ backgroundColor: course.color || '#1e293b' }}
+                  >
+                    <div className="absolute inset-0 bg-black/10" />
+                    <div className="relative z-10 flex flex-col items-center">
+                      <span className="text-6xl mb-4 group-hover:scale-110 transition-transform duration-500">{course.icon || '📚'}</span>
+                      <span className="text-[10px] font-bold uppercase tracking-widest opacity-60">ID: {course.id}</span>
+                    </div>
+                    {course.isHidden && (
+                      <div className="absolute top-4 left-4 bg-amber-400 text-amber-900 text-[10px] font-bold px-2 py-1 rounded-lg flex items-center gap-1 shadow-lg">
+                        <EyeOff size={12} /> PRIVATE
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Content Side */}
+                  <div className="flex-1 p-8 flex flex-col justify-between">
+                    <div>
+                      <div className="flex justify-between items-start mb-4">
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${course.difficulty === 'Advanced' ? 'bg-rose-50 text-rose-600' :
+                              course.difficulty === 'Intermediate' ? 'bg-amber-50 text-amber-600' :
+                                'bg-emerald-50 text-emerald-600'
+                              }`}>
+                              {course.difficulty}
+                            </span>
+                          </div>
+                          <h2 className="text-2xl font-bold text-slate-900 group-hover:text-blue-600 transition-colors">{course.title}</h2>
+                          <p className="text-slate-500 text-sm mt-2 max-w-2xl leading-relaxed">{course.description}</p>
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleToggleHidden(course)}
+                            className={`p-2 rounded-xl transition-colors ${course.isHidden ? 'bg-amber-50 text-amber-600' : 'bg-slate-50 text-slate-400 hover:text-blue-600'}`}
+                            title={course.isHidden ? "Unhide Course" : "Hide Course"}
+                          >
+                            {course.isHidden ? <EyeOff size={18} /> : <Eye size={18} />}
+                          </button>
+                          <button
+                            onClick={() => setEditingCourse(course)}
+                            className="p-2 bg-slate-50 text-slate-400 hover:text-blue-600 rounded-xl transition-colors"
+                            title="Edit Metadata"
+                          >
+                            <Edit size={18} />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteCourse(course.id, course.title)}
+                            className="p-2 bg-slate-50 text-slate-400 hover:text-rose-600 rounded-xl transition-colors"
+                            title="Destroy Course"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap gap-6 mt-6">
+                        <div className="flex items-center gap-2">
+                          <Layers size={16} className="text-blue-500" />
+                          <span className="text-sm font-bold text-slate-700">{course.totalLevels} Stages</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Clock size={16} className="text-slate-400" />
+                          <span className="text-sm font-medium text-slate-500">{course.estimatedTime}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <HelpCircle size={16} className="text-slate-400" />
+                          <span className="text-sm font-medium text-slate-500">Manual Evaluation Enabled</span>
+                        </div>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <div className="text-sm opacity-90">ID: {course.id}</div>
-                      <div className="text-lg font-semibold">{course.difficulty}</div>
-                    </div>
-                  </div>
-                </div>
 
-                {/* Course Details */}
-                <div className="p-6">
-                  <div className="grid grid-cols-3 gap-4 mb-4">
-                    <div>
-                      <div className="text-sm text-gray-600">Total Levels</div>
-                      <div className="text-2xl font-bold text-gray-900">{course.totalLevels}</div>
+                    <div className="flex items-center justify-between mt-8 pt-6 border-t border-slate-50">
+                      <div className="flex flex-wrap gap-2">
+                        {course.tags && course.tags.map((tag, idx) => (
+                          <span key={idx} className="px-2.5 py-1 bg-slate-100 text-slate-500 text-[10px] font-bold uppercase tracking-wider rounded-lg">
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                      <div className="flex gap-3">
+                        <button
+                          onClick={() => navigate(`/admin/course/${course.id}/questions`)} // Updated onClick to navigate
+                          className="flex items-center gap-2 px-5 py-2.5 bg-slate-100 text-slate-600 rounded-xl text-xs font-bold hover:bg-indigo-600 hover:text-white transition-all" // Updated styling
+                        >
+                          <Briefcase size={14} /> Manage Question Bank {/* Updated icon */}
+                        </button>
+                        <button
+                          onClick={() => navigate(`/course/${course.id}`)}
+                          className="flex items-center gap-2 px-5 py-2.5 bg-slate-900 text-white rounded-xl text-xs font-bold hover:bg-blue-600 transition-all shadow-lg shadow-slate-900/10"
+                        >
+                          <ExternalLink size={14} /> Preview
+                        </button>
+                      </div>
                     </div>
-                    <div>
-                      <div className="text-sm text-gray-600">Estimated Time</div>
-                      <div className="text-lg font-semibold text-gray-900">{course.estimatedTime}</div>
-                    </div>
-                    <div>
-                      <div className="text-sm text-gray-600">Thumbnail</div>
-                      <div className="text-sm text-gray-700 truncate">{course.thumbnail}</div>
-                    </div>
-                  </div>
-
-                  {/* Tags */}
-                  <div className="mb-4">
-                    <div className="text-sm text-gray-600 mb-2">Tags:</div>
-                    <div className="flex flex-wrap gap-2">
-                      {course.tags && course.tags.map((tag, idx) => (
-                        <span key={idx} className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded">
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex gap-2 flex-wrap">
-                    <button
-                      onClick={() => handleToggleHidden(course)}
-                      className={`px-3 py-1 rounded border ${course.isHidden
-                          ? 'bg-yellow-100 text-yellow-800 border-yellow-300'
-                          : 'bg-green-100 text-green-800 border-green-300'
-                        }`}
-                      title={course.isHidden ? "Click to unhide" : "Click to hide"}
-                    >
-                      {course.isHidden ? '👁️ Unhide' : '👁️ Hide'}
-                    </button>
-                    <button
-                      onClick={() => navigate(`/course/${course.id}`)}
-                      className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
-                    >
-                      👁️ Preview Course
-                    </button>
-                    <button
-                      onClick={() => setEditingCourse(course)}
-                      className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-                    >
-                      ✏️ Edit
-                    </button>
-                    <button
-                      onClick={() => setManagingQuestions({ id: course.id, name: course.title })}
-                      className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-                    >
-                      📝 Manage Questions
-                    </button>
-                    <button
-                      onClick={() => handleDeleteCourse(course.id, course.title)}
-                      className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
-                    >
-                      🗑️ Delete
-                    </button>
                   </div>
                 </div>
               </div>
-            ))}
-          </div>
-        )}
-
-        {/* Instructions */}
-        <div className="mt-8 bg-blue-50 rounded-lg p-6">
-          <h3 className="text-lg font-bold text-blue-900 mb-3">📘 Quick Guide</h3>
-          <div className="space-y-2 text-blue-800">
-            <p><strong>✏️ Edit Course:</strong> Click "Edit" button to modify course details</p>
-            <p><strong>📝 Manage Questions:</strong> Click "Manage Questions" to view/edit/delete questions</p>
-            <p><strong>👁️ Hide/Unhide:</strong> Toggle visibility of courses for students</p>
-            <p><strong>🗑️ Delete:</strong> Click "Delete" to remove a course (careful!)</p>
-            <p><strong>🎨 Assets:</strong> Upload images to <code className="bg-blue-100 px-2 py-1 rounded">backend/assets/images/</code></p>
-            <p><strong>🔄 Apply Changes:</strong> Changes are saved immediately to JSON files</p>
-          </div>
+            ))
+          )}
         </div>
 
-        {/* Current Question Structure */}
-        <div className="mt-6 bg-gray-50 rounded-lg p-6">
-          <h3 className="text-lg font-bold text-gray-900 mb-3">📊 Question Structure Overview</h3>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {courses.map((course) => (
-              <div key={course.id} className="bg-white rounded-lg p-4 shadow">
-                <div className="text-2xl mb-2">{course.icon}</div>
-                <div className="text-sm font-semibold text-gray-900">{course.title}</div>
-                <div className="text-xs text-gray-600 mt-2">
-                  {/* This would need to query questions per course */}
-                  Click "Manage Questions" to view
-                </div>
-              </div>
-            ))}
+        {/* Info Zone */}
+        <div className="bg-indigo-600 rounded-3xl p-8 text-white relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-8 opacity-10">
+            <Settings size={120} />
+          </div>
+          <div className="relative z-10 max-w-2xl">
+            <h3 className="text-xl font-bold mb-4">Core Architecture Tips</h3>
+            <p className="text-indigo-100 text-sm leading-relaxed mb-6">
+              Courses are defined by their levels and assessment banks. Changes made here propagate immediately to the student experience.
+              Use the **Private** toggle to work on courses in draft mode before releasing them to the public.
+            </p>
+            <div className="flex gap-4">
+              <button className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-xl text-xs font-bold transition-colors">Documentation</button>
+              <button className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-xl text-xs font-bold transition-colors">Asset Library</button>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Modals */}
+      {/* Modals are kept as they are functional, but UI is updated via props/context if possible */}
       {(editingCourse || showCreateModal) && (
         <CourseEditModal
           course={editingCourse}
@@ -259,13 +248,6 @@ export default function CourseManager() {
         />
       )}
 
-      {managingQuestions && (
-        <QuestionManagerModal
-          courseId={managingQuestions.id}
-          courseName={managingQuestions.name}
-          onClose={() => setManagingQuestions(null)}
-        />
-      )}
-    </div>
+    </SaaSLayout>
   );
 }

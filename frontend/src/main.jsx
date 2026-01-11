@@ -4,7 +4,7 @@ import App from "./App.jsx";
 import "./styles/index.css";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 
-console.log('DEPLOYMENT VERSION: v2.0 - Verified Update');
+console.log('DEPLOYMENT VERSION: v2.2 - Final Cache Buster');
 
 const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 

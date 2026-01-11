@@ -57,7 +57,9 @@ export default function ResultsPanel({ result }) {
         <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
           <div className="space-y-2">
             {result.feedback.encouragement.map((msg, index) => (
-              <p key={index} className="text-purple-800 font-medium">{msg}</p>
+              <p key={index} className="text-purple-800 font-medium">
+                {typeof msg === 'object' ? JSON.stringify(msg) : msg}
+              </p>
             ))}
           </div>
         </div>
@@ -238,7 +240,9 @@ export default function ResultsPanel({ result }) {
                 >
                   <div className="flex items-start gap-2">
                     <span className="mt-1">•</span>
-                    <span className="font-medium leading-snug">{title}</span>
+                    <span className="font-medium leading-snug">
+                      {typeof title === 'object' ? JSON.stringify(title) : title}
+                    </span>
                   </div>
 
                   {isObject && (

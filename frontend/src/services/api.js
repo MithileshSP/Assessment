@@ -7,8 +7,10 @@ import axios from 'axios';
 
 // Use environment variable or relative path
 // Universal API URL: detects if running under /fullstack or root
-const API_BASE_URL = import.meta.env.VITE_API_URL ||
+// Universal API URL: detects if running under /fullstack or root
+export const BASE_URL = import.meta.env.VITE_API_URL ||
   (window.location.pathname.startsWith('/fullstack') ? '/fullstack/api' : '/api');
+const API_BASE_URL = BASE_URL;
 
 // Create axios instance
 const api = axios.create({
@@ -21,7 +23,7 @@ const api = axios.create({
 
 // Add auth token to requests if available
 api.interceptors.request.use(config => {
-  const token = localStorage.getItem('adminToken');
+  const token = localStorage.getItem('userToken') || localStorage.getItem('adminToken');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -50,6 +52,7 @@ export const updateQuestion = (questionId, question) => api.put(`/courses/questi
 export const createQuestion = (courseId, question) => api.post(`/courses/${courseId}/questions`, question);
 export const deleteQuestion = (questionId) => api.delete(`/courses/questions/${questionId}`);
 export const bulkUploadQuestions = (courseId, questions) => api.post(`/courses/${courseId}/questions/bulk`, { questions });
+export const bulkDeleteQuestions = (courseId, questionIds) => api.post(`/courses/${courseId}/questions/bulk-delete`, { questionIds });
 export const getRandomQuestions = (courseId, level, count = 2) => api.get(`/courses/${courseId}/levels/${level}/randomize?count=${count}`);
 
 // Level-specific question bank management
@@ -106,5 +109,12 @@ export const reEvaluateSubmission = (id) =>
 
 export const deleteSubmission = (id) =>
   api.delete(`/admin/submissions/${id}`);
+
+export const getUserSubmissions = (userId) =>
+  api.get(`/submissions/user/${userId}`);
+
+// Admin Level Reset
+export const resetLevel = (userId, courseId, level) =>
+  api.post('/admin/reset-level', { userId, courseId, level });
 
 export default api;

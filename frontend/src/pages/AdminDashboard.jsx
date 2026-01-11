@@ -1,220 +1,177 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
-import { getAllSubmissions, reEvaluateSubmission, deleteSubmission } from '../services/api';
-import SubmissionList from '../components/SubmissionList';
-import GroupedSubmissionsList from '../components/GroupedSubmissionsList';
-import { clearAdminSession } from '../utils/session';
+import SaaSLayout from '../components/SaaSLayout';
+import api from '../services/api';
+import {
+  Users,
+  BookOpen,
+  FileText,
+  Calendar,
+  AlertCircle,
+  ArrowRight,
+  CheckCircle,
+  Clock
+} from 'lucide-react';
 
-export default function AdminDashboard() {
-  const [submissions, setSubmissions] = useState([]);
-  const [groupedSessions, setGroupedSessions] = useState([]);
+const AdminDashboard = () => {
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    totalCourses: 0,
+    totalSubmissions: 0,
+    pendingAttendance: 0,
+    pendingEvaluations: 0
+  });
+  const [recentSubmissions, setRecentSubmissions] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({ total: 0, passed: 0, failed: 0, pending: 0, totalSessions: 0 });
-  const [viewMode, setViewMode] = useState('grouped'); // 'grouped' or 'individual'
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (viewMode === 'grouped') {
-      loadGroupedSubmissions();
-    } else {
-      loadSubmissions();
-    }
-  }, [viewMode]);
+    fetchDashboardData();
+  }, []);
 
-  const loadGroupedSubmissions = async () => {
+  const fetchDashboardData = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('/api/admin/submissions/grouped');
-      const sessions = response.data;
-      setGroupedSessions(sessions);
-
-      // Calculate stats from sessions
-      let totalSubmissions = 0;
-      let passedSubmissions = 0;
-      let failedSubmissions = 0;
-
-      sessions.forEach(session => {
-        totalSubmissions += session.total_questions || 0;
-        passedSubmissions += session.passed_count || 0;
-        failedSubmissions += (session.total_questions - session.passed_count) || 0;
-      });
-
-      setStats({
-        totalSessions: sessions.length,
-        total: totalSubmissions,
-        passed: passedSubmissions,
-        failed: failedSubmissions,
-        pending: 0
-      });
+      const [statsRes, submissionsRes] = await Promise.all([
+        api.get('/admin/stats'),
+        api.get('/admin/submissions')
+      ]);
+      setStats(statsRes.data);
+      setRecentSubmissions(submissionsRes.data.slice(0, 5));
     } catch (error) {
-      console.error('Failed to load grouped submissions:', error);
+      console.error('Error fetching dashboard data:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const loadSubmissions = async () => {
-    try {
-      setLoading(true);
-      const response = await getAllSubmissions();
-      const data = response.data;
-      setSubmissions(data);
-
-      // Calculate stats
-      setStats({
-        total: data.length,
-        passed: data.filter(s => s.status === 'passed').length,
-        failed: data.filter(s => s.status === 'failed').length,
-        pending: data.filter(s => s.status === 'pending').length,
-        totalSessions: 0
-      });
-    } catch (error) {
-      console.error('Failed to load submissions:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleReEvaluate = async (submissionId) => {
-    if (!confirm('Re-evaluate this submission?')) return;
-
-    try {
-      await reEvaluateSubmission(submissionId);
-      await loadSubmissions();
-      alert('Re-evaluation complete!');
-    } catch (error) {
-      alert('Re-evaluation failed: ' + error.message);
-    }
-  };
-
-  const handleDelete = async (submissionId) => {
-    if (!confirm('Are you sure you want to delete this submission? This action cannot be undone.')) return;
-
-    try {
-      await deleteSubmission(submissionId);
-      await loadSubmissions();
-      alert('Submission deleted successfully!');
-    } catch (error) {
-      alert('Failed to delete submission: ' + error.message);
-    }
-  };
-
-  const handleLogout = () => {
-    clearAdminSession();
-    navigate('/admin/login');
-  };
-
-  const handleViewDetails = (submissionId) => {
-    // Navigate to submission details or open modal
-    window.open(`/admin/submission/${submissionId}`, '_blank');
-  };
+  const widgets = [
+    { label: 'Total Users', value: stats.totalUsers, icon: <Users size={24} />, color: 'blue' },
+    { label: 'Courses', value: stats.totalCourses, icon: <BookOpen size={24} />, color: 'indigo' },
+    { label: 'Submissions', value: stats.totalSubmissions, icon: <FileText size={24} />, color: 'emerald' },
+    { label: 'Attendance Requests', value: stats.pendingAttendance, icon: <Calendar size={24} />, color: 'orange', action: '/admin/attendance' },
+  ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
-            <p className="text-sm text-gray-600">Manage challenges and review submissions</p>
-          </div>
-          <div className="flex gap-3">
-            <button
-              onClick={() => navigate('/admin/courses')}
-              className="btn-primary"
-            >
-              📚 Manage Courses
-            </button>
-            <button
-              onClick={() => navigate('/admin/users')}
-              className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
-            >
-              👥 Manage Users
-            </button>
-            <button
-              onClick={handleLogout}
-              className="btn-secondary"
-            >
-              Logout
-            </button>
-          </div>
-        </div>
-      </header>
-
-      {/* Stats */}
-      <div className="max-w-7xl mx-auto px-6 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          {viewMode === 'grouped' && (
-            <div className="bg-indigo-50 rounded-lg shadow p-6">
-              <div className="text-indigo-700 text-sm mb-1">Total Test Sessions</div>
-              <div className="text-3xl font-bold text-indigo-600">{stats.totalSessions}</div>
-            </div>
-          )}
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="text-gray-600 text-sm mb-1">Total Submissions</div>
-            <div className="text-3xl font-bold text-gray-900">{stats.total}</div>
-          </div>
-          <div className="bg-green-50 rounded-lg shadow p-6">
-            <div className="text-green-700 text-sm mb-1">Passed</div>
-            <div className="text-3xl font-bold text-green-600">{stats.passed}</div>
-          </div>
-          <div className="bg-red-50 rounded-lg shadow p-6">
-            <div className="text-red-700 text-sm mb-1">Failed</div>
-            <div className="text-3xl font-bold text-red-600">{stats.failed}</div>
-          </div>
+    <SaaSLayout>
+      <div className="space-y-8">
+        {/* Welcome Header */}
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Platform Overview</h1>
+          <p className="text-slate-500 mt-1">Monitor system health and pending administrative actions.</p>
         </div>
 
-        {/* View Mode Toggle */}
-        <div className="mb-6 flex gap-3">
-          <button
-            onClick={() => setViewMode('grouped')}
-            className={`px-4 py-2 rounded-lg font-medium transition-colors ${viewMode === 'grouped'
-                ? 'bg-indigo-600 text-white'
-                : 'bg-white text-gray-700 border hover:bg-gray-50'
-              }`}
-          >
-            📋 Grouped by Test Session
-          </button>
-          <button
-            onClick={() => setViewMode('individual')}
-            className={`px-4 py-2 rounded-lg font-medium transition-colors ${viewMode === 'individual'
-                ? 'bg-indigo-600 text-white'
-                : 'bg-white text-gray-700 border hover:bg-gray-50'
-              }`}
-          >
-            📄 Individual Submissions
-          </button>
+        {/* Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {widgets.map((widget, idx) => (
+            <div
+              key={idx}
+              className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow cursor-pointer group"
+              onClick={() => widget.action && navigate(widget.action)}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div className={`p-3 rounded-xl bg-${widget.color}-50 text-${widget.color}-600 group-hover:scale-110 transition-transform duration-200`}>
+                  {widget.icon}
+                </div>
+                {widget.action && <ArrowRight size={16} className="text-slate-300 group-hover:text-slate-500 transition-colors" />}
+              </div>
+              <p className="text-sm font-medium text-slate-500">{widget.label}</p>
+              <p className="text-3xl font-bold text-slate-900 mt-1">
+                {loading ? '...' : widget.value}
+              </p>
+            </div>
+          ))}
         </div>
 
-        {/* Submissions Display */}
-        <div className="bg-white rounded-lg shadow">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h2 className="text-xl font-bold text-gray-900">
-              {viewMode === 'grouped' ? 'Test Sessions' : 'Recent Submissions'}
-            </h2>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Recent Submissions */}
+          <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden text-sm">
+            <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
+              <h3 className="font-bold text-slate-800">Recent Submissions</h3>
+              <button
+                onClick={() => navigate('/admin/results')}
+                className="text-blue-600 hover:text-blue-700 font-bold transition-colors"
+                style={{ fontSize: 13 }}
+              >
+                View All Results
+              </button>
+            </div>
+            <div className="divide-y divide-slate-50">
+              {recentSubmissions.map((sub) => (
+                <div key={sub.id} className="px-6 py-4 flex items-center justify-between hover:bg-slate-50/50 transition-colors">
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-bold">
+                      {sub.candidateName?.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <p className="font-bold text-slate-900">{sub.candidateName}</p>
+                      <p className="text-slate-400 text-xs">Level {sub.level} • {new Date(sub.submitted_at).toLocaleDateString()}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className={`px-3 py-1 rounded-full font-bold text-[10px] uppercase tracking-wider border ${sub.status === 'passed' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                        sub.status === 'failed' ? 'bg-rose-50 text-rose-600 border-rose-100' :
+                          'bg-amber-50 text-amber-600 border-amber-100'
+                      }`}>
+                      {sub.status}
+                    </span>
+                    <button
+                      onClick={() => navigate(`/admin/submission/${sub.id}`)}
+                      className="p-2 text-slate-300 hover:text-slate-600 transition-colors"
+                    >
+                      <ArrowRight size={18} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+              {recentSubmissions.length === 0 && !loading && (
+                <div className="p-12 text-center text-slate-400">
+                  No submissions yet.
+                </div>
+              )}
+            </div>
           </div>
-          {loading ? (
-            <div className="text-center py-12">
-              <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-              <p className="mt-4 text-gray-600">Loading submissions...</p>
+
+          {/* Pending Tasks */}
+          <div className="space-y-6">
+            <div className="bg-[#1e293b] rounded-2xl p-6 text-white shadow-xl shadow-slate-200">
+              <h3 className="font-bold text-lg mb-4 flex items-center gap-2">
+                <AlertCircle size={20} className="text-amber-400" />
+                Pending Tasks
+              </h3>
+              <div className="space-y-4">
+                <div
+                  className="bg-slate-800/50 p-4 rounded-xl border border-slate-700 hover:border-slate-500 transition-colors cursor-pointer"
+                  onClick={() => navigate('/admin/attendance')}
+                >
+                  <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-1">Attendance</p>
+                  <p className="font-bold text-xl">{stats.pendingAttendance}</p>
+                  <p className="text-xs text-slate-500 mt-1">Students waiting to start tests</p>
+                </div>
+                <div
+                  className="bg-slate-800/50 p-4 rounded-xl border border-slate-700 hover:border-slate-500 transition-colors cursor-pointer"
+                  onClick={() => navigate('/admin/assignment')}
+                >
+                  <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-1">Evaluations</p>
+                  <p className="font-bold text-xl">{stats.pendingEvaluations}</p>
+                  <p className="text-xs text-slate-500 mt-1">Unassigned or pending faculty review</p>
+                </div>
+              </div>
             </div>
-          ) : viewMode === 'grouped' ? (
-            <div className="p-6">
-              <GroupedSubmissionsList
-                sessions={groupedSessions}
-                onViewDetails={handleViewDetails}
-              />
+
+            {/* Quick Tips */}
+            <div className="bg-blue-600 rounded-2xl p-6 text-white shadow-xl shadow-blue-200 relative overflow-hidden group">
+              <div className="absolute -right-8 -bottom-8 w-32 h-32 bg-white/10 rounded-full group-hover:scale-125 transition-transform duration-500" />
+              <h3 className="font-bold text-lg mb-2 relative z-10">Pro-Tip 💡</h3>
+              <p className="text-blue-100 text-sm leading-relaxed relative z-10">
+                Use the **Faculty Allocation** tool to automatically balance grading workload using the Round-Robin algorithm.
+              </p>
             </div>
-          ) : (
-            <SubmissionList
-              submissions={submissions}
-              onReEvaluate={handleReEvaluate}
-              onDelete={handleDelete}
-            />
-          )}
+          </div>
         </div>
       </div>
-    </div>
+    </SaaSLayout>
   );
-}
+};
+
+export default AdminDashboard;

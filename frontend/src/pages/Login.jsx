@@ -73,8 +73,10 @@ export default function Login({ isAdmin = false, onLogin }) {
       clearAdminSession();
       localStorage.setItem("userId", user.id);
       localStorage.setItem("username", user.username);
+      localStorage.setItem("user", JSON.stringify(user));
+      localStorage.setItem("fullName", user.fullName || user.full_name);
       localStorage.setItem("userToken", token);
-
+      notifySessionChange();
 
       navigate("/");
     } catch (err) {
@@ -204,6 +206,8 @@ export default function Login({ isAdmin = false, onLogin }) {
                     localStorage.setItem("username", user.username);
                     localStorage.setItem("userId", user.id);
                     localStorage.setItem("userRole", user.role);
+                    localStorage.setItem("user", JSON.stringify(user));
+                    localStorage.setItem("fullName", user.fullName || user.full_name);
 
 
                     const normalizedRole =

@@ -61,13 +61,15 @@ class UserModel {
        username = COALESCE(?, username),
        email = COALESCE(?, email),
        full_name = COALESCE(?, full_name),
-       role = COALESCE(?, role)
+       role = COALESCE(?, role),
+       password = COALESCE(?, password)
        WHERE id = ?`,
       [
         userData.username ?? null,
         userData.email ?? null,
         (userData.fullName ?? userData.full_name) ?? null,
         userData.role ?? null,
+        userData.password ?? null,
         id
       ]
     );

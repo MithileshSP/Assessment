@@ -14,7 +14,7 @@ CREATE TABLE users (
     password VARCHAR(255) NULL,
     email VARCHAR(100) UNIQUE NOT NULL,
     full_name VARCHAR(100),
-    role ENUM('admin', 'student') DEFAULT 'student',
+    role ENUM('admin', 'faculty', 'student') DEFAULT 'student',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     last_login TIMESTAMP NULL,
     INDEX idx_username (username),

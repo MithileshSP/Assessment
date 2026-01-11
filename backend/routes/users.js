@@ -164,16 +164,14 @@ router.post("/google", async (req, res) => {
       }
     }
 
-    const jwtSecret = process.env.JWT_SECRET;
+    const jwtSecret = process.env.JWT_SECRET || 'fallback_secret';
     const payloadForToken = {
       id: user.id,
       username: user.username,
       role: user.role,
     };
 
-    const appToken = jwtSecret
-      ? jwt.sign(payloadForToken, jwtSecret, { expiresIn: "7d" })
-      : generateToken();
+    const appToken = jwt.sign(payloadForToken, jwtSecret, { expiresIn: '7d' });
 
     res.json({
       user: {
@@ -246,7 +244,14 @@ router.post("/login", async (req, res) => {
     }
 
     // Generate token
-    const token = generateToken();
+    const jwtSecret = process.env.JWT_SECRET || 'fallback_secret';
+    const payloadForToken = {
+      id: user.id,
+      username: user.username,
+      role: user.role,
+    };
+
+    const token = jwt.sign(payloadForToken, jwtSecret, { expiresIn: '7d' });
 
     // Update last login (try database, fallback to JSON)
     try {
