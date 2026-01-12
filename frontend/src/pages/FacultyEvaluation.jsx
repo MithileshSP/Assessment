@@ -86,9 +86,27 @@ const FacultyEvaluation = () => {
 
                     <div className="mb-6">
                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Status</p>
-                        <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${submission.status === 'passed' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
-                            {submission.status}
-                        </span>
+                        <div className="flex flex-col gap-2">
+                            <span className={`px-2 py-1 rounded text-[10px] font-bold uppercase w-fit ${submission.status === 'passed' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                                {submission.status}
+                            </span>
+                            {(submission.status === 'error' || submission.status === 'pending') && (
+                                <button
+                                    onClick={async () => {
+                                        try {
+                                            await api.post('/evaluate', { submissionId });
+                                            alert('Re-evaluation queued!');
+                                            fetchSubmission();
+                                        } catch (e) {
+                                            alert('Failed to queue re-evaluation');
+                                        }
+                                    }}
+                                    className="text-[10px] font-bold text-blue-600 hover:text-blue-800 underline text-left"
+                                >
+                                    Retry Evaluation
+                                </button>
+                            )}
+                        </div>
                     </div>
 
                     <div className="mb-6">
@@ -98,6 +116,41 @@ const FacultyEvaluation = () => {
                             {new Date(submission.submitted_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </p>
                     </div>
+
+                    {data.studentFeedback && (
+                        <div className="mt-8 pt-6 border-t border-slate-100">
+                            <h3 className="font-bold text-[10px] uppercase tracking-widest text-slate-400 mb-4">Student Feedback</h3>
+
+                            <div className="space-y-4">
+                                <div>
+                                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.1em] mb-1">Difficulty</p>
+                                    <div className="flex gap-0.5">
+                                        {[1, 2, 3, 4, 5].map(star => (
+                                            <div key={star} className={`w-2 h-2 rounded-full ${star <= data.studentFeedback.difficulty_rating ? 'bg-amber-400' : 'bg-slate-200'}`} />
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.1em] mb-1">Clarity</p>
+                                    <div className="flex gap-0.5">
+                                        {[1, 2, 3, 4, 5].map(star => (
+                                            <div key={star} className={`w-2 h-2 rounded-full ${star <= data.studentFeedback.clarity_rating ? 'bg-blue-400' : 'bg-slate-200'}`} />
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {data.studentFeedback.comments && (
+                                    <div>
+                                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-[0.1em] mb-1">Comments</p>
+                                        <p className="text-[11px] text-slate-600 leading-relaxed italic bg-slate-50 p-2 rounded-lg border border-slate-100">
+                                            "{data.studentFeedback.comments}"
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* Middle Panel: Workspace (55%) */}

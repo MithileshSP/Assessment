@@ -14,20 +14,35 @@ router.post('/request', verifyToken, async (req, res) => {
     }
 
     try {
-        // Check if already requested
-        const existing = await query(
-            "SELECT * FROM test_attendance WHERE user_id = ? AND test_identifier = ?",
-            [userId, testIdentifier]
-        );
+        // 1. Check for active global session
+        const activeSession = await GlobalSession.findActive(courseId, level);
+        const sessionId = activeSession ? activeSession.id : null;
+
+        // 2. Check if already requested/approved for THIS session (or latest request if no session)
+        const checkSql = sessionId
+            ? "SELECT * FROM test_attendance WHERE user_id = ? AND session_id = ?"
+            : "SELECT * FROM test_attendance WHERE user_id = ? AND test_identifier = ? AND session_id IS NULL";
+
+        const checkParams = sessionId ? [userId, sessionId] : [userId, testIdentifier];
+
+        const existing = await query(checkSql, checkParams);
 
         if (existing.length > 0) {
-            // Return existing status
+            if (existing[0].is_used) {
+                // Allow re-requesting if already used
+                await query(
+                    "UPDATE test_attendance SET status = 'requested', is_used = FALSE, requested_at = CURRENT_TIMESTAMP WHERE id = ?",
+                    [existing[0].id]
+                );
+                return res.json({ success: true, status: 'requested' });
+            }
             return res.json({ success: true, status: existing[0].status });
         }
 
+        // 3. Create new request linked to session (or lack thereof)
         await query(
-            "INSERT INTO test_attendance (user_id, test_identifier, status) VALUES (?, ?, 'requested')",
-            [userId, testIdentifier]
+            "INSERT INTO test_attendance (user_id, test_identifier, status, session_id) VALUES (?, ?, 'requested', ?)",
+            [userId, testIdentifier, sessionId]
         );
 
         res.json({ success: true, status: 'requested' });
@@ -36,6 +51,8 @@ router.post('/request', verifyToken, async (req, res) => {
         res.status(500).json({ error: 'Failed to request attendance' });
     }
 });
+
+const GlobalSession = require('../models/GlobalSession');
 
 // Check status
 router.get('/status', verifyToken, async (req, res) => {
@@ -46,15 +63,35 @@ router.get('/status', verifyToken, async (req, res) => {
     if (!courseId || !level) return res.status(400).json({ error: 'Missing params' });
 
     try {
+        // 1. Check for active global session
+        const activeSession = await GlobalSession.findActive(courseId, level);
+
+        // 2. Get individual attendance record
         const result = await query(
-            "SELECT status, approved_at FROM test_attendance WHERE user_id = ? AND test_identifier = ?",
+            "SELECT status, approved_at, is_used, session_id FROM test_attendance WHERE user_id = ? AND test_identifier = ? ORDER BY requested_at DESC LIMIT 1",
             [userId, testIdentifier]
         );
+
+        let response = {
+            status: 'none',
+            approvedAt: null,
+            isUsed: false,
+            session: activeSession
+        };
+
         if (result.length > 0) {
-            res.json({ status: result[0].status, approvedAt: result[0].approved_at });
-        } else {
-            res.json({ status: 'none' }); // Not requested yet
+            response.status = result[0].status;
+            response.approvedAt = result[0].approved_at;
+            response.isUsed = Boolean(result[0].is_used);
+
+            // If the record is for an older session, it's effectively 'none' for the current session
+            if (activeSession && result[0].session_id !== activeSession.id) {
+                response.status = 'none';
+                response.isUsed = false;
+            }
         }
+
+        res.json(response);
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Check failed' });
@@ -109,52 +146,30 @@ router.post('/manual-approve', verifyAdmin, async (req, res) => {
     const adminId = req.user.id;
     const testIdentifier = `${courseId}_${level}`;
 
-    console.log('[Manual Approve] Request:', { userId, courseId, level, adminId, testIdentifier });
-
     if (!userId || !courseId || !level) {
-        console.log('[Manual Approve] Missing required fields:', { userId, courseId, level });
-        return res.status(400).json({ error: 'Missing required fields: userId, courseId, and level are required' });
+        return res.status(400).json({ error: 'Missing required fields' });
     }
 
     try {
-        // Verify the user exists first
-        const userCheck = await query("SELECT id, username FROM users WHERE id = ?", [userId]);
-        if (userCheck.length === 0) {
-            console.log('[Manual Approve] User not found:', userId);
-            return res.status(404).json({ error: `User not found with ID: ${userId}` });
-        }
-        console.log('[Manual Approve] User verified:', userCheck[0].username);
+        // 1. Check for active global session
+        const activeSession = await GlobalSession.findActive(courseId, level);
+        const sessionId = activeSession ? activeSession.id : null;
 
-        // Verify the course exists
-        const courseCheck = await query("SELECT id, title FROM courses WHERE id = ?", [courseId]);
-        if (courseCheck.length === 0) {
-            console.log('[Manual Approve] Course not found:', courseId);
-            return res.status(404).json({ error: `Course not found with ID: ${courseId}` });
-        }
-        console.log('[Manual Approve] Course verified:', courseCheck[0].title);
-
-        // Upsert logic: if exists update, else insert
-        const existing = await query(
-            "SELECT id FROM test_attendance WHERE user_id = ? AND test_identifier = ?",
-            [userId, testIdentifier]
-        );
-
-        if (existing.length > 0) {
-            console.log('[Manual Approve] Updating existing record:', existing[0].id);
-            await query(
-                "UPDATE test_attendance SET status = 'approved', approved_at = CURRENT_TIMESTAMP, approved_by = ? WHERE id = ?",
-                [adminId, existing[0].id]
-            );
-        } else {
-            console.log('[Manual Approve] Creating new attendance record');
-            await query(
-                "INSERT INTO test_attendance (user_id, test_identifier, status, approved_at, approved_by) VALUES (?, ?, 'approved', CURRENT_TIMESTAMP, ?)",
-                [userId, testIdentifier, adminId]
-            );
+        if (!activeSession) {
+            console.log(`[Manual Approve] No active session for ${testIdentifier}. Proceeding with bypass authorization.`);
         }
 
-        console.log('[Manual Approve] Success for user:', userCheck[0].username);
-        res.json({ success: true, message: `User ${userCheck[0].username} approved for ${courseCheck[0].title} Level ${level}` });
+        // 2. Upsert logic (FIX 1: Handle null session_id safely)
+        await query(`
+            INSERT INTO test_attendance (user_id, test_identifier, status, approved_at, approved_by, session_id, is_used)
+            VALUES (?, ?, 'approved', CURRENT_TIMESTAMP, ?, ?, FALSE)
+            ON DUPLICATE KEY UPDATE status = 'approved', is_used = FALSE, approved_at = CURRENT_TIMESTAMP, approved_by = ?, session_id = ?
+        `, [userId, testIdentifier, adminId, sessionId, adminId, sessionId]);
+
+        res.json({
+            success: true,
+            message: sessionId ? `User authorized for session ${sessionId}` : "User authorized (Bypass Mode - No Active Session)"
+        });
     } catch (error) {
         console.error('[Manual Approve] Error:', error);
         res.status(500).json({ error: 'Failed to approve attendance: ' + error.message });
@@ -208,6 +223,30 @@ router.post('/bulk-approve', verifyAdmin, async (req, res) => {
     } catch (error) {
         console.error('Bulk approval error:', error);
         res.status(500).json({ error: 'Failed to process bulk approval' });
+    }
+});
+
+/**
+ * GET /api/attendance/sample/csv
+ * Download sample CSV template for bulk authorization
+ */
+router.get('/sample/csv', (req, res) => {
+    try {
+        const headers = ['username'];
+        const rows = [
+            ['student_01'],
+            ['student_02'],
+            ['student_03']
+        ];
+
+        const csvContent = headers.join(',') + '\n' + rows.map(r => r.join(',')).join('\n');
+
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', 'attachment; filename=attendance_template.csv');
+        res.send(csvContent);
+    } catch (error) {
+        console.error('Template generation error:', error);
+        res.status(500).json({ error: 'Failed to generate template' });
     }
 });
 

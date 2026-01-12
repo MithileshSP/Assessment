@@ -44,17 +44,6 @@ const QuestionBank = () => {
     const [showEditModal, setShowEditModal] = useState(false);
     const [editingQuestion, setEditingQuestion] = useState(null);
 
-    // Tab Management
-    const [activeTab, setActiveTab] = useState('questions'); // 'questions' | 'restrictions'
-
-    // Restrictions State
-    const [restrictions, setRestrictions] = useState({
-        blockCopy: false,
-        forceFullscreen: false,
-        maxViolations: 3,
-        timeLimit: 0
-    });
-    const [savingRestrictions, setSavingRestrictions] = useState(false);
 
     // Import Modal
     const [showImportModal, setShowImportModal] = useState(false);
@@ -86,15 +75,6 @@ const QuestionBank = () => {
 
             setQuestionsByLevel(grouped);
 
-            // Initialize restrictions from course data
-            if (courseRes.data?.restrictions) {
-                setRestrictions({
-                    blockCopy: courseRes.data.restrictions.blockCopy || false,
-                    forceFullscreen: courseRes.data.restrictions.forceFullscreen || false,
-                    maxViolations: courseRes.data.restrictions.maxViolations || 3,
-                    timeLimit: courseRes.data.restrictions.timeLimit || 0
-                });
-            }
         } catch (error) {
             console.error('Error fetching course data:', error);
         } finally {
@@ -189,22 +169,6 @@ const QuestionBank = () => {
         levels: course?.totalLevels || 0
     };
 
-    const handleRestrictionChange = (field, value) => {
-        setRestrictions(prev => ({ ...prev, [field]: value }));
-    };
-
-    const handleSaveRestrictions = async () => {
-        try {
-            setSavingRestrictions(true);
-            await api.updateCourseRestrictions(courseId, restrictions);
-            alert('Restrictions saved successfully!');
-        } catch (error) {
-            console.error('Failed to save restrictions:', error);
-            alert('Failed to save restrictions');
-        } finally {
-            setSavingRestrictions(false);
-        }
-    };
 
     // Extract asset paths from HTML/CSS code
     const extractAssetsFromCode = (html, css) => {
@@ -405,343 +369,238 @@ const QuestionBank = () => {
                     </div>
                 </div>
 
-                {/* Navigation Tabs */}
-                <div className="flex items-center gap-2 bg-slate-100 p-1.5 rounded-2xl w-fit">
-                    <button
-                        onClick={() => setActiveTab('questions')}
-                        className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'questions'
-                            ? 'bg-white text-indigo-600 shadow-sm'
-                            : 'text-slate-500 hover:text-slate-700'
-                            }`}
-                    >
-                        Question Bank
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('restrictions')}
-                        className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'restrictions'
-                            ? 'bg-white text-indigo-600 shadow-sm'
-                            : 'text-slate-500 hover:text-slate-700'
-                            }`}
-                    >
-                        Exam Restrictions
-                    </button>
-                </div>
-
-                {activeTab === 'questions' ? (
-                    <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-                        {/* Stats & Search Sidebar */}
-                        <div className="lg:col-span-1 space-y-6">
-                            <div className="bg-white p-6 rounded-[2.5rem] border border-slate-200 shadow-sm space-y-6">
-                                <div className="text-left">
-                                    <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3">Search Database</label>
-                                    <div className="relative group">
-                                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-500 transition-colors" size={16} />
-                                        <input
-                                            type="text"
-                                            placeholder="Find questions..."
-                                            value={searchTerm}
-                                            onChange={(e) => setSearchTerm(e.target.value)}
-                                            className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium focus:ring-4 focus:ring-indigo-500/5 focus:bg-white transition-all outline-none"
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="bg-slate-50 p-4 rounded-3xl border border-slate-100 text-left">
-                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Total Items</p>
-                                        <p className="text-2xl font-black text-slate-900 mt-2">{totals.questions}</p>
-                                    </div>
-                                    <div className="bg-indigo-50 p-4 rounded-3xl border border-indigo-100 text-left">
-                                        <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest leading-none">Levels</p>
-                                        <p className="text-2xl font-black text-indigo-600 mt-2">{totals.levels}</p>
-                                    </div>
-                                </div>
-
-                                <div className="pt-4 border-t border-slate-100">
-                                    <button className="w-full flex items-center justify-center gap-2 px-4 py-3 border border-slate-200 rounded-2xl text-sm font-bold text-slate-600 hover:bg-slate-50 transition-all">
-                                        <Download size={16} />
-                                        Export Full Bank
-                                    </button>
+                <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+                    {/* Stats & Search Sidebar */}
+                    <div className="lg:col-span-1 space-y-6">
+                        <div className="bg-white p-6 rounded-[2.5rem] border border-slate-200 shadow-sm space-y-6">
+                            <div className="text-left">
+                                <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3">Search Database</label>
+                                <div className="relative group">
+                                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-500 transition-colors" size={16} />
+                                    <input
+                                        type="text"
+                                        placeholder="Find questions..."
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                        className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium focus:ring-4 focus:ring-indigo-500/5 focus:bg-white transition-all outline-none"
+                                    />
                                 </div>
                             </div>
 
-                            {/* Quick Actions */}
-                            <div className="bg-gradient-to-br from-indigo-600 to-violet-700 p-6 rounded-[2.5rem] text-white shadow-xl shadow-indigo-200 text-left">
-                                <h3 className="font-black text-lg mb-4 flex items-center gap-2">
-                                    <Zap size={20} className="text-amber-400" />
-                                    Bulk Operations
-                                </h3>
-                                <div className="space-y-3">
-                                    <div className="w-full bg-white/10 p-4 rounded-2xl border border-white/10 transition-all text-left group">
-                                        <p className="font-bold text-xs uppercase tracking-widest text-indigo-100 mb-3">Download Templates</p>
-                                        <div className="flex gap-2">
-                                            <a
-                                                href={`${api.BASE_URL}/courses/sample/csv?courseId=${courseId}`}
-                                                download="questions_template.csv"
-                                                className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-white/10 hover:bg-white/20 rounded-xl border border-white/10 transition-all"
-                                            >
-                                                <FileText size={14} className="text-white" />
-                                                <span className="text-[10px] font-black text-white uppercase">CSV</span>
-                                            </a>
-                                            <button
-                                                onClick={() => {
-                                                    const blob = new Blob([JSON.stringify([{
-                                                        courseId,
-                                                        level: 1,
-                                                        title: "Sample Question",
-                                                        description: "Description here",
-                                                        instructions: "Instructions here",
-                                                        tags: ["HTML", "CSS"],
-                                                        assets: { images: [], reference: "" },
-                                                        expectedHtml: "<div></div>",
-                                                        expectedCss: "",
-                                                        expectedJs: ""
-                                                    }], null, 2)], { type: 'application/json' });
-                                                    const url = URL.createObjectURL(blob);
-                                                    const a = document.createElement('a');
-                                                    a.href = url;
-                                                    a.download = 'template.json';
-                                                    a.click();
-                                                }}
-                                                className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-white/10 hover:bg-white/20 rounded-xl border border-white/10 transition-all"
-                                            >
-                                                <FileCode size={14} className="text-white" />
-                                                <span className="text-[10px] font-black text-white uppercase">JSON</span>
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <button onClick={() => setShowImportModal(true)} className="w-full bg-white/10 hover:bg-white/20 p-4 rounded-2xl border border-white/10 transition-all text-left flex items-center justify-between group">
-                                        <span className="font-bold text-sm">Import Questions</span>
-                                        <Upload size={16} className="text-white/50 group-hover:text-white" />
-                                    </button>
-                                    {selectedQuestions.length > 0 && (
-                                        <button
-                                            onClick={handleBulkDelete}
-                                            disabled={deleting}
-                                            className="w-full bg-rose-500/90 hover:bg-rose-600 p-4 rounded-2xl border border-rose-400/30 transition-all text-left flex items-center justify-between group"
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="bg-slate-50 p-4 rounded-3xl border border-slate-100 text-left">
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Total Items</p>
+                                    <p className="text-2xl font-black text-slate-900 mt-2">{totals.questions}</p>
+                                </div>
+                                <div className="bg-indigo-50 p-4 rounded-3xl border border-indigo-100 text-left">
+                                    <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest leading-none">Levels</p>
+                                    <p className="text-2xl font-black text-indigo-600 mt-2">{totals.levels}</p>
+                                </div>
+                            </div>
+
+                            <div className="pt-4 border-t border-slate-100">
+                                <button className="w-full flex items-center justify-center gap-2 px-4 py-3 border border-slate-200 rounded-2xl text-sm font-bold text-slate-600 hover:bg-slate-50 transition-all">
+                                    <Download size={16} />
+                                    Export Full Bank
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Quick Actions */}
+                        <div className="bg-gradient-to-br from-indigo-600 to-violet-700 p-6 rounded-[2.5rem] text-white shadow-xl shadow-indigo-200 text-left">
+                            <h3 className="font-black text-lg mb-4 flex items-center gap-2">
+                                <Zap size={20} className="text-amber-400" />
+                                Bulk Operations
+                            </h3>
+                            <div className="space-y-3">
+                                <div className="w-full bg-white/10 p-4 rounded-2xl border border-white/10 transition-all text-left group">
+                                    <p className="font-bold text-xs uppercase tracking-widest text-indigo-100 mb-3">Download Templates</p>
+                                    <div className="flex gap-2">
+                                        <a
+                                            href={`${api.BASE_URL}/courses/sample/csv?courseId=${courseId}`}
+                                            download="questions_template.csv"
+                                            className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-white/10 hover:bg-white/20 rounded-xl border border-white/10 transition-all"
                                         >
-                                            <span className="font-bold text-sm">
-                                                {deleting ? 'Deleting...' : `Delete Selected (${selectedQuestions.length})`}
-                                            </span>
-                                            <Trash2 size={16} className="text-white/70 group-hover:text-white" />
+                                            <FileText size={14} className="text-white" />
+                                            <span className="text-[10px] font-black text-white uppercase">CSV</span>
+                                        </a>
+                                        <button
+                                            onClick={() => {
+                                                const blob = new Blob([JSON.stringify([{
+                                                    courseId,
+                                                    level: 1,
+                                                    title: "Sample Question",
+                                                    description: "Description here",
+                                                    instructions: "Instructions here",
+                                                    tags: ["HTML", "CSS"],
+                                                    assets: { images: [], reference: "" },
+                                                    expectedHtml: "<div></div>",
+                                                    expectedCss: "",
+                                                    expectedJs: ""
+                                                }], null, 2)], { type: 'application/json' });
+                                                const url = URL.createObjectURL(blob);
+                                                const a = document.createElement('a');
+                                                a.href = url;
+                                                a.download = 'template.json';
+                                                a.click();
+                                            }}
+                                            className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-white/10 hover:bg-white/20 rounded-xl border border-white/10 transition-all"
+                                        >
+                                            <FileCode size={14} className="text-white" />
+                                            <span className="text-[10px] font-black text-white uppercase">JSON</span>
                                         </button>
-                                    )}
+                                    </div>
+                                </div>
+                                <button onClick={() => setShowImportModal(true)} className="w-full bg-white/10 hover:bg-white/20 p-4 rounded-2xl border border-white/10 transition-all text-left flex items-center justify-between group">
+                                    <span className="font-bold text-sm">Import Questions</span>
+                                    <Upload size={16} className="text-white/50 group-hover:text-white" />
+                                </button>
+                                {selectedQuestions.length > 0 && (
                                     <button
-                                        onClick={handleFixAssets}
-                                        disabled={fixingAssets}
-                                        className="w-full bg-white/10 hover:bg-white/20 p-4 rounded-2xl border border-white/10 transition-all text-left flex items-center justify-between group"
+                                        onClick={handleBulkDelete}
+                                        disabled={deleting}
+                                        className="w-full bg-rose-500/90 hover:bg-rose-600 p-4 rounded-2xl border border-rose-400/30 transition-all text-left flex items-center justify-between group"
                                     >
                                         <span className="font-bold text-sm">
-                                            {fixingAssets ? 'Fixing...' : 'Fix Assets'}
+                                            {deleting ? 'Deleting...' : `Delete Selected (${selectedQuestions.length})`}
                                         </span>
-                                        <Wrench size={16} className="text-white/50 group-hover:text-white" />
+                                        <Trash2 size={16} className="text-white/70 group-hover:text-white" />
                                     </button>
-                                </div>
+                                )}
+                                <button
+                                    onClick={handleFixAssets}
+                                    disabled={fixingAssets}
+                                    className="w-full bg-white/10 hover:bg-white/20 p-4 rounded-2xl border border-white/10 transition-all text-left flex items-center justify-between group"
+                                >
+                                    <span className="font-bold text-sm">
+                                        {fixingAssets ? 'Fixing...' : 'Fix Assets'}
+                                    </span>
+                                    <Wrench size={16} className="text-white/50 group-hover:text-white" />
+                                </button>
                             </div>
                         </div>
-                        {/* Questions List Area */}
-                        <div className="lg:col-span-3 space-y-4">
-                            {Array.from({ length: course?.totalLevels || course?.total_levels || 1 }, (_, i) => i + 1).map((lv) => {
-                                const questions = questionsByLevel[lv] || [];
-                                const isExpanded = expandedLevels[lv];
-                                const filtered = questions.filter(q =>
-                                    q.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                                    q.description?.toLowerCase().includes(searchTerm.toLowerCase())
-                                );
+                    </div>
+                    {/* Questions List Area */}
+                    <div className="lg:col-span-3 space-y-4">
+                        {Array.from({ length: course?.totalLevels || course?.total_levels || 1 }, (_, i) => i + 1).map((lv) => {
+                            const questions = questionsByLevel[lv] || [];
+                            const isExpanded = expandedLevels[lv];
+                            const filtered = questions.filter(q =>
+                                q.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                                q.description?.toLowerCase().includes(searchTerm.toLowerCase())
+                            );
 
-                                if (searchTerm && filtered.length === 0 && questions.length > 0) return null;
+                            if (searchTerm && filtered.length === 0 && questions.length > 0) return null;
 
-                                return (
-                                    <div key={lv} className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden">
-                                        <div
-                                            onClick={() => toggleLevel(lv)}
-                                            className="px-8 py-5 flex items-center justify-between cursor-pointer hover:bg-slate-50/50 transition-colors border-b border-slate-50"
-                                        >
-                                            <div className="flex items-center gap-4">
-                                                <div className={`w-10 h-10 ${questions.length > 0 ? 'bg-indigo-50 text-indigo-600' : 'bg-slate-100 text-slate-400'} rounded-xl flex items-center justify-center font-black shadow-sm`}>
-                                                    {lv}
-                                                </div>
-                                                <div className="text-left">
-                                                    <h3 className={`font-black ${questions.length > 0 ? 'text-slate-800' : 'text-slate-400'}`}>Level {lv} Questions</h3>
-                                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5">
-                                                        {questions.length > 0 ? `${questions.length} Questions Configured` : 'No questions yet'}
-                                                    </p>
-                                                </div>
+                            return (
+                                <div key={lv} className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden">
+                                    <div
+                                        onClick={() => toggleLevel(lv)}
+                                        className="px-8 py-5 flex items-center justify-between cursor-pointer hover:bg-slate-50/50 transition-colors border-b border-slate-50"
+                                    >
+                                        <div className="flex items-center gap-4">
+                                            <div className={`w-10 h-10 ${questions.length > 0 ? 'bg-indigo-50 text-indigo-600' : 'bg-slate-100 text-slate-400'} rounded-xl flex items-center justify-center font-black shadow-sm`}>
+                                                {lv}
                                             </div>
-                                            <div className="flex items-center gap-4">
-                                                {isExpanded ? <ChevronUp className="text-slate-300" size={20} /> : <ChevronDown className="text-slate-300" size={20} />}
+                                            <div className="text-left">
+                                                <h3 className={`font-black ${questions.length > 0 ? 'text-slate-800' : 'text-slate-400'}`}>Level {lv} Questions</h3>
+                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5">
+                                                    {questions.length > 0 ? `${questions.length} Questions Configured` : 'No questions yet'}
+                                                </p>
                                             </div>
                                         </div>
+                                        <div className="flex items-center gap-4">
+                                            {isExpanded ? <ChevronUp className="text-slate-300" size={20} /> : <ChevronDown className="text-slate-300" size={20} />}
+                                        </div>
+                                    </div>
 
-                                        {isExpanded && (
-                                            <div className="p-4 space-y-3 bg-slate-50/30">
-                                                {/* Select All header */}
-                                                {questions.length > 0 && (
-                                                    <div className="flex items-center justify-between px-4 py-2 bg-white/50 rounded-xl border border-slate-100">
-                                                        <label className="flex items-center gap-3 cursor-pointer">
-                                                            <input
-                                                                type="checkbox"
-                                                                checked={questions.length > 0 && questions.every(q => selectedQuestions.includes(q.id))}
-                                                                onChange={() => toggleSelectAllInLevel(lv)}
-                                                                className="w-5 h-5 rounded-lg border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
-                                                            />
-                                                            <span className="text-sm font-bold text-slate-600">
-                                                                Select All ({questions.length})
-                                                            </span>
-                                                        </label>
-                                                        {questions.filter(q => selectedQuestions.includes(q.id)).length > 0 && (
-                                                            <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded-lg">
-                                                                {questions.filter(q => selectedQuestions.includes(q.id)).length} selected
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                )}
-                                                {filtered.length > 0 ? filtered.map((q) => (
-                                                    <div
-                                                        key={q.id}
-                                                        className={`bg-white p-6 rounded-3xl border ${selectedQuestions.includes(q.id) ? 'border-indigo-400 bg-indigo-50/30' : 'border-slate-200'} hover:border-indigo-300 transition-all group flex items-start justify-between gap-6 shadow-sm`}
-                                                    >
-                                                        <div className="flex items-start gap-4 flex-1">
-                                                            <input
-                                                                type="checkbox"
-                                                                checked={selectedQuestions.includes(q.id)}
-                                                                onChange={() => toggleSelectQuestion(q.id)}
-                                                                className="mt-1.5 w-5 h-5 rounded-lg border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
-                                                            />
-                                                            <div className="flex-1 space-y-3 text-left">
-                                                                <div className="flex items-center gap-3">
-                                                                    <span className="bg-indigo-50 text-indigo-600 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">
-                                                                        Q{q.questionNumber || 'X'}
+                                    {isExpanded && (
+                                        <div className="p-4 space-y-3 bg-slate-50/30">
+                                            {/* Select All header */}
+                                            {questions.length > 0 && (
+                                                <div className="flex items-center justify-between px-4 py-2 bg-white/50 rounded-xl border border-slate-100">
+                                                    <label className="flex items-center gap-3 cursor-pointer">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={questions.length > 0 && questions.every(q => selectedQuestions.includes(q.id))}
+                                                            onChange={() => toggleSelectAllInLevel(lv)}
+                                                            className="w-5 h-5 rounded-lg border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                                                        />
+                                                        <span className="text-sm font-bold text-slate-600">
+                                                            Select All ({questions.length})
+                                                        </span>
+                                                    </label>
+                                                    {questions.filter(q => selectedQuestions.includes(q.id)).length > 0 && (
+                                                        <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded-lg">
+                                                            {questions.filter(q => selectedQuestions.includes(q.id)).length} selected
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            )}
+                                            {filtered.length > 0 ? filtered.map((q) => (
+                                                <div
+                                                    key={q.id}
+                                                    className={`bg-white p-6 rounded-3xl border ${selectedQuestions.includes(q.id) ? 'border-indigo-400 bg-indigo-50/30' : 'border-slate-200'} hover:border-indigo-300 transition-all group flex items-start justify-between gap-6 shadow-sm`}
+                                                >
+                                                    <div className="flex items-start gap-4 flex-1">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={selectedQuestions.includes(q.id)}
+                                                            onChange={() => toggleSelectQuestion(q.id)}
+                                                            className="mt-1.5 w-5 h-5 rounded-lg border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                                                        />
+                                                        <div className="flex-1 space-y-3 text-left">
+                                                            <div className="flex items-center gap-3">
+                                                                <span className="bg-indigo-50 text-indigo-600 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">
+                                                                    Q{q.questionNumber || 'X'}
+                                                                </span>
+                                                                <h4 className="font-bold text-slate-900">{q.title}</h4>
+                                                                {q.isLocked && <Lock size={14} className="text-amber-500" />}
+                                                            </div>
+                                                            <p className="text-sm text-slate-500 line-clamp-2 leading-relaxed">
+                                                                {q.description}
+                                                            </p>
+                                                            <div className="flex flex-wrap gap-2">
+                                                                {q.tags?.map(tag => (
+                                                                    <span key={tag} className="px-2.5 py-1 bg-slate-50 text-slate-400 rounded-lg text-[10px] font-black uppercase tracking-widest border border-slate-100">
+                                                                        {tag}
                                                                     </span>
-                                                                    <h4 className="font-bold text-slate-900">{q.title}</h4>
-                                                                    {q.isLocked && <Lock size={14} className="text-amber-500" />}
-                                                                </div>
-                                                                <p className="text-sm text-slate-500 line-clamp-2 leading-relaxed">
-                                                                    {q.description}
-                                                                </p>
-                                                                <div className="flex flex-wrap gap-2">
-                                                                    {q.tags?.map(tag => (
-                                                                        <span key={tag} className="px-2.5 py-1 bg-slate-50 text-slate-400 rounded-lg text-[10px] font-black uppercase tracking-widest border border-slate-100">
-                                                                            {tag}
-                                                                        </span>
-                                                                    ))}
-                                                                </div>
+                                                                ))}
                                                             </div>
                                                         </div>
-
-                                                        <div className="flex flex-col gap-2">
-                                                            <button
-                                                                onClick={() => handleEdit(q)}
-                                                                className="flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl hover:bg-indigo-600 hover:text-white transition-all font-bold text-xs"
-                                                            >
-                                                                <Edit3 size={14} />
-                                                                Edit
-                                                            </button>
-                                                            <button
-                                                                onClick={() => handleDelete(q.id)}
-                                                                className="flex items-center gap-2 px-4 py-2 bg-rose-50 text-rose-600 rounded-xl hover:bg-rose-600 hover:text-white transition-all font-bold text-xs"
-                                                            >
-                                                                <Trash2 size={14} />
-                                                                Remove
-                                                            </button>
-                                                        </div>
                                                     </div>
-                                                )) : (
-                                                    <div className="py-12 text-center text-slate-400 italic font-medium">
-                                                        {questions.length === 0
-                                                            ? 'No questions added to this level yet. Click "Add Question" to create one.'
-                                                            : 'No questions found matching your search.'}
+
+                                                    <div className="flex flex-col gap-2">
+                                                        <button
+                                                            onClick={() => handleEdit(q)}
+                                                            className="flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl hover:bg-indigo-600 hover:text-white transition-all font-bold text-xs"
+                                                        >
+                                                            <Edit3 size={14} />
+                                                            Edit
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDelete(q.id)}
+                                                            className="flex items-center gap-2 px-4 py-2 bg-rose-50 text-rose-600 rounded-xl hover:bg-rose-600 hover:text-white transition-all font-bold text-xs"
+                                                        >
+                                                            <Trash2 size={14} />
+                                                            Remove
+                                                        </button>
                                                     </div>
-                                                )}
-                                            </div>
-                                        )}
-                                    </div>
-                                );
-                            })}
-                        </div>
+                                                </div>
+                                            )) : (
+                                                <div className="py-12 text-center text-slate-400 italic font-medium">
+                                                    {questions.length === 0
+                                                        ? 'No questions added to this level yet. Click "Add Question" to create one.'
+                                                        : 'No questions found matching your search.'}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
                     </div>
-                ) : (
-                    /* Restrictions Tab */
-                    <div className="max-w-4xl mx-auto space-y-6">
-                        <div className="bg-white p-10 rounded-[3rem] border border-slate-200 shadow-sm relative overflow-hidden">
-                            <div className="absolute top-0 right-0 p-10">
-                                <Shield size={160} className="text-indigo-50/50" />
-                            </div>
-
-                            <div className="relative z-10 space-y-12 text-left">
-                                <div className="text-left">
-                                    <div className="flex items-center gap-2 text-[10px] font-black text-indigo-500 uppercase tracking-widest mb-2">
-                                        <Zap size={10} />
-                                        <span>Security Protocol</span>
-                                    </div>
-                                    <h2 className="text-3xl font-black text-slate-900">Exam Integrity Controls</h2>
-                                    <p className="text-slate-500 mt-2 max-w-xl">These settings define the strictness of the test environment for all levels in this course. Changes take effect on next assessment launch.</p>
-                                </div>
-
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                    <RestrictionToggle
-                                        title="Copy-Paste Protection"
-                                        description="Strictly block clipboard interactions during evaluation."
-                                        icon={<Lock size={20} />}
-                                        enabled={restrictions.blockCopy}
-                                        onChange={(val) => handleRestrictionChange('blockCopy', val)}
-                                    />
-                                    <RestrictionToggle
-                                        title="Aggressive Fullscreen"
-                                        description="Automatically force and lock students into full-window mode."
-                                        icon={<Layout size={20} />}
-                                        enabled={restrictions.forceFullscreen}
-                                        onChange={(val) => handleRestrictionChange('forceFullscreen', val)}
-                                    />
-                                    <div className="p-8 bg-slate-50 rounded-[2.5rem] border border-slate-100 flex items-center justify-between">
-                                        <div className="text-left">
-                                            <p className="font-black text-slate-900 text-sm flex items-center gap-2">
-                                                <AlertCircle size={16} className="text-amber-500" />
-                                                Integrity Violations
-                                            </p>
-                                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Attempts before auto-terminate</p>
-                                        </div>
-                                        <input
-                                            type="number"
-                                            className="w-20 h-14 bg-white border border-slate-200 rounded-2xl text-center font-black text-slate-900 shadow-sm focus:ring-4 focus:ring-indigo-500/5 transition-all outline-none"
-                                            value={restrictions.maxViolations}
-                                            onChange={(e) => handleRestrictionChange('maxViolations', parseInt(e.target.value) || 0)}
-                                        />
-                                    </div>
-                                    <div className="p-8 bg-blue-50/50 rounded-[2.5rem] border border-blue-100/50 flex items-center justify-between">
-                                        <div className="text-left">
-                                            <p className="font-black text-blue-900 text-sm flex items-center gap-2">
-                                                <Clock size={16} className="text-blue-500" />
-                                                Global Session Timeout
-                                            </p>
-                                            <p className="text-[10px] text-blue-400 font-bold uppercase tracking-widest mt-1">Course-wide time limit in minutes</p>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <input
-                                                type="number"
-                                                className="w-20 h-14 bg-white border border-blue-100 rounded-2xl text-center font-black text-blue-900 shadow-sm focus:ring-4 focus:ring-blue-500/5 transition-all outline-none"
-                                                value={restrictions.timeLimit}
-                                                onChange={(e) => handleRestrictionChange('timeLimit', parseInt(e.target.value) || 0)}
-                                            />
-                                            <span className="text-[10px] font-black text-blue-400">MINS</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="pt-10 border-t border-slate-100 flex justify-end">
-                                    <button
-                                        onClick={handleSaveRestrictions}
-                                        disabled={savingRestrictions}
-                                        className="px-10 py-4 bg-indigo-600 text-white rounded-[1.5rem] font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-indigo-100 hover:bg-indigo-700 transition-all flex items-center gap-3 active:scale-95 disabled:opacity-50"
-                                    >
-                                        <CheckCircle2 size={20} />
-                                        {savingRestrictions ? 'Saving...' : 'Save Restrictions'}
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                )}
+                </div>
 
                 {/* Import Modal - Portal to document.body */}
                 {showImportModal && createPortal(

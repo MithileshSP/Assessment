@@ -16,7 +16,9 @@ import {
     ChevronLeft,
     ChevronRight,
     User,
-    RefreshCw
+    RefreshCw,
+    Shield,
+    Activity
 } from 'lucide-react';
 import { clearAdminSession, getUserRole } from '../utils/session';
 
@@ -82,7 +84,9 @@ const SaaSLayout = ({ children }) => {
             { id: 'attendance', label: 'Attendance', icon: <Calendar size={20} />, path: '/admin/attendance' },
             { id: 'faculty', label: 'Faculty Management', icon: <Briefcase size={20} />, path: '/admin/assignment' },
             { id: 'results', label: 'Master Results', icon: <Trophy size={20} />, path: '/admin/results' },
+            { id: 'restrictions', label: 'Restriction Hub', icon: <Shield size={20} />, path: '/admin/restrictions' },
             { id: 'reset', label: 'Reset Level', icon: <RefreshCw size={20} />, path: '/admin/reset-level' },
+            { id: 'evaluation', label: 'Evaluation Monitor', icon: <Activity size={20} />, path: '/admin/evaluation-tracker' },
         ],
         faculty: [
             { id: 'dashboard', label: 'Overview', icon: <Layout size={20} />, path: '/faculty/dashboard' },

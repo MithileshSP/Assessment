@@ -6,6 +6,14 @@
 const { query, queryOne } = require('../database/connection');
 
 class SubmissionModel {
+  static STATUS = {
+    QUEUED: 'queued',
+    EVALUATING: 'evaluating',
+    PASSED: 'passed',
+    FAILED: 'failed',
+    ERROR: 'error'
+  };
+
   // Get all submissions
   static async findAll() {
     const submissions = await query('SELECT * FROM submissions ORDER BY submitted_at DESC');
@@ -96,20 +104,15 @@ class SubmissionModel {
 
   // Update submission with evaluation result
   static async updateEvaluation(id, evaluationData) {
-    // Extract screenshot paths from evaluation result (visual.screenshots preferred)
     const screenshots = evaluationData.visual?.screenshots || evaluationData.pixel?.screenshots || {};
     let userScreenshot = screenshots.candidate || null;
     let expectedScreenshot = screenshots.expected || null;
+    let diffScreenshot = screenshots.diff || null;
 
     // Truncate to match DB limit (500 chars)
-    if (userScreenshot && userScreenshot.length > 500) {
-      console.warn('Truncating user_screenshot path (length > 500)');
-      userScreenshot = userScreenshot.substring(0, 500);
-    }
-    if (expectedScreenshot && expectedScreenshot.length > 500) {
-      console.warn('Truncating expected_screenshot path (length > 500)');
-      expectedScreenshot = expectedScreenshot.substring(0, 500);
-    }
+    if (userScreenshot && userScreenshot.length > 500) userScreenshot = userScreenshot.substring(0, 500);
+    if (expectedScreenshot && expectedScreenshot.length > 500) expectedScreenshot = expectedScreenshot.substring(0, 500);
+    if (diffScreenshot && diffScreenshot.length > 500) diffScreenshot = diffScreenshot.substring(0, 500);
 
     await query(
       `UPDATE submissions SET
@@ -122,7 +125,8 @@ class SubmissionModel {
        passed = ?,
        evaluation_result = ?,
        user_screenshot = ?,
-       expected_screenshot = ?
+       expected_screenshot = ?,
+       diff_screenshot = ?
        WHERE id = ?`,
       [
         evaluationData.passed ? 'passed' : 'failed',
@@ -134,6 +138,27 @@ class SubmissionModel {
         JSON.stringify(evaluationData),
         userScreenshot,
         expectedScreenshot,
+        diffScreenshot,
+        id
+      ]
+    );
+    return await this.findById(id);
+  }
+
+  // Update submission with admin override
+  static async updateOverride(id, status, reason) {
+    await query(
+      `UPDATE submissions SET
+       status = ?,
+       admin_override_status = ?,
+       admin_override_reason = ?,
+       passed = ?
+       WHERE id = ?`,
+      [
+        status,
+        status,
+        reason,
+        status === 'passed',
         id
       ]
     );
@@ -149,6 +174,30 @@ class SubmissionModel {
   static async count() {
     const result = await queryOne('SELECT COUNT(*) as count FROM submissions');
     return result.count;
+  }
+
+  // Find next queued submission
+  static async findNextQueued() {
+    const submission = await queryOne(
+      'SELECT * FROM submissions WHERE status = ? ORDER BY submitted_at ASC LIMIT 1',
+      [this.STATUS.QUEUED]
+    );
+    return submission ? this._formatSubmission(submission) : null;
+  }
+
+  // Find submissions currently being evaluated (to check for stuck ones)
+  static async findInProgress() {
+    const rows = await query(
+      'SELECT * FROM submissions WHERE status = ? ORDER BY submitted_at ASC',
+      [this.STATUS.EVALUATING]
+    );
+    return rows.map(this._formatSubmission);
+  }
+
+  // Update submission status
+  static async updateStatus(id, status) {
+    await query('UPDATE submissions SET status = ? WHERE id = ?', [status, id]);
+    return await this.findById(id);
   }
 
   // Get recent submissions (for dashboard)
@@ -174,6 +223,14 @@ class SubmissionModel {
       return path;
     };
 
+    const isPassed = submission.admin_override_status !== 'none'
+      ? (submission.admin_override_status === 'passed')
+      : (submission.manual_score !== null ? (submission.manual_score >= 50) : Boolean(submission.passed));
+
+    const finalStatus = submission.admin_override_status !== 'none'
+      ? submission.admin_override_status
+      : submission.status;
+
     return {
       id: submission.id,
       challengeId: submission.challenge_id,
@@ -186,34 +243,39 @@ class SubmissionModel {
         css: submission.css_code,
         js: submission.js_code
       },
-      status: submission.status,
+      status: finalStatus,
       submittedAt: submission.submitted_at,
       evaluatedAt: submission.evaluated_at,
       user_screenshot: formatScreenshotUrl(submission.user_screenshot),
       expected_screenshot: formatScreenshotUrl(submission.expected_screenshot),
-      total_score: submission.final_score,
+      diff_screenshot: formatScreenshotUrl(submission.diff_screenshot),
+      admin_override_status: submission.admin_override_status,
+      admin_override_reason: submission.admin_override_reason,
+      total_score: submission.manual_score !== null ? submission.manual_score : submission.final_score,
       manual_score: submission.manual_score,
       manual_feedback: submission.manual_feedback,
       code_quality_score: submission.code_quality_score,
       requirements_score: submission.requirements_score,
       expected_output_score: submission.expected_output_score,
       evaluator_name: submission.evaluator_name,
+      passed: isPassed,
       result: submission.evaluation_result ? (
         typeof submission.evaluation_result === 'string'
           ? (() => {
             try {
-              return JSON.parse(submission.evaluation_result);
+              const res = JSON.parse(submission.evaluation_result);
+              return { ...res, passed: isPassed, finalScore: submission.manual_score !== null ? submission.manual_score : res.finalScore };
             } catch (e) {
               return { error: 'Invalid result format', raw: submission.evaluation_result };
             }
           })()
-          : submission.evaluation_result
+          : { ...submission.evaluation_result, passed: isPassed, finalScore: submission.manual_score !== null ? submission.manual_score : submission.evaluation_result.finalScore }
       ) : {
         structureScore: submission.structure_score || 0,
         visualScore: submission.visual_score || 0,
         contentScore: submission.content_score || 0,
-        finalScore: submission.final_score || 0,
-        passed: Boolean(submission.passed),
+        finalScore: submission.manual_score !== null ? submission.manual_score : (submission.final_score || 0),
+        passed: isPassed,
         feedback: "No automated feedback available."
       }
     };

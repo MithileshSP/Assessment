@@ -319,8 +319,8 @@ router.get("/", verifyAdmin, async (req, res) => {
   }
 });
 
-// Download sample CSV template (Admin only)
-router.get("/sample-csv", verifyAdmin, (req, res) => {
+// Download sample CSV template (No auth required for sample data)
+router.get("/sample-csv", (req, res) => {
   const sampleCsv = `username,password,fullName,email,role
 student1,password123,John Doe,john@example.com,student
 student2,password456,Jane Smith,jane@example.com,student
@@ -495,55 +495,6 @@ router.post(
   }
 );
 
-// Create new user (Admin only)
-router.post("/", verifyAdmin, async (req, res) => {
-  const { username, password, email, fullName, role = "student" } = req.body;
-
-  if (!username || !password) {
-    return res
-      .status(400)
-      .json({ error: "Username and password are required" });
-  }
-
-  try {
-    // Check if username exists
-    const existingUser = await UserModel.findByUsername(username);
-    if (existingUser) {
-      return res.status(400).json({ error: "Username already exists" });
-    }
-
-    const newUser = {
-      id: `user-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      username,
-      password: hashPassword(password),
-      email: email || "",
-      full_name: fullName || "",
-      role: role || "student",
-      created_at: new Date(),
-      last_login: null,
-    };
-
-    const userId = await UserModel.create(newUser);
-    const createdUser = await UserModel.findById(userId);
-
-    const {
-      password: _,
-      full_name,
-      created_at,
-      last_login,
-      ...safeUser
-    } = createdUser;
-    safeUser.fullName = full_name;
-    safeUser.createdAt = created_at;
-    safeUser.lastLogin = last_login;
-
-    res.status(201).json(safeUser);
-  } catch (error) {
-    console.error("Error creating user:", error);
-    res.status(500).json({ error: "Failed to create user" });
-  }
-});
-
 // Update user (Admin only)
 router.put("/:userId", verifyAdmin, async (req, res) => {
   const { username, password, email, fullName, role } = req.body;
@@ -702,54 +653,53 @@ router.post("/complete-level", (req, res) => {
   }
 });
 
-// POST / - Create a single user
-router.post("/", async (req, res) => {
+// Create new user (Admin only)
+router.post("/", verifyAdmin, async (req, res) => {
+  const { username, password, email, fullName, role = "student" } = req.body;
+
+  if (!username || !password) {
+    return res
+      .status(400)
+      .json({ error: "Username and password are required" });
+  }
+
   try {
-    const { username, password, fullName, email, role } = req.body;
-    console.log('Creating user:', { username, email, hasPassword: !!password, emailType: typeof email, emailValue: email });
-
-    // Validate required fields
-    if (!username || !password) {
-      return res.status(400).json({ error: "Username and password are required" });
-    }
-
-    // Check if user already exists
-    const existingUser = await query(
-      "SELECT id FROM users WHERE username = ?",
-      [username]
-    );
-
-    if (existingUser.length > 0) {
+    // Check if username exists
+    const existingUser = await UserModel.findByUsername(username);
+    if (existingUser) {
       return res.status(400).json({ error: "Username already exists" });
     }
 
-    // Generate user ID
-    const userId = `user-${Date.now()}-${crypto.randomBytes(4).toString("hex")}`;
+    const newUser = {
+      id: `user-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      username,
+      password: hashPassword(password),
+      email: email || "",
+      full_name: fullName || "",
+      role: role || "student",
+      created_at: new Date(),
+      last_login: null,
+    };
 
-    // Hash password
-    const hashedPassword = hashPassword(password);
+    const createdUser = await UserModel.create(newUser);
 
-    // Insert user into database
-    await query(
-      `INSERT INTO users (id, username, password, full_name, email, role, created_at) 
-       VALUES (?, ?, ?, ?, ?, ?, NOW())`,
-      [
-        userId,
-        username,
-        hashedPassword,
-        fullName || null,
-        email || null,
-        role || "student"
-      ]
-    );
+    if (!createdUser) {
+      throw new Error("User creation failed in database");
+    }
 
-    res.status(201).json({
-      success: true,
-      message: "User created successfully",
-      userId: userId,
-      username: username
-    });
+    const {
+      password: _,
+      full_name,
+      created_at,
+      last_login,
+      ...safeUser
+    } = createdUser;
 
+    safeUser.fullName = full_name;
+    safeUser.createdAt = created_at;
+    safeUser.lastLogin = last_login;
+
+    res.status(201).json(safeUser);
   } catch (error) {
     console.error("Error creating user:", error);
     res.status(500).json({ error: "Failed to create user: " + error.message });

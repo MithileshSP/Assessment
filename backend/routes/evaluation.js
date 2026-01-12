@@ -10,6 +10,7 @@ const fs = require("fs");
 const path = require("path");
 const ChallengeModel = require("../models/Challenge");
 const SubmissionModel = require("../models/Submission");
+const { queryOne, query } = require('../database/connection');
 
 const submissionsPath = path.join(__dirname, "../data/submissions.json");
 const challengesPath = path.join(__dirname, "../data/challenges.json");
@@ -134,7 +135,7 @@ const seedSubmissionIntoDatabase = async (submission) => {
  * Evaluate a submission using hybrid method
  * Body: { submissionId }
  */
-router.post("/", async (req, res) => {
+router.post(["/", ""], async (req, res) => {
   try {
     const { submissionId } = req.body;
 
@@ -142,106 +143,41 @@ router.post("/", async (req, res) => {
       return res.status(400).json({ error: "Submission ID required" });
     }
 
-    // Get submission - try database first, then JSON fallback
-    let submission;
-    let submissionFromDb = false;
-    try {
-      submission = await SubmissionModel.findById(submissionId);
-      if (submission) {
-        submissionFromDb = true;
-      }
-    } catch (dbError) {
-      console.log("Database lookup failed, using JSON:", dbError.message);
-    }
-
-    // Fallback to JSON if not found in database
-    if (!submission) {
-      const submissions = getSubmissions();
-      submission = submissions.find((s) => s.id === submissionId);
-    }
+    // Get submission
+    const submission = await SubmissionModel.findById(submissionId);
 
     if (!submission) {
       return res.status(404).json({ error: "Submission not found" });
     }
 
-    // Get challenge with expected solution
-    const challenge = await getChallenge(submission.challengeId);
-
-    if (!challenge) {
-      console.error(`❌ Challenge not found: ${submission.challengeId}`);
-      return res.status(404).json({ error: "Challenge not found" });
+    // If already evaluated, return result
+    if (submission.status === 'passed' || submission.status === 'failed') {
+      return res.json({
+        status: submission.status,
+        result: submission.result,
+        message: "Evaluation already complete"
+      });
     }
 
-    console.log(`\n🔄 Starting evaluation for submission: ${submissionId}`);
-    console.log(`📝 Challenge: ${challenge.title}`);
-
-    // Run hybrid evaluation with content validation
-    const evaluationResult = await evaluator.evaluate(
-      submission.code,
-      challenge.expectedSolution,
-      challenge.passingThreshold,
-      submissionId,
-      submission.challengeId // Pass challengeId for content-specific validation
-    );
-
-    const persistEvaluationToJson = () => {
-      submission.status = evaluationResult.passed ? "passed" : "failed";
-      submission.result = evaluationResult;
-      submission.evaluatedAt = new Date().toISOString();
-      const submissions = getSubmissions();
-      const submissionIndex = submissions.findIndex(
-        (s) => s.id === submissionId
-      );
-      if (submissionIndex >= 0) {
-        submissions[submissionIndex] = submission;
-      } else {
-        submissions.push(submission);
-      }
-      saveSubmissions(submissions);
-    };
-
-    if (!submissionFromDb) {
-      submissionFromDb = await seedSubmissionIntoDatabase(submission);
+    // If currently being evaluated or queued, return status
+    if (submission.status === 'queued' || submission.status === 'evaluating') {
+      return res.json({
+        status: submission.status,
+        message: submission.status === 'evaluating' ? "Evaluation in progress" : "Submission is in queue"
+      });
     }
 
-    // Update submission with result - try database first
-    try {
-      if (!submissionFromDb) {
-        throw new Error("Submission not available in database");
-      }
-
-      const updatedSubmission = await SubmissionModel.updateEvaluation(
-        submissionId,
-        evaluationResult
-      );
-      if (!updatedSubmission) {
-        throw new Error("Submission not found during evaluation update");
-      }
-      console.log("✅ Saved evaluation to database");
-    } catch (dbError) {
-      console.log(
-        "Database save failed, using JSON fallback:",
-        dbError.message
-      );
-      persistEvaluationToJson();
-    }
-
-    console.log(
-      `✅ Evaluation complete: ${evaluationResult.passed ? "PASSED" : "FAILED"}`
-    );
-    console.log(`   Content: ${evaluationResult.contentScore}%`);
-    console.log(`   Structure: ${evaluationResult.structureScore}%`);
-    console.log(`   Visual: ${evaluationResult.visualScore}%`);
-    console.log(`   Final: ${evaluationResult.finalScore}%\n`);
+    // Fallback: If somehow not queued, queue it now (should not happen with new submission route)
+    await SubmissionModel.updateStatus(submissionId, SubmissionModel.STATUS.QUEUED);
 
     res.json({
-      message: "Evaluation complete",
-      result: evaluationResult,
+      status: 'queued',
+      message: "Submission added to queue"
     });
   } catch (error) {
-    console.error("Evaluation error:", error);
+    console.error("Evaluation request error:", error);
     res.status(500).json({
-      error: "Evaluation failed",
+      error: "Failed to process evaluation request",
       details: error.message,
     });
   }
@@ -283,6 +219,24 @@ router.post("/quick", async (req, res) => {
       error: "Evaluation failed",
       details: error.message,
     });
+  }
+});
+
+// Queue status for admin monitor
+router.get("/queue-status", async (req, res) => {
+  try {
+    const queuedCount = await queryOne('SELECT COUNT(*) as count FROM submissions WHERE status = ?', [SubmissionModel.STATUS.QUEUED]) || { count: 0 };
+    const evaluatingCount = await queryOne('SELECT COUNT(*) as count FROM submissions WHERE status = ?', [SubmissionModel.STATUS.EVALUATING]) || { count: 0 };
+    const recentEvaluations = await query('SELECT id, status, evaluated_at, final_score FROM submissions WHERE status IN (?, ?) ORDER BY evaluated_at DESC LIMIT 10', [SubmissionModel.STATUS.PASSED, SubmissionModel.STATUS.FAILED]) || [];
+
+    res.json({
+      queued: queuedCount.count || 0,
+      evaluating: evaluatingCount.count || 0,
+      recent: recentEvaluations
+    });
+  } catch (error) {
+    console.error("Queue status error:", error);
+    res.status(500).json({ error: "Failed to fetch queue status", details: error.message });
   }
 });
 

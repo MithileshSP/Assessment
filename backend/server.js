@@ -29,6 +29,7 @@ const attendanceRouter = require("./routes/attendance");
 const facultyRouter = require("./routes/faculty");
 const feedbackRouter = require("./routes/feedback");
 const { scheduleFallbackSync } = require("./services/submissionSync");
+const evaluationWorker = require("./services/EvaluationWorker");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -36,7 +37,12 @@ const { applyMigrations } = require("./services/dbMigration");
 
 // Create necessary directories for static files
 const screenshotsDir = path.join(__dirname, "screenshots");
-const assetsDir = path.join(__dirname, "assets");
+const BUNDLED_ASSETS = path.join(__dirname, "assets");
+const ASSETS_ROOT = process.env.ASSETS_ROOT || BUNDLED_ASSETS;
+
+// Ensure directories exist
+if (!fs.existsSync(screenshotsDir)) fs.mkdirSync(screenshotsDir, { recursive: true });
+if (!fs.existsSync(ASSETS_ROOT)) fs.mkdirSync(ASSETS_ROOT, { recursive: true });
 
 // Static file serving BEFORE security middleware (to set custom CORS headers)
 app.use("/screenshots", express.static(screenshotsDir, {
@@ -50,7 +56,13 @@ app.use("/assets", (req, res, next) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
   next();
-}, express.static(assetsDir));
+});
+
+// Serve from persistent volume first (for uploads/overrides), then bundled assets
+app.use("/assets", express.static(ASSETS_ROOT));
+if (ASSETS_ROOT !== BUNDLED_ASSETS) {
+  app.use("/assets", express.static(BUNDLED_ASSETS));
+}
 
 // Security: Helmet for security headers (after static files)
 app.use((req, res, next) => {
@@ -271,6 +283,10 @@ app.listen(PORT, async () => {
 
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📊 Environment: ${process.env.NODE_ENV}`);
+
+  // Start Evaluation Queue Worker
+  evaluationWorker.start();
+
   console.log(`\n📁 API Endpoints:`);
   console.log(`   GET  /api/challenges`);
   console.log(`   POST /api/submissions`);

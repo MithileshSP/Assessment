@@ -103,6 +103,19 @@ class TestSession {
       JSON.stringify(submission_ids),
     ]);
 
+    // Track attempt started (FIX 3)
+    try {
+      // Find the most recent active attendance (or any approved one if session_id is missing)
+      await db.query(`
+        UPDATE test_attendance 
+        SET attempt_started_at = CURRENT_TIMESTAMP 
+        WHERE user_id = ? AND test_identifier = ? AND is_used = FALSE
+        ORDER BY requested_at DESC LIMIT 1
+      `, [user_id, `${course_id}_${level}`]);
+    } catch (e) {
+      console.warn("Failed to update attempt_started_at:", e.message);
+    }
+
     return this.findById(id);
   }
 
@@ -115,90 +128,136 @@ class TestSession {
     }
 
     const session = rows[0];
+    let submissionIds = [];
+    try {
+      submissionIds = typeof session.submission_ids === "string"
+        ? JSON.parse(session.submission_ids || "[]")
+        : (session.submission_ids || []);
+      if (!Array.isArray(submissionIds)) submissionIds = [];
+    } catch (e) {
+      console.error(`❌ Failed to parse submission_ids for session ${id}:`, e.message);
+      submissionIds = [];
+    }
 
     // Parse JSON fields
     return {
       ...session,
-      submission_ids:
-        typeof session.submission_ids === "string"
-          ? JSON.parse(session.submission_ids)
-          : session.submission_ids,
+      submission_ids: submissionIds
     };
   }
 
   static async addSubmission(sessionId, submissionId) {
+    console.log(`[TestSession] Adding submission ${submissionId} to session ${sessionId}`);
     const session = await this.findById(sessionId);
     if (!session) {
+      console.error(`[TestSession] Session ${sessionId} not found`);
       throw new Error("Test session not found");
     }
 
-    // Fetch submission to know its challenge_id
-    const submissionRows = await db.query(
-      `SELECT id, challenge_id, submitted_at FROM submissions WHERE id = ?`,
-      [submissionId]
-    );
-
-    const submissionRecord = submissionRows[0];
-    if (!submissionRecord) {
-      throw new Error("Submission not found");
-    }
-
-    const submissionChallengeId = submissionRecord.challenge_id;
-
-    // Keep only the latest submission per challenge
-    const submissionIds = Array.isArray(session.submission_ids)
-      ? [...session.submission_ids]
-      : [];
-
-    // Remove older submission for same challenge_id, if any
-    const filteredIds = [];
-    for (const id of submissionIds) {
-      if (id === submissionId) {
-        continue;
-      }
-
-      const existing = await db.query(
-        `SELECT challenge_id, submitted_at FROM submissions WHERE id = ?`,
-        [id]
+    // Fetch the new submission to know its challenge_id
+    let newSub = null;
+    try {
+      const newSubRows = await db.query(
+        `SELECT id, challenge_id, submitted_at FROM submissions WHERE id = ?`,
+        [submissionId]
       );
-
-      const existingRecord = existing[0];
-      if (!existingRecord) continue;
-
-      if (existingRecord.challenge_id === submissionChallengeId) {
-        // Keep the newer one between existing and new
-        const existingTime = new Date(existingRecord.submitted_at || 0).getTime();
-        const newTime = new Date(submissionRecord.submitted_at || 0).getTime();
-        if (existingTime > newTime) {
-          // Existing is newer; keep it and skip adding new
-          return session;
-        }
-        // Existing is older; drop it
-        continue;
-      }
-
-      filteredIds.push(id);
+      newSub = newSubRows[0];
+    } catch (e) {
+      console.warn("DB fetch failed for new submission, checking fallback");
     }
 
-    filteredIds.push(submissionId);
+    if (!newSub) {
+      const fallbackData = loadFallbackSubmissions();
+      const fallback = fallbackData.find(s => s.id === submissionId);
+      if (fallback) {
+        newSub = mapFallbackSubmission(fallback);
+        console.log(`📄 Found submission ${submissionId} in JSON fallback for addSubmission`);
+      }
+    }
 
-    // Ensure uniqueness just in case
-    const uniqueIds = Array.from(new Set(filteredIds));
+    if (!newSub) {
+      console.error(`[TestSession] Failed to locate submission ${submissionId} in DB or Fallback`);
+      throw new Error(`Submission ${submissionId} not found in DB or Fallback`);
+    }
+    console.log(`[TestSession] Found submission info for ${submissionId}, challenge: ${newSub.challenge_id}`);
 
-    const query = `
+    const currentIds = (Array.isArray(session.submission_ids)
+      ? session.submission_ids
+      : []).filter(Boolean);
+
+    // If session has no submissions yet, just add this one
+    if (currentIds.length === 0) {
+      const uniqueIds = [submissionId];
+      await db.query(
+        "UPDATE test_sessions SET submission_ids = ?, total_questions = ? WHERE id = ?",
+        [JSON.stringify(uniqueIds), 1, sessionId]
+      );
+      return this.findById(sessionId);
+    }
+
+    // Fetch all existing submissions in this session to handle deduplication by challenge_id
+    let existingSubs = [];
+    if (currentIds.length > 0) {
+      try {
+        const placeholders = currentIds.map(() => "?").join(",");
+        existingSubs = await db.query(
+          `SELECT id, challenge_id, submitted_at FROM submissions WHERE id IN (${placeholders})`,
+          currentIds
+        );
+      } catch (e) {
+        console.warn("DB fetch failed for session submissions, using fallback mechanism");
+      }
+    }
+
+    // Ensure we have data for all IDs (check fallback if DB missed some)
+    existingSubs = mergeWithFallbackSubmissions(existingSubs, currentIds);
+
+    // Map by challenge_id to keep only the latest
+    const challengeMap = new Map();
+    existingSubs.forEach(sub => {
+      const key = sub.challenge_id || sub.id;
+      challengeMap.set(key, sub);
+    });
+
+    // Check if we have a Newer submission for this challenge
+    const existingForChallenge = challengeMap.get(newSub.challenge_id);
+    if (existingForChallenge) {
+      const existingTime = new Date(existingForChallenge.submitted_at || 0).getTime();
+      const newTime = new Date(newSub.submitted_at || 0).getTime();
+
+      if (newTime >= existingTime) {
+        challengeMap.set(newSub.challenge_id, newSub);
+      }
+    } else {
+      challengeMap.set(newSub.challenge_id, newSub);
+    }
+
+    const updatedIds = Array.from(challengeMap.values()).map(s => s.id);
+    const uniqueIds = Array.from(new Set(updatedIds));
+
+    console.log(`[TestSession] Preparing update for session ${sessionId}`);
+    const updateQuery = `
       UPDATE test_sessions 
       SET submission_ids = ?,
           total_questions = ?
       WHERE id = ?
     `;
 
-    await db.query(query, [
-      JSON.stringify(uniqueIds),
-      uniqueIds.length,
-      sessionId,
-    ]);
+    console.log(`[TestSession] Updating session ${sessionId} with ${uniqueIds.length} submissions: ${JSON.stringify(uniqueIds)}`);
+    try {
+      const updateResult = await db.query(updateQuery, [
+        JSON.stringify(uniqueIds),
+        uniqueIds.length,
+        sessionId,
+      ]);
+      console.log(`[TestSession] Successfully updated session ${sessionId}. Affected rows:`, updateResult?.affectedRows);
+    } catch (updateError) {
+      console.error(`[TestSession] Update query failed for session ${sessionId}:`, updateError.message);
+      console.error(`[TestSession] SQL Query: ${updateQuery}`);
+      console.error(`[TestSession] Params:`, [JSON.stringify(uniqueIds), uniqueIds.length, sessionId]);
+      throw updateError;
+    }
 
-    // Force refresh to ensure we return latest state
     return this.findById(sessionId);
   }
 
@@ -262,20 +321,18 @@ class TestSession {
     // Get all submissions for this session
     const submissionIds = session.submission_ids || [];
     if (submissionIds.length === 0) {
-      throw new Error("No submissions in this test session");
+      // Don't throw 500 if no submissions yet, just mark as completed with 0 results
+      console.warn(`⚠️ Completing session ${sessionId} with zero submissions.`);
     }
 
-    const submissions = await this.getSubmissionsByIds(submissionIds);
-    if (!submissions.length) {
-      throw new Error("Unable to locate submissions for this session");
-    }
+    const submissions = submissionIds.length > 0 ? await this.getSubmissionsByIds(submissionIds) : [];
 
     // Calculate passed count and overall status
     const passedCount = submissions.filter(
-      (s) => s.passed === 1 || s.status === "passed"
+      (s) => s && (s.passed === 1 || s.status === "passed")
     ).length;
-    const totalQuestions = submissions.length;
-    const overallStatus = passedCount === totalQuestions ? "passed" : "failed";
+    const totalQuestions = submissions.length || 0;
+    const overallStatus = (totalQuestions > 0 && passedCount === totalQuestions) ? "passed" : "failed";
 
     // Update test session
     const updateQuery = `
@@ -295,6 +352,18 @@ class TestSession {
       feedbackData.user_feedback || null,
       sessionId,
     ]);
+
+    // Track attempt submission and mark used (FIX 3 & 4)
+    try {
+      await db.query(`
+        UPDATE test_attendance 
+        SET attempt_submitted_at = CURRENT_TIMESTAMP, is_used = TRUE 
+        WHERE user_id = ? AND test_identifier = ? AND is_used = FALSE
+        ORDER BY requested_at DESC LIMIT 1
+      `, [session.user_id, `${session.course_id}_${session.level}`]);
+    } catch (e) {
+      console.warn("Failed to mark attendance as used:", e.message);
+    }
 
     return this.findById(sessionId);
   }
@@ -342,13 +411,21 @@ class TestSession {
 
     const rows = await db.query(query, [limit]);
 
-    return rows.map((session) => ({
-      ...session,
-      submission_ids:
-        typeof session.submission_ids === "string"
-          ? JSON.parse(session.submission_ids)
-          : session.submission_ids,
-    }));
+    return rows.map((session) => {
+      let submissionIds = [];
+      try {
+        submissionIds = typeof session.submission_ids === "string"
+          ? JSON.parse(session.submission_ids || "[]")
+          : (session.submission_ids || []);
+        if (!Array.isArray(submissionIds)) submissionIds = [];
+      } catch (e) {
+        submissionIds = [];
+      }
+      return {
+        ...session,
+        submission_ids: submissionIds,
+      };
+    });
   }
 
   static async findByUser(userId, limit = 20) {
@@ -361,13 +438,21 @@ class TestSession {
 
     const rows = await db.query(query, [userId, limit]);
 
-    return rows.map((session) => ({
-      ...session,
-      submission_ids:
-        typeof session.submission_ids === "string"
-          ? JSON.parse(session.submission_ids)
-          : session.submission_ids,
-    }));
+    return rows.map((session) => {
+      let submissionIds = [];
+      try {
+        submissionIds = typeof session.submission_ids === "string"
+          ? JSON.parse(session.submission_ids || "[]")
+          : (session.submission_ids || []);
+        if (!Array.isArray(submissionIds)) submissionIds = [];
+      } catch (e) {
+        submissionIds = [];
+      }
+      return {
+        ...session,
+        submission_ids: submissionIds,
+      };
+    });
   }
 }
 

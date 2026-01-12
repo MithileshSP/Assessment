@@ -2,6 +2,123 @@ const express = require('express');
 const router = express.Router();
 const db = require('../database/connection');
 const { verifyAdmin } = require('../middleware/auth');
+const GlobalSession = require('../models/GlobalSession');
+
+/**
+ * GET /api/admin/sessions/active
+ * Get active session for a course/level
+ */
+router.get('/sessions/active', verifyAdmin, async (req, res) => {
+  const { courseId, level } = req.query;
+  try {
+    const session = await GlobalSession.findActive(courseId, level);
+    res.json(session);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * POST /api/admin/sessions/start
+ * Start a global exam session
+ */
+router.post('/sessions/start', verifyAdmin, async (req, res) => {
+  const { courseId, level, duration } = req.body;
+  const adminId = req.user.id;
+
+  if (!courseId || !level || !duration) {
+    return res.status(400).json({ error: 'Missing courseId, level, or duration' });
+  }
+
+  try {
+    const session = await GlobalSession.start(courseId, level, duration, adminId);
+    res.status(201).json(session);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * POST /api/admin/sessions/end
+ * End a global exam session early
+ */
+router.post('/sessions/end', verifyAdmin, async (req, res) => {
+  const { sessionId, reason = 'FORCED' } = req.body;
+
+  if (!sessionId) {
+    return res.status(400).json({ error: 'Missing sessionId' });
+  }
+
+  try {
+    const session = await GlobalSession.findById(sessionId);
+    if (!session) return res.status(404).json({ error: 'Session not found' });
+
+    await GlobalSession.end(sessionId, reason);
+
+    // Graceful End (FIX 4): Mark all associated attendance as used to lock others out
+    await db.query(`
+      UPDATE test_attendance 
+      SET is_used = TRUE 
+      WHERE session_id = ? AND is_used = FALSE
+    `, [sessionId]);
+
+    res.json({ message: 'Session ended successfully', sessionId });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * POST /api/admin/sessions/bulk-authorize
+ * Bulk authorize students for an active session
+ */
+router.post('/sessions/bulk-authorize', verifyAdmin, async (req, res) => {
+  const { usernames, sessionId } = req.body;
+  const adminId = req.user.id;
+
+  if (!usernames || !Array.isArray(usernames) || !sessionId) {
+    return res.status(400).json({ error: 'Invalid payload' });
+  }
+
+  try {
+    const session = await GlobalSession.findById(sessionId);
+    if (!session) return res.status(404).json({ error: 'Active session not found' });
+
+    const testIdentifier = `${session.course_id}_${session.level}`;
+
+    // Get user IDs
+    const users = await db.query("SELECT id, username FROM users WHERE username IN (?)", [usernames]);
+    const userMap = new Map(users.map(u => [u.username, u.id]));
+
+    const results = { approved: 0, failed: 0, notFound: [] };
+
+    for (const username of usernames) {
+      const userId = userMap.get(username);
+      if (!userId) {
+        results.notFound.push(username);
+        continue;
+      }
+
+      try {
+        // Use IGNORE or check to satisfy UNIQUE (user_id, session_id)
+        await db.query(`
+          INSERT INTO test_attendance (user_id, test_identifier, status, approved_at, approved_by, session_id, is_used)
+          VALUES (?, ?, 'approved', CURRENT_TIMESTAMP, ?, ?, FALSE)
+          ON DUPLICATE KEY UPDATE status = 'approved', is_used = FALSE, approved_at = CURRENT_TIMESTAMP
+        `, [userId, testIdentifier, adminId, sessionId]);
+        results.approved++;
+      } catch (e) {
+        console.error(`Failed to authorize ${username}:`, e.message);
+        results.failed++;
+      }
+    }
+
+    res.json({ success: true, results });
+  } catch (error) {
+    console.error('Bulk session auth error:', error);
+    res.status(500).json({ error: 'Bulk authorization failed' });
+  }
+});
 
 // Get Platform Stats
 router.get('/stats', verifyAdmin, async (req, res) => {
@@ -325,6 +442,33 @@ router.post('/reset-level', verifyAdmin, async (req, res) => {
   } catch (error) {
     console.error('Error resetting level:', error);
     res.status(500).json({ error: 'Failed to reset level: ' + error.message });
+  }
+});
+
+/**
+ * POST /api/admin/submissions/:id/override
+ * Manually override a submission result (Admin only)
+ */
+router.post('/submissions/:id/override', verifyAdmin, async (req, res) => {
+  const { id } = req.params;
+  const { status, reason } = req.body;
+
+  if (!status || !reason) {
+    return res.status(400).json({ error: 'Status and reason are required' });
+  }
+
+  try {
+    const SubmissionModel = require('../models/Submission');
+    const updated = await SubmissionModel.updateOverride(id, status, reason);
+
+    if (!updated) {
+      return res.status(404).json({ error: 'Submission not found' });
+    }
+
+    res.json({ message: 'Override applied successfully', submission: updated });
+  } catch (error) {
+    console.error('Override error:', error);
+    res.status(500).json({ error: 'Failed to apply override' });
   }
 });
 

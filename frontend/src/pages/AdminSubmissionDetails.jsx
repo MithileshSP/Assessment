@@ -14,7 +14,9 @@ import {
   Monitor,
   ArrowLeft,
   ChevronRight,
-  Trophy
+  Trophy,
+  ShieldAlert,
+  Save
 } from 'lucide-react';
 
 const SectionCard = ({ title, icon: Icon, children }) => (
@@ -44,6 +46,8 @@ export default function AdminSubmissionDetails() {
   const [submission, setSubmission] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [overriding, setOverriding] = useState(false);
+  const [overrideReason, setOverrideReason] = useState('');
 
   useEffect(() => {
     const fetchSubmission = async () => {
@@ -59,6 +63,29 @@ export default function AdminSubmissionDetails() {
     };
     fetchSubmission();
   }, [submissionId]);
+
+  const handleOverride = async (status) => {
+    if (!overrideReason.trim()) {
+      alert('Please provide a reason for the override.');
+      return;
+    }
+    try {
+      setOverriding(true);
+      await api.post(`/admin/submissions/${submissionId}/override`, {
+        status,
+        reason: overrideReason
+      });
+      // Refresh
+      const response = await api.get(`/submissions/${submissionId}`);
+      setSubmission(response.data);
+      setOverrideReason('');
+      alert(`Submission successfully marked as ${status.toUpperCase()}`);
+    } catch (err) {
+      alert(err.response?.data?.error || 'Failed to apply override');
+    } finally {
+      setOverriding(false);
+    }
+  };
 
   if (loading) return (
     <SaaSLayout>
@@ -290,15 +317,12 @@ export default function AdminSubmissionDetails() {
               </div>
             </SectionCard>
 
-            {(submission.user_screenshot || submission.expected_screenshot) && (
+            {(submission.user_screenshot || submission.expected_screenshot || submission.diff_screenshot) && (
               <SectionCard title="Visual Delta Analysis" icon={Monitor}>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-10 p-2">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-10 p-2">
                   {submission.user_screenshot && (
                     <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Candidate Rendering</p>
-                        <div className="px-2 py-0.5 bg-rose-50 text-rose-500 text-[9px] font-black uppercase rounded">Actual</div>
-                      </div>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Candidate Rendering</p>
                       <div className="rounded-[2.5rem] border-8 border-slate-100 overflow-hidden shadow-2xl group relative">
                         <img src={submission.user_screenshot} className="w-full h-auto group-hover:scale-110 transition-transform duration-[2s]" />
                         <div className="absolute inset-0 bg-gradient-to-t from-slate-900/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -307,12 +331,18 @@ export default function AdminSubmissionDetails() {
                   )}
                   {submission.expected_screenshot && (
                     <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Production Template</p>
-                        <div className="px-2 py-0.5 bg-emerald-50 text-emerald-500 text-[9px] font-black uppercase rounded">Master</div>
-                      </div>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Production Template</p>
                       <div className="rounded-[2.5rem] border-8 border-slate-100 overflow-hidden shadow-2xl group relative">
                         <img src={submission.expected_screenshot} className="w-full h-auto group-hover:scale-110 transition-transform duration-[2s]" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-slate-900/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </div>
+                    </div>
+                  )}
+                  {submission.diff_screenshot && (
+                    <div className="space-y-4">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Pixel-Match Diff</p>
+                      <div className="rounded-[2.5rem] border-8 border-slate-100 overflow-hidden shadow-2xl group relative bg-slate-900">
+                        <img src={submission.diff_screenshot} className="w-full h-auto group-hover:scale-110 transition-transform duration-[2s]" />
                         <div className="absolute inset-0 bg-gradient-to-t from-slate-900/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                       </div>
                     </div>
@@ -320,6 +350,59 @@ export default function AdminSubmissionDetails() {
                 </div>
               </SectionCard>
             )}
+
+            {/* Admin Override Section */}
+            <SectionCard title="Administrative Override" icon={ShieldAlert}>
+              <div className="space-y-6">
+                <div className="bg-amber-50 rounded-2xl p-6 border border-amber-100 flex items-start gap-4">
+                  <div className="p-2 bg-amber-500/10 rounded-lg">
+                    <ShieldAlert size={20} className="text-amber-600" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-amber-900 text-sm">Force Evaluation Result</h4>
+                    <p className="text-xs text-amber-700 mt-1 leading-relaxed">
+                      Admins can manually override the final status. This will bypass both AI and Faculty scoring.
+                      A mandatory reason must be provided for audit purposes.
+                    </p>
+                  </div>
+                </div>
+
+                {submission.admin_override_status !== 'none' && (
+                  <div className="bg-blue-50 rounded-2xl p-6 border border-blue-100">
+                    <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-2">Active Override</p>
+                    <p className="text-sm font-bold text-blue-900 capitalize">Status: {submission.admin_override_status}</p>
+                    <p className="text-xs text-blue-700 mt-2 italic font-medium">"{submission.admin_override_reason}"</p>
+                  </div>
+                )}
+
+                <div className="space-y-4">
+                  <textarea
+                    placeholder="Enter justification for manual override..."
+                    className="w-full p-5 bg-slate-50 border border-slate-100 rounded-2xl text-sm focus:ring-2 focus:ring-blue-500 min-h-[100px]"
+                    value={overrideReason}
+                    onChange={(e) => setOverrideReason(e.target.value)}
+                  />
+                  <div className="flex gap-4">
+                    <button
+                      onClick={() => handleOverride('passed')}
+                      disabled={overriding}
+                      className="flex-1 py-4 bg-emerald-600 text-white rounded-2xl font-bold hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-500/10 flex items-center justify-center gap-2 group disabled:opacity-50"
+                    >
+                      <CheckCircle size={18} className="group-hover:scale-110 transition-transform" />
+                      Force Pass
+                    </button>
+                    <button
+                      onClick={() => handleOverride('failed')}
+                      disabled={overriding}
+                      className="flex-1 py-4 bg-rose-600 text-white rounded-2xl font-bold hover:bg-rose-700 transition-all shadow-lg shadow-rose-500/10 flex items-center justify-center gap-2 group disabled:opacity-50"
+                    >
+                      <XCircle size={18} className="group-hover:scale-110 transition-transform" />
+                      Force Fail
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </SectionCard>
           </div>
         </div>
       </div>

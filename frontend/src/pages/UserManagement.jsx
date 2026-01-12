@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import SaaSLayout from '../components/SaaSLayout';
-import api from '../services/api';
+import api, { BASE_URL } from '../services/api';
 import {
   UserPlus,
   Upload,
@@ -149,7 +149,7 @@ export default function UserManagement() {
 
         {/* Search & Stats Bar */}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          <div className="lg:col-span-3 relative font-bold uppercase tracking-widest">
+          <div className="lg:col-span-3 relative">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
             <input
               type="text"
@@ -379,8 +379,8 @@ export default function UserManagement() {
                     Execute Import
                   </button>
                   <button
-                    onClick={() => window.open(`${api.defaults.baseURL}/users/sample-csv`, '_blank')}
-                    className="px-6 py-4 bg-white border border-slate-200 text-slate-600 rounded-2xl font-bold hover:bg-slate-50"
+                    onClick={() => window.open(`${BASE_URL}/users/sample-csv`, '_blank')}
+                    className="px-6 py-4 bg-white border border-slate-200 text-slate-600 rounded-2xl font-bold hover:bg-slate-50 transition-colors"
                   >
                     <Download size={20} />
                   </button>

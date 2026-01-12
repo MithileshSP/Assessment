@@ -72,9 +72,16 @@ router.get('/submission/:id', verifyFaculty, async (req, res) => {
             [submissionId]
         );
 
+        // Get student feedback
+        const studentFeedback = await db.query(
+            "SELECT * FROM student_feedback WHERE submission_id = ?",
+            [submissionId]
+        );
+
         res.json({
             submission: submission[0],
-            evaluation: evaluation[0] || null
+            evaluation: evaluation[0] || null,
+            studentFeedback: studentFeedback[0] || null
         });
 
     } catch (err) {

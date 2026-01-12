@@ -57,8 +57,11 @@ router.post('/', async (req, res) => {
   try {
     const { challengeId, candidateName, code, userId } = req.body;
 
-    if (!challengeId || !code || !code.html) {
-      return res.status(400).json({ error: 'Missing required fields' });
+    if (!challengeId || !code || !code.html || code.html.trim() === '') {
+      return res.status(400).json({
+        error: 'Incomplete content',
+        message: 'Your solution must contain at least some HTML structure before you can submit.'
+      });
     }
 
     const submissionData = {
@@ -71,7 +74,7 @@ router.post('/', async (req, res) => {
         css: code.css || '',
         js: code.js || ''
       },
-      status: 'pending',
+      status: SubmissionModel.STATUS.QUEUED,
       submittedAt: new Date().toISOString()
     };
 

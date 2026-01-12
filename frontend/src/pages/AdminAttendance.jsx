@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import SaaSLayout from '../components/SaaSLayout';
-import api from '../services/api';
+import api, { BASE_URL } from '../services/api';
 import {
     Calendar,
     Check,
@@ -29,6 +29,12 @@ const AdminAttendance = () => {
     const [searchQuery, setSearchQuery] = useState('');
     const [submitting, setSubmitting] = useState(false);
     const [stats, setStats] = useState({ pending: 0, active: 0 });
+    const [activeSession, setActiveSession] = useState(null);
+    const [selectedCourse, setSelectedCourse] = useState('');
+    const [selectedLevel, setSelectedLevel] = useState('1');
+    const [sessionDuration, setSessionDuration] = useState('60');
+    const [bulkUsernames, setBulkUsernames] = useState('');
+    const [timeRemaining, setTimeRemaining] = useState(0);
 
     const fetchUsers = async () => {
         try {
@@ -48,16 +54,33 @@ const AdminAttendance = () => {
         }
     };
 
+    const fetchActiveSession = async () => {
+        if (!selectedCourse || !selectedLevel) return;
+        try {
+            const res = await api.get('/admin/sessions/active', {
+                params: { courseId: selectedCourse, level: selectedLevel }
+            });
+            setActiveSession(res.data);
+        } catch (e) {
+            console.error("Failed to fetch session", e);
+        }
+    };
+
     const fetchRequests = async (showLoading = false) => {
         try {
             if (showLoading) setLoading(true);
             setIsPolling(true);
             const res = await api.get('/attendance/requests');
             setRequests(res.data);
-            setStats({
-                pending: res.data.length,
-                active: Math.floor(Math.random() * 10) + 5 // Simulated for UI
-            });
+            setStats(prev => ({
+                ...prev,
+                pending: res.data.length
+            }));
+
+            // Also fetch active session if course/level selected
+            if (selectedCourse && selectedLevel) {
+                fetchActiveSession();
+            }
         } catch (error) {
             console.error("Failed to load requests", error);
         } finally {
@@ -72,7 +95,84 @@ const AdminAttendance = () => {
         fetchCourses();
         const interval = setInterval(() => fetchRequests(false), 5000);
         return () => clearInterval(interval);
-    }, []);
+    }, [selectedCourse, selectedLevel]);
+
+    // Live countdown effect
+    useEffect(() => {
+        if (!activeSession) return;
+
+        const updateTimer = () => {
+            const end = new Date(activeSession.end_time).getTime();
+            const left = Math.max(0, Math.floor((end - Date.now()) / 1000));
+            setTimeRemaining(left);
+        };
+
+        updateTimer();
+        const interval = setInterval(updateTimer, 1000);
+        return () => clearInterval(interval);
+    }, [activeSession]);
+
+    const handleStartSession = async () => {
+        if (!selectedCourse || !selectedLevel || !sessionDuration) {
+            alert("Please select course, level and duration");
+            return;
+        }
+        try {
+            setSubmitting(true);
+            await api.post('/admin/sessions/start', {
+                courseId: selectedCourse,
+                level: selectedLevel,
+                duration: parseInt(sessionDuration)
+            });
+            alert("Global session started!");
+            fetchActiveSession();
+        } catch (e) {
+            alert("Failed to start session: " + (e.response?.data?.error || e.message));
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const handleEndSession = async () => {
+        if (!activeSession) return;
+        if (!window.confirm("CRITICAL: Ending the session will lock all students out and auto-submit their work. Proceed?")) return;
+
+        try {
+            setSubmitting(true);
+            await api.post('/admin/sessions/end', { sessionId: activeSession.id });
+            alert("Session terminated successfully.");
+            setActiveSession(null);
+        } catch (e) {
+            alert("Failed to end session");
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const handleBulkSessionAuth = async () => {
+        if (!activeSession || !bulkUsernames.trim()) {
+            alert("No active session or usernames provided");
+            return;
+        }
+
+        const usernames = bulkUsernames.split(/[\n,]+/).map(u => u.trim()).filter(u => u);
+        if (usernames.length === 0) return;
+
+        try {
+            setSubmitting(true);
+            const res = await api.post('/admin/sessions/bulk-authorize', {
+                usernames,
+                sessionId: activeSession.id
+            });
+            alert(`Bulk auth complete. Approved: ${res.data.results.approved}, Failed: ${res.data.results.failed}, Not Found: ${res.data.results.notFound.length}`);
+            setBulkUsernames('');
+            fetchRequests(true);
+        } catch (e) {
+            alert("Bulk authorization failed");
+        } finally {
+            setSubmitting(false);
+        }
+    };
 
     const handleAction = async (requestId, action) => {
         try {
@@ -84,7 +184,6 @@ const AdminAttendance = () => {
             fetchRequests(true);
         }
     };
-
     const handleManualApprove = async () => {
         if (!manualTarget.userId || !manualTarget.courseId || !manualTarget.level) {
             alert("Please fill all fields");
@@ -166,72 +265,159 @@ const AdminAttendance = () => {
                                     <Clock size={20} />
                                 </div>
                                 <span className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-full">
-                                    System Active • v2.0
+                                    System Active • v2.1 (Global Sync)
                                 </span>
                             </div>
                             <h1 className="text-4xl lg:text-5xl font-black tracking-tight text-slate-900 mb-2">
                                 Attendance Console
                             </h1>
                             <p className="text-slate-500 font-medium text-lg max-w-2xl">
-                                Proactively authorize student credentials or manage real-time access requests for assessment sequences.
+                                Manage global synchronized exam sessions and bulk-authorize student access.
                             </p>
                         </div>
 
                         <div className="flex items-center gap-3">
-                            <label className="group relative overflow-hidden px-6 py-4 bg-white border border-slate-200 text-slate-600 rounded-2xl font-bold text-sm tracking-tight transition-all hover:border-slate-300 hover:text-slate-900 shadow-sm cursor-pointer">
-                                <div className="flex items-center gap-2 relative z-10">
-                                    <Upload size={18} className="group-hover:translate-y-[-2px] transition-transform" />
-                                    <span>CSV Bulk Import</span>
-                                </div>
-                                <input type="file" accept=".csv" className="hidden" onChange={handleCsvUpload} />
-                            </label>
                             <button
                                 onClick={() => setShowManualModal(true)}
-                                className="px-8 py-4 bg-slate-900 text-white rounded-2xl font-bold text-sm tracking-tight transition-all hover:bg-indigo-600 hover:scale-[1.02] shadow-xl shadow-slate-900/10 flex items-center gap-2"
+                                className="px-8 py-4 bg-white border border-slate-200 text-slate-900 rounded-2xl font-bold text-sm tracking-tight transition-all hover:bg-slate-50 shadow-sm flex items-center gap-2"
                             >
                                 <Plus size={18} />
-                                <span>Authorize Student</span>
+                                <span>Add Student</span>
                             </button>
                         </div>
                     </div>
 
-                    {/* --- Quick Stats Dashboard --- */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-10">
-                        <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-md transition-shadow text-left">
-                            <div className="flex items-center gap-4 mb-4">
-                                <div className="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-600">
-                                    <Clock size={20} />
+                    {/* --- Live Session & Quick Stats --- */}
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-10">
+                        {/* Live Session Control Panel */}
+                        <div className="lg:col-span-8 bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/50 text-left">
+                            <div className="flex items-center justify-between mb-8">
+                                <div className="flex items-center gap-4">
+                                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${activeSession ? 'bg-emerald-50 text-emerald-600' : 'bg-indigo-50 text-indigo-600'}`}>
+                                        <Briefcase size={22} />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-xl font-black text-slate-900">Live Session Control</h3>
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Global Synchronization Center</p>
+                                    </div>
                                 </div>
-                                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Pending Sync</span>
+                                {activeSession && (
+                                    <div className="px-4 py-2 bg-emerald-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 animate-pulse">
+                                        <RefreshCw size={12} />
+                                        In Progress
+                                    </div>
+                                )}
                             </div>
-                            <div className="flex items-end gap-2">
-                                <span className="text-4xl font-black text-slate-900">{stats.pending}</span>
-                                <span className="text-slate-400 font-bold mb-1">Requests</span>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div className="space-y-6">
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Course</label>
+                                            <select
+                                                value={selectedCourse}
+                                                onChange={(e) => setSelectedCourse(e.target.value)}
+                                                className="w-full px-4 py-3 bg-slate-50 border-2 border-transparent rounded-xl text-sm font-bold focus:border-indigo-600 outline-none transition-all"
+                                            >
+                                                <option value="">Select Course</option>
+                                                {courses.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
+                                            </select>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Level</label>
+                                            <select
+                                                value={selectedLevel}
+                                                onChange={(e) => setSelectedLevel(e.target.value)}
+                                                className="w-full px-4 py-3 bg-slate-50 border-2 border-transparent rounded-xl text-sm font-bold focus:border-indigo-600 outline-none transition-all"
+                                            >
+                                                {[1, 2, 3, 4, 5].map(l => <option key={l} value={l}>Level {l}</option>)}
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    {!activeSession ? (
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="space-y-2">
+                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Duration (min)</label>
+                                                <input
+                                                    type="number"
+                                                    value={sessionDuration}
+                                                    onChange={(e) => setSessionDuration(e.target.value)}
+                                                    className="w-full px-4 py-3 bg-slate-50 border-2 border-transparent rounded-xl text-sm font-bold focus:border-indigo-600 outline-none transition-all"
+                                                    placeholder="60"
+                                                />
+                                            </div>
+                                            <button
+                                                onClick={handleStartSession}
+                                                disabled={submitting || !selectedCourse}
+                                                className="mt-6 w-full bg-slate-900 text-white rounded-xl font-bold text-sm tracking-tight hover:bg-indigo-600 transition-all disabled:opacity-50"
+                                            >
+                                                Start Session
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <div className="p-6 bg-slate-900 rounded-3xl text-white">
+                                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2">Live Session Countdown</p>
+                                            <div className="flex items-center justify-between mb-4">
+                                                <div className="text-3xl font-black text-indigo-400">
+                                                    {(() => {
+                                                        const m = Math.floor(timeRemaining / 60);
+                                                        const s = timeRemaining % 60;
+                                                        return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+                                                    })()}
+                                                </div>
+                                                <div className="text-right text-[10px] font-medium text-slate-400">
+                                                    Starts: {new Date(activeSession.start_time).toLocaleTimeString()}<br />
+                                                    Ends: {new Date(activeSession.end_time).toLocaleTimeString()}
+                                                </div>
+                                            </div>
+                                            <button
+                                                onClick={handleEndSession}
+                                                className="w-full py-3 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold text-xs uppercase tracking-widest transition-all"
+                                            >
+                                                Terminate Exam
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="space-y-4">
+                                    <div className="space-y-2 text-left">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">BULK Authorization {activeSession ? `(SessionID: ${activeSession.id})` : '(No Active Session)'}</label>
+                                        <textarea
+                                            value={bulkUsernames}
+                                            onChange={(e) => setBulkUsernames(e.target.value)}
+                                            rows={4}
+                                            placeholder="Enter student usernames (comma or newline separated)..."
+                                            className="w-full px-4 py-4 bg-slate-50 border-2 border-transparent rounded-2xl text-xs font-medium focus:bg-white focus:border-indigo-600 outline-none transition-all resize-none shadow-inner"
+                                            disabled={!activeSession}
+                                        />
+                                    </div>
+                                    <button
+                                        onClick={handleBulkSessionAuth}
+                                        disabled={!activeSession || submitting || !bulkUsernames.trim()}
+                                        className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-bold text-sm tracking-tight hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 disabled:opacity-20"
+                                    >
+                                        Authorize Group
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
-                        <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-md transition-shadow text-left">
-                            <div className="flex items-center gap-4 mb-4">
-                                <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-600">
-                                    <CheckCircle size={20} />
+                        {/* Quick Stats Sidebar */}
+                        <div className="lg:col-span-4 space-y-6">
+                            <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm text-left">
+                                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest block mb-4">Pending Approval</span>
+                                <div className="flex items-end gap-2">
+                                    <span className="text-5xl font-black text-slate-900">{stats.pending}</span>
+                                    <span className="text-slate-400 font-bold mb-2 uppercase text-[10px]">Requests</span>
                                 </div>
-                                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Cleared Access</span>
                             </div>
-                            <div className="flex items-end gap-2">
-                                <span className="text-4xl font-black text-slate-900">{stats.active}+</span>
-                                <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-pulse mb-2.5"></div>
-                            </div>
-                        </div>
-
-                        <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-md transition-shadow text-left">
-                            <div className="flex items-center gap-4 mb-4">
-                                <div className="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600">
-                                    <AlertCircle size={20} />
-                                </div>
-                                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Security Mode</span>
-                            </div>
-                            <div className="flex items-end gap-2 text-left">
-                                <span className="text-3xl font-black text-slate-900">Live Guard</span>
+                            <div className="bg-indigo-600 p-6 rounded-[2rem] text-white text-left relative overflow-hidden">
+                                <div className="absolute top-[-20px] right-[-20px] w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
+                                <span className="text-xs font-bold text-white/60 uppercase tracking-widest block mb-4">Exam Mode</span>
+                                <div className="text-2xl font-black leading-tight mb-2">College Grade Enforcement</div>
+                                <p className="text-white/70 text-xs font-medium">Automatic re-authorization required per attempt.</p>
                             </div>
                         </div>
                     </div>

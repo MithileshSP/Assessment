@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { AlertTriangle, Clock, CheckCircle, ArrowLeft, ChevronLeft, ChevronRight, RefreshCw, Check, Layout } from "lucide-react";
+import { AlertTriangle, Clock, CheckCircle, ArrowLeft, ChevronLeft, ChevronRight, RefreshCw, Check, Layout, Star } from "lucide-react";
 import CodeEditor from "../components/CodeEditor";
 import PreviewFrame from "../components/PreviewFrame";
 import ResultsPanel from "../components/ResultsPanel";
@@ -80,9 +80,26 @@ export default function LevelChallenge() {
 
     try {
       const res = await api.get('/attendance/status', { params: { courseId, level } });
-      const status = res.data.status;
+      const { status, session, isUsed } = res.data;
+
+      if (isUsed) {
+        setAttendanceStatus('used');
+        setLoading(false);
+        return;
+      }
 
       setAttendanceStatus(status);
+
+      if (session) {
+        // Sync global timer (FIX 2: End time based)
+        const endTime = new Date(session.end_time).getTime();
+        const now = Date.now();
+        const remaining = Math.max(0, Math.floor((endTime - now) / 1000));
+        setTimeRemaining(remaining);
+
+        // Load session restrictions if needed
+        setRestrictions(prev => ({ ...prev, timeLimit: session.duration_minutes }));
+      }
 
       // Check for active test session to auto-resume
       const sessionRes = await api.post("/test-sessions", {
@@ -96,19 +113,27 @@ export default function LevelChallenge() {
         if (sessionRes.data.started_at) setStartedAt(sessionRes.data.started_at);
 
         if (status === 'approved') {
-          // If approved AND session exists, auto-start
           startTest();
         }
       }
 
       if (status === 'requested' && !attendanceTimer) {
-        // Start polling
         const timer = setInterval(async () => {
           const pollRes = await api.get('/attendance/status', { params: { courseId, level } });
-          if (pollRes.data.status === 'approved') {
-            setAttendanceStatus('approved');
+          const pollData = pollRes.data;
+
+          if (pollData.isUsed) {
+            setAttendanceStatus('used');
             clearInterval(timer);
-          } else if (pollRes.data.status === 'rejected') {
+          } else if (pollData.status === 'approved') {
+            setAttendanceStatus('approved');
+            // Sync timer on approval
+            if (pollData.session) {
+              const endTime = new Date(pollData.session.end_time).getTime();
+              setTimeRemaining(Math.max(0, Math.floor((endTime - Date.now()) / 1000)));
+            }
+            clearInterval(timer);
+          } else if (pollData.status === 'rejected') {
             setAttendanceStatus('rejected');
             clearInterval(timer);
           }
@@ -119,7 +144,7 @@ export default function LevelChallenge() {
       }
     } catch (error) {
       console.error("Attendance check failed", error);
-      setAttendanceStatus('error');
+      setAttendanceStatus('none'); // Safe fallback
       setLoading(false);
     }
   };
@@ -138,6 +163,13 @@ export default function LevelChallenge() {
     loadLevelQuestions();
     loadRestrictions();
     setAttendanceStatus('started'); // distinct state to hide the wall
+
+    // Request fullscreen on user gesture (Button click)
+    if (restrictions.forceFullscreen) {
+      document.documentElement.requestFullscreen?.().catch((err) => {
+        console.warn('Initial fullscreen request failed:', err.message);
+      });
+    }
   };
 
   const loadLevelQuestions = async () => {
@@ -210,12 +242,12 @@ export default function LevelChallenge() {
       // Create test session
       await createTestSession();
 
-      // Fetch and apply restrictions
       try {
         const restrictionsRes = await api.get(`/courses/${courseId}/restrictions`);
         if (restrictionsRes.data) {
-          setRestrictions(restrictionsRes.data);
-          console.log('Loaded restrictions:', restrictionsRes.data);
+          // Merge with existing state (to preserve timeLimit set by session)
+          setRestrictions(prev => ({ ...prev, ...restrictionsRes.data }));
+          console.log('Loaded restrictions (merged):', restrictionsRes.data);
         }
       } catch (e) {
         console.warn('Failed to load restrictions, using defaults:', e.message);
@@ -260,88 +292,6 @@ export default function LevelChallenge() {
     }
   }, [code, userAnswers, currentQuestionIndex, assignedQuestions]);
 
-  // Restrictions Enforcement - Copy/Paste blocking
-  useEffect(() => {
-    if (!restrictions.blockCopy) return;
-
-    const handleCopy = (e) => {
-      e.preventDefault();
-      recordViolation('Copy attempt blocked');
-    };
-
-    const handlePaste = (e) => {
-      if (restrictions.blockPaste) {
-        e.preventDefault();
-        recordViolation('Paste attempt blocked');
-      }
-    };
-
-    const handleCut = (e) => {
-      e.preventDefault();
-      recordViolation('Cut attempt blocked');
-    };
-
-    document.addEventListener('copy', handleCopy);
-    document.addEventListener('paste', handlePaste);
-    document.addEventListener('cut', handleCut);
-
-    return () => {
-      document.removeEventListener('copy', handleCopy);
-      document.removeEventListener('paste', handlePaste);
-      document.removeEventListener('cut', handleCut);
-    };
-  }, [restrictions.blockCopy, restrictions.blockPaste]);
-
-  // Restrictions Enforcement - Fullscreen
-  useEffect(() => {
-    if (!restrictions.forceFullscreen) return;
-
-    const handleFullscreenChange = () => {
-      if (!document.fullscreenElement) {
-        recordViolation('Exited fullscreen mode');
-        // Try to re-enter fullscreen
-        document.documentElement.requestFullscreen?.().catch(() => { });
-      }
-    };
-
-    // Request fullscreen on mount
-    document.documentElement.requestFullscreen?.().catch(() => {
-      console.warn('Could not enter fullscreen - user interaction may be required');
-    });
-
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-
-    return () => {
-      document.removeEventListener('fullscreenchange', handleFullscreenChange);
-      // Exit fullscreen on unmount
-      if (document.fullscreenElement) {
-        document.exitFullscreen?.().catch(() => { });
-      }
-    };
-  }, [restrictions.forceFullscreen]);
-
-  // Record violation helper
-  const recordViolation = (message) => {
-    const now = Date.now();
-    // Debounce - only record if at least 1 second has passed
-    if (now - lastViolationTime < 1000) return;
-
-    setLastViolationTime(now);
-    setViolations(prev => {
-      const newCount = prev + 1;
-      if (newCount >= restrictions.maxViolations) {
-        // Auto-submit and lock out
-        alert(`You have exceeded the maximum allowed violations (${restrictions.maxViolations}). Your test will be submitted.`);
-        handleFinishLevel();
-      }
-      return newCount;
-    });
-
-    // Show toast notification
-    setViolationMessage(message);
-    setShowViolationToast(true);
-    setTimeout(() => setShowViolationToast(false), 3000);
-  };
 
   // Fisher-Yates shuffle algorithm for randomizing question order
   const shuffleArray = (array) => {
@@ -380,14 +330,14 @@ export default function LevelChallenge() {
     }
   };
 
-  // Load restrictions from API
   const loadRestrictions = async () => {
     try {
       const response = await api.get(`/courses/${courseId}/restrictions`);
       if (response.data) {
-        setRestrictions(response.data);
-        // Initialize timer if timeLimit is set
-        if (response.data.timeLimit > 0) {
+        // Merge with existing state (to preserve timeLimit set by session)
+        setRestrictions(prev => ({ ...prev, ...response.data }));
+        // Initialize timer if timeLimit is set in fetched results AND not already synced from session
+        if (response.data.timeLimit > 0 && timeRemaining === null) {
           setTimeRemaining(response.data.timeLimit * 60); // Convert minutes to seconds
         }
       }
@@ -396,18 +346,40 @@ export default function LevelChallenge() {
     }
   };
 
-  // Sync Timer with Server Session
+  // Sync Timer with Server Session (Robust Sync)
   useEffect(() => {
-    if (startedAt && restrictions.timeLimit > 0) {
-      const start = new Date(startedAt).getTime();
-      const limitSec = restrictions.timeLimit * 60;
-      const now = Date.now();
-      const elapsedSec = (now - start) / 1000;
-      const remaining = Math.max(0, limitSec - elapsedSec);
-      // Only update if significantly different (prevention of loops, though dependencies handle it)
-      setTimeRemaining(Math.ceil(remaining));
-    }
-  }, [startedAt, restrictions.timeLimit]);
+    let syncTimer;
+
+    const syncWithServer = async () => {
+      if (attendanceStatus === 'approved' || attendanceStatus === 'started') {
+        try {
+          const res = await api.get('/attendance/status', { params: { courseId, level } });
+          const { session } = res.data;
+          if (session) {
+            const endTime = new Date(session.end_time).getTime();
+            const now = Date.now();
+            const remaining = Math.max(0, Math.floor((endTime - now) / 1000));
+            setTimeRemaining(remaining);
+
+            // If session is expired on server, auto-finish
+            if (remaining <= 0) {
+              handleFinishLevel({ reason: "timeout" });
+            }
+          }
+        } catch (err) {
+          console.error("Timer sync failed:", err);
+        }
+      }
+    };
+
+    // Initial sync
+    syncWithServer();
+
+    // Periodic sync every 30 seconds to prevent drift 
+    syncTimer = setInterval(syncWithServer, 30000);
+
+    return () => clearInterval(syncTimer);
+  }, [attendanceStatus, courseId, level]);
 
   // Timer countdown
   useEffect(() => {
@@ -417,7 +389,7 @@ export default function LevelChallenge() {
       setTimeRemaining((prev) => {
         if (prev <= 1) {
           clearInterval(interval);
-          alert("Time is up! Your test will be submitted automatically.");
+          // Auto-submission trigger
           handleFinishLevel({ reason: "timeout" });
           return 0;
         }
@@ -605,17 +577,143 @@ export default function LevelChallenge() {
     }
   };
 
+  const pollEvaluationResult = async (submissionId, questionId) => {
+    let attempts = 0;
+    const maxAttempts = 60; // 5 minutes at 5s interval
+    const interval = 5000;
+
+    const poll = async () => {
+      try {
+        const response = await api.post("/evaluate", { submissionId });
+        const data = response.data;
+
+        if (data.status === 'passed' || data.status === 'failed') {
+          const evalResult = data.result;
+
+          // Save result
+          setUserAnswers((prev) => ({
+            ...prev,
+            [questionId]: {
+              html: code.html,
+              css: code.css,
+              js: code.js,
+              submitted: true,
+              result: evalResult,
+              submissionId: submissionId
+            },
+          }));
+
+          setEvaluationStep("");
+          setEvaluating(false);
+          setSubmitting(false);
+          alert(`Evaluation complete! Result: ${evalResult.passed ? 'PASSED' : 'FAILED'}`);
+          return true;
+        }
+
+        if (data.status === 'evaluating') {
+          setEvaluationStep("Evaluation in progress...");
+        } else {
+          setEvaluationStep("In execution queue...");
+        }
+
+        return false;
+      } catch (error) {
+        console.error("Polling error:", error);
+        return false;
+      }
+    };
+
+    const timer = setInterval(async () => {
+      attempts++;
+      const isDone = await poll();
+      if (isDone || attempts >= maxAttempts) {
+        clearInterval(timer);
+        if (attempts >= maxAttempts) {
+          setEvaluating(false);
+          setSubmitting(false);
+          setEvaluationStep("");
+          alert("Evaluation timed out. Please check results later.");
+        }
+      }
+    }, interval);
+  };
+
+  const computeProgressSummary = () => {
+    const results = assignedQuestions.map((q) => {
+      const answer = userAnswers[q.id];
+      const res = answer?.result || {};
+      return {
+        questionId: q.id,
+        questionTitle: q.title,
+        submitted: !!answer?.submitted,
+        score: res.finalScore || 0,
+        passed: !!res.passed,
+      };
+    });
+
+    const submittedCount = results.filter((r) => r.submitted).length;
+    const passedCount = results.filter((r) => r.passed).length;
+    const totalQuestions = assignedQuestions.length;
+    const avgScore = totalQuestions > 0 ? results.reduce((sum, r) => sum + r.score, 0) / totalQuestions : 0;
+
+    return {
+      results,
+      submittedCount,
+      passedCount,
+      totalQuestions,
+      avgScore: Math.round(avgScore),
+    };
+  };
+
+  const saveCompletionProgress = async (summary, feedbackData = {}) => {
+    const payload = {
+      userId,
+      courseId,
+      level: parseInt(level),
+      completedAt: new Date().toISOString(),
+      finalScore: summary.avgScore,
+      passed: summary.passedCount === summary.totalQuestions,
+      questionsSubmitted: summary.submittedCount,
+      questionsPassed: summary.passedCount,
+      totalQuestions: summary.totalQuestions,
+      feedback: feedbackData.feedback || "",
+      results: summary.results
+    };
+
+    try {
+      // Step 1: Tell TestSession we are done (updates session state and attendance)
+      if (testSessionId) {
+        await api.put(`/test-sessions/${testSessionId}/complete`, {
+          user_feedback: payload.feedback
+        });
+      }
+
+      // Step 2: Save high-level completion progress (for course stats/unlocking)
+      const response = await api.post('/level-completion', payload);
+      return response.data;
+    } catch (err) {
+      console.error("Save completion failed:", err);
+      throw err;
+    }
+  };
+
   const handleSubmit = async () => {
     setSubmitting(true);
     setEvaluating(true);
     setResult(null);
-    setEvaluationStep("Submitting your solution...");
+    setEvaluationStep("Initializing secure submission...");
 
     const questionId = challenge.id;
 
+    if (!code.html || code.html.trim() === '') {
+      alert("Please write some HTML code before submitting.");
+      setSubmitting(false);
+      setEvaluating(false);
+      return;
+    }
+
     try {
       // Step 1: Create submission
-      setEvaluationStep("Creating submission...");
       const submitResponse = await api.post("/submissions", {
         challengeId: questionId,
         userId: userId,
@@ -628,24 +726,18 @@ export default function LevelChallenge() {
 
       const submissionId = submitResponse.data.submissionId;
 
-      setEvaluationStep("Launching browser environment...");
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      // Add submission to test session immediately (even if evaluation is pending)
+      if (testSessionId && submissionId) {
+        try {
+          await api.post(`/test-sessions/${testSessionId}/submissions`, {
+            submission_id: submissionId,
+          });
+        } catch (err) {
+          console.error("Failed to add submission to session:", err);
+        }
+      }
 
-      setEvaluationStep("Rendering your code...");
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      setEvaluationStep("Comparing with expected solution...");
-
-      // Step 2: Evaluate submission
-      const evalResponse = await api.post("/evaluate", {
-        submissionId: submissionId,
-      });
-
-      const evalResult = evalResponse.data.result;
-      // HIDE RESULT: Do not show immediate pass/fail modal
-      // setResult(evalResult); 
-
-      // Save result
+      // Step 2: Mark as submitted immediately in UI
       setUserAnswers((prev) => ({
         ...prev,
         [questionId]: {
@@ -653,31 +745,29 @@ export default function LevelChallenge() {
           css: code.css,
           js: code.js,
           submitted: true,
-          result: evalResult,
-          submissionId: submissionId // Store ID for feedback redirect
+          submissionId: submissionId,
+          result: { status: 'queued' } // Placeholder for worker processing
         },
       }));
 
-      // Add submission to test session
-      if (testSessionId && submissionId) {
-        try {
-          await api.post(`/test-sessions/${testSessionId}/submissions`, {
-            submission_id: submissionId,
-          });
-          console.log("Added submission to test session");
-        } catch (err) {
-          console.error("Failed to add submission to session:", err);
-        }
-      }
+      // Step 3: Handle background polling
+      const isStudent = localStorage.getItem('userRole') !== 'admin';
 
-      setEvaluationStep("");
-      alert("Solution submitted! Proceed to next question or finish test.");
+      if (!isStudent) {
+        setEvaluationStep("Placed in evaluation queue...");
+        pollEvaluationResult(submissionId, questionId);
+      } else {
+        // For students, just finish the submission state
+        setEvaluating(false);
+        setSubmitting(false);
+        // We still optionally poll in background if we want results available locally
+        // but the user said "evaluation are in backend not to show for student"
+      }
 
     } catch (error) {
       console.error("Submission failed:", error);
       alert("Failed to submit solution.");
       setEvaluationStep("");
-    } finally {
       setSubmitting(false);
       setEvaluating(false);
     }
@@ -685,63 +775,38 @@ export default function LevelChallenge() {
 
   const handleFinishLevel = async ({ reason = "manual" } = {}) => {
     if (finishingLevel) return;
+    handleFinishTest();
+  };
 
+  const handleFinishTest = async () => {
     setFinishingLevel(true);
 
     try {
-      // Get the last submission ID for feedback
-      const lastQuestionId = assignedQuestions[assignedQuestions.length - 1]?.id;
-      const lastSubmissionId = userAnswers[lastQuestionId]?.submissionId;
-
+      // Step 1: Tell TestSession we are done
       if (testSessionId) {
         await api.put(`/test-sessions/${testSessionId}/complete`, {
-          user_feedback: null,
+          user_feedback: ""
         });
       }
 
-      // Redirect to feedback if we have a submission, else dashboard
+      // Step 2: Redirect to dedicated feedback page
+      const lastQuestionId = assignedQuestions[assignedQuestions.length - 1]?.id;
+      const lastSubmissionId = userAnswers[lastQuestionId]?.submissionId;
+
       if (lastSubmissionId) {
         navigate(`/student/feedback/${lastSubmissionId}`);
       } else {
-        navigate(`/course/${courseId}`);
+        navigate(`/level-results/${courseId}/${level}`);
       }
-
     } catch (error) {
-      console.error("Error finishing level:", error);
+      console.error('Error finishing test:', error);
+      // Fallback navigation
       navigate(`/course/${courseId}`);
+    } finally {
+      setFinishingLevel(false);
     }
   };
 
-  const handleFinishTest = () => {
-    const summary = computeProgressSummary();
-    setFinalScore(summary);
-    setShowFinishModal(true);
-  };
-
-  const handleSubmitFeedback = async () => {
-    try {
-      const completionData = await saveCompletionProgress(finalScore, {
-        feedback,
-      });
-
-      // Close modal and navigate
-      setShowFinishModal(false);
-      navigate(`/level-results/${courseId}/${level}`, {
-        state: {
-          userAnswers,
-          assignedQuestions,
-          completionData,
-        },
-      });
-    } catch (error) {
-      console.error("Failed to save completion:", error);
-      // Still navigate even if save fails
-      setShowFinishModal(false);
-      navigate(`/level-results/${courseId}/${level}`, {
-        state: { userAnswers, assignedQuestions },
-      });
-    }
-  };
 
   const allQuestionsSubmitted = () => {
     return assignedQuestions.every((q) => userAnswers[q.id]?.submitted);
@@ -794,6 +859,41 @@ export default function LevelChallenge() {
               <p className="text-sm text-slate-400 font-medium">
                 Sequence queued. An administrator will review your credentials shortly.
               </p>
+            </div>
+          )}
+
+          {attendanceStatus === 'used' && (
+            <div className="space-y-6 animate-fade-in group">
+              <div className="w-20 h-20 bg-amber-50 rounded-3xl flex items-center justify-center mx-auto mb-6 text-amber-600 shadow-inner group-hover:scale-110 transition-transform">
+                <AlertTriangle size={40} />
+              </div>
+              <h3 className="text-2xl font-black text-slate-900">Access Restricted</h3>
+              <p className="text-slate-500 font-medium">
+                Our records show you have already submitted an attempt for this level.
+                <br /><br />
+                <span className="text-[10px] font-black uppercase tracking-widest text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-full inline-block mt-2">
+                  Session Audit: Completed
+                </span>
+              </p>
+              <div className="bg-slate-50 border border-slate-100 rounded-2xl p-6 text-slate-400 text-xs font-bold leading-relaxed">
+                If you believe this is an error or require a re-test, please contact your administrator for a new authorization.
+              </div>
+              <div className="flex flex-col gap-3">
+                <button
+                  onClick={requestAttendance}
+                  className="w-full py-4 bg-blue-600 text-white rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-blue-700 transition-all shadow-xl shadow-blue-500/10"
+                >
+                  <RefreshCw size={18} />
+                  Request New Attempt
+                </button>
+                <button
+                  onClick={() => navigate(`/course/${courseId}`)}
+                  className="w-full py-4 bg-slate-900 text-white rounded-2xl font-bold flex items-center justify-center gap-2"
+                >
+                  <ArrowLeft size={18} />
+                  Return to Course
+                </button>
+              </div>
             </div>
           )}
 
@@ -861,7 +961,12 @@ export default function LevelChallenge() {
               >
                 <ArrowLeft size={16} /> Back to Course
               </button>
-              <h1 className="text-2xl font-bold">{challenge.title}</h1>
+              <div className="flex items-center gap-3">
+                <h1 className="text-2xl font-bold">{challenge.title}</h1>
+                <span className="px-2 py-0.5 bg-slate-100 text-slate-400 text-[10px] font-mono rounded border border-slate-200">
+                  BUILD: v2.6
+                </span>
+              </div>
               <p className="text-gray-600">
                 Level {level}{" "}
                 {assignedQuestions.length > 1 &&
@@ -872,8 +977,8 @@ export default function LevelChallenge() {
 
             {/* Question Navigator with Timer */}
             <div className="flex items-center gap-3">
-              {/* Small Timer */}
-              {restrictions.timeLimit > 0 && timeRemaining !== null && (
+              {/* Small Timer - Show if timeRemaining is active regardless of restriction.timeLimit */}
+              {timeRemaining !== null && (
                 <div
                   className={`px-3 py-2 rounded border font-mono font-bold flex items-center gap-2 ${timeRemaining <= 300
                     ? "bg-red-50 border-red-300 text-red-600"
@@ -914,7 +1019,7 @@ export default function LevelChallenge() {
           <div className="flex gap-3">
             {allQuestionsSubmitted() && (
               <button
-                onClick={handleFinishLevel}
+                onClick={handleFinishTest}
                 disabled={finishingLevel}
                 className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2"
               >
@@ -952,11 +1057,19 @@ export default function LevelChallenge() {
             <button
               onClick={handleSubmit}
               disabled={submitting || evaluating}
-              className="btn-success disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
-              {submitting || evaluating
-                ? "Evaluating..."
-                : "✓ Submit & Evaluate"}
+              {submitting || evaluating ? (
+                <>
+                  <RefreshCw size={20} className="animate-spin" />
+                  Evaluating...
+                </>
+              ) : (
+                <>
+                  <Check size={20} />
+                  Submit & Evaluate
+                </>
+              )}
             </button>
           </div>
         </div>
@@ -1197,7 +1310,38 @@ export default function LevelChallenge() {
           </div>
 
           {/* Results (Below Split View) */}
-          {(evaluating || result) && (
+          {evaluating && (
+            <div className="card mt-4 shrink-0 transition-all duration-300 flex flex-col max-h-[40%]">
+              <div className="text-center py-8">
+                <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-slate-900 mb-4"></div>
+                <p className="text-lg font-black text-slate-900 tracking-tight mb-2">
+                  {evaluationStep || "Evaluating..."}
+                </p>
+                <div className="max-w-md mx-auto text-left bg-slate-50 p-6 rounded-3xl border border-slate-100">
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">
+                    🔄 Submission Pipeline Active
+                  </p>
+                  <ul className="text-xs text-slate-600 font-medium space-y-2">
+                    <li className="flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 bg-slate-900 rounded-full" />
+                      Capturing code state
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 bg-slate-900 rounded-full" />
+                      Queuing for visual verification
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 bg-slate-900 rounded-full" />
+                      Wait for final results in summary
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Results Panel - Admin Only */}
+          {result && localStorage.getItem('userRole') === 'admin' && (
             <div
               className={`card mt-4 shrink-0 transition-all duration-300 flex flex-col ${showEvaluationPanel ? "max-h-[40%]" : "max-h-14 overflow-hidden"
                 }`}
@@ -1206,7 +1350,7 @@ export default function LevelChallenge() {
                 className={`flex items-center justify-between ${showEvaluationPanel ? "mb-3" : "mb-0"
                   }`}
               >
-                <h2 className="text-lg font-bold">Evaluation Results</h2>
+                <h2 className="text-lg font-bold">Admin: Evaluation Results</h2>
                 <button
                   onClick={() => setShowEvaluationPanel((prev) => !prev)}
                   className="text-xs px-3 py-1 rounded bg-gray-100 hover:bg-gray-200 text-gray-700"
@@ -1216,113 +1360,12 @@ export default function LevelChallenge() {
               </div>
               {showEvaluationPanel && (
                 <div className="flex-1 overflow-auto pr-2">
-                  {evaluating ? (
-                    <div className="text-center py-8">
-                      <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
-                      <p className="text-lg font-semibold text-gray-700 mb-2">
-                        {evaluationStep || "Evaluating..."}
-                      </p>
-                      <p className="text-sm text-gray-500 mb-4">
-                        This may take 5-10 seconds
-                      </p>
-                      <div className="max-w-md mx-auto text-left bg-blue-50 p-4 rounded-lg">
-                        <p className="text-xs font-semibold text-blue-900 mb-2">
-                          🔄 Evaluation Process:
-                        </p>
-                        <ul className="text-xs text-blue-800 space-y-1">
-                          <li>• Launching headless browser (Chrome)</li>
-                          <li>• Rendering your code as screenshot</li>
-                          <li>• Rendering expected solution</li>
-                          <li>• Comparing DOM structure</li>
-                          <li>• Comparing visual appearance (pixels)</li>
-                          <li>• Calculating final score</li>
-                        </ul>
-                      </div>
-                    </div>
-                  ) : (
-                    <ResultsPanel result={result} />
-                  )}
+                  <ResultsPanel result={result} />
                 </div>
               )}
             </div>
           )}
-          {/* Finish Test Modal */}
-          {showFinishModal && finalScore && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center">
-              <div
-                className="absolute inset-0 bg-black opacity-40"
-                onClick={() => setShowFinishModal(false)}
-              ></div>
-              <div className="bg-white rounded-lg shadow-lg z-20 w-full max-w-lg mx-4">
-                <div className="p-6">
-                  <h3 className="text-xl font-bold mb-2">
-                    Finish Test — Summary & Feedback
-                  </h3>
-                  <p className="text-sm text-gray-600 mb-4">
-                    Questions submitted: {finalScore.submittedCount}/
-                    {finalScore.totalQuestions}
-                  </p>
-
-                  <div className="mb-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="font-semibold">Questions Passed</div>
-                      <div className="font-bold">
-                        {finalScore.passedCount}/{finalScore.totalQuestions}
-                      </div>
-                    </div>
-                    <div className="mb-2">
-                      Average Score:{" "}
-                      <span className="font-bold">{finalScore.avgScore}%</span>
-                    </div>
-                    <div className="mt-3 border rounded p-2 max-h-40 overflow-auto">
-                      {finalScore.results.map((r, idx) => (
-                        <div
-                          key={idx}
-                          className="flex items-center justify-between py-1"
-                        >
-                          <div className="text-sm">
-                            {idx + 1}. {r.questionTitle}
-                          </div>
-                          <div
-                            className={`text-sm font-semibold ${r.passed ? "text-green-600" : "text-red-600"
-                              }`}
-                          >
-                            {r.passed ? "Passed" : "Failed"} ({r.score}%)
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <label className="block text-sm font-medium mb-2">
-                    Any feedback for this level (optional)
-                  </label>
-                  <textarea
-                    value={feedback}
-                    onChange={(e) => setFeedback(e.target.value)}
-                    className="w-full border rounded p-2 mb-4"
-                    rows={4}
-                    placeholder="Tell us what went well or what was unclear..."
-                  />
-
-                  <div className="flex justify-end gap-2">
-                    <button
-                      onClick={() => setShowFinishModal(false)}
-                      className="px-4 py-2 rounded bg-gray-200"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={handleSubmitFeedback}
-                      className="px-4 py-2 rounded bg-blue-600 text-white"
-                    >
-                      Submit & Save
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
+          {/* Reverted Popup Modal - Navigate directly instead */}
         </div>
       </div>
       {/* Full Screen Modal */}
