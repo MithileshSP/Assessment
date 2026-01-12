@@ -147,7 +147,8 @@ const corsOptions = {
       origin.startsWith("https://localhost") ||
       origin.startsWith("http://127.0.0.1") ||
       origin.startsWith("https://127.0.0.1") ||
-      origin.startsWith("http://192.168");
+      origin.startsWith("http://192.168") ||
+      origin.startsWith("http://10.");
 
     const normalizedOrigin = origin.replace(/\/$/, "");
 
