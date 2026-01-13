@@ -9,6 +9,8 @@ services:
       MYSQL_DATABASE: ${DB_NAME}
     volumes:
       - portal_mysql_data:/var/lib/mysql
+    ports:
+      - "3307:3306"
     networks:
       - test-portal-network
     healthcheck:
@@ -40,6 +42,7 @@ services:
     volumes:
       # Persist generated files
       - ./backend/screenshots:/app/screenshots
+      - ./backend/data:/app/data
       - /var/www/portal-assets:/var/www/portal-assets
     deploy:
       replicas: 3

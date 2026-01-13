@@ -88,14 +88,13 @@ const TestResultsPage = () => {
 
   const { submissions = [], overall_status, passed_count, total_questions } = sessionData;
   const isSessionCompleted = Boolean(sessionData.completed_at);
-  const computedPassedCount = submissions.filter(sub => sub.passed === 1 || sub.status === 'passed').length;
-  const computedTotalQuestions = submissions.length;
-  const hasStoredCounts = isSessionCompleted && typeof total_questions === 'number' && total_questions > 0;
+  const anyPending = submissions.some(sub => sub.manual_score === null || sub.manual_score === undefined);
   const finalTotalQuestions = hasStoredCounts ? total_questions : computedTotalQuestions;
   const finalPassedCount = hasStoredCounts ? passed_count : computedPassedCount;
-  const overallPassed = hasStoredCounts
+
+  const overallPassed = !anyPending && (hasStoredCounts
     ? overall_status === 'passed'
-    : (computedTotalQuestions > 0 && computedPassedCount === computedTotalQuestions);
+    : (computedTotalQuestions > 0 && computedPassedCount === computedTotalQuestions));
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8 px-4">
@@ -110,15 +109,17 @@ const TestResultsPage = () => {
               {overallPassed ? '🎉' : '📝'}
             </div>
             <h1 className="text-4xl font-bold mb-2">
-              {overallPassed ? 'Congratulations!' : 'Keep Learning!'}
+              {anyPending ? 'Evaluation in Progress' : (overallPassed ? 'Congratulations!' : 'Keep Learning!')}
             </h1>
             <p className="text-xl mb-4">
-              {overallPassed
-                ? 'You passed all questions!'
-                : 'You need to pass all questions to complete this test'}
+              {anyPending
+                ? 'Your test has been submitted for faculty review.'
+                : (overallPassed
+                  ? 'You passed all questions!'
+                  : 'You need to pass all questions to complete this test')}
             </p>
             <div className="text-3xl font-bold">
-              {finalPassedCount} / {finalTotalQuestions} Questions Passed
+              {anyPending ? '⏳ Results Pending' : `${finalPassedCount} / ${finalTotalQuestions} Questions Passed`}
             </div>
           </div>
         </div>
@@ -134,9 +135,9 @@ const TestResultsPage = () => {
               return (
                 <div
                   key={submission.id}
-                  className={`border-2 rounded-lg p-5 transition-all ${isPassed
+                  className={`border-2 rounded-lg p-5 transition-all ${!anyPending && isPassed
                     ? 'border-green-400 bg-green-50'
-                    : submission.status === 'pending'
+                    : submission.status === 'pending' || anyPending
                       ? 'border-yellow-400 bg-yellow-50'
                       : 'border-red-400 bg-red-50'
                     }`}
@@ -152,12 +153,12 @@ const TestResultsPage = () => {
                             Question {index + 1}
                           </h3>
                           <p className="text-sm text-gray-600">
-                            {submission.challenge_id}
+                            {submission.status === 'pending' || submission.manual_score === null ? 'Awaiting faculty evaluation' : submission.challenge_id}
                           </p>
                         </div>
                       </div>
 
-                      {submission.status !== 'pending' && (
+                      {submission.status !== 'pending' && submission.manual_score !== null && (
                         <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-3">
                           <div className="bg-white rounded p-2 text-center">
                             <div className="text-xs text-gray-600">Content</div>

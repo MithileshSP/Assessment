@@ -15,14 +15,14 @@ class PixelMatcher {
     this.screenshotDir = path.join(__dirname, '../screenshots');
     this.browser = null;
   }
-  
+
   /**
    * Initialize browser instance (reuse for performance)
    */
   async initBrowser() {
     if (!this.browser) {
       const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH || undefined;
-      
+
       this.browser = await puppeteer.launch({
         headless: 'new',
         executablePath,
@@ -40,7 +40,7 @@ class PixelMatcher {
     }
     return this.browser;
   }
-  
+
   /**
    * Close browser
    */
@@ -50,7 +50,7 @@ class PixelMatcher {
       this.browser = null;
     }
   }
-  
+
   /**
    * Main comparison function
    * @param {Object} candidateCode - { html, css, js }
@@ -60,34 +60,34 @@ class PixelMatcher {
    */
   async compare(candidateCode, expectedCode, submissionId) {
     let browser = null;
-    
+
     try {
       browser = await this.initBrowser();
-      
+
       // Create full HTML pages
       const candidatePage = this.createFullPage(candidateCode);
       const expectedPage = this.createFullPage(expectedCode);
-      
+
       // Take screenshots
       const candidateScreenshot = await this.captureScreenshot(
         browser,
         candidatePage,
         `${submissionId}-candidate`
       );
-      
+
       const expectedScreenshot = await this.captureScreenshot(
         browser,
         expectedPage,
         `${submissionId}-expected`
       );
-      
+
       // Compare screenshots
       const comparisonResult = await this.compareImages(
         candidateScreenshot,
         expectedScreenshot,
         submissionId
       );
-      
+
       return {
         score: comparisonResult.score,
         passed: comparisonResult.score >= 80, // Default threshold
@@ -100,7 +100,7 @@ class PixelMatcher {
           diff: `/screenshots/${submissionId}-diff.png`
         }
       };
-      
+
     } catch (error) {
       console.error('Pixel matching error:', error);
       return {
@@ -110,7 +110,7 @@ class PixelMatcher {
       };
     }
   }
-  
+
   /**
    * Create full HTML page with CSS and JS injected
    * @param {Object} code - { html, css, js }
@@ -150,7 +150,7 @@ class PixelMatcher {
       </html>
     `;
   }
-  
+
   /**
    * Capture screenshot of HTML page
    * @param {Browser} browser - Puppeteer browser instance
@@ -160,7 +160,7 @@ class PixelMatcher {
    */
   async captureScreenshot(browser, htmlContent, filename) {
     const page = await browser.newPage();
-    
+
     try {
       // Set consistent viewport
       await page.setViewport({
@@ -168,30 +168,30 @@ class PixelMatcher {
         height: 720,
         deviceScaleFactor: 1
       });
-      
+
       // Set content and wait for rendering
       await page.setContent(htmlContent, {
         waitUntil: 'domcontentloaded', // Faster than 'load'
         timeout: 30000 // 30 second timeout (increased for Docker)
       });
-      
+
       // Wait a bit for any animations or dynamic content
       await page.waitForTimeout(500);
-      
+
       // Capture screenshot
       const screenshotPath = path.join(this.screenshotDir, `${filename}.png`);
       await page.screenshot({
         path: screenshotPath,
         fullPage: false // Use viewport size for consistency
       });
-      
+
       return screenshotPath;
-      
+
     } finally {
       await page.close();
     }
   }
-  
+
   /**
    * Compare two PNG images pixel by pixel
    * @param {string} candidatePath - Path to candidate screenshot
@@ -204,9 +204,9 @@ class PixelMatcher {
       // Read images
       const candidateImg = PNG.sync.read(fs.readFileSync(candidatePath));
       const expectedImg = PNG.sync.read(fs.readFileSync(expectedPath));
-      
+
       const { width, height } = expectedImg;
-      
+
       // Ensure images are same size (resize candidate if needed)
       let candidateData = candidateImg.data;
       if (candidateImg.width !== width || candidateImg.height !== height) {
@@ -214,10 +214,10 @@ class PixelMatcher {
         // In production, you'd resize the image properly
         // For prototype, we'll proceed with size difference noted
       }
-      
+
       // Create diff image
       const diff = new PNG({ width, height });
-      
+
       // Perform pixel comparison
       const diffPixels = pixelmatch(
         candidateImg.data,
@@ -232,16 +232,16 @@ class PixelMatcher {
           diffColorAlt: [0, 255, 0] // Green for matches (optional)
         }
       );
-      
+
       // Save diff image
       const diffPath = path.join(this.screenshotDir, `${submissionId}-diff.png`);
       fs.writeFileSync(diffPath, PNG.sync.write(diff));
-      
+
       // Calculate metrics
       const totalPixels = width * height;
       const diffPercentage = (diffPixels / totalPixels) * 100;
       const similarityScore = Math.max(0, 100 - diffPercentage);
-      
+
       return {
         score: Math.round(similarityScore),
         diffPixels,
@@ -249,7 +249,7 @@ class PixelMatcher {
         diffPercentage: diffPercentage.toFixed(2),
         matchPercentage: similarityScore.toFixed(2)
       };
-      
+
     } catch (error) {
       console.error('Image comparison error:', error);
       throw error;

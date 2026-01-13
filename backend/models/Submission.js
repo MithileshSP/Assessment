@@ -223,13 +223,12 @@ class SubmissionModel {
       return path;
     };
 
-    const isPassed = submission.admin_override_status !== 'none'
-      ? (submission.admin_override_status === 'passed')
-      : (submission.manual_score !== null ? (submission.manual_score >= 50) : Boolean(submission.passed));
+    const finalStatus = submission.manual_score !== null
+      ? (submission.admin_override_status !== 'none' ? submission.admin_override_status : submission.status)
+      : 'pending';
 
-    const finalStatus = submission.admin_override_status !== 'none'
-      ? submission.admin_override_status
-      : submission.status;
+    const isPassed = (submission.manual_score !== null && submission.manual_score >= 50) ||
+      (submission.admin_override_status === 'passed');
 
     return {
       id: submission.id,
@@ -251,7 +250,7 @@ class SubmissionModel {
       diff_screenshot: formatScreenshotUrl(submission.diff_screenshot),
       admin_override_status: submission.admin_override_status,
       admin_override_reason: submission.admin_override_reason,
-      total_score: submission.manual_score !== null ? submission.manual_score : submission.final_score,
+      total_score: submission.final_score || 0,
       manual_score: submission.manual_score,
       manual_feedback: submission.manual_feedback,
       code_quality_score: submission.code_quality_score,
@@ -264,17 +263,17 @@ class SubmissionModel {
           ? (() => {
             try {
               const res = JSON.parse(submission.evaluation_result);
-              return { ...res, passed: isPassed, finalScore: submission.manual_score !== null ? submission.manual_score : res.finalScore };
+              return { ...res, passed: isPassed, finalScore: res.finalScore };
             } catch (e) {
               return { error: 'Invalid result format', raw: submission.evaluation_result };
             }
           })()
-          : { ...submission.evaluation_result, passed: isPassed, finalScore: submission.manual_score !== null ? submission.manual_score : submission.evaluation_result.finalScore }
+          : { ...submission.evaluation_result, passed: isPassed, finalScore: submission.evaluation_result.finalScore }
       ) : {
         structureScore: submission.structure_score || 0,
         visualScore: submission.visual_score || 0,
         contentScore: submission.content_score || 0,
-        finalScore: submission.manual_score !== null ? submission.manual_score : (submission.final_score || 0),
+        finalScore: (submission.final_score || 0),
         passed: isPassed,
         feedback: "No automated feedback available."
       }

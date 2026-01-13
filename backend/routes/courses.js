@@ -1522,16 +1522,18 @@ router.get('/:courseId/restrictions', (req, res) => {
       return res.status(404).json({ error: 'Course not found' });
     }
 
-    // Return restrictions or defaults
-    const restrictions = course.restrictions || {
-      blockCopy: true,
-      blockPaste: true,
-      forceFullscreen: true,
-      maxViolations: 3,
-      timeLimit: 0
+    // Return restrictions with secure defaults enforced
+    const restrictions = course.restrictions || {};
+
+    const secureRestrictions = {
+      blockCopy: restrictions.blockCopy !== undefined ? restrictions.blockCopy : true,
+      blockPaste: restrictions.blockPaste !== undefined ? restrictions.blockPaste : true,
+      forceFullscreen: restrictions.forceFullscreen !== undefined ? restrictions.forceFullscreen : true,
+      maxViolations: restrictions.maxViolations || 3,
+      timeLimit: restrictions.timeLimit || 0
     };
 
-    res.json(restrictions);
+    res.json(secureRestrictions);
   } catch (error) {
     console.error('Get restrictions error:', error);
     res.status(500).json({ error: 'Failed to fetch restrictions' });

@@ -60,10 +60,11 @@ export default function LevelChallenge() {
     }
   }, [currentQuestionIndex, assignedQuestions]);
 
-  // Check Attendance on Mount
+  // Check Attendance and Restrictions on Mount
   useEffect(() => {
     if (courseId && level) {
       checkAttendance();
+      loadRestrictions(); // Initial load for instant application
     }
     return () => clearInterval(attendanceTimer);
   }, [courseId, level]);
@@ -390,7 +391,10 @@ export default function LevelChallenge() {
         if (prev <= 1) {
           clearInterval(interval);
           // Auto-submission trigger
-          handleFinishLevel({ reason: "timeout" });
+          (async () => {
+            await forceSubmitCurrentCode();
+            handleFinishLevel({ reason: "timeout" });
+          })();
           return 0;
         }
         return prev - 1;
@@ -424,10 +428,50 @@ export default function LevelChallenge() {
     setTimeout(() => setShowViolationToast(false), 3000);
 
     if (newViolations >= restrictions.maxViolations) {
-      setTimeout(() => {
-        alert("Maximum violations reached! Test will be submitted.");
-        handleFinishLevel({ reason: "violations" });
+      setTimeout(async () => {
+        // Force submit current progress before finishing
+        setViolationMessage("Security Protocol: Forced Submission Active");
+        const submissionId = await forceSubmitCurrentCode();
+        alert("Maximum violations reached! Test submitted.");
+        handleFinishLevel({ reason: "violations", forceSubmissionId: submissionId });
       }, 500);
+    }
+  };
+
+  const forceSubmitCurrentCode = async () => {
+    if (!challenge) return null;
+    try {
+      const response = await api.post("/submissions", {
+        challengeId: challenge.id,
+        userId: userId,
+        code: {
+          html: code.html,
+          css: code.css,
+          js: code.js,
+        },
+      });
+      const submissionId = response.data.submissionId;
+      if (testSessionId && submissionId) {
+        await api.post(`/test-sessions/${testSessionId}/submissions`, {
+          submission_id: submissionId,
+        });
+      }
+      // Update local state so handleFinish can find it
+      const updatedAnswers = {
+        ...userAnswers,
+        [challenge.id]: {
+          html: code.html,
+          css: code.css,
+          js: code.js,
+          submitted: true,
+          submissionId: submissionId
+        }
+      };
+      setUserAnswers(updatedAnswers);
+      return submissionId;
+    } catch (err) {
+      console.error("Force submission failed", err);
+      return null;
     }
   };
 
@@ -773,25 +817,31 @@ export default function LevelChallenge() {
     }
   };
 
-  const handleFinishLevel = async ({ reason = "manual" } = {}) => {
+  const handleFinishLevel = async ({ reason = "manual", forceSubmissionId = null } = {}) => {
     if (finishingLevel) return;
-    handleFinishTest();
+    handleFinishTest({ reason, forceSubmissionId });
   };
 
-  const handleFinishTest = async () => {
+  const handleFinishTest = async ({ reason = "manual", forceSubmissionId = null } = {}) => {
     setFinishingLevel(true);
 
     try {
       // Step 1: Tell TestSession we are done
       if (testSessionId) {
         await api.put(`/test-sessions/${testSessionId}/complete`, {
-          user_feedback: ""
+          user_feedback: reason === "violations" ? "Session terminated due to security violations." : ""
         });
       }
 
-      // Step 2: Redirect to dedicated feedback page
+      // Step 2: Redirect
+      // If violations occurred, skip feedback and show results
+      if (reason === "violations") {
+        navigate(`/level-results/${courseId}/${level}`);
+        return;
+      }
+
       const lastQuestionId = assignedQuestions[assignedQuestions.length - 1]?.id;
-      const lastSubmissionId = userAnswers[lastQuestionId]?.submissionId;
+      const lastSubmissionId = forceSubmissionId || userAnswers[lastQuestionId]?.submissionId;
 
       if (lastSubmissionId) {
         navigate(`/student/feedback/${lastSubmissionId}`);

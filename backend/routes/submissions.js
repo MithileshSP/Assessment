@@ -275,12 +275,8 @@ router.get('/user/:userId', async (req, res) => {
          ORDER BY s.submitted_at DESC`,
         [userId]
       );
-      // Parse JSON evaluation_result if it's a string
-      const parsed = submissions.map(s => ({
-        ...s,
-        result: typeof s.evaluation_result === 'string' ? JSON.parse(s.evaluation_result) : s.evaluation_result
-      }));
-      return res.json(parsed);
+      const formatted = submissions.map(s => SubmissionModel._formatSubmission(s));
+      return res.json(formatted);
     } catch (dbError) {
       console.log('Database error, using JSON file:', dbError.message);
       const submissions = getSubmissions();

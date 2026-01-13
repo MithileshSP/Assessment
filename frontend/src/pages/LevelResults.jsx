@@ -28,24 +28,28 @@ export default function LevelResults() {
       // Calculate results
       const resultsData = assignedQuestions.map((q, index) => {
         const submission = submissions[q.id];
+        const isGraded = submission?.manual_score !== null && submission?.manual_score !== undefined;
+
         return {
           questionNumber: index + 1,
           title: q.title,
-          score: submission?.finalScore || 0,
-          passed: submission?.passed || false,
-          feedback: submission?.feedback || null
+          score: isGraded ? submission.manual_score : (submission?.finalScore || 0),
+          passed: isGraded ? (submission.manual_score >= 50) : false,
+          feedback: submission?.feedback || null,
+          isPending: !isGraded,
+          manualFeedback: submission?.manual_feedback || null
         };
       });
 
       setResults(resultsData);
 
-      // Calculate overall pass percentage
+      // Check if level should be unlocked
+      const anyPending = resultsData.some(r => r.isPending);
+      const allPassed = resultsData.every(r => r.passed);
       const totalScore = resultsData.reduce((sum, r) => sum + r.score, 0);
       const avgScore = totalScore / resultsData.length;
-      const allPassed = resultsData.every(r => r.passed);
 
-      // Check if level should be unlocked
-      if (allPassed || avgScore >= 70) {
+      if (!anyPending && (allPassed || avgScore >= 70)) {
         // Mark level as complete and unlock next level
         await axios.post('/api/users/complete-level', {
           userId,
@@ -53,6 +57,8 @@ export default function LevelResults() {
           level: parseInt(level)
         });
         setLevelUnlocked(true);
+      } else if (anyPending) {
+        setLevelUnlocked(false);
       }
 
       setLoading(false);
@@ -90,20 +96,22 @@ export default function LevelResults() {
       <div className="max-w-4xl mx-auto">
         {/* Results Header */}
         <div className={`rounded-xl shadow-2xl p-8 mb-8 ${levelUnlocked
-            ? 'bg-gradient-to-r from-green-500 to-green-600'
-            : 'bg-gradient-to-r from-orange-500 to-orange-600'
+          ? 'bg-gradient-to-r from-green-500 to-green-600'
+          : 'bg-gradient-to-r from-orange-500 to-orange-600'
           } text-white`}>
           <div className="text-center">
             <div className="text-6xl mb-4">
               {levelUnlocked ? '🎉' : '📝'}
             </div>
             <h1 className="text-4xl font-bold mb-2">
-              Level {level} {levelUnlocked ? 'Complete!' : 'Results'}
+              Level {level} {levelUnlocked ? 'Complete!' : resultsData.some(r => r.isPending) ? 'Evaluation Pending' : 'Results'}
             </h1>
             <p className="text-xl opacity-90">
               {levelUnlocked
                 ? `Congratulations! You've unlocked Level ${parseInt(level) + 1}!`
-                : 'Review your performance below'}
+                : resultsData.some(r => r.isPending)
+                  ? 'Your submission is being reviewed by our faculty.'
+                  : 'Review your performance below'}
             </p>
           </div>
 
@@ -119,10 +127,10 @@ export default function LevelResults() {
             </div>
             <div className="bg-white bg-opacity-20 rounded-lg p-4 text-center">
               <div className="text-3xl font-bold">
-                {levelUnlocked ? '✓' : '✗'}
+                {resultsData.some(r => r.isPending) ? '⏳' : (levelUnlocked ? '✓' : '✗')}
               </div>
               <div className="text-sm opacity-90 mt-1">
-                {levelUnlocked ? 'Level Unlocked' : 'Try Again'}
+                {resultsData.some(r => r.isPending) ? 'Pending Review' : (levelUnlocked ? 'Level Unlocked' : 'Try Again')}
               </div>
             </div>
           </div>
@@ -146,14 +154,18 @@ export default function LevelResults() {
                   </div>
                   <div>
                     <h3 className="font-semibold text-lg text-gray-800">{result.title}</h3>
-                    <p className={`text-sm ${result.passed ? 'text-green-600' : 'text-red-600'}`}>
-                      {result.passed ? '✓ Passed' : '✗ Not Passed'}
+                    <p className={`text-sm ${result.isPending ? 'text-blue-600' : (result.passed ? 'text-green-600' : 'text-red-600')}`}>
+                      {result.isPending ? '⏳ Pending Faculty Review' : (result.passed ? '✓ Passed' : '✗ Not Passed')}
                     </p>
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="text-3xl font-bold text-gray-800">{result.score}%</div>
-                  <div className="text-sm text-gray-500">Final Score</div>
+                  <div className="text-3xl font-bold text-gray-800">
+                    {result.isPending ? '--' : `${result.score}%`}
+                  </div>
+                  <div className="text-sm text-gray-500">
+                    {result.isPending ? 'Awaiting Score' : 'Final Score'}
+                  </div>
                 </div>
               </div>
 
@@ -181,12 +193,11 @@ export default function LevelResults() {
                 </div>
               )}
 
-              {/* Encouragement */}
-              {result.feedback?.encouragement && result.feedback.encouragement.length > 0 && (
-                <div className="mt-4 p-3 bg-purple-50 rounded-lg">
-                  {result.feedback.encouragement.map((msg, idx) => (
-                    <p key={idx} className="text-sm text-purple-800">{msg}</p>
-                  ))}
+              {/* Manual Feedback */}
+              {result.manualFeedback && (
+                <div className="mt-4 p-4 bg-blue-50 border border-blue-100 rounded-lg">
+                  <h4 className="text-sm font-bold text-blue-800 mb-1 uppercase tracking-wider">Faculty Feedback</h4>
+                  <p className="text-sm text-blue-900 leading-relaxed">{result.manualFeedback}</p>
                 </div>
               )}
             </div>

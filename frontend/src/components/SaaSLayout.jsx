@@ -23,7 +23,9 @@ import {
 import { clearAdminSession, getUserRole } from '../utils/session';
 
 const SaaSLayout = ({ children }) => {
-    const [isSidebarOpen, setSidebarOpen] = useState(true);
+    const [isSidebarOpen, setSidebarOpen] = useState(false);
+    const [isHovered, setHovered] = useState(false);
+    const isSidebarOpenEffectively = isSidebarOpen || isHovered;
     const navigate = useNavigate();
     const location = useLocation();
     const role = getUserRole();
@@ -106,60 +108,55 @@ const SaaSLayout = ({ children }) => {
         <div className="flex h-screen bg-slate-50 overflow-hidden font-sans text-slate-900">
             {/* Sidebar */}
             <aside
-                className={`${isSidebarOpen ? 'w-64' : 'w-22'} bg-[#0f172a] text-slate-300 transition-all duration-500 flex flex-col z-30 shadow-[4px_0_24px_rgba(0,0,0,0.1)] relative border-r border-white/5`}
+                onMouseEnter={() => setHovered(true)}
+                onMouseLeave={() => setHovered(false)}
+                className={`${isSidebarOpenEffectively ? 'w-64' : 'w-16'} bg-[#0f172a] text-slate-300 transition-all duration-500 flex flex-col z-30 shadow-[4px_0_24px_rgba(0,0,0,0.1)] relative border-r border-white/5 overflow-hidden`}
             >
                 {/* Sidebar Header */}
-                <div className="h-20 flex items-center justify-between px-6 bg-[#0f172a]">
-                    {isSidebarOpen && (
-                        <div
-                            className="flex items-center gap-3 group cursor-pointer"
-                            onClick={() => {
-                                if (role === 'admin') navigate('/admin/dashboard');
-                                else if (role === 'faculty') navigate('/faculty/dashboard');
-                                else navigate('/');
-                            }}
-                        >
-                            <div className={`w-10 h-10 bg-gradient-to-tr ${theme.accent} rounded-2xl flex items-center justify-center text-white font-black shadow-xl ${theme.glow} group-hover:scale-110 transition-transform duration-300`}>
-                                A
-                            </div>
-                            <div className="flex flex-col">
-                                <span className="font-black text-lg tracking-tight text-white leading-none uppercase">Portal</span>
-                                <span className={`text-[10px] font-black tracking-[0.2em] ${theme.text} mt-1 uppercase`}>{role}</span>
-                            </div>
-                        </div>
-                    )}
-                    {!isSidebarOpen && (
-                        <div className={`w-10 h-10 bg-gradient-to-tr ${theme.accent} rounded-2xl flex items-center justify-center text-white font-black mx-auto shadow-xl ${theme.glow} hover:scale-110 transition-transform duration-300`}>
+                <div className="h-20 flex items-center px-3 bg-[#0f172a] overflow-hidden">
+                    <div
+                        className="flex items-center gap-4 group cursor-pointer transition-all duration-500"
+                        onClick={() => {
+                            if (role === 'admin') navigate('/admin/dashboard');
+                            else if (role === 'faculty') navigate('/faculty/dashboard');
+                            else navigate('/');
+                        }}
+                    >
+                        <div className={`w-10 h-10 flex-shrink-0 bg-gradient-to-tr ${theme.accent} rounded-2xl flex items-center justify-center text-white font-black shadow-xl ${theme.glow} group-hover:scale-110 transition-transform duration-300`}>
                             A
                         </div>
-                    )}
+                        <div className={`flex flex-col transition-all duration-500 ${isSidebarOpenEffectively ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-10 pointer-events-none'}`}>
+                            <span className="font-black text-lg tracking-tight text-white leading-none uppercase whitespace-nowrap">Portal</span>
+                            <span className={`text-[10px] font-black tracking-[0.2em] ${theme.text} mt-1 uppercase whitespace-nowrap`}>{role}</span>
+                        </div>
+                    </div>
                 </div>
 
                 {/* Sidebar Content */}
-                <nav className="flex-1 py-8 px-4 space-y-2 overflow-y-auto custom-scrollbar">
+                <nav className={`flex-1 py-8 px-3 space-y-2 overflow-y-auto hide-scrollbar transition-all duration-500`}>
                     {currentMenuItems.map((item) => {
                         const isActive = location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path));
                         return (
                             <Link
                                 key={item.id}
                                 to={item.path}
-                                className={`flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all duration-300 group relative ${isActive
+                                className={`flex items-center gap-4 py-3.5 rounded-2xl transition-all duration-300 group relative ${isActive
                                     ? 'bg-blue-600/10 text-white border border-blue-500/20'
                                     : 'hover:bg-white/5 hover:text-white border border-transparent'
                                     }`}
                             >
-                                <span className={`${isActive ? theme.text : 'text-slate-500 group-hover:text-blue-400'} transition-colors duration-300`}>
-                                    {item.icon}
-                                </span>
-                                {isSidebarOpen && (
-                                    <span className={`font-bold text-xs uppercase tracking-widest ${isActive ? 'text-white' : 'text-slate-400'}`}>
-                                        {item.label}
+                                <div className="w-10 flex-shrink-0 flex items-center justify-center">
+                                    <span className={`${isActive ? theme.text : 'text-slate-500 group-hover:text-blue-400'} transition-colors duration-300`}>
+                                        {item.icon}
                                     </span>
-                                )}
-                                {isActive && (
+                                </div>
+                                <span className={`font-bold text-xs uppercase tracking-widest whitespace-nowrap transition-all duration-500 ${isSidebarOpenEffectively ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-10 pointer-events-none w-0'} ${isActive ? 'text-white' : 'text-slate-400'}`}>
+                                    {item.label}
+                                </span>
+                                {isActive && isSidebarOpenEffectively && (
                                     <div className={`absolute right-4 w-1.5 h-1.5 rounded-full ${theme.pulse} animate-pulse`} />
                                 )}
-                                {isActive && !isSidebarOpen && (
+                                {isActive && !isSidebarOpenEffectively && (
                                     <div className={`absolute left-0 w-1 h-8 ${theme.pulse} rounded-r-full`} />
                                 )}
                             </Link>
@@ -168,13 +165,17 @@ const SaaSLayout = ({ children }) => {
                 </nav>
 
                 {/* Sidebar Footer */}
-                <div className="p-4 border-t border-white/5 bg-[#0f172a]/50">
+                <div className="p-3 border-t border-white/5 bg-[#0f172a]/50">
                     <button
                         onClick={handleLogout}
-                        className="flex items-center gap-4 w-full px-4 py-4 rounded-2xl text-slate-500 hover:bg-rose-500/10 hover:text-rose-400 transition-all duration-300 font-bold text-xs uppercase tracking-widest"
+                        className="flex items-center gap-4 py-4 rounded-2xl text-slate-500 hover:bg-rose-500/10 hover:text-rose-400 transition-all duration-300 font-bold text-xs uppercase tracking-widest group"
                     >
-                        <LogOut size={18} />
-                        {isSidebarOpen && <span>Secure Logout</span>}
+                        <div className="w-10 flex-shrink-0 flex items-center justify-center">
+                            <LogOut size={18} />
+                        </div>
+                        <span className={`whitespace-nowrap transition-all duration-500 ${isSidebarOpenEffectively ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-10 pointer-events-none w-0'}`}>
+                            Secure Logout
+                        </span>
                     </button>
                 </div>
             </aside>
@@ -188,7 +189,7 @@ const SaaSLayout = ({ children }) => {
                             onClick={() => setSidebarOpen(!isSidebarOpen)}
                             className="bg-slate-50 p-2.5 hover:bg-slate-100 rounded-2xl text-slate-500 transition-all active:scale-90 border border-slate-200/50"
                         >
-                            {isSidebarOpen ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
+                            {isSidebarOpenEffectively ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
                         </button>
 
                         <div className="hidden lg:flex flex-col">
@@ -264,6 +265,14 @@ const SaaSLayout = ({ children }) => {
         }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
           background: #cbd5e1;
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+          width: 0px;
+          background: transparent;
+        }
+        .hide-scrollbar {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
         }
         @keyframes fade-in {
           from { opacity: 0; transform: translateY(10px); }

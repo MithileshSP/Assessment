@@ -126,18 +126,29 @@ router.get('/stats', verifyAdmin, async (req, res) => {
     const [userCount] = await db.query("SELECT COUNT(*) as count FROM users");
     const [courseCount] = await db.query("SELECT COUNT(*) as count FROM courses");
     const [submissionCount] = await db.query("SELECT COUNT(*) as count FROM submissions");
-    const [pendingAttendance] = await db.query("SELECT COUNT(*) as count FROM test_attendance WHERE status = 'pending'");
+    const [pendingAttendance] = await db.query("SELECT COUNT(*) as count FROM test_attendance WHERE status = 'requested'");
     const [pendingEvaluations] = await db.query("SELECT COUNT(*) as count FROM submission_assignments WHERE status = 'pending'");
 
     res.json({
-      totalUsers: userCount[0].count,
-      totalCourses: courseCount[0].count,
-      totalSubmissions: submissionCount[0].count,
-      pendingAttendance: pendingAttendance[0].count,
-      pendingEvaluations: pendingEvaluations[0].count
+      totalUsers: userCount.count,
+      totalCourses: courseCount.count,
+      totalSubmissions: submissionCount.count,
+      pendingAttendance: pendingAttendance.count,
+      pendingEvaluations: pendingEvaluations.count
     });
   } catch (error) {
     console.error("Error fetching stats:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get all submissions
+router.get('/submissions', verifyAdmin, async (req, res) => {
+  try {
+    const SubmissionModel = require('../models/Submission');
+    const submissions = await SubmissionModel.findAll();
+    res.json(submissions);
+  } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
