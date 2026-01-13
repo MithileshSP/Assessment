@@ -156,14 +156,21 @@ const FacultyEvaluation = () => {
                 {/* Middle Panel: Workspace (55%) */}
                 <div className={`${isFullScreen ? 'w-full' : 'w-[55%]'} bg-slate-900 text-white flex flex-col relative`}>
                     <div className="flex bg-slate-800 border-b border-slate-700 items-center justify-between pr-4">
-                        <div className="flex">
-                            {['html', 'css', 'js', 'compare'].map(lang => (
+                        <div className="flex overflow-x-auto no-scrollbar">
+                            {[
+                                { id: 'html', label: 'HTML' },
+                                { id: 'css', label: 'CSS' },
+                                { id: 'js', label: 'JS' },
+                                { id: 'student_live', label: 'Student Live' },
+                                { id: 'expected_live', label: 'Expected Live' },
+                                { id: 'compare', label: 'Screenshots' }
+                            ].map(tab => (
                                 <button
-                                    key={lang}
-                                    onClick={() => setActiveTab(lang)}
-                                    className={`px-5 py-3 text-[10px] font-bold tracking-widest uppercase transition-all ${activeTab === lang ? 'bg-slate-700 text-blue-400 border-b-2 border-blue-400' : 'text-slate-400 hover:text-white hover:bg-slate-700/50'}`}
+                                    key={tab.id}
+                                    onClick={() => setActiveTab(tab.id)}
+                                    className={`px-4 py-3 text-[10px] font-bold tracking-widest uppercase transition-all whitespace-nowrap ${activeTab === tab.id ? 'bg-slate-700 text-blue-400 border-b-2 border-blue-400' : 'text-slate-400 hover:text-white hover:bg-slate-700/50'}`}
                                 >
-                                    {lang === 'compare' ? 'Visual Comparison' : lang.toUpperCase()}
+                                    {tab.label}
                                 </button>
                             ))}
                         </div>
@@ -188,7 +195,7 @@ const FacultyEvaluation = () => {
                                 <div className="flex-1 bg-slate-900 p-4 flex flex-col">
                                     <div className="flex items-center justify-between mb-3">
                                         <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-400">Candidate Output</h4>
-                                        <span className="px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 text-[9px] font-bold">LIVE PREVIEW</span>
+                                        <span className="px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 text-[9px] font-bold">SCREENSHOT</span>
                                     </div>
                                     <div className="flex-1 relative rounded-xl overflow-hidden border border-slate-700/50 shadow-2xl bg-white group">
                                         {(submission.user_screenshot || submission.id) ? (
@@ -197,7 +204,6 @@ const FacultyEvaluation = () => {
                                                 alt="User Screenshot"
                                                 className="absolute inset-0 w-full h-full object-contain"
                                                 onError={(e) => {
-                                                    console.warn("Retrying screenshot load...");
                                                     if (!e.target.src.includes('retry=1')) {
                                                         e.target.src += '?retry=1';
                                                     }
@@ -231,9 +237,41 @@ const FacultyEvaluation = () => {
                                     </div>
                                 </div>
                             </div>
+                        ) : activeTab === 'student_live' || activeTab === 'expected_live' ? (
+                            <div className="h-full bg-white relative">
+                                <div className="absolute top-2 left-2 z-10 px-2 py-1 rounded bg-slate-900/80 backdrop-blur-sm text-[10px] font-bold text-white uppercase tracking-widest border border-white/10">
+                                    {activeTab === 'student_live' ? 'Student Live Rendering' : 'Reference Solution Rendering'}
+                                </div>
+                                <iframe
+                                    title="Live Preview"
+                                    className="w-full h-full border-none"
+                                    srcDoc={`
+                                        <!DOCTYPE html>
+                                        <html>
+                                            <head>
+                                                <style>${activeTab === 'student_live' ? submission.css_code : submission.expected_css}</style>
+                                            </head>
+                                            <body>
+                                                ${activeTab === 'student_live' ? submission.html_code : submission.expected_html}
+                                                <script>${activeTab === 'student_live' ? submission.js_code : submission.expected_js}</script>
+                                            </body>
+                                        </html>
+                                    `}
+                                />
+                            </div>
                         ) : (
-                            <div className="p-6 font-mono text-sm leading-relaxed whitespace-pre font-medium text-slate-300">
-                                {activeTab === 'html' ? submission.html_code : activeTab === 'css' ? submission.css_code : submission.js_code}
+                            <div className="p-6 h-full flex flex-col">
+                                <div className="flex items-center justify-between mb-4">
+                                    <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-400">
+                                        {activeTab === 'html' ? 'HTML' : activeTab === 'css' ? 'CSS' : 'Javascript'} Code
+                                    </h4>
+                                    <span className="px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 text-[9px] font-bold uppercase tracking-wider">Candidate Source</span>
+                                </div>
+                                <div className="flex-1 bg-slate-950/50 rounded-xl border border-slate-800/50 overflow-auto p-4 custom-scrollbar">
+                                    <pre className="font-mono text-xs leading-relaxed whitespace-pre text-slate-300">
+                                        {activeTab === 'html' ? submission.html_code : activeTab === 'css' ? submission.css_code : submission.js_code}
+                                    </pre>
+                                </div>
                             </div>
                         )}
                     </div>
@@ -307,8 +345,8 @@ const FacultyEvaluation = () => {
                                     <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Aggregated Intelligence</span>
                                     <h4 className="text-3xl font-black text-slate-900 mt-1">{totalScore}<span className="text-slate-300">/100</span></h4>
                                 </div>
-                                <div className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest ${totalScore >= 60 ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' : 'bg-rose-500 text-white shadow-lg shadow-rose-500/20'}`}>
-                                    {totalScore >= 60 ? 'PASS' : 'FAIL'}
+                                <div className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest ${totalScore >= 80 ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/20' : 'bg-rose-500 text-white shadow-lg shadow-rose-500/20'}`}>
+                                    {totalScore >= 80 ? 'PASS' : 'FAIL'}
                                 </div>
                             </div>
 

@@ -904,10 +904,10 @@ export default function LevelChallenge() {
             <div className="space-y-6">
               <div className="bg-blue-50 border border-blue-100 rounded-2xl p-6 text-blue-700 text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-3">
                 <Clock size={16} className="animate-spin" />
-                Wait for verification...
+                Waiting for Presence Verification...
               </div>
               <p className="text-sm text-slate-400 font-medium">
-                Sequence queued. An administrator will review your credentials shortly.
+                Sequence queued. Please reach out to your faculty to mark you as "Present" to start the test.
               </p>
             </div>
           )}
@@ -950,7 +950,7 @@ export default function LevelChallenge() {
           {attendanceStatus === 'rejected' && (
             <div className="space-y-6">
               <div className="bg-rose-50 border border-rose-100 rounded-2xl p-6 text-rose-700 text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-3">
-                <AlertTriangle size={16} /> Access Denied
+                <AlertTriangle size={16} /> Attendance Rejected
               </div>
               <button
                 onClick={() => navigate(`/course/${courseId}`)}
@@ -964,13 +964,13 @@ export default function LevelChallenge() {
           {attendanceStatus === 'approved' && (
             <div className="space-y-8 animate-fade-in">
               <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-6 text-emerald-700 text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-3">
-                <CheckCircle size={16} /> Verified & Cleared
+                <CheckCircle size={16} /> Attendance Verified: Present
               </div>
               <button
                 onClick={startTest}
                 className="w-full py-5 bg-blue-600 text-white rounded-[1.5rem] font-bold text-lg hover:bg-blue-700 transition-all shadow-2xl shadow-blue-600/20 hover:scale-[1.02] active:scale-[0.98]"
               >
-                Initialize Logic Test
+                Start Assessment
               </button>
             </div>
           )}

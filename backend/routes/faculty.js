@@ -10,7 +10,7 @@ router.get('/queue', verifyFaculty, async (req, res) => {
 
         const sql = `
             SELECT 
-                s.id, u.full_name as candidate_name, s.submitted_at, s.challenge_id, 
+                s.id, s.user_id as candidate_name, s.submitted_at, s.challenge_id, 
                 s.level, c.title as challenge_title, co.title as course_title,
                 sa.status as assignment_status
             FROM submission_assignments sa
@@ -54,9 +54,12 @@ router.get('/submission/:id', verifyFaculty, async (req, res) => {
         const submission = await db.query(`
             SELECT 
                 s.*, 
-                u.full_name as candidate_name, 
+                s.user_id as candidate_name, 
                 c.title as course_title,
-                ch.expected_screenshot_url as expected_screenshot
+                ch.expected_screenshot_url as expected_screenshot,
+                ch.expected_html,
+                ch.expected_css,
+                ch.expected_js
             FROM submissions s
             LEFT JOIN users u ON s.user_id = u.id
             LEFT JOIN courses c ON s.course_id = c.id
@@ -127,7 +130,7 @@ router.post('/evaluate', verifyFaculty, async (req, res) => {
 
         // Calculate total score and determine pass/fail
         const totalScore = (codeQuality || 0) + (requirements || 0) + (expectedOutput || 0);
-        const passed = totalScore >= 50;
+        const passed = totalScore >= 80;
         const status = passed ? 'passed' : 'failed';
 
         // Update main submission status and evaluated_at
@@ -182,7 +185,7 @@ router.get('/history', verifyFaculty, async (req, res) => {
 
         const sql = `
             SELECT 
-                s.id, u.full_name as candidate_name, s.submitted_at, s.challenge_id, 
+                s.id, s.user_id as candidate_name, s.submitted_at, s.challenge_id, 
                 s.level, c.title as challenge_title, co.title as course_title,
                 sa.status as assignment_status, me.total_score as manual_score
             FROM submission_assignments sa

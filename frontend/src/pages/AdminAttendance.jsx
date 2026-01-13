@@ -255,9 +255,9 @@ const AdminAttendance = () => {
 
     return (
         <SaaSLayout>
-            <div className="min-h-screen bg-[#F8FAFC]/30 -m-8 p-8 font-sans antialiased text-slate-900">
+            <div className="min-h-screen bg-[#F8FAFC]/30 -m-4 md:-m-8 p-4 md:p-8 font-sans antialiased text-slate-900">
                 {/* --- Premium Header Section --- */}
-                <div className="max-w-7xl mx-auto mb-10">
+                <div className="max-w-7xl mx-auto mb-6 md:mb-10">
                     <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 pb-10 border-b border-slate-200/60">
                         <div className="text-left">
                             <div className="flex items-center gap-3 mb-4">
@@ -268,29 +268,29 @@ const AdminAttendance = () => {
                                     System Active • v2.1 (Global Sync)
                                 </span>
                             </div>
-                            <h1 className="text-4xl lg:text-5xl font-black tracking-tight text-slate-900 mb-2">
+                            <h1 className="text-3xl md:text-4xl lg:text-5xl font-black tracking-tight text-slate-900 mb-2">
                                 Attendance Console
                             </h1>
-                            <p className="text-slate-500 font-medium text-lg max-w-2xl">
-                                Manage global synchronized exam sessions and bulk-authorize student access.
+                            <p className="text-slate-500 font-medium text-sm md:text-lg max-w-2xl">
+                                Manage global synchronized exam sessions and mark student attendance.
                             </p>
                         </div>
 
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3 w-full lg:w-auto">
                             <button
                                 onClick={() => setShowManualModal(true)}
-                                className="px-8 py-4 bg-white border border-slate-200 text-slate-900 rounded-2xl font-bold text-sm tracking-tight transition-all hover:bg-slate-50 shadow-sm flex items-center gap-2"
+                                className="w-full lg:w-auto px-6 md:px-8 py-3 md:py-4 bg-white border border-slate-200 text-slate-900 rounded-2xl font-bold text-sm tracking-tight transition-all hover:bg-slate-50 shadow-sm flex items-center justify-center gap-2"
                             >
                                 <Plus size={18} />
-                                <span>Add Student</span>
+                                <span>Mark Student Present</span>
                             </button>
                         </div>
                     </div>
 
                     {/* --- Live Session & Quick Stats --- */}
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-10">
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-6 md:mt-10">
                         {/* Live Session Control Panel */}
-                        <div className="lg:col-span-8 bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/50 text-left">
+                        <div className="lg:col-span-8 bg-white p-5 md:p-8 rounded-[1.5rem] md:rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/50 text-left">
                             <div className="flex items-center justify-between mb-8">
                                 <div className="flex items-center gap-4">
                                     <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${activeSession ? 'bg-emerald-50 text-emerald-600' : 'bg-indigo-50 text-indigo-600'}`}>
@@ -398,22 +398,21 @@ const AdminAttendance = () => {
                                         disabled={!activeSession || submitting || !bulkUsernames.trim()}
                                         className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-bold text-sm tracking-tight hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 disabled:opacity-20"
                                     >
-                                        Authorize Group
+                                        Mark Group Present
                                     </button>
                                 </div>
                             </div>
                         </div>
 
-                        {/* Quick Stats Sidebar */}
-                        <div className="lg:col-span-4 space-y-6">
-                            <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm text-left">
-                                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest block mb-4">Pending Approval</span>
+                        <div className="lg:col-span-4 space-y-4 md:y-6">
+                            <div className="bg-white p-5 md:p-6 rounded-[1.5rem] md:rounded-[2rem] border border-slate-100 shadow-sm text-left">
+                                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest block mb-4">Total Present</span>
                                 <div className="flex items-end gap-2">
-                                    <span className="text-5xl font-black text-slate-900">{stats.pending}</span>
-                                    <span className="text-slate-400 font-bold mb-2 uppercase text-[10px]">Requests</span>
+                                    <span className="text-4xl md:text-5xl font-black text-slate-900">{stats.pending}</span>
+                                    <span className="text-slate-400 font-bold mb-2 uppercase text-[10px]">Students</span>
                                 </div>
                             </div>
-                            <div className="bg-indigo-600 p-6 rounded-[2rem] text-white text-left relative overflow-hidden">
+                            <div className="bg-indigo-600 p-5 md:p-6 rounded-[1.5rem] md:rounded-[2rem] text-white text-left relative overflow-hidden">
                                 <div className="absolute top-[-20px] right-[-20px] w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
                                 <span className="text-xs font-bold text-white/60 uppercase tracking-widest block mb-4">Exam Mode</span>
                                 <div className="text-2xl font-black leading-tight mb-2">College Grade Enforcement</div>
@@ -424,12 +423,12 @@ const AdminAttendance = () => {
                 </div>
 
                 {/* --- Main Content Section --- */}
-                <div className="max-w-7xl mx-auto bg-white rounded-[2.5rem] border border-slate-100 shadow-2xl shadow-slate-200/50 overflow-hidden">
-                    <div className="p-10">
-                        <div className="flex items-center justify-between mb-10 text-left">
+                <div className="max-w-7xl mx-auto bg-white rounded-[1.5rem] md:rounded-[2.5rem] border border-slate-100 shadow-2xl shadow-slate-200/50 overflow-hidden">
+                    <div className="p-5 md:p-10">
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 md:mb-10 text-left">
                             <div>
-                                <h2 className="text-2xl font-black text-slate-900 mb-1">Authorization Queue</h2>
-                                <p className="text-slate-400 font-bold text-xs uppercase tracking-widest">Real-time Approval Processing</p>
+                                <h2 className="text-xl md:text-2xl font-black text-slate-900 mb-1">Attendance Queue</h2>
+                                <p className="text-slate-400 font-bold text-[10px] uppercase tracking-widest">Mark offline students as present</p>
                             </div>
                             {isPolling && (
                                 <div className="flex items-center gap-2 bg-indigo-50 px-4 py-2 rounded-xl text-[10px] font-bold text-indigo-600 uppercase tracking-widest transition-all">
@@ -453,71 +452,116 @@ const AdminAttendance = () => {
                                 <p className="text-slate-400 text-sm max-w-xs mx-auto">Candidates will appear here once they request authorization for an assessment.</p>
                             </div>
                         ) : (
-                            <div className="overflow-x-auto text-left">
-                                <table className="w-full border-separate border-spacing-y-4">
-                                    <thead>
-                                        <tr className="text-left text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-4">
-                                            <th className="pb-4 pl-6">Candidate</th>
-                                            <th className="pb-4">Assessment Path</th>
-                                            <th className="pb-4">Request Log</th>
-                                            <th className="pb-4 pr-6 text-right">Action</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {requests.map((req) => (
-                                            <tr key={req.id} className="group bg-white hover:bg-slate-50/80 transition-all border border-slate-100">
-                                                <td className="py-6 pl-6 rounded-l-[1.5rem]">
-                                                    <div className="flex items-center gap-4 text-left">
-                                                        <div className="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600 font-black text-sm uppercase shadow-sm group-hover:bg-white transition-colors">
-                                                            {(req.full_name || req.username || 'U')[0]}
-                                                        </div>
-                                                        <div>
-                                                            <p className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">{req.full_name || 'Candidate'}</p>
-                                                            <p className="text-xs text-slate-400 font-medium tracking-tight">@{req.username}</p>
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                                <td className="py-6 text-left">
-                                                    <div className="flex flex-col gap-1">
-                                                        <span className="text-xs font-black text-slate-700 uppercase tracking-tighter">
-                                                            {req.test_identifier?.split('_')[0] || 'Logic Assessment'}
-                                                        </span>
-                                                        <div className="flex items-center gap-2">
-                                                            <div className="px-2.5 py-1 bg-slate-100 rounded-lg text-[9px] font-black text-slate-500 uppercase tracking-widest">
-                                                                Level {req.test_identifier?.split('_')[1] || '1'}
+                            <>
+                                {/* Desktop Table View */}
+                                <div className="hidden md:block overflow-x-auto text-left">
+                                    <table className="w-full border-separate border-spacing-y-4">
+                                        <thead>
+                                            <tr className="text-left text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-4">
+                                                <th className="pb-4 pl-6">Candidate</th>
+                                                <th className="pb-4">Assessment Path</th>
+                                                <th className="pb-4">Request Log</th>
+                                                <th className="pb-4 pr-6 text-right">Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {requests.map((req) => (
+                                                <tr key={req.id} className="group bg-white hover:bg-slate-50/80 transition-all border border-slate-100">
+                                                    <td className="py-6 pl-6 rounded-l-[1.5rem]">
+                                                        <div className="flex items-center gap-4 text-left">
+                                                            <div className="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600 font-black text-sm uppercase shadow-sm group-hover:bg-white transition-colors">
+                                                                {(req.full_name || req.username || 'U')[0]}
+                                                            </div>
+                                                            <div>
+                                                                <p className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">{req.full_name || 'Candidate'}</p>
+                                                                <p className="text-xs text-slate-400 font-medium tracking-tight">@{req.username}</p>
                                                             </div>
                                                         </div>
-                                                    </div>
-                                                </td>
-                                                <td className="py-6 text-left">
-                                                    <div className="flex items-center gap-2 text-slate-400 text-xs font-medium">
-                                                        <Clock size={12} />
-                                                        {new Date(req.requested_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                    </div>
-                                                </td>
-                                                <td className="py-6 pr-6 text-right rounded-r-[1.5rem]">
-                                                    <div className="flex items-center justify-end gap-2">
-                                                        <button
-                                                            onClick={() => handleAction(req.id, 'reject')}
-                                                            className="p-3 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all"
-                                                            title="Reject Request"
-                                                        >
-                                                            <X size={20} />
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleAction(req.id, 'approve')}
-                                                            className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-bold text-sm tracking-tight hover:bg-emerald-600 hover:scale-105 transition-all shadow-lg shadow-indigo-200 flex items-center gap-2"
-                                                        >
-                                                            <Check size={16} />
-                                                            <span>Approve</span>
-                                                        </button>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
+                                                    </td>
+                                                    <td className="py-6 text-left">
+                                                        <div className="flex flex-col gap-1">
+                                                            <span className="text-xs font-black text-slate-700 uppercase tracking-tighter">
+                                                                {req.test_identifier?.split('_')[0] || 'Logic Assessment'}
+                                                            </span>
+                                                            <div className="flex items-center gap-2">
+                                                                <div className="px-2.5 py-1 bg-slate-100 rounded-lg text-[9px] font-black text-slate-500 uppercase tracking-widest">
+                                                                    Level {req.test_identifier?.split('_')[1] || '1'}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td className="py-6 text-left">
+                                                        <div className="flex items-center gap-2 text-slate-400 text-xs font-medium">
+                                                            <Clock size={12} />
+                                                            {new Date(req.requested_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                        </div>
+                                                    </td>
+                                                    <td className="py-6 pr-6 text-right rounded-r-[1.5rem]">
+                                                        <div className="flex items-center justify-end gap-2">
+                                                            <button
+                                                                onClick={() => handleAction(req.id, 'reject')}
+                                                                className="p-3 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all"
+                                                                title="Reject Request"
+                                                            >
+                                                                <X size={20} />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleAction(req.id, 'approve')}
+                                                                className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-bold text-sm tracking-tight hover:bg-emerald-600 hover:scale-105 transition-all shadow-lg shadow-indigo-200 flex items-center gap-2"
+                                                            >
+                                                                <Check size={16} />
+                                                                <span>Mark Present</span>
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                {/* Mobile Card View */}
+                                <div className="md:hidden space-y-4">
+                                    {requests.map((req) => (
+                                        <div key={req.id} className="bg-slate-50 p-5 rounded-3xl border border-slate-100 space-y-4">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center text-white font-black text-sm uppercase shadow-lg shadow-indigo-200">
+                                                    {(req.full_name || req.username || 'U')[0]}
+                                                </div>
+                                                <div className="flex-1">
+                                                    <p className="font-bold text-slate-900 leading-tight">{req.full_name || 'Candidate'}</p>
+                                                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight">@{req.username}</p>
+                                                </div>
+                                                <div className="text-right">
+                                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Time</p>
+                                                    <p className="text-xs font-bold text-slate-700">{new Date(req.requested_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                                                </div>
+                                            </div>
+
+                                            <div className="flex items-center justify-between p-3 bg-white rounded-2xl border border-slate-100">
+                                                <div className="flex flex-col gap-1 text-left">
+                                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Assessment</span>
+                                                    <span className="text-xs font-bold text-slate-700">{req.test_identifier?.split('_')[0] || 'Logic Assessment'} L{req.test_identifier?.split('_')[1] || '1'}</span>
+                                                </div>
+                                                <div className="flex gap-2">
+                                                    <button
+                                                        onClick={() => handleAction(req.id, 'reject')}
+                                                        className="p-3 text-rose-500 bg-rose-50 rounded-xl"
+                                                    >
+                                                        <X size={18} />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleAction(req.id, 'approve')}
+                                                        className="px-4 py-2 bg-indigo-600 text-white rounded-xl font-bold text-xs"
+                                                    >
+                                                        Mark Present
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </>
                         )}
                     </div>
                 </div>
@@ -537,8 +581,8 @@ const AdminAttendance = () => {
                                         <Plus size={28} />
                                     </div>
                                     <div>
-                                        <h3 className="text-2xl font-black text-slate-900 tracking-tight">Direct Authorization</h3>
-                                        <p className="text-slate-400 font-bold text-[10px] uppercase tracking-widest">Manual Credential Verification</p>
+                                        <h3 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight">Mark Student Present</h3>
+                                        <p className="text-slate-400 font-bold text-[10px] uppercase tracking-widest">Direct Attendance Verification</p>
                                     </div>
                                 </div>
 
@@ -633,9 +677,9 @@ const AdminAttendance = () => {
                                         <button
                                             onClick={handleManualApprove}
                                             disabled={!manualTarget.userId || !manualTarget.courseId || submitting}
-                                            className="flex-[2] py-5 bg-slate-900 text-white rounded-3xl font-black text-sm tracking-widest uppercase hover:bg-indigo-600 disabled:opacity-20 disabled:hover:bg-slate-900 transition-all shadow-2xl shadow-slate-900/10"
+                                            className="flex-[2] py-4 md:py-5 bg-slate-900 text-white rounded-[1.25rem] md:rounded-3xl font-black text-xs md:text-sm tracking-widest uppercase hover:bg-indigo-600 disabled:opacity-20 disabled:hover:bg-slate-900 transition-all shadow-2xl shadow-slate-900/10"
                                         >
-                                            {submitting ? 'Processing...' : 'Execute Authorization'}
+                                            {submitting ? 'Processing...' : 'Mark Present'}
                                         </button>
                                     </div>
                                 </div>
@@ -644,6 +688,7 @@ const AdminAttendance = () => {
                     </div>
                 )}
             </div>
+
             {/* --- Global Utility Styles --- */}
             <style dangerouslySetInnerHTML={{
                 __html: `

@@ -106,11 +106,29 @@ const SaaSLayout = ({ children }) => {
 
     return (
         <div className="flex h-screen bg-slate-50 overflow-hidden font-sans text-slate-900">
+            {/* Mobile Sidebar Overlay */}
+            {isSidebarOpen && (
+                <div
+                    className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-40 md:hidden transition-opacity duration-300"
+                    onClick={() => setSidebarOpen(false)}
+                />
+            )}
+
             {/* Sidebar */}
             <aside
                 onMouseEnter={() => setHovered(true)}
                 onMouseLeave={() => setHovered(false)}
-                className={`${isSidebarOpenEffectively ? 'w-64' : 'w-16'} bg-[#0f172a] text-slate-300 transition-all duration-500 flex flex-col z-30 shadow-[4px_0_24px_rgba(0,0,0,0.1)] relative border-r border-white/5 overflow-hidden`}
+                className={`
+                    fixed inset-y-0 left-0 z-50 
+                    md:relative md:z-30 md:flex
+                    bg-[#0f172a] text-slate-300 
+                    transition-all duration-500 
+                    flex flex-col 
+                    shadow-[4px_0_24px_rgba(0,0,0,0.1)] 
+                    border-r border-white/5 overflow-hidden
+                    ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+                    ${isSidebarOpenEffectively ? 'w-64' : 'w-16'}
+                `}
             >
                 {/* Sidebar Header */}
                 <div className="h-20 flex items-center px-3 bg-[#0f172a] overflow-hidden">
@@ -181,9 +199,9 @@ const SaaSLayout = ({ children }) => {
             </aside>
 
             {/* Main Content Area */}
-            <div className="flex-1 flex flex-col overflow-hidden relative">
+            <div className={`flex-1 flex flex-col overflow-hidden relative transition-all duration-500`}>
                 {/* Top Navigation */}
-                <header className="h-20 bg-white/80 backdrop-blur-xl border-b border-slate-200/60 flex items-center justify-between px-10 z-20 sticky top-0">
+                <header className="h-20 bg-white/80 backdrop-blur-xl border-b border-slate-200/60 flex items-center justify-between px-4 md:px-10 z-20 sticky top-0">
                     <div className="flex items-center gap-6">
                         <button
                             onClick={() => setSidebarOpen(!isSidebarOpen)}
@@ -244,7 +262,7 @@ const SaaSLayout = ({ children }) => {
                 </header>
 
                 {/* Page Content */}
-                <main className="flex-1 overflow-y-auto p-8 custom-scrollbar relative">
+                <main className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar relative">
                     <div className="max-w-7xl mx-auto animate-fade-in">
                         {children}
                     </div>
