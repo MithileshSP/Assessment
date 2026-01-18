@@ -43,7 +43,7 @@ services:
       # Persist generated files
       - ./backend/screenshots:/app/screenshots
       - ./backend/data:/app/data
-      - /var/www/portal-assets:/var/www/portal-assets
+      - ./backend/assets:/var/www/portal-assets
     deploy:
       replicas: 3
     networks:

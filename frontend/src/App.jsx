@@ -38,6 +38,7 @@ import QuestionBank from "./pages/QuestionBank";
 import AdminLevelReset from "./pages/AdminLevelReset";
 import RestrictionManagement from "./pages/RestrictionManagement";
 import AdminEvaluationTracker from "./pages/AdminEvaluationTracker";
+import AdminAssetManager from "./pages/AdminAssetManager";
 
 // Auth & Components
 import Login from "./pages/Login";
@@ -100,6 +101,7 @@ function App() {
           <Route path="/admin/reset-level" element={role === 'admin' ? <AdminLevelReset /> : <Navigate to="/admin/login" />} />
           <Route path="/admin/restrictions" element={role === 'admin' ? <RestrictionManagement /> : <Navigate to="/admin/login" />} />
           <Route path="/admin/evaluation-tracker" element={role === 'admin' ? <AdminEvaluationTracker /> : <Navigate to="/admin/login" />} />
+          <Route path="/admin/assets" element={role === 'admin' ? <AdminAssetManager /> : <Navigate to="/admin/login" />} />
 
           {/* Fallback */}
           <Route path="*" element={<Navigate to="/login" />} />

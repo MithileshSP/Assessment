@@ -18,7 +18,8 @@ import {
     User,
     RefreshCw,
     Shield,
-    Activity
+    Activity,
+    Image as ImageIcon
 } from 'lucide-react';
 import { clearAdminSession, getUserRole } from '../utils/session';
 
@@ -89,6 +90,7 @@ const SaaSLayout = ({ children }) => {
             { id: 'restrictions', label: 'Restriction Hub', icon: <Shield size={20} />, path: '/admin/restrictions' },
             { id: 'reset', label: 'Reset Level', icon: <RefreshCw size={20} />, path: '/admin/reset-level' },
             { id: 'evaluation', label: 'Evaluation Monitor', icon: <Activity size={20} />, path: '/admin/evaluation-tracker' },
+            { id: 'assets', label: 'Media Assets', icon: <ImageIcon size={20} />, path: '/admin/assets' },
         ],
         faculty: [
             { id: 'dashboard', label: 'Overview', icon: <Layout size={20} />, path: '/faculty/dashboard' },

@@ -22,8 +22,8 @@ const ensureDir = (dir) => {
 };
 
 const sanitizeCategory = (raw) => {
-  const val = (raw || 'general').toLowerCase();
-  return /^[a-z0-9_-]{1,32}$/.test(val) ? val : 'general';
+  const val = (raw || 'images').toLowerCase();
+  return /^[a-z0-9_-]{1,32}$/.test(val) ? val : 'images';
 };
 
 const requireAdmin = (req, res, next) => {
@@ -69,7 +69,7 @@ const allowedMimes = [
 
 const upload = multer({
   storage,
-  limits: { fileSize: 20 * 1024 * 1024 },
+  limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     if (!allowedMimes.includes(file.mimetype)) {
       return cb(new Error('Invalid file type'));
@@ -137,12 +137,11 @@ router.post('/upload', requireAdmin, upload.single('asset'), async (req, res) =>
 
     const checksum = checksumFile(filePath);
 
-    // reject duplicates by checksum+category (disabled - column doesn't exist)
-    const existing = [];
-    // const existing = await query(
-    //   'SELECT filename, url, category FROM assets WHERE checksum_sha256 = ? AND category = ? LIMIT 1',
-    //   [checksum, category]
-    // );
+    // reject duplicates by checksum+category
+    const existing = await query(
+      'SELECT filename, url, category FROM assets WHERE checksum_sha256 = ? AND category = ? LIMIT 1',
+      [checksum, category]
+    );
     if (existing.length) {
       fs.unlinkSync(filePath);
       return res.status(200).json(existing[0]);
@@ -152,9 +151,9 @@ router.post('/upload', requireAdmin, upload.single('asset'), async (req, res) =>
     const url = `/assets/${relativePath}`;
 
     await query(
-      `INSERT INTO assets (filename, original_name, path, url, type, size, category)
-       VALUES (?, ?, ?, ?, ?, ?, ?)
-       ON DUPLICATE KEY UPDATE path=VALUES(path), url=VALUES(url), type=VALUES(type), size=VALUES(size), category=VALUES(category)`,
+      `INSERT INTO assets (filename, original_name, path, url, type, size, category, checksum_sha256)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+       ON DUPLICATE KEY UPDATE path=VALUES(path), url=VALUES(url), type=VALUES(type), size=VALUES(size), category=VALUES(category), checksum_sha256=VALUES(checksum_sha256)`,
       [
         req.file.filename,
         req.file.originalname,
@@ -162,7 +161,8 @@ router.post('/upload', requireAdmin, upload.single('asset'), async (req, res) =>
         url,
         req.file.mimetype,
         req.file.size,
-        category
+        category,
+        checksum
       ]
     );
 

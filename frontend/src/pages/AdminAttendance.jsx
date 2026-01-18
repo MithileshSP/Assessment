@@ -35,6 +35,7 @@ const AdminAttendance = () => {
     const [sessionDuration, setSessionDuration] = useState('60');
     const [bulkUsernames, setBulkUsernames] = useState('');
     const [timeRemaining, setTimeRemaining] = useState(0);
+    const fileInputRef = React.useRef(null);
 
     const fetchUsers = async () => {
         try {
@@ -203,20 +204,39 @@ const AdminAttendance = () => {
         }
     };
 
+    const handleDownloadTemplate = async () => {
+        try {
+            window.open(`${BASE_URL}/attendance/sample/csv`, '_blank');
+        } catch (error) {
+            alert("Failed to download template");
+        }
+    };
+
     const handleCsvUpload = (e) => {
         const file = e.target.files[0];
         if (!file) return;
+
+        if (!activeSession) {
+            alert("Please select a course and level, and ensure a session is active before uploading.");
+            e.target.value = '';
+            return;
+        }
 
         const reader = new FileReader();
         reader.onload = async (event) => {
             const text = event.target.result;
             const lines = text.split('\n').map(l => l.trim()).filter(l => l);
-            if (lines.length < 2) return;
+            if (lines.length < 2) {
+                alert("CSV is empty or invalid");
+                e.target.value = '';
+                return;
+            }
             const headers = lines[0].toLowerCase().split(',');
             const usernameIndex = headers.indexOf('username');
 
             if (usernameIndex === -1) {
                 alert("CSV must have a 'username' column");
+                e.target.value = '';
                 return;
             }
 
@@ -226,28 +246,24 @@ const AdminAttendance = () => {
             }).filter(u => u);
 
             if (usernames.length === 0) {
-                alert("No usernames found");
+                alert("No usernames found in CSV");
+                e.target.value = '';
                 return;
             }
 
-            const courseId = prompt("Enter Course ID (e.g., course-fullstack):");
-            const level = prompt("Enter Level Number:");
-
-            if (!courseId || !level) return;
-
             try {
-                setLoading(true);
-                const res = await api.post('/attendance/bulk-approve', {
+                setSubmitting(true);
+                const res = await api.post('/admin/sessions/bulk-authorize', {
                     usernames,
-                    courseId,
-                    level: parseInt(level)
+                    sessionId: activeSession.id
                 });
-                alert(`Processed. Approved: ${res.data.results.approved}, Not Found: ${res.data.results.notFound.length}`);
+                alert(`Bulk upload complete. Approved: ${res.data.results.approved}, Failed: ${res.data.results.failed}, Not Found: ${res.data.results.notFound.length}`);
                 fetchRequests(true);
             } catch (err) {
                 alert("Bulk approval failed");
             } finally {
-                setLoading(false);
+                setSubmitting(false);
+                e.target.value = '';
             }
         };
         reader.readAsText(file);
@@ -383,23 +399,50 @@ const AdminAttendance = () => {
 
                                 <div className="space-y-4">
                                     <div className="space-y-2 text-left">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">BULK Authorization {activeSession ? `(SessionID: ${activeSession.id})` : '(No Active Session)'}</label>
+                                        <div className="flex items-center justify-between mb-1">
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                                BULK Authorization {activeSession ? `(SessionID: ${activeSession.id})` : '(No Active Session)'}
+                                            </label>
+                                            <button
+                                                onClick={handleDownloadTemplate}
+                                                className="text-[10px] font-black text-indigo-600 uppercase tracking-widest hover:underline"
+                                            >
+                                                Download Template
+                                            </button>
+                                        </div>
                                         <textarea
                                             value={bulkUsernames}
                                             onChange={(e) => setBulkUsernames(e.target.value)}
-                                            rows={4}
-                                            placeholder="Enter student usernames (comma or newline separated)..."
+                                            rows={2}
+                                            placeholder="Enter student usernames..."
                                             className="w-full px-4 py-4 bg-slate-50 border-2 border-transparent rounded-2xl text-xs font-medium focus:bg-white focus:border-indigo-600 outline-none transition-all resize-none shadow-inner"
                                             disabled={!activeSession}
                                         />
                                     </div>
-                                    <button
-                                        onClick={handleBulkSessionAuth}
-                                        disabled={!activeSession || submitting || !bulkUsernames.trim()}
-                                        className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-bold text-sm tracking-tight hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 disabled:opacity-20"
-                                    >
-                                        Mark Group Present
-                                    </button>
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <button
+                                            onClick={handleBulkSessionAuth}
+                                            disabled={!activeSession || submitting || !bulkUsernames.trim()}
+                                            className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-bold text-sm tracking-tight hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 disabled:opacity-20"
+                                        >
+                                            Mark Present
+                                        </button>
+                                        <input
+                                            type="file"
+                                            ref={fileInputRef}
+                                            onChange={handleCsvUpload}
+                                            accept=".csv"
+                                            className="hidden"
+                                        />
+                                        <button
+                                            onClick={() => fileInputRef.current?.click()}
+                                            disabled={!activeSession || submitting}
+                                            className="w-full py-4 bg-white border-2 border-slate-100 text-slate-900 rounded-2xl font-bold text-sm tracking-tight hover:bg-slate-50 transition-all disabled:opacity-20 flex items-center justify-center gap-2"
+                                        >
+                                            <Upload size={16} />
+                                            Upload CSV
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
