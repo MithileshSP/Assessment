@@ -9,6 +9,7 @@ const UserModel = require("../models/User");
 const { query } = require("../database/connection");
 const { OAuth2Client } = require("google-auth-library");
 const jwt = require("jsonwebtoken");
+const { verifyAdmin } = require("../middleware/auth");
 require("dotenv").config();
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
@@ -190,23 +191,7 @@ router.post("/google", async (req, res) => {
   }
 });
 
-// Middleware to verify admin token
-function verifyAdmin(req, res, next) {
-  const token = req.headers.authorization?.replace("Bearer ", "");
-
-  if (!token) {
-    return res.status(401).json({ error: "No token provided" });
-  }
-
-  // Accept any token that's not empty (simplified for now)
-  // In production, you'd validate against a token store or JWT
-  // For now, we trust that the frontend only sends tokens after successful admin login
-  if (token && token.length > 10) {
-    next();
-  } else {
-    return res.status(403).json({ error: "Invalid admin token" });
-  }
-}
+// verifyAdmin is imported from ../middleware/auth
 
 // User Login
 router.post("/login", async (req, res) => {
@@ -707,4 +692,4 @@ router.post("/", verifyAdmin, async (req, res) => {
 });
 
 module.exports = router;
-module.exports.verifyAdmin = verifyAdmin;
+module.exports.verifyAdmin = verifyAdmin; // Still export from auth.js reference

@@ -57,10 +57,10 @@ router.post('/', async (req, res) => {
   try {
     const { challengeId, candidateName, code, userId } = req.body;
 
-    if (!challengeId || !code || !code.html || code.html.trim() === '') {
+    if (!challengeId || !code || ((!code.html || code.html.trim() === '') && (!code.js || code.js.trim() === ''))) {
       return res.status(400).json({
         error: 'Incomplete content',
-        message: 'Your solution must contain at least some HTML structure before you can submit.'
+        message: 'Your solution must contain at least some code (HTML or JavaScript) before you can submit.'
       });
     }
 

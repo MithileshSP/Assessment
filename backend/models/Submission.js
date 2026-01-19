@@ -3,7 +3,7 @@
  * Database operations for submissions table
  */
 
-const { query, queryOne } = require('../database/connection');
+const { query, queryOne, transaction } = require('../database/connection');
 
 class SubmissionModel {
   static STATUS = {
@@ -17,7 +17,7 @@ class SubmissionModel {
   // Get all submissions
   static async findAll() {
     const submissions = await query('SELECT * FROM submissions ORDER BY submitted_at DESC');
-    return submissions.map(this._formatSubmission);
+    return submissions.map(s => this._formatSubmission(s));
   }
 
   // Get submission by ID
@@ -51,7 +51,7 @@ class SubmissionModel {
       'SELECT * FROM submissions WHERE user_id = ? ORDER BY submitted_at DESC',
       [userId]
     );
-    return submissions.map(this._formatSubmission);
+    return submissions.map(s => this._formatSubmission(s));
   }
 
   // Get submissions by challenge
@@ -60,7 +60,7 @@ class SubmissionModel {
       'SELECT * FROM submissions WHERE challenge_id = ? ORDER BY submitted_at DESC',
       [challengeId]
     );
-    return submissions.map(this._formatSubmission);
+    return submissions.map(s => this._formatSubmission(s));
   }
 
   // Create new submission
@@ -176,13 +176,26 @@ class SubmissionModel {
     return result.count;
   }
 
-  // Find next queued submission
+  // Find next queued submission with atomic locking to prevent race conditions
   static async findNextQueued() {
-    const submission = await queryOne(
-      'SELECT * FROM submissions WHERE status = ? ORDER BY submitted_at ASC LIMIT 1',
-      [this.STATUS.QUEUED]
-    );
-    return submission ? this._formatSubmission(submission) : null;
+    return await transaction(async (connection) => {
+      // 1. Fetch the next queued submission and lock the row
+      const [rows] = await connection.execute(
+        'SELECT * FROM submissions WHERE status = ? ORDER BY submitted_at ASC LIMIT 1 FOR UPDATE',
+        [this.STATUS.QUEUED]
+      );
+
+      const submission = rows[0];
+      if (!submission) return null;
+
+      // 2. Immediately mark as evaluating while still in transaction
+      await connection.execute(
+        'UPDATE submissions SET status = ? WHERE id = ?',
+        [this.STATUS.EVALUATING, submission.id]
+      );
+
+      return this._formatSubmission(submission);
+    });
   }
 
   // Find submissions currently being evaluated (to check for stuck ones)
@@ -191,7 +204,7 @@ class SubmissionModel {
       'SELECT * FROM submissions WHERE status = ? ORDER BY submitted_at ASC',
       [this.STATUS.EVALUATING]
     );
-    return rows.map(this._formatSubmission);
+    return rows.map(s => this._formatSubmission(s));
   }
 
   // Update submission status
@@ -206,7 +219,7 @@ class SubmissionModel {
       'SELECT * FROM submissions ORDER BY submitted_at DESC LIMIT ?',
       [limit]
     );
-    return submissions.map(this._formatSubmission);
+    return submissions.map(s => this._formatSubmission(s));
   }
 
   // Format submission for response
@@ -225,7 +238,7 @@ class SubmissionModel {
 
     const finalStatus = submission.manual_score !== null
       ? (submission.admin_override_status !== 'none' ? submission.admin_override_status : submission.status)
-      : 'pending';
+      : (['evaluating', 'error', 'queued'].includes(submission.status) ? submission.status : 'pending');
 
     const isPassed = (submission.manual_score !== null && submission.manual_score >= 50) ||
       (submission.admin_override_status === 'passed');

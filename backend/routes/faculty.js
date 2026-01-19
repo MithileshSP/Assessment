@@ -59,7 +59,9 @@ router.get('/submission/:id', verifyFaculty, async (req, res) => {
                 ch.expected_screenshot_url as expected_screenshot,
                 ch.expected_html,
                 ch.expected_css,
-                ch.expected_js
+                ch.expected_js,
+                ch.description as challenge_description,
+                ch.instructions as challenge_instructions
             FROM submissions s
             LEFT JOIN users u ON s.user_id = u.id
             LEFT JOIN courses c ON s.course_id = c.id

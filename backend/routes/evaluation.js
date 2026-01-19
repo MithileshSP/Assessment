@@ -11,6 +11,7 @@ const path = require("path");
 const ChallengeModel = require("../models/Challenge");
 const SubmissionModel = require("../models/Submission");
 const { queryOne, query } = require('../database/connection');
+const { verifyAdmin } = require('../middleware/auth');
 
 const submissionsPath = path.join(__dirname, "../data/submissions.json");
 const challengesPath = path.join(__dirname, "../data/challenges.json");
@@ -223,7 +224,7 @@ router.post("/quick", async (req, res) => {
 });
 
 // Queue status for admin monitor
-router.get("/queue-status", async (req, res) => {
+router.get("/queue-status", verifyAdmin, async (req, res) => {
   try {
     const queuedCount = await queryOne('SELECT COUNT(*) as count FROM submissions WHERE status = ?', [SubmissionModel.STATUS.QUEUED]) || { count: 0 };
     const evaluatingCount = await queryOne('SELECT COUNT(*) as count FROM submissions WHERE status = ?', [SubmissionModel.STATUS.EVALUATING]) || { count: 0 };

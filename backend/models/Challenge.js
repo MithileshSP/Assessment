@@ -10,7 +10,7 @@ class ChallengeModel {
   static async findAll() {
     try {
       const challenges = await query('SELECT * FROM challenges ORDER BY created_at DESC');
-      return challenges.map(c => this._formatChallenge(c));
+      return challenges.map(c => ChallengeModel._formatChallenge(c));
     } catch (error) {
       console.error('Error in findAll:', error.message);
       throw error;
@@ -20,7 +20,7 @@ class ChallengeModel {
   // Get challenge by ID
   static async findById(id) {
     const challenge = await queryOne('SELECT * FROM challenges WHERE id = ?', [id]);
-    return challenge ? this._formatChallenge(challenge) : null;
+    return challenge ? ChallengeModel._formatChallenge(challenge) : null;
   }
 
   // Get challenges by course and level
@@ -29,15 +29,15 @@ class ChallengeModel {
       'SELECT * FROM challenges WHERE course_id = ? AND level = ?',
       [courseId, level]
     );
-    return challenges.map(this._formatChallenge);
+    return challenges.map(c => ChallengeModel._formatChallenge(c));
   }
 
   // Create new challenge
   static async create(challengeData) {
     const id = challengeData.id || `challenge-${Date.now()}`;
     await query(
-      `INSERT INTO challenges (id, title, description, instructions, tags, passing_threshold, expected_html, expected_css, expected_js, expected_screenshot_url, course_id, level, assets, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO challenges (id, title, description, instructions, tags, passing_threshold, expected_html, expected_css, expected_js, expected_screenshot_url, course_id, level, points, hints, assets, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id,
         challengeData.title,
@@ -51,8 +51,10 @@ class ChallengeModel {
         challengeData.expectedScreenshotUrl || null,
         challengeData.courseId || null,
         challengeData.level || 1,
+        challengeData.points || 100,
+        JSON.stringify(challengeData.hints || []),
         JSON.stringify(challengeData.assets || { images: [], reference: '' }),
-        challengeData.createdAt || new Date()
+        challengeData.createdAt ? new Date(challengeData.createdAt) : new Date()
       ]
     );
     return await this.findById(id);
@@ -73,6 +75,8 @@ class ChallengeModel {
        expected_screenshot_url = COALESCE(?, expected_screenshot_url),
        course_id = COALESCE(?, course_id),
        level = COALESCE(?, level),
+       points = COALESCE(?, points),
+       hints = COALESCE(?, hints),
        assets = COALESCE(?, assets),
        updated_at = NOW()
        WHERE id = ?`,
@@ -88,6 +92,8 @@ class ChallengeModel {
         challengeData.expectedScreenshotUrl !== undefined ? challengeData.expectedScreenshotUrl : null,
         challengeData.courseId !== undefined ? challengeData.courseId : null,
         challengeData.level !== undefined ? challengeData.level : null,
+        challengeData.points !== undefined ? challengeData.points : null,
+        challengeData.hints ? JSON.stringify(challengeData.hints) : null,
         challengeData.assets ? JSON.stringify(challengeData.assets) : null,
         id
       ]
@@ -106,18 +112,37 @@ class ChallengeModel {
     return result.count;
   }
 
+  // Helper to safely parse JSON or return default
+  static _safeParse(data, defaultValue) {
+    if (!data) return defaultValue;
+    if (typeof data === 'object') return data;
+    try {
+      const parsed = JSON.parse(data);
+      return parsed;
+    } catch (e) {
+      // If it's a string but not valid JSON, it might be a simple string or pipe-separated
+      if (typeof data === 'string' && data.includes('|')) {
+        return data.split('|').map(t => t.trim()).filter(t => t);
+      }
+      return typeof data === 'string' && data.length > 0 ? [data] : defaultValue;
+    }
+  }
+
   // Format challenge for response
   static _formatChallenge(challenge) {
+    const tags = ChallengeModel._safeParse(challenge.tags, []);
+    const hints = ChallengeModel._safeParse(challenge.hints, []);
+    const assets = ChallengeModel._safeParse(challenge.assets, { images: [], reference: '' });
+    const passingThreshold = ChallengeModel._safeParse(challenge.passing_threshold, { structure: 80, visual: 80, overall: 75 });
+
     return {
       id: challenge.id,
       title: challenge.title,
       description: challenge.description,
       instructions: challenge.instructions,
-      tags: Array.isArray(challenge.tags) ? challenge.tags : JSON.parse(challenge.tags || '[]'),
-      passingThreshold: (typeof challenge.passing_threshold === 'object' && challenge.passing_threshold !== null)
-        ? challenge.passing_threshold
-        : JSON.parse(challenge.passing_threshold || '{"structure":80,"visual":80,"overall":75}'),
-      hints: Array.isArray(challenge.hints) ? challenge.hints : JSON.parse(challenge.hints || '[]'),
+      tags: Array.isArray(tags) ? tags : (typeof tags === 'string' ? [tags] : []),
+      passingThreshold,
+      hints: Array.isArray(hints) ? hints : (typeof hints === 'string' ? [hints] : []),
       points: challenge.points || 100,
       expectedSolution: {
         html: challenge.expected_html,
@@ -130,9 +155,7 @@ class ChallengeModel {
       expectedScreenshotUrl: challenge.expected_screenshot_url,
       courseId: challenge.course_id,
       level: challenge.level,
-      assets: (typeof challenge.assets === 'object' && challenge.assets !== null)
-        ? challenge.assets
-        : JSON.parse(challenge.assets || '{"images":[],"reference":""}'),
+      assets,
       createdAt: challenge.created_at,
       updatedAt: challenge.updated_at
     };

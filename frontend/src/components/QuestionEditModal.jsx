@@ -12,6 +12,9 @@ export default function QuestionEditModal({ question, courseId, onSave, onClose 
     questionNumber: 1,
     points: 100,
     tags: '',
+    hasHtml: false,
+    hasCss: false,
+    hasJs: false,
     hints: '',
     isLocked: false,
     assetImages: '',
@@ -38,6 +41,12 @@ export default function QuestionEditModal({ question, courseId, onSave, onClose 
 
       const referencePath = question.assets?.reference || '';
 
+      const tagsArray = Array.isArray(question.tags) ? question.tags : [];
+      const hasHtml = tagsArray.some(t => t.toLowerCase() === 'html');
+      const hasCss = tagsArray.some(t => t.toLowerCase() === 'css');
+      const hasJs = tagsArray.some(t => t.toLowerCase() === 'js');
+      const otherTags = tagsArray.filter(t => !['html', 'css', 'js'].includes(t.toLowerCase())).join(', ');
+
       setFormData({
         id: question.id || '',
         title: question.title || '',
@@ -46,7 +55,10 @@ export default function QuestionEditModal({ question, courseId, onSave, onClose 
         level: question.level || 1,
         questionNumber: question.questionNumber || 1,
         points: question.points || 100,
-        tags: Array.isArray(question.tags) ? question.tags.join(', ') : '',
+        tags: otherTags,
+        hasHtml,
+        hasCss,
+        hasJs,
         hints: Array.isArray(question.hints) ? question.hints.join('\n') : '',
         isLocked: question.isLocked || false,
         assetImages: imagePaths,
@@ -124,7 +136,12 @@ export default function QuestionEditModal({ question, courseId, onSave, onClose 
       description: formData.description,
       instructions: formData.instructions,
       points: parseInt(formData.points),
-      tags: formData.tags.split(',').map(t => t.trim()).filter(t => t),
+      tags: [
+        ...(formData.hasHtml ? ['HTML'] : []),
+        ...(formData.hasCss ? ['CSS'] : []),
+        ...(formData.hasJs ? ['JS'] : []),
+        ...formData.tags.split(',').map(t => t.trim()).filter(t => t && !['html', 'css', 'js'].includes(t.toLowerCase()))
+      ],
       hints: formData.hints.split('\n').filter(h => h.trim()),
       isLocked: formData.isLocked,
       passingThreshold: {
@@ -250,18 +267,43 @@ export default function QuestionEditModal({ question, courseId, onSave, onClose 
                 <MetricInput label="Points Awarded" value={formData.points} onChange={v => setFormData({ ...formData, points: v })} icon={<Target size={14} />} />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Keywords / Tags</label>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-8 pt-4">
+                <div className="md:col-span-1 space-y-4">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Primary Stack</label>
+                  <div className="flex flex-col gap-3">
+                    <LanguageToggle
+                      label="HTML5"
+                      checked={formData.hasHtml}
+                      onChange={(v) => setFormData({ ...formData, hasHtml: v })}
+                      color="peer-checked:bg-orange-500"
+                    />
+                    <LanguageToggle
+                      label="CSS3"
+                      checked={formData.hasCss}
+                      onChange={(v) => setFormData({ ...formData, hasCss: v })}
+                      color="peer-checked:bg-blue-500"
+                    />
+                    <LanguageToggle
+                      label="JavaScript"
+                      checked={formData.hasJs}
+                      onChange={(v) => setFormData({ ...formData, hasJs: v })}
+                      color="peer-checked:bg-yellow-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="md:col-span-2 space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Additional Keywords / Tags</label>
                   <input
                     type="text"
                     value={formData.tags}
                     onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
                     className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-indigo-500/5 focus:bg-white focus:border-indigo-500 transition-all outline-none"
-                    placeholder="Flexbox, Semantic HTML, Grid"
+                    placeholder="e.g. Flexbox, Semantic HTML, Grid"
                   />
                 </div>
-                <div className="flex items-center justify-center p-4 bg-slate-50 rounded-2xl border border-slate-100">
+
+                <div className="md:col-span-1 flex items-center justify-center p-4 bg-slate-50 rounded-2xl border border-slate-100 mt-6">
                   <label className="flex items-center gap-4 cursor-pointer group">
                     <div className="relative">
                       <input
@@ -435,6 +477,21 @@ export default function QuestionEditModal({ question, courseId, onSave, onClose 
 
   return createPortal(modalContent, document.body);
 }
+
+const LanguageToggle = ({ label, checked, onChange, color }) => (
+  <label className="flex items-center justify-between cursor-pointer group bg-white border border-slate-100 px-4 py-2.5 rounded-xl hover:border-slate-200 transition-all">
+    <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{label}</span>
+    <div className="relative">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        className="sr-only peer"
+      />
+      <div className={`w-10 h-6 bg-slate-200 rounded-full peer ${color} transition-all after:content-[''] after:absolute after:top-1 after:left-1 after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-4 shadow-inner`} />
+    </div>
+  </label>
+);
 
 const MetricInput = ({ label, value, onChange, icon }) => (
   <div className="space-y-2">

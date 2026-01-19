@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../services/api';
+import PreviewFrame from '../components/PreviewFrame';
 
 const FacultyEvaluation = () => {
     const { submissionId } = useParams();
     const navigate = useNavigate();
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState('html'); // 'html', 'css', 'js', 'compare'
+    const [activeTab, setActiveTab] = useState('html'); // 'html', 'css', 'js', 'student_live', 'expected_live', 'compare', 'instructions'
     const [isFullScreen, setIsFullScreen] = useState(false);
 
     // Form State
@@ -161,6 +162,7 @@ const FacultyEvaluation = () => {
                                 { id: 'html', label: 'HTML' },
                                 { id: 'css', label: 'CSS' },
                                 { id: 'js', label: 'JS' },
+                                { id: 'instructions', label: 'Instructions' },
                                 { id: 'student_live', label: 'Student Live' },
                                 { id: 'expected_live', label: 'Expected Live' },
                                 { id: 'compare', label: 'Screenshots' }
@@ -237,26 +239,55 @@ const FacultyEvaluation = () => {
                                     </div>
                                 </div>
                             </div>
-                        ) : activeTab === 'student_live' || activeTab === 'expected_live' ? (
-                            <div className="h-full bg-white relative">
-                                <div className="absolute top-2 left-2 z-10 px-2 py-1 rounded bg-slate-900/80 backdrop-blur-sm text-[10px] font-bold text-white uppercase tracking-widest border border-white/10">
-                                    {activeTab === 'student_live' ? 'Student Live Rendering' : 'Reference Solution Rendering'}
+                        ) : activeTab === 'instructions' ? (
+                            <div className="p-8 h-full overflow-auto bg-slate-900 border-l border-slate-800">
+                                <div className="max-w-3xl mx-auto">
+                                    <div className="mb-8">
+                                        <h3 className="text-xl font-bold text-white mb-2">{submission.course_title} - Level {submission.level}</h3>
+                                        <div className="h-1 w-20 bg-blue-500 rounded-full"></div>
+                                    </div>
+
+                                    <div className="space-y-8">
+                                        <section>
+                                            <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-400 mb-4">Problem Statement</h4>
+                                            <div className="text-slate-300 leading-relaxed text-sm bg-slate-800/50 p-6 rounded-2xl border border-slate-700/50">
+                                                {submission.challenge_description || "No description provided."}
+                                            </div>
+                                        </section>
+
+                                        <section>
+                                            <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-400 mb-4">Instructions</h4>
+                                            <div className="prose prose-invert prose-sm max-w-none text-slate-300 bg-slate-800/50 p-6 rounded-2xl border border-slate-700/50">
+                                                <div dangerouslySetInnerHTML={{ __html: submission.challenge_instructions || "No instructions provided." }} />
+                                            </div>
+                                        </section>
+                                    </div>
                                 </div>
-                                <iframe
-                                    title="Live Preview"
-                                    className="w-full h-full border-none"
-                                    srcDoc={`
-                                        <!DOCTYPE html>
-                                        <html>
-                                            <head>
-                                                <style>${activeTab === 'student_live' ? submission.css_code : submission.expected_css}</style>
-                                            </head>
-                                            <body>
-                                                ${activeTab === 'student_live' ? submission.html_code : submission.expected_html}
-                                                <script>${activeTab === 'student_live' ? submission.js_code : submission.expected_js}</script>
-                                            </body>
-                                        </html>
-                                    `}
+                            </div>
+                        ) : activeTab === 'student_live' ? (
+                            <div className="h-full bg-white relative flex flex-col">
+                                <div className="absolute top-2 left-2 z-10 px-2 py-1 rounded bg-slate-900/80 backdrop-blur-sm text-[10px] font-bold text-white uppercase tracking-widest border border-white/10">
+                                    Student Live Rendering
+                                </div>
+                                <PreviewFrame
+                                    code={{
+                                        html: submission.html_code,
+                                        css: submission.css_code,
+                                        js: submission.js_code
+                                    }}
+                                />
+                            </div>
+                        ) : activeTab === 'expected_live' ? (
+                            <div className="h-full bg-white relative flex flex-col">
+                                <div className="absolute top-2 left-2 z-10 px-2 py-1 rounded bg-emerald-900/80 backdrop-blur-sm text-[10px] font-bold text-white uppercase tracking-widest border border-white/10">
+                                    Expected Result Rendering
+                                </div>
+                                <PreviewFrame
+                                    code={{
+                                        html: submission.expected_html,
+                                        css: submission.expected_css,
+                                        js: submission.expected_js
+                                    }}
                                 />
                             </div>
                         ) : (

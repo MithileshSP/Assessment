@@ -238,6 +238,55 @@ async function applyMigrations() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
 
+    // 7.1 level_access table (Missing)
+    await query(`
+      CREATE TABLE IF NOT EXISTS level_access (
+        id VARCHAR(100) PRIMARY KEY,
+        user_id VARCHAR(100) NOT NULL,
+        course_id VARCHAR(100) NOT NULL,
+        level INT NOT NULL,
+        is_locked BOOLEAN DEFAULT FALSE,
+        locked_by VARCHAR(100),
+        locked_at TIMESTAMP NULL,
+        unlocked_at TIMESTAMP NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE,
+        UNIQUE KEY unique_user_level (user_id, course_id, level)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    // 7.2 assets table
+    await query(`
+      CREATE TABLE IF NOT EXISTS assets (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        filename VARCHAR(255) NOT NULL UNIQUE,
+        original_name VARCHAR(255) NOT NULL,
+        path VARCHAR(500) NOT NULL,
+        url VARCHAR(500) NOT NULL,
+        type VARCHAR(100),
+        size INT,
+        category VARCHAR(50) DEFAULT 'general',
+        checksum_sha256 CHAR(64) NULL,
+        uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    // 7.3 activity_logs table
+    await query(`
+      CREATE TABLE IF NOT EXISTS activity_logs (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id VARCHAR(100),
+        action VARCHAR(100) NOT NULL,
+        entity_type VARCHAR(50),
+        entity_id VARCHAR(100),
+        details JSON,
+        ip_address VARCHAR(50),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
     // 8. Add mission columns to submissions
     const addColumn = async (sql) => {
       try {

@@ -39,6 +39,7 @@ class EvaluationWorker {
      */
     async processNext() {
         if (this.activeWorkers >= this.concurrencyLimit) {
+            console.log(`👷 Evaluation Worker: Concurrency limit reached (${this.activeWorkers}/${this.concurrencyLimit})`);
             return;
         }
 
@@ -72,10 +73,7 @@ class EvaluationWorker {
         console.log(`\n🔄 [Queue] Starting evaluation for submission: ${submissionId}`);
 
         try {
-            // 1. Mark as evaluating
-            await SubmissionModel.updateStatus(submissionId, SubmissionModel.STATUS.EVALUATING);
-
-            // 2. Get challenge
+            // 1. Get challenge
             const challengeId = submission.challengeId;
             const challenge = await ChallengeModel.findById(challengeId);
 

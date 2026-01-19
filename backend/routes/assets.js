@@ -80,16 +80,22 @@ const upload = multer({
 
 // Minimal magic-number validation; basic SVG hardening
 const isMagicValid = (filePath, mime) => {
-  const buf = fs.readFileSync(filePath);
-  const header = buf.slice(0, 12);
-  const str = buf.slice(0, 256).toString('utf8').toLowerCase();
+  const fd = fs.openSync(filePath, 'r');
+  const buffer = Buffer.alloc(256);
+  fs.readSync(fd, buffer, 0, 256, 0);
+  fs.closeSync(fd);
+
+  const header = buffer.slice(0, 12);
+  const str = buffer.toString('utf8').toLowerCase();
+
   if (mime === 'image/png') return header[0] === 0x89 && header[1] === 0x50 && header[2] === 0x4e && header[3] === 0x47;
   if (mime === 'image/jpeg') return header[0] === 0xff && header[1] === 0xd8;
   if (mime === 'image/gif') return str.startsWith('gif8');
-  if (mime === 'image/webp') return str.startsWith('riff') && str.includes('webp');
+  if (mime === 'image/webp') return buffer.slice(0, 4).toString('ascii') === 'RIFF' && buffer.slice(8, 12).toString('ascii') === 'WEBP';
   if (mime === 'image/svg+xml') {
-    if (!str.includes('<svg')) return false;
-    if (str.includes('<script') || str.includes('onload=')) return false;
+    const fullStr = fs.readFileSync(filePath, 'utf8').toLowerCase(); // SVG needs full scan for security
+    if (!fullStr.includes('<svg')) return false;
+    if (fullStr.includes('<script') || fullStr.includes('onload=')) return false;
     return true;
   }
   return false;

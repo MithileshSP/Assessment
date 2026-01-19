@@ -69,6 +69,7 @@ export default function LevelChallenge() {
     return () => clearInterval(attendanceTimer);
   }, [courseId, level]);
 
+
   const checkAttendance = async () => {
     // Admin bypass - skip attendance check entirely
     const userRole = localStorage.getItem('userRole');
@@ -749,8 +750,8 @@ export default function LevelChallenge() {
 
     const questionId = challenge.id;
 
-    if (!code.html || code.html.trim() === '') {
-      alert("Please write some HTML code before submitting.");
+    if ((!code.html || code.html.trim() === '') && (!code.js || code.js.trim() === '')) {
+      alert("Please write some code (HTML or JavaScript) before submitting.");
       setSubmitting(false);
       setEvaluating(false);
       return;

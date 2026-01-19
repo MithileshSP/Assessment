@@ -561,7 +561,7 @@ const QuestionBank = () => {
                                                                 {q.description}
                                                             </p>
                                                             <div className="flex flex-wrap gap-2">
-                                                                {q.tags?.map(tag => (
+                                                                {(Array.isArray(q.tags) ? q.tags : []).map(tag => (
                                                                     <span key={tag} className="px-2.5 py-1 bg-slate-50 text-slate-400 rounded-lg text-[10px] font-black uppercase tracking-widest border border-slate-100">
                                                                         {tag}
                                                                     </span>

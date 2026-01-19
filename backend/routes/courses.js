@@ -705,30 +705,7 @@ router.get('/:courseId/questions', async (req, res) => {
     try {
       // Query challenges from database by course_id
       const challenges = await query('SELECT * FROM challenges WHERE course_id = ? ORDER BY level, created_at', [courseId]);
-      courseQuestions = challenges.map(c => ({
-        id: c.id,
-        title: c.title,
-        courseId: c.course_id,
-        level: c.level,
-        difficulty: c.difficulty,
-        description: c.description,
-        instructions: c.instructions,
-        tags: Array.isArray(c.tags) ? c.tags : JSON.parse(c.tags || '[]'),
-        timeLimit: c.time_limit,
-        passingThreshold: (typeof c.passing_threshold === 'object' && c.passing_threshold !== null)
-          ? c.passing_threshold
-          : JSON.parse(c.passing_threshold || '{}'),
-        points: c.points || 0,
-        hints: Array.isArray(c.hints) ? c.hints : JSON.parse(c.hints || '[]'),
-        expectedSolution: {
-          html: c.expected_html,
-          css: c.expected_css,
-          js: c.expected_js
-        },
-        assets: (typeof c.assets === 'object' && c.assets !== null)
-          ? c.assets
-          : JSON.parse(c.assets || '{"images":[],"reference":""}')
-      }));
+      courseQuestions = challenges.map(c => ChallengeModel._formatChallenge(c));
     } catch (dbError) {
       console.log('Database error, using JSON file:', dbError.message);
       const challenges = getChallenges();
@@ -831,6 +808,8 @@ router.post('/:courseId/questions', async (req, res) => {
       await ChallengeModel.create(question);
     } catch (dbError) {
       console.error('Database create failed:', dbError.message);
+      // If DB is crucial, we should probably return an error here
+      return res.status(500).json({ error: 'Database creation failed: ' + dbError.message });
     }
 
     // 2. Save to JSON File (Legacy/Backup)
@@ -1473,13 +1452,38 @@ router.post('/:courseId/levels/:level/questions/bulk', async (req, res) => {
 /**
  * PUT /api/courses/:courseId/restrictions
  * Update exam restrictions for a course
- * Body: { blockCopy, blockPaste, forceFullscreen, maxViolations }
  */
-router.put('/:courseId/restrictions', (req, res) => {
+router.put('/:courseId/restrictions', async (req, res) => {
   try {
     const { courseId } = req.params;
     const { blockCopy, blockPaste, forceFullscreen, maxViolations, timeLimit } = req.body;
 
+    const newRestrictions = {
+      blockCopy: blockCopy !== undefined ? blockCopy : true,
+      blockPaste: blockPaste !== undefined ? blockPaste : true,
+      forceFullscreen: forceFullscreen !== undefined ? forceFullscreen : true,
+      maxViolations: maxViolations || 3,
+      timeLimit: timeLimit !== undefined ? timeLimit : 0
+    };
+
+    // 1. Try Database
+    try {
+      const course = await CourseModel.findById(courseId);
+      if (course) {
+        await query(
+          "UPDATE courses SET restrictions = ? WHERE id = ?",
+          [JSON.stringify(newRestrictions), courseId]
+        );
+        return res.json({
+          message: 'Restrictions updated successfully (DB)',
+          restrictions: newRestrictions
+        });
+      }
+    } catch (dbError) {
+      console.warn('Database restrictions update failed, falling back to JSON:', dbError.message);
+    }
+
+    // 2. Fallback to JSON
     const courses = getCourses();
     const courseIndex = courses.findIndex(c => c.id === courseId);
 
@@ -1487,20 +1491,12 @@ router.put('/:courseId/restrictions', (req, res) => {
       return res.status(404).json({ error: 'Course not found' });
     }
 
-    // Update restrictions
-    courses[courseIndex].restrictions = {
-      blockCopy: blockCopy !== undefined ? blockCopy : true,
-      blockPaste: blockPaste !== undefined ? blockPaste : true,
-      forceFullscreen: forceFullscreen !== undefined ? forceFullscreen : true,
-      maxViolations: maxViolations || 3,
-      timeLimit: timeLimit !== undefined ? timeLimit : 0 // in minutes, 0 = no limit
-    };
-
+    courses[courseIndex].restrictions = newRestrictions;
     fs.writeFileSync(coursesPath, JSON.stringify(courses, null, 2));
 
     res.json({
-      message: 'Restrictions updated successfully',
-      restrictions: courses[courseIndex].restrictions
+      message: 'Restrictions updated successfully (JSON)',
+      restrictions: newRestrictions
     });
   } catch (error) {
     console.error('Restrictions update error:', error);
@@ -1512,25 +1508,42 @@ router.put('/:courseId/restrictions', (req, res) => {
  * GET /api/courses/:courseId/restrictions
  * Get exam restrictions for a course
  */
-router.get('/:courseId/restrictions', (req, res) => {
+router.get('/:courseId/restrictions', async (req, res) => {
   try {
     const { courseId } = req.params;
-    const courses = getCourses();
-    const course = courses.find(c => c.id === courseId);
+    let restrictions = null;
 
-    if (!course) {
-      return res.status(404).json({ error: 'Course not found' });
+    // 1. Try Database
+    try {
+      const course = await CourseModel.findById(courseId);
+      if (course) {
+        restrictions = course.restrictions;
+      }
+    } catch (dbError) {
+      console.warn('Database restrictions fetch failed, falling back to JSON:', dbError.message);
+    }
+
+    // 2. Try JSON Fallback
+    if (!restrictions) {
+      const courses = getCourses();
+      const course = courses.find(c => c.id === courseId);
+      if (course) {
+        restrictions = course.restrictions;
+      }
+    }
+
+    if (!restrictions && courseId !== 'course-javascript') {
+      // If still not found, return 404
+      // Note: We might want a default even if course is not found, but 404 is safer for routing
     }
 
     // Return restrictions with secure defaults enforced
-    const restrictions = course.restrictions || {};
-
     const secureRestrictions = {
-      blockCopy: restrictions.blockCopy !== undefined ? restrictions.blockCopy : true,
-      blockPaste: restrictions.blockPaste !== undefined ? restrictions.blockPaste : true,
-      forceFullscreen: restrictions.forceFullscreen !== undefined ? restrictions.forceFullscreen : true,
-      maxViolations: restrictions.maxViolations || 3,
-      timeLimit: restrictions.timeLimit || 0
+      blockCopy: (restrictions && restrictions.blockCopy !== undefined) ? restrictions.blockCopy : true,
+      blockPaste: (restrictions && restrictions.blockPaste !== undefined) ? restrictions.blockPaste : true,
+      forceFullscreen: (restrictions && restrictions.forceFullscreen !== undefined) ? restrictions.forceFullscreen : true,
+      maxViolations: (restrictions && restrictions.maxViolations) || 3,
+      timeLimit: (restrictions && restrictions.timeLimit) || 0
     };
 
     res.json(secureRestrictions);
@@ -1544,17 +1557,31 @@ router.get('/:courseId/restrictions', (req, res) => {
  * GET /api/courses/:courseId/level-settings
  * Get level settings (randomization counts, etc.)
  */
-router.get('/:courseId/level-settings', (req, res) => {
+router.get('/:courseId/level-settings', async (req, res) => {
   try {
     const { courseId } = req.params;
-    const courses = getCourses();
-    const course = courses.find(c => c.id === courseId);
+    let levelSettings = null;
 
-    if (!course) {
-      return res.status(404).json({ error: 'Course not found' });
+    // 1. Try Database
+    try {
+      const course = await CourseModel.findById(courseId);
+      if (course) {
+        levelSettings = course.levelSettings || course.level_settings;
+      }
+    } catch (dbError) {
+      console.warn('Database level-settings fetch failed, falling back to JSON:', dbError.message);
     }
 
-    res.json(course.levelSettings || {});
+    // 2. Try JSON Fallback
+    if (!levelSettings) {
+      const courses = getCourses();
+      const course = courses.find(c => c.id === courseId);
+      if (course) {
+        levelSettings = course.levelSettings || {};
+      }
+    }
+
+    res.json(levelSettings || {});
   } catch (error) {
     console.error('Get level settings error:', error);
     res.status(500).json({ error: 'Failed to fetch level settings' });
