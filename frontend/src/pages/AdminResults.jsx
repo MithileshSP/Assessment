@@ -9,7 +9,8 @@ import {
     Download,
     ExternalLink,
     User,
-    BookOpen
+    BookOpen,
+    Calendar
 } from 'lucide-react';
 
 export default function AdminResults() {
@@ -17,6 +18,8 @@ export default function AdminResults() {
     const [results, setResults] = useState([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
+    const [fromDate, setFromDate] = useState('');
+    const [toDate, setToDate] = useState('');
 
     useEffect(() => {
         loadResults();
@@ -35,7 +38,12 @@ export default function AdminResults() {
 
     const handleExportCSV = async () => {
         try {
-            const response = await api.get('/admin/results/export', {
+            // Build query params for date filtering
+            const params = new URLSearchParams();
+            if (fromDate) params.append('fromDate', fromDate);
+            if (toDate) params.append('toDate', toDate);
+
+            const response = await api.get(`/admin/results/export?${params.toString()}`, {
                 responseType: 'blob'
             });
 
@@ -103,9 +111,29 @@ export default function AdminResults() {
                             onChange={(e) => setSearch(e.target.value)}
                         />
                     </div>
-                    <button className="flex items-center gap-2 px-6 py-3 bg-slate-100 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-200 transition-colors">
-                        <Filter size={18} /> Filters
-                    </button>
+                    <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2 bg-slate-50 px-3 py-2 rounded-xl">
+                            <Calendar size={16} className="text-slate-400" />
+                            <input
+                                type="date"
+                                value={fromDate}
+                                onChange={(e) => setFromDate(e.target.value)}
+                                className="bg-transparent border-none text-sm font-medium text-slate-600 focus:outline-none"
+                                placeholder="From"
+                            />
+                        </div>
+                        <span className="text-slate-300 font-bold">to</span>
+                        <div className="flex items-center gap-2 bg-slate-50 px-3 py-2 rounded-xl">
+                            <Calendar size={16} className="text-slate-400" />
+                            <input
+                                type="date"
+                                value={toDate}
+                                onChange={(e) => setToDate(e.target.value)}
+                                className="bg-transparent border-none text-sm font-medium text-slate-600 focus:outline-none"
+                                placeholder="To"
+                            />
+                        </div>
+                    </div>
                 </div>
 
                 {/* Results Table */}

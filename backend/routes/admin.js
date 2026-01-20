@@ -294,6 +294,21 @@ router.get('/results', verifyAdmin, async (req, res) => {
  */
 router.get('/results/export', verifyAdmin, async (req, res) => {
   try {
+    const { fromDate, toDate } = req.query;
+
+    // Build WHERE conditions
+    let whereConditions = ['s.exported_at IS NULL'];
+    const queryParams = [];
+
+    if (fromDate) {
+      whereConditions.push('DATE(s.submitted_at) >= ?');
+      queryParams.push(fromDate);
+    }
+    if (toDate) {
+      whereConditions.push('DATE(s.submitted_at) <= ?');
+      queryParams.push(toDate);
+    }
+
     // Query unexported submissions with all required fields
     const exportQuery = `
       SELECT 
@@ -303,16 +318,17 @@ router.get('/results/export', verifyAdmin, async (req, res) => {
         c.title as course_name,
         s.level as level_name,
         s.status as status,
-        COALESCE(me.total_score, s.final_score, 0) as score
+        COALESCE(me.total_score, s.final_score, 0) as score,
+        s.submitted_at as test_date
       FROM submissions s
       JOIN users u ON s.user_id = u.id
       LEFT JOIN courses c ON s.course_id = c.id
       LEFT JOIN manual_evaluations me ON s.id = me.submission_id
-      WHERE s.exported_at IS NULL
+      WHERE ${whereConditions.join(' AND ')}
       ORDER BY s.submitted_at DESC
     `;
 
-    const results = await db.query(exportQuery);
+    const results = await db.query(exportQuery, queryParams);
 
     if (results.length === 0) {
       return res.status(200).json({
@@ -322,19 +338,21 @@ router.get('/results/export', verifyAdmin, async (req, res) => {
     }
 
     // Build CSV content
-    const headers = ['Student Name', 'Email', 'Course', 'Level', 'Status', 'Score'];
+    const headers = ['Student Name', 'Email', 'Course', 'Level', 'Status', 'Score', 'Test Date'];
     const csvRows = [headers.join(',')];
 
     const submissionIds = [];
     for (const row of results) {
       submissionIds.push(row.id);
+      const testDate = row.test_date ? new Date(row.test_date).toLocaleDateString('en-IN') : '';
       const csvRow = [
         `"${(row.student_name || 'Anonymous').replace(/"/g, '""')}"`,
         `"${(row.student_email || '').replace(/"/g, '""')}"`,
         `"${(row.course_name || 'N/A').replace(/"/g, '""')}"`,
         `Level ${row.level_name || 1}`,
         row.status === 'passed' ? 'PASS' : 'FAIL',
-        row.score || 0
+        row.score || 0,
+        testDate
       ];
       csvRows.push(csvRow.join(','));
     }
