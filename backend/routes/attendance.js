@@ -178,24 +178,24 @@ router.post('/manual-approve', verifyAdmin, async (req, res) => {
 
 // Admin: Bulk Proactive Approval (CSV)
 router.post('/bulk-approve', verifyAdmin, async (req, res) => {
-    const { usernames, courseId, level } = req.body; // usernames is an array
+    const { emails, courseId, level } = req.body; // emails is an array
     const adminId = req.user.id;
     const testIdentifier = `${courseId}_${level}`;
 
-    if (!usernames || !Array.isArray(usernames) || !courseId || !level) {
+    if (!emails || !Array.isArray(emails) || !courseId || !level) {
         return res.status(400).json({ error: 'Invalid payload' });
     }
 
     try {
-        // 1. Get user IDs for these usernames
+        // 1. Get user IDs for these emails
         const users = await query(
-            "SELECT id, username FROM users WHERE username IN (?)",
-            [usernames]
+            "SELECT id, email FROM users WHERE email IN (?)",
+            [emails]
         );
 
         const results = {
             approved: 0,
-            notFound: usernames.filter(un => !users.find(u => u.username === un))
+            notFound: emails.filter(em => !users.find(u => u.email === em))
         };
 
         // 2. Process each user
@@ -232,11 +232,11 @@ router.post('/bulk-approve', verifyAdmin, async (req, res) => {
  */
 router.get('/sample/csv', (req, res) => {
     try {
-        const headers = ['username'];
+        const headers = ['email'];
         const rows = [
-            ['student_01'],
-            ['student_02'],
-            ['student_03']
+            ['student01@example.com'],
+            ['student02@example.com'],
+            ['student03@example.com']
         ];
 
         const csvContent = headers.join(',') + '\n' + rows.map(r => r.join(',')).join('\n');

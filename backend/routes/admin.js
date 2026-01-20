@@ -73,10 +73,10 @@ router.post('/sessions/end', verifyAdmin, async (req, res) => {
  * Bulk authorize students for an active session
  */
 router.post('/sessions/bulk-authorize', verifyAdmin, async (req, res) => {
-  const { usernames, sessionId } = req.body;
+  const { emails, sessionId } = req.body;
   const adminId = req.user.id;
 
-  if (!usernames || !Array.isArray(usernames) || !sessionId) {
+  if (!emails || !Array.isArray(emails) || !sessionId) {
     return res.status(400).json({ error: 'Invalid payload' });
   }
 
@@ -87,15 +87,15 @@ router.post('/sessions/bulk-authorize', verifyAdmin, async (req, res) => {
     const testIdentifier = `${session.course_id}_${session.level}`;
 
     // Get user IDs
-    const users = await db.query("SELECT id, username FROM users WHERE username IN (?)", [usernames]);
-    const userMap = new Map(users.map(u => [u.username, u.id]));
+    const users = await db.query("SELECT id, email FROM users WHERE email IN (?)", [emails]);
+    const userMap = new Map(users.map(u => [u.email, u.id]));
 
     const results = { approved: 0, failed: 0, notFound: [] };
 
-    for (const username of usernames) {
-      const userId = userMap.get(username);
+    for (const email of emails) {
+      const userId = userMap.get(email);
       if (!userId) {
-        results.notFound.push(username);
+        results.notFound.push(email);
         continue;
       }
 
@@ -108,7 +108,7 @@ router.post('/sessions/bulk-authorize', verifyAdmin, async (req, res) => {
         `, [userId, testIdentifier, adminId, sessionId]);
         results.approved++;
       } catch (e) {
-        console.error(`Failed to authorize ${username}:`, e.message);
+        console.error(`Failed to authorize ${email}:`, e.message);
         results.failed++;
       }
     }

@@ -240,25 +240,55 @@ const FacultyEvaluation = () => {
                                 </div>
                             </div>
                         ) : activeTab === 'instructions' ? (
-                            <div className="p-8 h-full overflow-auto bg-slate-900 border-l border-slate-800">
-                                <div className="max-w-3xl mx-auto">
-                                    <div className="mb-8">
-                                        <h3 className="text-xl font-bold text-white mb-2">{submission.course_title} - Level {submission.level}</h3>
-                                        <div className="h-1 w-20 bg-blue-500 rounded-full"></div>
+                            <div className="h-full overflow-auto bg-gray-50/50">
+                                <div className="max-w-4xl mx-auto p-8 md:p-12">
+                                    {/* Question Header */}
+                                    <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100 mb-8">
+                                        <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+                                            <div className="flex items-center gap-3">
+                                                <span className="px-3 py-1 rounded-full bg-blue-50 text-blue-600 text-[10px] font-bold uppercase tracking-wider border border-blue-100">
+                                                    ID: #{submission.challenge_id || 'N/A'}
+                                                </span>
+                                                <span className="px-3 py-1 rounded-full bg-slate-50 text-slate-500 text-[10px] font-bold uppercase tracking-wider border border-slate-100">
+                                                    {submission.course_title} • Level {submission.level}
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Active Assessment</span>
+                                            </div>
+                                        </div>
+
+                                        <h3 className="text-2xl md:text-3xl font-black text-slate-900 leading-tight mb-4">
+                                            {submission.challenge_title || "Final Assessment"}
+                                        </h3>
+                                        <div className="h-1.5 w-24 bg-gradient-to-r from-blue-600 to-blue-400 rounded-full"></div>
                                     </div>
 
+                                    {/* Question Content */}
                                     <div className="space-y-8">
-                                        <section>
-                                            <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-400 mb-4">Problem Statement</h4>
-                                            <div className="text-slate-300 leading-relaxed text-sm bg-slate-800/50 p-6 rounded-2xl border border-slate-700/50">
-                                                {submission.challenge_description || "No description provided."}
-                                            </div>
-                                        </section>
+                                        {submission.challenge_description && (
+                                            <section className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100">
+                                                <h4 className="flex items-center gap-3 text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 mb-6">
+                                                    <span className="w-8 h-8 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center italic font-serif text-lg">i</span>
+                                                    Description
+                                                </h4>
+                                                <div className="text-slate-700 leading-[1.8] text-base md:text-lg whitespace-pre-wrap font-medium">
+                                                    {submission.challenge_description}
+                                                </div>
+                                            </section>
+                                        )}
 
-                                        <section>
-                                            <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-400 mb-4">Instructions</h4>
-                                            <div className="prose prose-invert prose-sm max-w-none text-slate-300 bg-slate-800/50 p-6 rounded-2xl border border-slate-700/50">
-                                                <div dangerouslySetInnerHTML={{ __html: submission.challenge_instructions || "No instructions provided." }} />
+                                        <section className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100">
+                                            <h4 className="flex items-center gap-3 text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 mb-6">
+                                                <span className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-sm">✓</span>
+                                                Instructions & Samples
+                                            </h4>
+                                            <div className="prose prose-slate max-w-none">
+                                                <div
+                                                    className="text-slate-700 leading-[1.8] text-base md:text-lg font-medium"
+                                                    dangerouslySetInnerHTML={{ __html: submission.challenge_instructions || "No instructions provided." }}
+                                                />
                                             </div>
                                         </section>
                                     </div>

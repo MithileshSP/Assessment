@@ -56,6 +56,7 @@ router.get('/submission/:id', verifyFaculty, async (req, res) => {
                 s.*, 
                 s.user_id as candidate_name, 
                 c.title as course_title,
+                ch.title as challenge_title,
                 ch.expected_screenshot_url as expected_screenshot,
                 ch.expected_html,
                 ch.expected_css,

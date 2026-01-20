@@ -33,7 +33,7 @@ const AdminAttendance = () => {
     const [selectedCourse, setSelectedCourse] = useState('');
     const [selectedLevel, setSelectedLevel] = useState('1');
     const [sessionDuration, setSessionDuration] = useState('60');
-    const [bulkUsernames, setBulkUsernames] = useState('');
+    const [bulkEmails, setBulkEmails] = useState('');
     const [timeRemaining, setTimeRemaining] = useState(0);
     const fileInputRef = React.useRef(null);
 
@@ -151,22 +151,22 @@ const AdminAttendance = () => {
     };
 
     const handleBulkSessionAuth = async () => {
-        if (!activeSession || !bulkUsernames.trim()) {
-            alert("No active session or usernames provided");
+        if (!activeSession || !bulkEmails.trim()) {
+            alert("No active session or emails provided");
             return;
         }
 
-        const usernames = bulkUsernames.split(/[\n,]+/).map(u => u.trim()).filter(u => u);
-        if (usernames.length === 0) return;
+        const emails = bulkEmails.split(/[\n,]+/).map(e => e.trim()).filter(e => e);
+        if (emails.length === 0) return;
 
         try {
             setSubmitting(true);
             const res = await api.post('/admin/sessions/bulk-authorize', {
-                usernames,
+                emails,
                 sessionId: activeSession.id
             });
             alert(`Bulk auth complete. Approved: ${res.data.results.approved}, Failed: ${res.data.results.failed}, Not Found: ${res.data.results.notFound.length}`);
-            setBulkUsernames('');
+            setBulkEmails('');
             fetchRequests(true);
         } catch (e) {
             alert("Bulk authorization failed");
@@ -232,21 +232,21 @@ const AdminAttendance = () => {
                 return;
             }
             const headers = lines[0].toLowerCase().split(',');
-            const usernameIndex = headers.indexOf('username');
+            const emailIndex = headers.indexOf('email');
 
-            if (usernameIndex === -1) {
-                alert("CSV must have a 'username' column");
+            if (emailIndex === -1) {
+                alert("CSV must have an 'email' column");
                 e.target.value = '';
                 return;
             }
 
-            const usernames = lines.slice(1).map(line => {
+            const emails = lines.slice(1).map(line => {
                 const parts = line.split(',');
-                return parts[usernameIndex];
-            }).filter(u => u);
+                return parts[emailIndex];
+            }).filter(e => e);
 
-            if (usernames.length === 0) {
-                alert("No usernames found in CSV");
+            if (emails.length === 0) {
+                alert("No emails found in CSV");
                 e.target.value = '';
                 return;
             }
@@ -254,7 +254,7 @@ const AdminAttendance = () => {
             try {
                 setSubmitting(true);
                 const res = await api.post('/admin/sessions/bulk-authorize', {
-                    usernames,
+                    emails,
                     sessionId: activeSession.id
                 });
                 alert(`Bulk upload complete. Approved: ${res.data.results.approved}, Failed: ${res.data.results.failed}, Not Found: ${res.data.results.notFound.length}`);
@@ -411,10 +411,10 @@ const AdminAttendance = () => {
                                             </button>
                                         </div>
                                         <textarea
-                                            value={bulkUsernames}
-                                            onChange={(e) => setBulkUsernames(e.target.value)}
+                                            value={bulkEmails}
+                                            onChange={(e) => setBulkEmails(e.target.value)}
                                             rows={2}
-                                            placeholder="Enter student usernames..."
+                                            placeholder="Enter student emails..."
                                             className="w-full px-4 py-4 bg-slate-50 border-2 border-transparent rounded-2xl text-xs font-medium focus:bg-white focus:border-indigo-600 outline-none transition-all resize-none shadow-inner"
                                             disabled={!activeSession}
                                         />
@@ -422,7 +422,7 @@ const AdminAttendance = () => {
                                     <div className="grid grid-cols-2 gap-3">
                                         <button
                                             onClick={handleBulkSessionAuth}
-                                            disabled={!activeSession || submitting || !bulkUsernames.trim()}
+                                            disabled={!activeSession || submitting || !bulkEmails.trim()}
                                             className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-bold text-sm tracking-tight hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 disabled:opacity-20"
                                         >
                                             Mark Present

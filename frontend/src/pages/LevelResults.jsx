@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api, { getLevelQuestions, getUserSubmissions } from '../services/api';
 
 export default function LevelResults() {
   const { courseId, level } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
-  const userId = localStorage.getItem('userId') || 'default-user';
+  const userId = localStorage.getItem('userId') || JSON.parse(localStorage.getItem('user'))?.id || 'default-user';
 
   const [results, setResults] = useState([]);
   const [levelUnlocked, setLevelUnlocked] = useState(false);
@@ -14,13 +14,37 @@ export default function LevelResults() {
 
   useEffect(() => {
     calculateResults();
-  }, []);
+  }, [courseId, level]);
 
   const calculateResults = async () => {
     try {
-      const { submissions, assignedQuestions } = location.state || {};
+      setLoading(true);
+      let { submissions, assignedQuestions } = location.state || {};
 
+      // If state is missing, fetch from API
       if (!submissions || !assignedQuestions) {
+        const [questionsRes, submissionsRes] = await Promise.all([
+          getLevelQuestions(courseId, level, userId),
+          getUserSubmissions(userId)
+        ]);
+
+        assignedQuestions = questionsRes.data;
+
+        // Map submissions to matching questions (keyed by challenge_id)
+        const subMap = {};
+        // submissionsRes.data is expected to be an array of submissions from newest to oldest
+        submissionsRes.data.forEach(s => {
+          if (s.courseId === courseId && s.level === parseInt(level)) {
+            // Only capture the most recent submission per challenge
+            if (!subMap[s.challengeId]) {
+              subMap[s.challengeId] = s;
+            }
+          }
+        });
+        submissions = subMap;
+      }
+
+      if (!assignedQuestions || assignedQuestions.length === 0) {
         navigate(`/course/${courseId}`);
         return;
       }
@@ -30,13 +54,19 @@ export default function LevelResults() {
         const submission = submissions[q.id];
         const isGraded = submission?.manual_score !== null && submission?.manual_score !== undefined;
 
+        // Extract internal result if it's a JSON string or object
+        let internalResult = submission?.evaluation_result;
+        if (typeof internalResult === 'string') {
+          try { internalResult = JSON.parse(internalResult); } catch (e) { internalResult = {}; }
+        }
+
         return {
           questionNumber: index + 1,
           title: q.title,
-          score: isGraded ? submission.manual_score : (submission?.finalScore || 0),
-          passed: isGraded ? (submission.manual_score >= 50) : false,
-          feedback: submission?.feedback || null,
-          isPending: !isGraded,
+          score: isGraded ? submission.manual_score : (internalResult?.finalScore || submission?.final_score || 0),
+          passed: isGraded ? (submission.manual_score >= 50) : (submission?.status === 'passed' || internalResult?.passed),
+          feedback: internalResult || null,
+          isPending: !isGraded && submission?.status === 'pending',
           manualFeedback: submission?.manual_feedback || null
         };
       });
@@ -47,17 +77,17 @@ export default function LevelResults() {
       const anyPending = resultsData.some(r => r.isPending);
       const allPassed = resultsData.every(r => r.passed);
       const totalScore = resultsData.reduce((sum, r) => sum + r.score, 0);
-      const avgScore = totalScore / resultsData.length;
+      const avgScore = totalScore / (resultsData.length || 1);
 
       if (!anyPending && (allPassed || avgScore >= 70)) {
         // Mark level as complete and unlock next level
-        await axios.post('/api/users/complete-level', {
+        await api.post('/users/complete-level', {
           userId,
           courseId,
           level: parseInt(level)
         });
         setLevelUnlocked(true);
-      } else if (anyPending) {
+      } else {
         setLevelUnlocked(false);
       }
 
@@ -104,12 +134,12 @@ export default function LevelResults() {
               {levelUnlocked ? '🎉' : '📝'}
             </div>
             <h1 className="text-4xl font-bold mb-2">
-              Level {level} {levelUnlocked ? 'Complete!' : resultsData.some(r => r.isPending) ? 'Evaluation Pending' : 'Results'}
+              Level {level} {levelUnlocked ? 'Complete!' : results.some(r => r.isPending) ? 'Evaluation Pending' : 'Results'}
             </h1>
             <p className="text-xl opacity-90">
               {levelUnlocked
                 ? `Congratulations! You've unlocked Level ${parseInt(level) + 1}!`
-                : resultsData.some(r => r.isPending)
+                : results.some(r => r.isPending)
                   ? 'Your submission is being reviewed by our faculty.'
                   : 'Review your performance below'}
             </p>
@@ -127,10 +157,10 @@ export default function LevelResults() {
             </div>
             <div className="bg-white bg-opacity-20 rounded-lg p-4 text-center">
               <div className="text-3xl font-bold">
-                {resultsData.some(r => r.isPending) ? '⏳' : (levelUnlocked ? '✓' : '✗')}
+                {results.some(r => r.isPending) ? '⏳' : (levelUnlocked ? '✓' : '✗')}
               </div>
               <div className="text-sm opacity-90 mt-1">
-                {resultsData.some(r => r.isPending) ? 'Pending Review' : (levelUnlocked ? 'Level Unlocked' : 'Try Again')}
+                {results.some(r => r.isPending) ? 'Pending Review' : (levelUnlocked ? 'Level Unlocked' : 'Try Again')}
               </div>
             </div>
           </div>

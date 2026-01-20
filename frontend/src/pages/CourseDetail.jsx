@@ -83,6 +83,24 @@ export default function CourseDetail() {
     </SaaSLayout>
   );
 
+  if (!course) {
+    return (
+      <SaaSLayout>
+        <div className="flex flex-col items-center justify-center py-40 text-center">
+          <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center text-slate-200 mb-6 font-black text-4xl">?</div>
+          <h2 className="text-2xl font-bold text-slate-900 mb-2">Course Sequence Not Found</h2>
+          <p className="text-slate-500 max-w-md mx-auto mb-8 font-medium">The requested assessment module could not be retrieved from the ledger. It may have been relocated or renamed.</p>
+          <button
+            onClick={() => navigate('/dashboard')}
+            className="px-8 py-3 bg-slate-900 text-white rounded-2xl font-bold hover:bg-blue-600 transition-all"
+          >
+            Return to Dashboard
+          </button>
+        </div>
+      </SaaSLayout>
+    );
+  }
+
   return (
     <SaaSLayout>
       <div className="space-y-10 text-left">
@@ -94,7 +112,7 @@ export default function CourseDetail() {
               className="w-40 h-40 lg:w-56 lg:h-56 rounded-[2.5rem] bg-white p-1 shadow-2xl flex-shrink-0 group-hover:rotate-3 transition-transform duration-500"
             >
               <div className="w-full h-full rounded-[2.2rem] overflow-hidden relative bg-slate-100 flex items-center justify-center">
-                {course.thumbnail ? (
+                {course?.thumbnail ? (
                   <img src={course.thumbnail} className="w-full h-full object-cover" />
                 ) : (
                   <Code size={64} className="text-slate-300" />
@@ -122,7 +140,7 @@ export default function CourseDetail() {
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center text-blue-400">
-                    <Layers size={20} />
+                    <Clock size={20} />
                   </div>
                   <div className="text-left">
                     <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Syllabus</p>

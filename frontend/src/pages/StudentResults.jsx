@@ -40,7 +40,7 @@ const StudentResults = () => {
     };
 
     const filtered = submissions.filter(s =>
-        (s.course_id || '').toLowerCase().includes(search.toLowerCase()) ||
+        (s.courseId || '').toLowerCase().includes(search.toLowerCase()) ||
         `Level ${s.level}`.toLowerCase().includes(search.toLowerCase())
     );
 
@@ -111,7 +111,7 @@ const StudentResults = () => {
                                                             L{sub.level}
                                                         </div>
                                                         <div>
-                                                            <p className="font-bold text-slate-900 capitalize">{sub.course_id?.replace('-', ' ')}</p>
+                                                            <p className="font-bold text-slate-900 capitalize">{sub.courseId?.replace('-', ' ')}</p>
                                                             <p className="text-[11px] text-slate-400 font-bold uppercase tracking-widest">Module Access</p>
                                                         </div>
                                                     </div>
@@ -146,7 +146,7 @@ const StudentResults = () => {
                                                 </td>
                                                 <td className="px-8 py-6 text-right">
                                                     <button
-                                                        onClick={() => navigate(`/level-results/${sub.course_id}/${sub.level}`)}
+                                                        onClick={() => navigate(`/level-results/${sub.courseId}/${sub.level}`)}
                                                         className="inline-flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-xl text-xs font-bold hover:bg-blue-600 transition-all"
                                                     >
                                                         Details

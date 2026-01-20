@@ -1,0 +1,11 @@
+id	course_id	level
+1242511b-c47c-4334-b19a-4935d5c6e717	course-fullstack	1
+1dd19564-a16d-4d1d-b2d8-3fcd5d5fba8c	course-fullstack	1
+4988105b-61bb-4484-a090-08929bb142db	course-fullstack	1
+8efb9c88-eac8-4f82-977f-bcb151f8978c	course-fullstack	1
+964c5ec7-b124-44cd-a9aa-57276d5ccaf5	course-fullstack	1
+b1ae3354-1ad0-49b5-a273-e52010b125ef	course-fullstack	1
+be94dc4c-62e3-4b09-9f78-ef8283fbfc4e	course-fullstack	1
+89fce4d3-ccf6-4f1f-9d6e-1110b994c8d9	course-javascript	1
+b637ed31-01b9-4769-a54f-23b2b7eb2961	course-javascript	1
+e3fdd840-17f9-461d-83ab-5ffaa5e985f2	course-javascript	1
