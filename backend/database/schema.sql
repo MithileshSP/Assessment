@@ -91,6 +91,7 @@ CREATE TABLE submissions (
     expected_screenshot VARCHAR(500),
     course_id VARCHAR(100),
     level INT,
+    exported_at TIMESTAMP NULL DEFAULT NULL,
     INDEX idx_challenge (challenge_id),
     INDEX idx_user (user_id),
     INDEX idx_status (status),

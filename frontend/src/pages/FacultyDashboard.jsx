@@ -12,19 +12,29 @@ import {
 
 const FacultyDashboard = () => {
     const [queue, setQueue] = useState([]);
+    const [stats, setStats] = useState({
+        questionsAdded: 0,
+        evaluated: 0,
+        pending: 0
+    });
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
 
     useEffect(() => {
-        fetchQueue();
+        fetchData();
     }, []);
 
-    const fetchQueue = async () => {
+    const fetchData = async () => {
+        setLoading(true);
         try {
-            const res = await api.get('/faculty/queue');
-            setQueue(res.data);
+            const [queueRes, statsRes] = await Promise.all([
+                api.get('/faculty/queue'),
+                api.get('/faculty/stats')
+            ]);
+            setQueue(queueRes.data);
+            setStats(statsRes.data);
         } catch (error) {
-            console.error("Failed to load queue", error);
+            console.error("Failed to load dashboard data", error);
         } finally {
             setLoading(false);
         }
@@ -42,23 +52,51 @@ const FacultyDashboard = () => {
                     <div className="flex gap-4">
                         <div className="bg-white px-4 py-2 rounded-xl border border-slate-200 shadow-sm flex items-center gap-3">
                             <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                            <span className="text-sm font-bold text-slate-700">{queue.length} Tasks Pending</span>
+                            <span className="text-sm font-bold text-slate-700">{stats.pending} Tasks Pending</span>
                         </div>
                     </div>
                 </div>
 
                 {/* Quick Stats */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:border-indigo-200 transition-all group">
                         <div className="flex items-center gap-4 mb-3">
-                            <div className="p-3 rounded-xl bg-blue-50 text-blue-600">
+                            <div className="p-3 rounded-xl bg-blue-50 text-blue-600 group-hover:bg-blue-100 transition-colors">
                                 <ClipboardList size={20} />
                             </div>
-                            <span className="text-sm font-medium text-slate-500">Evaluation Queue</span>
+                            <span className="text-sm font-bold text-slate-500 uppercase tracking-wider">Evaluation Queue</span>
                         </div>
-                        <p className="text-3xl font-bold text-slate-900">{queue.length}</p>
+                        <div className="flex items-end justify-between">
+                            <p className="text-3xl font-black text-slate-900">{stats.pending}</p>
+                            <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-md uppercase tracking-tighter">Pending Review</span>
+                        </div>
                     </div>
-                    {/* Add more faculty-specific stats here if available */}
+
+                    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:border-emerald-200 transition-all group">
+                        <div className="flex items-center gap-4 mb-3">
+                            <div className="p-3 rounded-xl bg-emerald-50 text-emerald-600 group-hover:bg-emerald-100 transition-colors">
+                                <CheckCircle size={20} />
+                            </div>
+                            <span className="text-sm font-bold text-slate-500 uppercase tracking-wider">Evaluated</span>
+                        </div>
+                        <div className="flex items-end justify-between">
+                            <p className="text-3xl font-black text-slate-900">{stats.evaluated}</p>
+                            <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-md uppercase tracking-tighter">Completed</span>
+                        </div>
+                    </div>
+
+                    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:border-amber-200 transition-all group">
+                        <div className="flex items-center gap-4 mb-3">
+                            <div className="p-3 rounded-xl bg-amber-50 text-amber-600 group-hover:bg-amber-100 transition-colors">
+                                <FileText size={20} />
+                            </div>
+                            <span className="text-sm font-bold text-slate-500 uppercase tracking-wider">Questions Added</span>
+                        </div>
+                        <div className="flex items-end justify-between">
+                            <p className="text-3xl font-black text-slate-900">{stats.questionsAdded}</p>
+                            <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-1 rounded-md uppercase tracking-tighter">Contribution</span>
+                        </div>
+                    </div>
                 </div>
 
                 {/* Submissions Table */}
@@ -126,7 +164,7 @@ const FacultyDashboard = () => {
                     </div>
                 </div>
             </div>
-        </SaaSLayout>
+        </SaaSLayout >
     );
 };
 

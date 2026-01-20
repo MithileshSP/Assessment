@@ -3,6 +3,40 @@ const router = express.Router();
 const db = require('../database/connection');
 const { verifyToken, verifyFaculty } = require('../middleware/auth');
 
+// Get faculty statistics
+router.get('/stats', verifyFaculty, async (req, res) => {
+    try {
+        const facultyId = req.user.id;
+
+        // 1. Count questions added by this faculty
+        const questionsResult = await db.query(
+            "SELECT COUNT(*) as count FROM challenges WHERE created_by = ?",
+            [facultyId]
+        );
+
+        // 2. Count evaluated submissions
+        const evaluatedResult = await db.query(
+            "SELECT COUNT(*) as count FROM submission_assignments WHERE faculty_id = ? AND status = 'evaluated'",
+            [facultyId]
+        );
+
+        // 3. Count pending submissions
+        const pendingResult = await db.query(
+            "SELECT COUNT(*) as count FROM submission_assignments WHERE faculty_id = ? AND status = 'pending'",
+            [facultyId]
+        );
+
+        res.json({
+            questionsAdded: questionsResult[0]?.count || 0,
+            evaluated: evaluatedResult[0]?.count || 0,
+            pending: pendingResult[0]?.count || 0
+        });
+    } catch (error) {
+        console.error("Error fetching faculty stats:", error);
+        res.status(500).json({ error: "Failed to fetch faculty statistics" });
+    }
+});
+
 // Get list of submissions assigned to this faculty
 router.get('/queue', verifyFaculty, async (req, res) => {
     try {

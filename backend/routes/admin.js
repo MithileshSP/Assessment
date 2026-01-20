@@ -289,6 +289,80 @@ router.get('/results', verifyAdmin, async (req, res) => {
 });
 
 /**
+ * GET /api/admin/results/export
+ * Export unexported results as CSV and mark them as exported
+ */
+router.get('/results/export', verifyAdmin, async (req, res) => {
+  try {
+    // Query unexported submissions with all required fields
+    const exportQuery = `
+      SELECT 
+        s.id,
+        u.full_name as student_name,
+        u.email as student_email,
+        c.title as course_name,
+        s.level as level_name,
+        s.status as status,
+        COALESCE(me.total_score, s.final_score, 0) as score
+      FROM submissions s
+      JOIN users u ON s.user_id = u.id
+      LEFT JOIN courses c ON s.course_id = c.id
+      LEFT JOIN manual_evaluations me ON s.id = me.submission_id
+      WHERE s.exported_at IS NULL
+      ORDER BY s.submitted_at DESC
+    `;
+
+    const results = await db.query(exportQuery);
+
+    if (results.length === 0) {
+      return res.status(200).json({
+        message: 'No new submissions to export',
+        exported: 0
+      });
+    }
+
+    // Build CSV content
+    const headers = ['Student Name', 'Email', 'Course', 'Level', 'Status', 'Score'];
+    const csvRows = [headers.join(',')];
+
+    const submissionIds = [];
+    for (const row of results) {
+      submissionIds.push(row.id);
+      const csvRow = [
+        `"${(row.student_name || 'Anonymous').replace(/"/g, '""')}"`,
+        `"${(row.student_email || '').replace(/"/g, '""')}"`,
+        `"${(row.course_name || 'N/A').replace(/"/g, '""')}"`,
+        `Level ${row.level_name || 1}`,
+        row.status === 'passed' ? 'PASS' : 'FAIL',
+        row.score || 0
+      ];
+      csvRows.push(csvRow.join(','));
+    }
+
+    // Mark submissions as exported
+    if (submissionIds.length > 0) {
+      await db.query(
+        `UPDATE submissions SET exported_at = NOW() WHERE id IN (?)`,
+        [submissionIds]
+      );
+    }
+
+    // Send CSV response
+    const csvContent = csvRows.join('\n');
+    const filename = `results_export_${new Date().toISOString().slice(0, 10)}.csv`;
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('X-Exported-Count', results.length);
+    res.send(csvContent);
+
+  } catch (error) {
+    console.error("Error exporting results:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
  * POST /reset-level
  * Reset a user's level progress for re-testing
  * Body: { userId, courseId, level }

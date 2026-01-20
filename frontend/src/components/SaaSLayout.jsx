@@ -94,6 +94,7 @@ const SaaSLayout = ({ children }) => {
         ],
         faculty: [
             { id: 'dashboard', label: 'Overview', icon: <Layout size={20} />, path: '/faculty/dashboard' },
+            { id: 'questions', label: 'Question Bank', icon: <BookOpen size={20} />, path: '/faculty/questions' },
             { id: 'queue', label: 'Pending Reviews', icon: <FileText size={20} />, path: '/faculty/submissions' },
             { id: 'history', label: 'History', icon: <BarChart2 size={20} />, path: '/faculty/history' },
         ],

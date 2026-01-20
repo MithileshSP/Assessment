@@ -29,10 +29,12 @@ import { X } from 'lucide-react';
 import SaaSLayout from '../components/SaaSLayout';
 import QuestionEditModal from '../components/QuestionEditModal';
 import * as api from '../services/api';
+import { getUserRole } from '../utils/session';
 
 const QuestionBank = () => {
     const { courseId } = useParams();
     const navigate = useNavigate();
+    const userRole = getUserRole();
 
     const [course, setCourse] = useState(null);
     const [questionsByLevel, setQuestionsByLevel] = useState({});
@@ -341,7 +343,7 @@ const QuestionBank = () => {
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div className="flex items-center gap-4">
                         <button
-                            onClick={() => navigate('/admin/courses')}
+                            onClick={() => navigate(userRole === 'admin' ? '/admin/courses' : '/faculty/dashboard')}
                             className="p-2.5 bg-white rounded-2xl border border-slate-200 text-slate-500 hover:bg-slate-50 transition-all shadow-sm"
                         >
                             <ArrowLeft size={20} />
@@ -560,6 +562,12 @@ const QuestionBank = () => {
                                                             <p className="text-sm text-slate-500 line-clamp-2 leading-relaxed">
                                                                 {q.description}
                                                             </p>
+                                                            <div className="flex items-center gap-2 mt-1">
+                                                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Added by:</span>
+                                                                <span className="text-[10px] font-black text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded-md uppercase tracking-widest border border-indigo-100/50">
+                                                                    {q.creatorName || 'System'}
+                                                                </span>
+                                                            </div>
                                                             <div className="flex flex-wrap gap-2">
                                                                 {(Array.isArray(q.tags) ? q.tags : []).map(tag => (
                                                                     <span key={tag} className="px-2.5 py-1 bg-slate-50 text-slate-400 rounded-lg text-[10px] font-black uppercase tracking-widest border border-slate-100">

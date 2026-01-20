@@ -33,6 +33,40 @@ export default function AdminResults() {
         }
     };
 
+    const handleExportCSV = async () => {
+        try {
+            const response = await api.get('/admin/results/export', {
+                responseType: 'blob'
+            });
+
+            // Check if response is JSON (no new exports)
+            const contentType = response.headers['content-type'];
+            if (contentType && contentType.includes('application/json')) {
+                const text = await response.data.text();
+                const json = JSON.parse(text);
+                alert(json.message || 'No new submissions to export');
+                return;
+            }
+
+            // Download the CSV file
+            const blob = new Blob([response.data], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `results_export_${new Date().toISOString().slice(0, 10)}.csv`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
+
+            // Reload results to update any UI state if needed
+            loadResults();
+        } catch (error) {
+            console.error('Export failed:', error);
+            alert('Failed to export CSV. Please try again.');
+        }
+    };
+
     const filteredResults = results.filter(r =>
         r.candidate_name?.toLowerCase().includes(search.toLowerCase()) ||
         r.course_title?.toLowerCase().includes(search.toLowerCase())
@@ -48,7 +82,10 @@ export default function AdminResults() {
                         <p className="text-slate-500 mt-1 text-left">Aggregated view of automated and manual evaluations.</p>
                     </div>
                     <div className="flex items-center gap-3">
-                        <button className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 hover:bg-slate-50 transition-colors shadow-sm">
+                        <button
+                            onClick={handleExportCSV}
+                            className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 hover:bg-slate-50 transition-colors shadow-sm"
+                        >
                             <Download size={16} /> Export CSV
                         </button>
                     </div>
@@ -110,8 +147,8 @@ export default function AdminResults() {
                                             </td>
                                             <td className="px-6 py-4 text-center">
                                                 <span className={`px-2.5 py-1 rounded-lg font-bold text-[10px] uppercase tracking-wider border ${row.final_status === 'passed' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-                                                        row.final_status === 'failed' ? 'bg-rose-50 text-rose-600 border-rose-100' :
-                                                            'bg-amber-50 text-amber-600 border-amber-100'
+                                                    row.final_status === 'failed' ? 'bg-rose-50 text-rose-600 border-rose-100' :
+                                                        'bg-amber-50 text-amber-600 border-amber-100'
                                                     }`}>
                                                     {row.final_status || 'PENDING'}
                                                 </span>

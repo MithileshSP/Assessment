@@ -10,6 +10,7 @@ const path = require('path');
 const CourseModel = require('../models/Course');
 const ChallengeModel = require('../models/Challenge');
 const { query } = require('../database/connection');
+const { verifyFaculty } = require('../middleware/auth');
 
 const challengesPath = path.join(__dirname, '../data/challenges-new.json');
 const progressPath = path.join(__dirname, '../data/user-progress.json');
@@ -703,9 +704,8 @@ router.get('/:courseId/questions', async (req, res) => {
     let courseQuestions;
 
     try {
-      // Query challenges from database by course_id
-      const challenges = await query('SELECT * FROM challenges WHERE course_id = ? ORDER BY level, created_at', [courseId]);
-      courseQuestions = challenges.map(c => ChallengeModel._formatChallenge(c));
+      // Query challenges from database by course_id with creator names
+      courseQuestions = await ChallengeModel.findByCourse(courseId);
     } catch (dbError) {
       console.log('Database error, using JSON file:', dbError.message);
       const challenges = getChallenges();
@@ -730,8 +730,8 @@ router.get('/:courseId/questions', async (req, res) => {
   }
 });
 
-// Update a question (Admin only)
-router.put('/questions/:questionId', async (req, res) => {
+// Update a question (Admin or Faculty only)
+router.put('/questions/:questionId', verifyFaculty, async (req, res) => {
   try {
     const { questionId } = req.params;
     const updatedQuestion = req.body;
@@ -772,11 +772,12 @@ router.put('/questions/:questionId', async (req, res) => {
   }
 });
 
-// Create a new question for a course (Admin only)
-router.post('/:courseId/questions', async (req, res) => {
+// Create a new question for a course (Admin or Faculty only)
+router.post('/:courseId/questions', verifyFaculty, async (req, res) => {
   try {
     const { courseId } = req.params;
     const newQuestion = req.body;
+    const createdBy = req.user.id;
 
     // Validate required fields
     if (!newQuestion.id || !newQuestion.title || !newQuestion.level) {
@@ -792,16 +793,19 @@ router.post('/:courseId/questions', async (req, res) => {
 
     // Add default values
     const question = {
-      courseId,
       questionNumber: 1,
       points: 100,
       isLocked: false,
       hints: [],
       assets: { images: [], reference: '' },
       ...newQuestion,
+      courseId: courseId, // Ensure courseId from params is used
+      createdBy: createdBy, // Ensure createdBy from auth is used
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
+
+    console.log(`[Routes] Creating question for course ${courseId}, user: ${createdBy}`);
 
     // 1. Save to Database
     try {
@@ -828,9 +832,9 @@ router.post('/:courseId/questions', async (req, res) => {
 
 /**
  * DELETE /api/courses/questions/:questionId
- * Delete a question (Admin only)
+ * Delete a question (Admin or Faculty only)
  */
-router.delete('/questions/:questionId', async (req, res) => {
+router.delete('/questions/:questionId', verifyFaculty, async (req, res) => {
   try {
     const { questionId } = req.params;
 
@@ -864,7 +868,7 @@ router.delete('/questions/:questionId', async (req, res) => {
  * Bulk upload questions from JSON/CSV
  * Body: { questions: [...] }
  */
-router.post('/:courseId/questions/bulk', async (req, res) => {
+router.post('/:courseId/questions/bulk', verifyFaculty, async (req, res) => {
   try {
     const { courseId } = req.params;
     const { questions } = req.body;
@@ -947,7 +951,8 @@ router.post('/:courseId/questions/bulk', async (req, res) => {
           passingThreshold: question.passingThreshold || { structure: 80, visual: 80, overall: 75 },
           expectedHtml: question.expectedHtml || question.expected_html || question['expectedSolution/html'] || '',
           expectedCss: question.expectedCss || question.expected_css || question['expectedSolution/css'] || '',
-          expectedJs: question.expectedJs || question.expected_js || question['expectedSolution/js'] || ''
+          expectedJs: question.expectedJs || question.expected_js || question['expectedSolution/js'] || '',
+          createdBy: req.user.id // Attribution for bulk upload
         };
 
         // Create in MySQL using ChallengeModel
@@ -997,7 +1002,7 @@ router.post('/:courseId/questions/bulk', async (req, res) => {
  * Bulk delete questions
  * Body: { questionIds: [...] }
  */
-router.post('/:courseId/questions/bulk-delete', async (req, res) => {
+router.post('/:courseId/questions/bulk-delete', verifyFaculty, async (req, res) => {
   try {
     const { courseId } = req.params;
     const { questionIds } = req.body;
@@ -1326,7 +1331,7 @@ router.get('/:courseId/levels/:level/template', (req, res) => {
  * Upload question bank for a specific level
  * Body: { questions: [...], randomizeCount: 2 }
  */
-router.post('/:courseId/levels/:level/questions/bulk', async (req, res) => {
+router.post('/:courseId/levels/:level/questions/bulk', verifyFaculty, async (req, res) => {
   try {
     const { courseId, level } = req.params;
     const { questions, randomizeCount } = req.body;

@@ -9,7 +9,12 @@ class ChallengeModel {
   // Get all challenges
   static async findAll() {
     try {
-      const challenges = await query('SELECT * FROM challenges ORDER BY created_at DESC');
+      const challenges = await query(`
+        SELECT c.*, u.full_name as creator_name 
+        FROM challenges c 
+        LEFT JOIN users u ON c.created_by = u.id 
+        ORDER BY c.created_at DESC
+      `);
       return challenges.map(c => ChallengeModel._formatChallenge(c));
     } catch (error) {
       console.error('Error in findAll:', error.message);
@@ -19,25 +24,45 @@ class ChallengeModel {
 
   // Get challenge by ID
   static async findById(id) {
-    const challenge = await queryOne('SELECT * FROM challenges WHERE id = ?', [id]);
+    const challenge = await queryOne(`
+      SELECT c.*, u.full_name as creator_name 
+      FROM challenges c 
+      LEFT JOIN users u ON c.created_by = u.id 
+      WHERE c.id = ?
+    `, [id]);
     return challenge ? ChallengeModel._formatChallenge(challenge) : null;
+  }
+
+  // Get challenges by course
+  static async findByCourse(courseId) {
+    const challenges = await query(`
+      SELECT c.*, u.full_name as creator_name 
+      FROM challenges c 
+      LEFT JOIN users u ON c.created_by = u.id 
+      WHERE c.course_id = ? 
+      ORDER BY c.level, c.created_at
+    `, [courseId]);
+    return challenges.map(c => ChallengeModel._formatChallenge(c));
   }
 
   // Get challenges by course and level
   static async findByCourseLevel(courseId, level) {
-    const challenges = await query(
-      'SELECT * FROM challenges WHERE course_id = ? AND level = ?',
-      [courseId, level]
-    );
+    const challenges = await query(`
+      SELECT c.*, u.full_name as creator_name 
+      FROM challenges c 
+      LEFT JOIN users u ON c.created_by = u.id 
+      WHERE c.course_id = ? AND c.level = ?
+    `, [courseId, level]);
     return challenges.map(c => ChallengeModel._formatChallenge(c));
   }
 
   // Create new challenge
   static async create(challengeData) {
     const id = challengeData.id || `challenge-${Date.now()}`;
+    console.log(`[ChallengeModel] Creating challenge ${id}, createdBy: ${challengeData.createdBy}`);
     await query(
-      `INSERT INTO challenges (id, title, description, instructions, tags, passing_threshold, expected_html, expected_css, expected_js, expected_screenshot_url, course_id, level, points, hints, assets, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO challenges (id, title, description, instructions, tags, passing_threshold, expected_html, expected_css, expected_js, expected_screenshot_url, course_id, level, points, hints, assets, created_at, created_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id,
         challengeData.title,
@@ -54,7 +79,8 @@ class ChallengeModel {
         challengeData.points || 100,
         JSON.stringify(challengeData.hints || []),
         JSON.stringify(challengeData.assets || { images: [], reference: '' }),
-        challengeData.createdAt ? new Date(challengeData.createdAt) : new Date()
+        challengeData.createdAt ? new Date(challengeData.createdAt) : new Date(),
+        challengeData.createdBy || null
       ]
     );
     return await this.findById(id);
@@ -156,6 +182,8 @@ class ChallengeModel {
       courseId: challenge.course_id,
       level: challenge.level,
       assets,
+      createdBy: challenge.created_by,
+      creatorName: challenge.creator_name || 'System',
       createdAt: challenge.created_at,
       updatedAt: challenge.updated_at
     };

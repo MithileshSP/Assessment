@@ -24,6 +24,7 @@ import Logout from "./pages/Logout";
 import FacultyDashboard from "./pages/FacultyDashboard";
 import FacultyEvaluation from "./pages/FacultyEvaluation";
 import FacultyHistory from "./pages/FacultyHistory";
+import FacultyQuestions from "./pages/FacultyQuestions";
 
 // Admin Portal
 import AdminDashboard from "./pages/AdminDashboard";
@@ -86,6 +87,7 @@ function App() {
           <Route path="/faculty/dashboard" element={role === 'faculty' ? <FacultyDashboard /> : <Navigate to="/login" />} />
           <Route path="/faculty/submissions" element={role === 'faculty' ? <FacultyDashboard /> : <Navigate to="/login" />} />
           <Route path="/faculty/history" element={role === 'faculty' ? <FacultyHistory /> : <Navigate to="/login" />} />
+          <Route path="/faculty/questions" element={role === 'faculty' ? <FacultyQuestions /> : <Navigate to="/login" />} />
           <Route path="/faculty/evaluate/:submissionId" element={role === 'faculty' ? <FacultyEvaluation /> : <Navigate to="/login" />} />
 
           {/* Admin Portal */}
@@ -97,7 +99,7 @@ function App() {
           <Route path="/admin/assignment" element={role === 'admin' ? <AdminAssignment /> : <Navigate to="/admin/login" />} />
           <Route path="/admin/submission/:submissionId" element={role === 'admin' ? <AdminSubmissionDetails /> : <Navigate to="/admin/login" />} />
           <Route path="/admin/level-management" element={role === 'admin' ? <LevelManagement /> : <Navigate to="/admin/login" />} />
-          <Route path="/admin/course/:courseId/questions" element={role === 'admin' ? <QuestionBank /> : <Navigate to="/admin/login" />} />
+          <Route path="/admin/course/:courseId/questions" element={(role === 'admin' || role === 'faculty') ? <QuestionBank /> : <Navigate to="/admin/login" />} />
           <Route path="/admin/reset-level" element={role === 'admin' ? <AdminLevelReset /> : <Navigate to="/admin/login" />} />
           <Route path="/admin/restrictions" element={role === 'admin' ? <RestrictionManagement /> : <Navigate to="/admin/login" />} />
           <Route path="/admin/evaluation-tracker" element={role === 'admin' ? <AdminEvaluationTracker /> : <Navigate to="/admin/login" />} />
