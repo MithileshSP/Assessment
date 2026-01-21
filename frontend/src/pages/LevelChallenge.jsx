@@ -785,78 +785,31 @@ export default function LevelChallenge() {
 
   const handleSubmit = async () => {
     setSubmitting(true);
-    setEvaluating(true);
     setResult(null);
-    setEvaluationStep("Initializing secure submission...");
 
     const questionId = challenge.id;
 
     if ((!code.html || code.html.trim() === '') && (!code.js || code.js.trim() === '')) {
       alert("Please write some code (HTML or JavaScript) before submitting.");
       setSubmitting(false);
-      setEvaluating(false);
       return;
     }
 
-    try {
-      // Step 1: Create submission
-      const submitResponse = await api.post("/submissions", {
-        challengeId: questionId,
-        userId: userId,
-        code: {
-          html: code.html,
-          css: code.css,
-          js: code.js,
-        },
-      });
+    // Save locally only - actual DB submission happens on Finish Test
+    setUserAnswers((prev) => ({
+      ...prev,
+      [questionId]: {
+        html: code.html,
+        css: code.css,
+        js: code.js,
+        submitted: true,
+        result: { status: 'saved' } // Local save only
+      },
+    }));
 
-      const submissionId = submitResponse.data.submissionId;
-
-      // Add submission to test session immediately (even if evaluation is pending)
-      if (testSessionId && submissionId) {
-        try {
-          await api.post(`/test-sessions/${testSessionId}/submissions`, {
-            submission_id: submissionId,
-          });
-        } catch (err) {
-          console.error("Failed to add submission to session:", err);
-        }
-      }
-
-      // Step 2: Mark as submitted immediately in UI
-      setUserAnswers((prev) => ({
-        ...prev,
-        [questionId]: {
-          html: code.html,
-          css: code.css,
-          js: code.js,
-          submitted: true,
-          submissionId: submissionId,
-          result: { status: 'queued' } // Placeholder for worker processing
-        },
-      }));
-
-      // Step 3: Handle background polling
-      const isStudent = localStorage.getItem('userRole') !== 'admin';
-
-      if (!isStudent) {
-        setEvaluationStep("Placed in evaluation queue...");
-        pollEvaluationResult(submissionId, questionId);
-      } else {
-        // For students, just finish the submission state
-        setEvaluating(false);
-        setSubmitting(false);
-        // We still optionally poll in background if we want results available locally
-        // but the user said "evaluation are in backend not to show for student"
-      }
-
-    } catch (error) {
-      console.error("Submission failed:", error);
-      alert("Failed to submit solution.");
-      setEvaluationStep("");
-      setSubmitting(false);
-      setEvaluating(false);
-    }
+    // Show success message
+    alert("Answer saved! Click 'Finish & View Results' when done with all questions to submit for evaluation.");
+    setSubmitting(false);
   };
 
   const handleFinishLevel = async ({ reason = "manual", forceSubmissionId = null } = {}) => {
