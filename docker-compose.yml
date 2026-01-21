@@ -1,11 +1,9 @@
 services:
   portal_mysql:
-    build:
-      context: ./mysql-init
-      dockerfile: Dockerfile
+    image: gokulv456/assessment-mysql:v1.8
     container_name: portal_mysql
     restart: unless-stopped
-    command: --bind-address=0.0.0.0
+    command: --bind-address=0.0.`0.0
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: ${DB_NAME}
@@ -23,9 +21,7 @@ services:
       start_period: 60s
 
   backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+    image: gokulv456/assessment-backend:v1.8
     restart: unless-stopped
     depends_on:
       portal_mysql:
@@ -54,9 +50,7 @@ services:
       - test-portal-network
 
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
+    image: gokulv456/assessment-frontend:v1.8
     container_name: portal_frontend
     restart: unless-stopped
     ports:
