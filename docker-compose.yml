@@ -21,7 +21,7 @@ services:
       start_period: 60s
 
   backend:
-    image: gokulv456/assessment-backend:v1.8
+    image: gokulv456/assessment-backend:v1.9
     restart: unless-stopped
     depends_on:
       portal_mysql:
@@ -50,7 +50,7 @@ services:
       - test-portal-network
 
   frontend:
-    image: gokulv456/assessment-frontend:v1.9
+    image: gokulv456/assessment-frontend:v1.10
     container_name: portal_frontend
     restart: unless-stopped
     ports:

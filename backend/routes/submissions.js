@@ -170,6 +170,38 @@ router.post('/', async (req, res) => {
 });
 
 /**
+ * GET /api/submissions/user-level
+ * Get submissions for a specific user, course, and level
+ * Query params: userId, courseId, level
+ */
+router.get('/user-level', async (req, res) => {
+  try {
+    const { userId, courseId, level } = req.query;
+
+    if (!userId || !courseId || !level) {
+      return res.status(400).json({ error: 'Missing required query parameters: userId, courseId, level' });
+    }
+
+    try {
+      const submissions = await query(
+        `SELECT id, status, submitted_at, evaluated_at, final_score, passed
+         FROM submissions 
+         WHERE user_id = ? AND course_id = ? AND level = ?
+         ORDER BY submitted_at DESC`,
+        [userId, courseId, parseInt(level)]
+      );
+      return res.json(submissions);
+    } catch (dbError) {
+      console.error('Database error in user-level:', dbError.message);
+      return res.json([]);
+    }
+  } catch (error) {
+    console.error('Error fetching user-level submissions:', error);
+    res.status(500).json({ error: 'Failed to fetch submissions' });
+  }
+});
+
+/**
  * GET /api/submissions/:id
  * Get specific submission
  */

@@ -157,7 +157,7 @@ const StudentResults = () => {
                                         </React.Fragment>
                                     ))
                                 )}
-                                tunic
+                                
                             </tbody>
                         </table>
                     </div>

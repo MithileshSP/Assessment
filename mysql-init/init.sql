@@ -1,5 +1,5 @@
 -- Frontend Test Portal: Fresh Schema Initialization
--- Consolidated Schema v1.2 - Complete with all fixes
+-- Consolidated Schema v1.1
 
 DROP DATABASE IF EXISTS fullstack_test_portal;
 CREATE DATABASE fullstack_test_portal CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -64,7 +64,6 @@ CREATE TABLE challenges (
     points INT DEFAULT 100,
     hints JSON,
     assets JSON,
-    created_by VARCHAR(100),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_course_level (course_id, level),
@@ -77,12 +76,8 @@ CREATE TABLE challenges (
 CREATE TABLE test_attendance (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id VARCHAR(100) NOT NULL,
-    course_id VARCHAR(100),
-    level INT,
     test_identifier VARCHAR(255) NOT NULL COMMENT 'Composite: courseId_level',
     status ENUM('requested', 'approved', 'rejected') DEFAULT 'requested',
-    is_used TINYINT(1) DEFAULT 0,
-    session_id INT NULL,
     requested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     approved_at TIMESTAMP NULL,
     approved_by VARCHAR(100),
@@ -90,33 +85,6 @@ CREATE TABLE test_attendance (
     FOREIGN KEY (approved_by) REFERENCES users(id) ON DELETE SET NULL,
     INDEX idx_user_test (user_id, test_identifier),
     INDEX idx_status (status)
-);
-
-CREATE TABLE global_test_sessions (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    course_id VARCHAR(100) NOT NULL,
-    level INT NOT NULL,
-    duration_minutes INT DEFAULT 60,
-    created_by VARCHAR(100),
-    is_active BOOLEAN DEFAULT TRUE,
-    started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    ends_at TIMESTAMP NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE,
-    INDEX idx_active (is_active),
-    INDEX idx_course_level (course_id, level)
-);
-
-CREATE TABLE level_access (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id VARCHAR(100) NOT NULL,
-    course_id VARCHAR(100) NOT NULL,
-    level INT NOT NULL,
-    granted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    granted_by VARCHAR(100),
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE,
-    UNIQUE KEY unique_user_course_level (user_id, course_id, level)
 );
 
 CREATE TABLE user_progress (
@@ -159,8 +127,6 @@ CREATE TABLE submissions (
     diff_screenshot VARCHAR(500),
     admin_override_status ENUM('passed', 'failed', 'none') DEFAULT 'none',
     admin_override_reason TEXT,
-    is_exported TINYINT(1) DEFAULT 0,
-    exported_at TIMESTAMP NULL,
     INDEX idx_user_challenge (user_id, challenge_id),
     INDEX idx_status (status),
     FOREIGN KEY (challenge_id) REFERENCES challenges(id) ON DELETE CASCADE,

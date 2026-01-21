@@ -85,6 +85,23 @@ export default function LevelChallenge() {
       const { status, session, isUsed } = res.data;
 
       if (isUsed) {
+        // Check if there are pending submissions (not yet evaluated)
+        try {
+          const submissionsRes = await api.get('/submissions/user-level', {
+            params: { userId, courseId, level }
+          });
+          const submissions = submissionsRes.data || [];
+          const hasPendingEvaluation = submissions.some(s => s.status === 'pending');
+
+          if (hasPendingEvaluation) {
+            setAttendanceStatus('pending_evaluation');
+            setLoading(false);
+            return;
+          }
+        } catch (e) {
+          console.warn('Failed to check pending submissions:', e.message);
+        }
+
         setAttendanceStatus('used');
         setLoading(false);
         return;
@@ -962,6 +979,32 @@ export default function LevelChallenge() {
             </div>
           )}
 
+          {attendanceStatus === 'pending_evaluation' && (
+            <div className="space-y-6 animate-fade-in group">
+              <div className="w-20 h-20 bg-blue-50 rounded-3xl flex items-center justify-center mx-auto mb-6 text-blue-600 shadow-inner group-hover:scale-110 transition-transform">
+                <Clock size={40} className="animate-pulse" />
+              </div>
+              <h3 className="text-2xl font-black text-slate-900">Evaluation in Progress</h3>
+              <p className="text-slate-500 font-medium">
+                Your submission is currently being evaluated by the faculty.
+                <br /><br />
+                <span className="text-[10px] font-black uppercase tracking-widest text-blue-600 bg-blue-50 px-3 py-1.5 rounded-full inline-block mt-2">
+                  Status: Pending Review
+                </span>
+              </p>
+              <div className="bg-slate-50 border border-slate-100 rounded-2xl p-6 text-slate-400 text-xs font-bold leading-relaxed">
+                Please wait for your faculty to complete the evaluation. You will be able to view your results once the evaluation is finished.
+              </div>
+              <button
+                onClick={() => navigate(`/course/${courseId}`)}
+                className="w-full py-4 bg-slate-900 text-white rounded-2xl font-bold flex items-center justify-center gap-2"
+              >
+                <ArrowLeft size={18} />
+                Return to Course
+              </button>
+            </div>
+          )}
+
           {attendanceStatus === 'approved' && (
             <div className="space-y-8 animate-fade-in">
               <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-6 text-emerald-700 text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-3">
@@ -1006,12 +1049,7 @@ export default function LevelChallenge() {
         <div className="px-6 py-4">
           <div className="flex items-center justify-between mb-3">
             <div>
-              <button
-                onClick={() => navigate(`/course/${courseId}`)}
-                className="text-blue-600 hover:text-blue-800 mb-2 flex items-center gap-1"
-              >
-                <ArrowLeft size={16} /> Back to Course
-              </button>
+              {/* Back to Course button removed during active test */}
               <div className="flex items-center gap-3">
                 <h1 className="text-2xl font-bold">{challenge.title}</h1>
                 <span className="px-2 py-0.5 bg-slate-100 text-slate-400 text-[10px] font-mono rounded border border-slate-200">
