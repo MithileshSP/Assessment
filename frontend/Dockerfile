@@ -20,6 +20,9 @@ RUN npm install
 # Copy source code
 COPY . .
 
+# Copy .env file for Vite build (if exists)
+COPY .env* ./
+
 # Build the application
 RUN npm run build
 

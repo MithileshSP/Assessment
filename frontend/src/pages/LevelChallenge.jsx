@@ -868,24 +868,55 @@ export default function LevelChallenge() {
     setFinishingLevel(true);
 
     try {
-      // Step 1: Tell TestSession we are done
+      // Step 1: Submit final code for ALL questions (even if not previously submitted)
+      console.log('[FinishTest] Submitting final code for all questions...');
+      for (const question of assignedQuestions) {
+        const savedAnswer = userAnswers[question.id];
+        const currentCode = currentQuestionIndex === assignedQuestions.indexOf(question)
+          ? code
+          : { html: savedAnswer?.html || '', css: savedAnswer?.css || '', js: savedAnswer?.js || '' };
+
+        // Only submit if there's any code
+        if (currentCode.html || currentCode.css || currentCode.js) {
+          try {
+            const response = await api.post("/submissions", {
+              challengeId: question.id,
+              userId: userId,
+              code: currentCode,
+            });
+            const submissionId = response.data.submissionId;
+
+            // Link to test session
+            if (testSessionId && submissionId) {
+              await api.post(`/test-sessions/${testSessionId}/submissions`, {
+                submission_id: submissionId,
+              });
+            }
+            console.log(`[FinishTest] Submitted question ${question.id}: ${submissionId}`);
+          } catch (submitError) {
+            console.error(`[FinishTest] Failed to submit question ${question.id}:`, submitError.message);
+          }
+        }
+      }
+
+      // Step 2: Tell TestSession we are done
       if (testSessionId) {
         await api.put(`/test-sessions/${testSessionId}/complete`, {
           user_feedback: reason === "violations" ? "Session terminated due to security violations." : ""
         });
       }
 
-      // Step 2: Clear localStorage to prevent re-entry with cached state
+      // Step 3: Clear localStorage to prevent re-entry with cached state
       const storageKey = `assessment_${userId}_${courseId}_${level}`;
       localStorage.removeItem(storageKey);
 
-      // Step 2: Redirect
-      // If violations occurred, skip feedback and show results
+      // Step 4: Redirect
       if (reason === "violations") {
         navigate(`/level-results/${courseId}/${level}`);
         return;
       }
 
+      // Navigate to feedback page for last question
       const lastQuestionId = assignedQuestions[assignedQuestions.length - 1]?.id;
       const lastSubmissionId = forceSubmissionId || userAnswers[lastQuestionId]?.submissionId;
 
