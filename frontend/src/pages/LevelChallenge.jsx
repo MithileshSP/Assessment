@@ -81,6 +81,28 @@ export default function LevelChallenge() {
     }
 
     try {
+      // FIRST: Check if user already has submissions for this level (block re-entry)
+      try {
+        const submissionsRes = await api.get('/submissions/user-level', {
+          params: { userId, courseId, level }
+        });
+        const submissions = submissionsRes.data || [];
+
+        if (submissions.length > 0) {
+          // User has already submitted - check if pending or completed
+          const hasPendingEvaluation = submissions.some(s => s.status === 'pending');
+
+          if (hasPendingEvaluation) {
+            setAttendanceStatus('pending_evaluation');
+          } else {
+            setAttendanceStatus('used');
+          }
+          setLoading(false);
+          return; // Block re-entry
+        }
+      } catch (e) {
+        console.warn('Failed to check existing submissions:', e.message);
+      }
       const res = await api.get('/attendance/status', { params: { courseId, level } });
       const { status, session, isUsed } = res.data;
 
