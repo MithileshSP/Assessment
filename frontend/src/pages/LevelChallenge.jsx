@@ -127,6 +127,30 @@ export default function LevelChallenge() {
         level: parseInt(level),
       });
 
+      // If session already completed, check for pending submissions
+      if (sessionRes.data && sessionRes.data.completed_at) {
+        try {
+          const submissionsRes = await api.get('/submissions/user-level', {
+            params: { userId, courseId, level }
+          });
+          const submissions = submissionsRes.data || [];
+          const hasPendingEvaluation = submissions.some(s => s.status === 'pending');
+
+          if (hasPendingEvaluation) {
+            setAttendanceStatus('pending_evaluation');
+            setLoading(false);
+            return;
+          } else {
+            // Test completed and evaluated - show 'used' status
+            setAttendanceStatus('used');
+            setLoading(false);
+            return;
+          }
+        } catch (e) {
+          console.warn('Failed to check pending submissions:', e.message);
+        }
+      }
+
       if (sessionRes.data && !sessionRes.data.completed_at) {
         setTestSessionId(sessionRes.data.id);
         if (sessionRes.data.started_at) setStartedAt(sessionRes.data.started_at);
@@ -850,6 +874,10 @@ export default function LevelChallenge() {
           user_feedback: reason === "violations" ? "Session terminated due to security violations." : ""
         });
       }
+
+      // Step 2: Clear localStorage to prevent re-entry with cached state
+      const storageKey = `assessment_${userId}_${courseId}_${level}`;
+      localStorage.removeItem(storageKey);
 
       // Step 2: Redirect
       // If violations occurred, skip feedback and show results
