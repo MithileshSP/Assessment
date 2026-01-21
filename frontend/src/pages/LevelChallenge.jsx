@@ -807,8 +807,7 @@ export default function LevelChallenge() {
       },
     }));
 
-    // Show success message
-    alert("Answer saved! Click 'Finish & View Results' when done with all questions to submit for evaluation.");
+    // Answer saved silently - final submission happens on Finish Test
     setSubmitting(false);
   };
 
@@ -819,6 +818,7 @@ export default function LevelChallenge() {
 
   const handleFinishTest = async ({ reason = "manual", forceSubmissionId = null } = {}) => {
     setFinishingLevel(true);
+    let lastSubmissionId = forceSubmissionId;
 
     try {
       // Step 1: Submit final code for ALL questions (even if not previously submitted)
@@ -838,6 +838,7 @@ export default function LevelChallenge() {
               code: currentCode,
             });
             const submissionId = response.data.submissionId;
+            lastSubmissionId = submissionId; // Track last successful submission
 
             // Link to test session
             if (testSessionId && submissionId) {
@@ -869,10 +870,7 @@ export default function LevelChallenge() {
         return;
       }
 
-      // Navigate to feedback page for last question
-      const lastQuestionId = assignedQuestions[assignedQuestions.length - 1]?.id;
-      const lastSubmissionId = forceSubmissionId || userAnswers[lastQuestionId]?.submissionId;
-
+      // Navigate to feedback page with last submission ID
       if (lastSubmissionId) {
         navigate(`/student/feedback/${lastSubmissionId}`);
       } else {
