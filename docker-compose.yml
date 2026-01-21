@@ -3,7 +3,7 @@ services:
     image: gokulv456/assessment-mysql:v1.8
     container_name: portal_mysql
     restart: unless-stopped
-    command: --bind-address=0.0.`0.0
+    command: --bind-address=0.0.0.0
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: ${DB_NAME}
