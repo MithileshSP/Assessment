@@ -1,6 +1,6 @@
 services:
   portal_mysql:
-    image: gokulv456/assessment-mysql:v1.9
+    image: gokulv456/assessment-mysql:v2.0
     container_name: portal_mysql
     restart: unless-stopped
     command: --bind-address=0.0.0.0
@@ -50,7 +50,7 @@ services:
       - test-portal-network
 
   frontend:
-    image: gokulv456/assessment-frontend:v1.10
+    image: gokulv456/assessment-frontend:v1.13
     container_name: portal_frontend
     restart: unless-stopped
     ports:

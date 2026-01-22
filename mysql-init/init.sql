@@ -1,5 +1,5 @@
 -- Frontend Test Portal: Fresh Schema Initialization
--- Consolidated Schema v1.1
+-- Consolidated Schema v2.0 - Complete with all fixes
 
 DROP DATABASE IF EXISTS fullstack_test_portal;
 CREATE DATABASE fullstack_test_portal CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -64,6 +64,7 @@ CREATE TABLE challenges (
     points INT DEFAULT 100,
     hints JSON,
     assets JSON,
+    created_by VARCHAR(100),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_course_level (course_id, level),
@@ -71,20 +72,57 @@ CREATE TABLE challenges (
 );
 
 -- ==========================================
--- 3. Student Progress & Attendance
+-- 3. Global Test Sessions & Attendance
 -- ==========================================
+CREATE TABLE global_test_sessions (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    course_id VARCHAR(100) NOT NULL,
+    level INT NOT NULL,
+    duration_minutes INT NOT NULL DEFAULT 60,
+    created_by VARCHAR(100),
+    is_active BOOLEAN DEFAULT TRUE,
+    start_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    ended_reason VARCHAR(50),
+    forced_end BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_active (is_active),
+    INDEX idx_course_level (course_id, level)
+);
+
 CREATE TABLE test_attendance (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id VARCHAR(100) NOT NULL,
     test_identifier VARCHAR(255) NOT NULL COMMENT 'Composite: courseId_level',
+    session_id INT NULL,
     status ENUM('requested', 'approved', 'rejected') DEFAULT 'requested',
     requested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     approved_at TIMESTAMP NULL,
     approved_by VARCHAR(100),
+    attempt_started_at TIMESTAMP NULL,
+    attempt_submitted_at TIMESTAMP NULL,
+    is_used BOOLEAN DEFAULT FALSE,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (approved_by) REFERENCES users(id) ON DELETE SET NULL,
     INDEX idx_user_test (user_id, test_identifier),
-    INDEX idx_status (status)
+    INDEX idx_status (status),
+    INDEX idx_session (session_id)
+);
+
+CREATE TABLE test_sessions (
+    id VARCHAR(100) PRIMARY KEY,
+    user_id VARCHAR(100) NOT NULL,
+    course_id VARCHAR(100) NOT NULL,
+    level INT NOT NULL,
+    submission_ids JSON NOT NULL,
+    total_questions INT DEFAULT 0,
+    passed_count INT DEFAULT 0,
+    overall_status ENUM('passed', 'failed') DEFAULT 'failed',
+    user_feedback TEXT NULL,
+    started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    completed_at TIMESTAMP NULL,
+    INDEX idx_user (user_id),
+    INDEX idx_course_level (course_id, level),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
 CREATE TABLE user_progress (
@@ -100,6 +138,21 @@ CREATE TABLE user_progress (
     FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE
 );
 
+CREATE TABLE level_access (
+    id VARCHAR(100) PRIMARY KEY,
+    user_id VARCHAR(100) NOT NULL,
+    course_id VARCHAR(100) NOT NULL,
+    level INT NOT NULL,
+    is_locked BOOLEAN DEFAULT FALSE,
+    locked_by VARCHAR(100),
+    locked_at TIMESTAMP NULL,
+    unlocked_at TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_user_level (user_id, course_id, level)
+);
+
 -- ==========================================
 -- 4. Submissions & Evaluations
 -- ==========================================
@@ -113,7 +166,7 @@ CREATE TABLE submissions (
     html_code TEXT,
     css_code TEXT,
     js_code TEXT,
-    status ENUM('pending', 'passed', 'failed') DEFAULT 'pending',
+    status ENUM('pending', 'passed', 'failed', 'queued', 'evaluating', 'error') DEFAULT 'pending',
     submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     evaluated_at TIMESTAMP NULL,
     structure_score INT DEFAULT 0,
@@ -125,10 +178,14 @@ CREATE TABLE submissions (
     user_screenshot VARCHAR(500),
     expected_screenshot VARCHAR(500),
     diff_screenshot VARCHAR(500),
+    user_feedback TEXT,
     admin_override_status ENUM('passed', 'failed', 'none') DEFAULT 'none',
     admin_override_reason TEXT,
+    is_exported TINYINT(1) DEFAULT 0,
+    exported_at TIMESTAMP NULL,
     INDEX idx_user_challenge (user_id, challenge_id),
     INDEX idx_status (status),
+    INDEX idx_course_level (course_id, level),
     FOREIGN KEY (challenge_id) REFERENCES challenges(id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
@@ -206,11 +263,12 @@ CREATE TABLE student_feedback (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id VARCHAR(100) NOT NULL,
     submission_id VARCHAR(100) NOT NULL,
-    difficulty_rating INT,
-    clarity_rating INT,
+    difficulty_rating INT DEFAULT 3,
+    clarity_rating INT DEFAULT 3,
     comments TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (submission_id) REFERENCES submissions(id) ON DELETE CASCADE,
     UNIQUE KEY unique_feedback (user_id, submission_id)
 );
 
