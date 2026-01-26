@@ -1,7 +1,7 @@
 import { useImperativeHandle, forwardRef, useRef, useEffect, useState } from "react";
 import { Terminal, ChevronDown, ChevronUp, Trash2, Command, Loader2 } from "lucide-react";
 
-const PreviewFrame = forwardRef(({ code }, ref) => {
+const PreviewFrame = forwardRef(({ code, isRestricted = false }, ref) => {
   const iframeRef = useRef(null);
   const [logs, setLogs] = useState([]);
   const [isConsoleOpen, setIsConsoleOpen] = useState(false);
@@ -209,8 +209,12 @@ const PreviewFrame = forwardRef(({ code }, ref) => {
   };
 
   return (
-    <div className="w-full h-full border-2 border-slate-200 rounded-lg overflow-hidden bg-white flex flex-col relative shadow-sm">
-      <div className="flex-1 relative">
+    <div
+      className="w-full h-full border-2 border-slate-200 rounded-lg overflow-hidden bg-white flex flex-col relative shadow-sm"
+      onContextMenu={isRestricted ? (e) => e.preventDefault() : undefined}
+      style={isRestricted ? { userSelect: 'none' } : undefined}
+    >
+      <div className="flex-1 relative overflow-auto">
         <iframe ref={iframeRef} sandbox="allow-scripts allow-same-origin allow-modals allow-forms" className="w-full h-full" title="Preview" />
       </div>
 
@@ -237,10 +241,10 @@ const PreviewFrame = forwardRef(({ code }, ref) => {
                 <div className="space-y-1.5">
                   {logs.map((log, i) => (
                     <div key={i} className={`flex items-start gap-3 ${log.type === 'error' ? 'text-red-400' :
-                        log.type === 'warn' ? 'text-yellow-400' :
-                          log.type === 'input' ? 'text-blue-400 font-bold' :
-                            log.type === 'system' ? 'text-purple-400 italic' :
-                              'text-green-400'
+                      log.type === 'warn' ? 'text-yellow-400' :
+                        log.type === 'input' ? 'text-blue-400 font-bold' :
+                          log.type === 'system' ? 'text-purple-400 italic' :
+                            'text-green-400'
                       }`}>
                       <span className="text-slate-700 min-w-[75px] text-[10px] mt-1 select-none">[{log.timestamp}]</span>
                       <span className="whitespace-pre-wrap break-all">{log.content}</span>

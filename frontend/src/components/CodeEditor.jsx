@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import Editor from '@monaco-editor/react';
 
-export default function CodeEditor({ code, onChange }) {
+export default function CodeEditor({ code, onChange, readOnly = false }) {
   const [activeTab, setActiveTab] = useState('html');
 
   const tabs = [
@@ -11,6 +11,7 @@ export default function CodeEditor({ code, onChange }) {
   ];
 
   const handleEditorChange = (value) => {
+    if (readOnly) return;
     onChange({ ...code, [activeTab]: value || '' });
   };
 
@@ -22,11 +23,11 @@ export default function CodeEditor({ code, onChange }) {
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`px-6 py-3 font-medium transition ${
-              activeTab === tab.id
+            disabled={readOnly}
+            className={`px-6 py-3 font-medium transition ${activeTab === tab.id
                 ? 'border-b-2 border-blue-600 text-blue-600'
                 : 'text-gray-600 hover:text-gray-900'
-            }`}
+              } ${readOnly ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             {tab.label}
           </button>
@@ -34,7 +35,7 @@ export default function CodeEditor({ code, onChange }) {
       </div>
 
       {/* Editor */}
-      <div className="flex-1 border border-gray-200 rounded-lg overflow-hidden">
+      <div className={`flex-1 border border-gray-200 rounded-lg overflow-hidden ${readOnly ? 'opacity-80' : ''}`}>
         <Editor
           height="100%"
           language={tabs.find(t => t.id === activeTab)?.language}
@@ -47,7 +48,9 @@ export default function CodeEditor({ code, onChange }) {
             lineNumbers: 'on',
             scrollBeyondLastLine: false,
             automaticLayout: true,
-            tabSize: 2
+            tabSize: 2,
+            readOnly: readOnly,
+            domReadOnly: readOnly
           }}
         />
       </div>

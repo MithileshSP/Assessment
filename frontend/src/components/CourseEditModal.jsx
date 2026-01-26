@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Save, Plus, Layers, Clock, Zap, Image, Palette, Tag, BookOpen } from 'lucide-react';
+import { X, Save, Plus, Layers, Clock, Zap, Image, Palette, Tag, BookOpen, Shield } from 'lucide-react';
 
 export default function CourseEditModal({ course, onClose, onSave }) {
   const [formData, setFormData] = useState(course || {
@@ -406,6 +406,71 @@ export default function CourseEditModal({ course, onClose, onSave }) {
                       min="0"
                       className="w-16 px-2 py-1 bg-slate-50 border rounded-lg text-sm text-center font-bold outline-none focus:border-indigo-500"
                     />
+                  </div>
+                </div>
+              </div>
+
+              {/* Evaluation Engine Section */}
+              <div className="col-span-2 border-t pt-8 mt-4">
+                <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+                  <Shield size={20} className="text-indigo-600" /> Global Evaluation Thresholds
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 p-6 rounded-[2rem] border border-slate-100">
+                  <div className="flex flex-col items-center p-4 bg-white rounded-2xl shadow-sm border border-slate-100 gap-2">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Structural Integrity</span>
+                    <div className="flex items-center gap-2 w-full">
+                      <input
+                        type="number"
+                        name="threshold_structure"
+                        value={formData.passingThreshold?.structure || 80}
+                        onChange={(e) => setFormData({
+                          ...formData,
+                          passingThreshold: { ...formData.passingThreshold, structure: parseInt(e.target.value) || 0 }
+                        })}
+                        min="0"
+                        max="100"
+                        className="flex-1 px-2 py-2 bg-slate-50 border rounded-lg text-sm text-center font-black outline-none focus:border-indigo-500"
+                      />
+                      <span className="text-xs font-bold text-slate-400">%</span>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col items-center p-4 bg-white rounded-2xl shadow-sm border border-slate-100 gap-2">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Visual Fidelity</span>
+                    <div className="flex items-center gap-2 w-full">
+                      <input
+                        type="number"
+                        name="threshold_visual"
+                        value={formData.passingThreshold?.visual || 80}
+                        onChange={(e) => setFormData({
+                          ...formData,
+                          passingThreshold: { ...formData.passingThreshold, visual: parseInt(e.target.value) || 0 }
+                        })}
+                        min="0"
+                        max="100"
+                        className="flex-1 px-2 py-2 bg-slate-50 border rounded-lg text-sm text-center font-black outline-none focus:border-indigo-500"
+                      />
+                      <span className="text-xs font-bold text-slate-400">%</span>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col items-center p-4 bg-white rounded-2xl shadow-sm border border-slate-100 gap-2">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Success (Min Pass)</span>
+                    <div className="flex items-center gap-2 w-full">
+                      <input
+                        type="number"
+                        name="threshold_overall"
+                        value={formData.passingThreshold?.overall || 75}
+                        onChange={(e) => setFormData({
+                          ...formData,
+                          passingThreshold: { ...formData.passingThreshold, overall: parseInt(e.target.value) || 0 }
+                        })}
+                        min="0"
+                        max="100"
+                        className="flex-1 px-2 py-2 bg-slate-50 border rounded-lg text-sm text-center font-black outline-none focus:border-indigo-500"
+                      />
+                      <span className="text-xs font-bold text-slate-400">%</span>
+                    </div>
                   </div>
                 </div>
               </div>

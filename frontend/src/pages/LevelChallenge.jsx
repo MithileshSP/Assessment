@@ -46,11 +46,15 @@ export default function LevelChallenge() {
 
   const previewRef = useRef();
   const [fullScreenView, setFullScreenView] = useState(null); // 'live' | 'expected' | null
+  const [isLocked, setIsLocked] = useState(false); // Test locked due to violations
+  const [lastSaveTime, setLastSaveTime] = useState(null); // Auto-save indicator
+  const [isSaving, setIsSaving] = useState(false);
 
   // Attendance State
   const [attendanceStatus, setAttendanceStatus] = useState('loading'); // loading, none, requested, approved, rejected
   const [attendanceTimer, setAttendanceTimer] = useState(null);
   const [startedAt, setStartedAt] = useState(null);
+  const [showNavWarning, setShowNavWarning] = useState(false); // Navigation warning state
 
 
 
@@ -66,7 +70,10 @@ export default function LevelChallenge() {
       checkAttendance();
       loadRestrictions(); // Initial load for instant application
     }
-    return () => clearInterval(attendanceTimer);
+    return () => {
+      clearInterval(attendanceTimer);
+      if (unlockPollRef.current) clearInterval(unlockPollRef.current);
+    };
   }, [courseId, level]);
 
 
@@ -81,30 +88,19 @@ export default function LevelChallenge() {
     }
 
     try {
-      // FIRST: Check if user already has submissions for this level (block re-entry)
-      try {
-        const submissionsRes = await api.get('/submissions/user-level', {
-          params: { userId, courseId, level }
-        });
-        const submissions = submissionsRes.data || [];
-
-        if (submissions.length > 0) {
-          // User has already submitted - check if pending or completed
-          const hasPendingEvaluation = submissions.some(s => s.status === 'pending');
-
-          if (hasPendingEvaluation) {
-            setAttendanceStatus('pending_evaluation');
-          } else {
-            setAttendanceStatus('used');
-          }
-          setLoading(false);
-          return; // Block re-entry
-        }
-      } catch (e) {
-        console.warn('Failed to check existing submissions:', e.message);
-      }
+      // Note: Submissions check removed from here because it blocks the 'Request New Attempt' flow.
+      // The attendance status (isUsed) is now the sole source of truth for blocking.
       const res = await api.get('/attendance/status', { params: { courseId, level } });
-      const { status, session, isUsed } = res.data;
+      const { status, session, isUsed, locked, lockedReason } = res.data;
+
+      // Check if the session is locked on mount
+      if (locked) {
+        setAttendanceStatus('started');
+        setLoading(false);
+        // Delay to ensure attendanceStatus is 'started' before handleLockTest runs
+        setTimeout(() => handleLockTest(restrictions.maxViolations || 3), 100);
+        return;
+      }
 
       if (isUsed) {
         // Check if there are pending submissions (not yet evaluated)
@@ -214,13 +210,18 @@ export default function LevelChallenge() {
     }
   };
 
+  const [isRequesting, setIsRequesting] = useState(false);
+
   const requestAttendance = async () => {
     try {
+      setIsRequesting(true);
       await api.post('/attendance/request', { courseId, level });
       setAttendanceStatus('requested');
       checkAttendance(); // Start polling
     } catch (err) {
       alert('Failed to request attendance');
+    } finally {
+      setIsRequesting(false);
     }
   };
 
@@ -482,6 +483,7 @@ export default function LevelChallenge() {
   const handleViolation = (type) => {
     const now = Date.now();
     if (now - lastViolationTime < 2000) return; // 2 second cooldown
+    if (isLocked) return; // Already locked, ignore further violations
 
     setLastViolationTime(now);
     const newViolations = violations + 1;
@@ -492,15 +494,110 @@ export default function LevelChallenge() {
     setTimeout(() => setShowViolationToast(false), 3000);
 
     if (newViolations >= restrictions.maxViolations) {
-      setTimeout(async () => {
-        // Force submit current progress before finishing
-        setViolationMessage("Security Protocol: Forced Submission Active");
-        const submissionId = await forceSubmitCurrentCode();
-        alert("Maximum violations reached! Test submitted.");
-        handleFinishLevel({ reason: "violations", forceSubmissionId: submissionId });
-      }, 500);
+      // LOCK TEST instead of auto-submit - only if not already locked
+      if (!isLocked) {
+        handleLockTest(newViolations);
+      }
     }
   };
+
+  // Ref to store unlock poll interval for cleanup
+  const unlockPollRef = useRef(null);
+
+  // Lock test on max violations
+  const handleLockTest = async (violationCount) => {
+    // Prevent duplicate calls
+    if (isLocked) return;
+
+    setIsLocked(true);
+    setViolationMessage("Test Locked. Waiting for admin decision.");
+    setShowViolationToast(true);
+
+    // Save current code before locking
+    await autoSaveAllQuestions();
+
+    // Notify backend about lock
+    try {
+      await api.post('/attendance/lock', {
+        courseId,
+        level: parseInt(level),
+        reason: 'Max violations reached',
+        violationCount
+      });
+    } catch (err) {
+      console.error('Failed to notify lock:', err);
+    }
+
+    // Clear any existing poll
+    if (unlockPollRef.current) {
+      clearInterval(unlockPollRef.current);
+    }
+
+    // Start polling for unlock (only proceed if admin explicitly unlocks)
+    unlockPollRef.current = setInterval(async () => {
+      try {
+        const res = await api.get('/attendance/status', { params: { courseId, level } });
+        // Only unlock if locked is explicitly false AND there's an unlock action
+        if (res.data && res.data.locked === false && res.data.unlockAction) {
+          clearInterval(unlockPollRef.current);
+          unlockPollRef.current = null;
+
+          if (res.data.unlockAction === 'submit' || res.data.isUsed) {
+            // Admin forced submit
+            setIsLocked(false);
+            handleFinishTest({ reason: "admin_forced" });
+          } else if (res.data.unlockAction === 'continue') {
+            // Admin allowed continue
+            setIsLocked(false);
+            setViolations(0);
+            setShowViolationToast(false);
+          }
+        }
+      } catch (e) {
+        console.error('Unlock poll error:', e);
+      }
+    }, 3000);
+  };
+
+  // Auto-save all questions to DB
+  const autoSaveAllQuestions = async () => {
+    if (!assignedQuestions.length || isSaving) return;
+    setIsSaving(true);
+
+    try {
+      for (const question of assignedQuestions) {
+        const savedAnswer = userAnswers[question.id];
+        const currentCode = currentQuestionIndex === assignedQuestions.indexOf(question)
+          ? code
+          : { html: savedAnswer?.html || '', css: savedAnswer?.css || '', js: savedAnswer?.js || '' };
+
+        if (currentCode.html || currentCode.css || currentCode.js) {
+          await api.post('/submissions', {
+            challengeId: question.id,
+            userId,
+            code: currentCode,
+            isAutoSave: true  // Draft/auto-save flag
+          });
+        }
+      }
+      setLastSaveTime(new Date());
+    } catch (err) {
+      console.error('Auto-save failed:', err);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // Auto-save every 30 seconds
+  useEffect(() => {
+    if (attendanceStatus !== 'started' || !assignedQuestions.length || isLocked) return;
+
+    const autoSaveInterval = setInterval(() => {
+      autoSaveAllQuestions();
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(autoSaveInterval);
+  }, [attendanceStatus, assignedQuestions, code, userAnswers, isLocked]);
 
   const forceSubmitCurrentCode = async () => {
     if (!challenge) return null;
@@ -566,6 +663,53 @@ export default function LevelChallenge() {
       }
     };
     const handleKeyDown = (e) => {
+      // Block F12 (DevTools)
+      if (e.key === 'F12' || e.keyCode === 123) {
+        e.preventDefault();
+        e.stopPropagation();
+        handleViolation("Security Alert: Developer Tools Access Blocked");
+        return false;
+      }
+
+      // Block Ctrl+Shift+I/J/C (DevTools shortcuts)
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey &&
+        ['I', 'i', 'J', 'j', 'C', 'c'].includes(e.key)) {
+        e.preventDefault();
+        e.stopPropagation();
+        handleViolation("Security Alert: Inspect Element Blocked");
+        return false;
+      }
+
+      // Block Ctrl+U (View Source)
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'u' || e.key === 'U')) {
+        e.preventDefault();
+        e.stopPropagation();
+        handleViolation("Security Alert: View Source Blocked");
+        return false;
+      }
+
+      // Block F5 (Refresh) - optional but prevents accidental loss
+      if (e.key === 'F5' || e.keyCode === 116) {
+        e.preventDefault();
+        return false;
+      }
+
+      // Block Alt + Left Arrow (Back), Alt + Right Arrow (Forward), Alt + Home
+      if (e.altKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'Home')) {
+        e.preventDefault();
+        e.stopPropagation();
+        handleViolation("Security Alert: Browser Navigation Shortcut Blocked");
+        return false;
+      }
+
+      // Block Escape key when locked
+      if (isLocked && e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+      }
+
+      // Block copy shortcuts
       if (
         (e.ctrlKey || e.metaKey) &&
         restrictions.blockCopy &&
@@ -574,6 +718,7 @@ export default function LevelChallenge() {
         e.preventDefault();
         handleViolation("Copy shortcut blocked");
       }
+      // Block paste shortcuts
       if (
         (e.ctrlKey || e.metaKey) &&
         restrictions.blockPaste &&
@@ -639,7 +784,39 @@ export default function LevelChallenge() {
       document.removeEventListener("fullscreenchange", handleFullscreenChange);
       if (restrictions.blockCopy) document.body.style.userSelect = "";
     };
-  }, [restrictions, violations]);
+  }, [restrictions, violations, lastViolationTime, isLocked]);
+
+  // Navigation blocking - prevent back/forward during test
+  useEffect(() => {
+    if (attendanceStatus !== 'started') return;
+
+    // Push a state to prevent back navigation
+    window.history.pushState({ testInProgress: true }, '', window.location.href);
+
+    const handlePopState = (e) => {
+      // Re-push state to keep them on current page
+      window.history.pushState({ testInProgress: true }, '', window.location.href);
+
+      // Trigger warning notification
+      setShowNavWarning(true);
+      setTimeout(() => setShowNavWarning(false), 4000);
+    };
+
+    const handleBeforeUnload = (e) => {
+      const msg = "Assessment in progress! Are you sure you want to leave? Your progress will be saved, but this session may be invalidated.";
+      e.preventDefault();
+      e.returnValue = msg;
+      return msg;
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [attendanceStatus, isLocked]);
 
   const handlePreviousQuestion = () => {
     if (currentQuestionIndex > 0) {
@@ -877,8 +1054,12 @@ export default function LevelChallenge() {
 
       // Step 2: Tell TestSession we are done
       if (testSessionId) {
+        let feedbackMsg = "";
+        if (reason === "violations") feedbackMsg = "Session terminated due to security violations.";
+        else if (reason === "admin_forced") feedbackMsg = "Session terminated by administrator decision.";
+
         await api.put(`/test-sessions/${testSessionId}/complete`, {
-          user_feedback: reason === "violations" ? "Session terminated due to security violations." : ""
+          user_feedback: feedbackMsg
         });
       }
 
@@ -934,7 +1115,38 @@ export default function LevelChallenge() {
           </p>
 
           {attendanceStatus === 'none' && (
-            <div className="space-y-4">
+            <div className="space-y-6">
+              {/* Student Details Card */}
+              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 text-left">
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3">Your Details</p>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Name:</span>
+                    <span className="font-bold text-slate-800">{localStorage.getItem('fullName') || localStorage.getItem('userName') || 'Student'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">Email:</span>
+                    <span className="font-mono text-xs text-slate-600">{localStorage.getItem('userEmail') || 'Not available'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-500">User ID:</span>
+                    <span className="font-mono text-xs text-slate-600">{userId || 'N/A'}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Instructions */}
+              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 text-left">
+                <p className="text-[10px] font-black uppercase tracking-widest text-amber-600 mb-3">📋 Test Instructions</p>
+                <ul className="text-xs text-amber-800 space-y-2">
+                  <li>• Do NOT switch tabs or minimize the browser</li>
+                  <li>• Do NOT use Developer Tools (F12, Inspect)</li>
+                  <li>• Do NOT copy/paste from external sources</li>
+                  <li>• Your code is auto-saved every 30 seconds</li>
+                  <li>• Maximum violations: <strong>{restrictions.maxViolations || 3}</strong> (test will lock)</li>
+                </ul>
+              </div>
+
               <button
                 onClick={requestAttendance}
                 className="w-full py-4 bg-slate-900 text-white rounded-2xl font-bold hover:bg-blue-600 transition-all shadow-xl shadow-slate-900/10"
@@ -952,12 +1164,30 @@ export default function LevelChallenge() {
 
           {attendanceStatus === 'requested' && (
             <div className="space-y-6">
-              <div className="bg-blue-50 border border-blue-100 rounded-2xl p-6 text-blue-700 text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-3">
+              {/* Student Details - Repeated for admin verification */}
+              <div className="bg-blue-50 border border-blue-200 rounded-2xl p-5 text-left">
+                <p className="text-[10px] font-black uppercase tracking-widest text-blue-500 mb-3">Your Details (for verification)</p>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-blue-400">Name:</span>
+                    <span className="font-bold text-blue-800">{localStorage.getItem('fullName') || localStorage.getItem('userName') || 'Student'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-blue-400">Email:</span>
+                    <span className="font-mono text-xs text-blue-700">{localStorage.getItem('userEmail') || 'Not available'}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-indigo-100 border border-indigo-200 rounded-2xl p-6 text-indigo-700 text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-3">
                 <Clock size={16} className="animate-spin" />
                 Waiting for Presence Verification...
               </div>
               <p className="text-sm text-slate-400 font-medium">
                 Sequence queued. Please reach out to your faculty to mark you as "Present" to start the test.
+              </p>
+              <p className="text-[10px] text-slate-400 italic">
+                Ensure your faculty can verify your identity before approval.
               </p>
             </div>
           )}
@@ -971,20 +1201,41 @@ export default function LevelChallenge() {
               <p className="text-slate-500 font-medium">
                 Our records show you have already submitted an attempt for this level.
                 <br /><br />
-                <span className="text-[10px] font-black uppercase tracking-widest text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-full inline-block mt-2">
-                  Session Audit: Completed
+                <span className="text-[10px] font-black uppercase tracking-widest text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-full inline-block mt-2 font-mono">
+                  Audit State: Session_Closed
                 </span>
               </p>
-              <div className="bg-slate-50 border border-slate-100 rounded-2xl p-6 text-slate-400 text-xs font-bold leading-relaxed">
-                If you believe this is an error or require a re-test, please contact your administrator for a new authorization.
+
+              {/* Student Details Card - Added for re-attempt info */}
+              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 text-left">
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3 tracking-tighter">Identity Verification</p>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-slate-500 font-medium text-xs">Student:</span>
+                    <span className="font-bold text-slate-800 text-xs">{localStorage.getItem('fullName') || localStorage.getItem('userName') || 'Not Identified'}</span>
+                  </div>
+                  <div className="flex justify-between border-t border-slate-100 pt-2">
+                    <span className="text-slate-500 font-medium text-xs">Email Hash:</span>
+                    <span className="font-mono text-[11px] text-slate-600">{localStorage.getItem('userEmail') || 'not_synced@bitsathy.ac.in'}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-amber-50 border border-amber-100 rounded-2xl p-6 text-slate-500 text-[11px] font-bold leading-relaxed shadow-sm">
+                To initiate a re-test, please submit a new authorization request. Your faculty must approve this request before the environment re-initializes.
               </div>
               <div className="flex flex-col gap-3">
                 <button
                   onClick={requestAttendance}
-                  className="w-full py-4 bg-blue-600 text-white rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-blue-700 transition-all shadow-xl shadow-blue-500/10"
+                  disabled={isRequesting}
+                  className="w-full py-4 bg-blue-600 text-white rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-blue-700 transition-all shadow-xl shadow-blue-500/10 disabled:opacity-70 disabled:cursor-not-allowed"
                 >
-                  <RefreshCw size={18} />
-                  Request New Attempt
+                  {isRequesting ? (
+                    <RefreshCw size={18} className="animate-spin" />
+                  ) : (
+                    <RefreshCw size={18} />
+                  )}
+                  {isRequesting ? 'Processing Request...' : 'Request New Attempt'}
                 </button>
                 <button
                   onClick={() => navigate(`/course/${courseId}`)}
@@ -1008,6 +1259,19 @@ export default function LevelChallenge() {
               >
                 Return to Base
               </button>
+            </div>
+          )}
+
+          {/* Navigation Attempt Warning */}
+          {showNavWarning && (
+            <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[10000] animate-bounce">
+              <div className="bg-amber-600 text-white px-8 py-4 rounded-2xl shadow-2xl flex items-center gap-4 border-2 border-amber-400">
+                <AlertTriangle size={32} className="animate-pulse" />
+                <div className="text-left">
+                  <p className="font-black text-lg leading-tight">NAVIGATION BLOCKED</p>
+                  <p className="text-sm font-bold opacity-90">Please finish your assessment before leaving.</p>
+                </div>
+              </div>
             </div>
           )}
 
@@ -1072,6 +1336,45 @@ export default function LevelChallenge() {
           <div className="bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2">
             <AlertTriangle size={24} />
             <span className="font-semibold">{violationMessage}</span>
+          </div>
+        </div>
+      )}
+
+      {/* LOCKED OVERLAY - Shows when test is locked due to violations */}
+      {isLocked && (
+        <div
+          className="fixed inset-0 z-[9999] bg-slate-900 flex items-center justify-center p-6"
+          onContextMenu={(e) => e.preventDefault()}
+          style={{ userSelect: 'none' }}
+        >
+          <div className="bg-white p-10 rounded-[2.5rem] shadow-2xl text-center max-w-lg w-full animate-fade-in">
+            <div className="w-24 h-24 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-8 animate-pulse">
+              <AlertTriangle size={48} />
+            </div>
+            <h2 className="text-3xl font-black text-red-600 mb-4">⚠️ TEST LOCKED ⚠️</h2>
+            <p className="text-slate-700 font-bold mb-4">
+              Maximum security violations detected.
+            </p>
+            <p className="text-slate-500 text-sm mb-6">
+              Your code has been automatically saved. Do NOT close this browser or navigate away.
+            </p>
+            <div className="bg-amber-50 border-2 border-amber-300 rounded-2xl p-6 mb-6">
+              <div className="flex items-center justify-center gap-2 text-amber-800 text-sm font-bold mb-2">
+                <Clock size={18} className="animate-pulse" />
+                WAITING FOR ADMINISTRATOR
+              </div>
+              <p className="text-amber-700 text-xs">
+                An administrator will review your case and decide whether you can continue or if your work will be submitted as-is.
+              </p>
+            </div>
+            <div className="bg-slate-100 rounded-xl p-4 mb-4">
+              <p className="text-xs text-slate-500 font-mono">
+                Violations: <span className="text-red-600 font-bold">{violations}</span> / {restrictions.maxViolations}
+              </p>
+            </div>
+            <p className="text-[10px] text-slate-400 uppercase tracking-widest">
+              🔒 Screen is locked • All actions are being monitored
+            </p>
           </div>
         </div>
       )}
@@ -1177,21 +1480,31 @@ export default function LevelChallenge() {
             </button>
             <button
               onClick={handleSubmit}
-              disabled={submitting || evaluating}
+              disabled={submitting || evaluating || isSaving}
               className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
             >
               {submitting || evaluating ? (
                 <>
                   <RefreshCw size={20} className="animate-spin" />
-                  Evaluating...
+                  Saving...
+                </>
+              ) : isSaving ? (
+                <>
+                  <RefreshCw size={20} className="animate-spin" />
+                  Auto-saving...
                 </>
               ) : (
                 <>
                   <Check size={20} />
-                  Submit & Evaluate
+                  Save Progress
                 </>
               )}
             </button>
+            {lastSaveTime && (
+              <span className="text-xs text-slate-400 self-center">
+                Saved {lastSaveTime.toLocaleTimeString()}
+              </span>
+            )}
           </div>
         </div>
       </header>
@@ -1351,12 +1664,12 @@ export default function LevelChallenge() {
 
           {/* Code Editors */}
           <div
-            className={`card ${showInstructions ? "flex-1" : "flex-1"}`}
+            className={`card flex-1 ${isLocked ? "blur-[2px] pointer-events-none" : ""}`}
             style={
               !showInstructions ? { minHeight: "calc(100vh - 250px)" } : {}
             }
           >
-            <CodeEditor code={code} onChange={setCode} />
+            <CodeEditor code={code} onChange={setCode} readOnly={isLocked} />
           </div>
         </div>
 
@@ -1420,6 +1733,7 @@ export default function LevelChallenge() {
                       css: challenge.expectedSolution.css || "",
                       js: challenge.expectedSolution.js || "",
                     }}
+                    isRestricted={true}
                   />
                 ) : (
                   <div className="h-full flex items-center justify-center text-sm text-gray-500">
@@ -1535,6 +1849,7 @@ export default function LevelChallenge() {
                     css: challenge.expectedSolution.css || "",
                     js: challenge.expectedSolution.js || "",
                   }}
+                  isRestricted={true}
                 />
               )}
             </div>

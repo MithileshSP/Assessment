@@ -1,20 +1,18 @@
--- Frontend Test Portal Database Schema
+-- Frontend Test Portal Database Schema v3.0 (Production Scalability Edition)
 -- MySQL Database Setup
 
-DROP DATABASE IF EXISTS fullstack_test_portal;
-
-CREATE DATABASE fullstack_test_portal CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-
+CREATE DATABASE IF NOT EXISTS fullstack_test_portal CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE fullstack_test_portal;
 
 -- Users Table
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
     id VARCHAR(100) PRIMARY KEY,
     username VARCHAR(50) UNIQUE NOT NULL,
     password VARCHAR(255) NULL,
     email VARCHAR(100) UNIQUE NOT NULL,
     full_name VARCHAR(100),
     role ENUM('admin', 'faculty', 'student') DEFAULT 'student',
+    picture VARCHAR(500) NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     last_login TIMESTAMP NULL,
     INDEX idx_username (username),
@@ -23,7 +21,7 @@ CREATE TABLE users (
 );
 
 -- Courses Table
-CREATE TABLE courses (
+CREATE TABLE IF NOT EXISTS courses (
     id VARCHAR(100) PRIMARY KEY,
     title VARCHAR(255) NOT NULL,
     description TEXT,
@@ -34,6 +32,8 @@ CREATE TABLE courses (
     estimated_time VARCHAR(50),
     difficulty ENUM('Beginner', 'Intermediate', 'Advanced') DEFAULT 'Beginner',
     tags JSON,
+    restrictions JSON,
+    level_settings JSON,
     is_locked BOOLEAN DEFAULT FALSE,
     is_hidden BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -44,7 +44,7 @@ CREATE TABLE courses (
 );
 
 -- Challenges Table
-CREATE TABLE challenges (
+CREATE TABLE IF NOT EXISTS challenges (
     id VARCHAR(100) PRIMARY KEY,
     title VARCHAR(255) NOT NULL,
     difficulty ENUM('Easy', 'Medium', 'Hard') DEFAULT 'Medium',
@@ -53,10 +53,11 @@ CREATE TABLE challenges (
     tags JSON,
     time_limit INT DEFAULT 30,
     passing_threshold JSON,
-    expected_html TEXT,
-    expected_css TEXT,
-    expected_js TEXT,
+    expected_html LONGTEXT,
+    expected_css LONGTEXT,
+    expected_js LONGTEXT,
     expected_screenshot_url VARCHAR(255),
+    expected_screenshot_data MEDIUMBLOB,
     course_id VARCHAR(100),
     level INT,
     points INT DEFAULT 100,
@@ -69,16 +70,16 @@ CREATE TABLE challenges (
     FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE SET NULL
 );
 
--- Submissions Table (Enhanced with screenshots)
-CREATE TABLE submissions (
+-- Submissions Table
+CREATE TABLE IF NOT EXISTS submissions (
     id VARCHAR(100) PRIMARY KEY,
     challenge_id VARCHAR(100) NOT NULL,
     user_id VARCHAR(100) NOT NULL,
     candidate_name VARCHAR(100),
-    html_code TEXT,
-    css_code TEXT,
-    js_code TEXT,
-    status ENUM('pending', 'passed', 'failed') DEFAULT 'pending',
+    html_code LONGTEXT,
+    css_code LONGTEXT,
+    js_code LONGTEXT,
+    status ENUM('pending', 'passed', 'failed', 'queued', 'evaluating', 'error', 'saved') DEFAULT 'pending',
     submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     evaluated_at TIMESTAMP NULL,
     structure_score INT DEFAULT 0,
@@ -88,10 +89,16 @@ CREATE TABLE submissions (
     passed BOOLEAN DEFAULT FALSE,
     evaluation_result JSON,
     user_screenshot VARCHAR(500),
+    user_screenshot_data MEDIUMBLOB,
     expected_screenshot VARCHAR(500),
+    expected_screenshot_data MEDIUMBLOB,
+    diff_screenshot VARCHAR(500),
+    diff_screenshot_data MEDIUMBLOB,
+    user_feedback TEXT,
+    admin_override_status ENUM('none', 'passed', 'failed') DEFAULT 'none',
+    admin_override_reason TEXT,
     course_id VARCHAR(100),
     level INT,
-    exported_at TIMESTAMP NULL DEFAULT NULL,
     INDEX idx_challenge (challenge_id),
     INDEX idx_user (user_id),
     INDEX idx_status (status),
@@ -101,40 +108,102 @@ CREATE TABLE submissions (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
--- User Progress Table
-CREATE TABLE user_progress (
-    id INT AUTO_INCREMENT PRIMARY KEY,
+-- Test Sessions Table
+CREATE TABLE IF NOT EXISTS test_sessions (
+    id VARCHAR(100) PRIMARY KEY,
     user_id VARCHAR(100) NOT NULL,
     course_id VARCHAR(100) NOT NULL,
-    current_level INT DEFAULT 1,
-    completed_levels JSON,
-    total_points INT DEFAULT 0,
-    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    UNIQUE KEY unique_user_course (user_id, course_id),
-    INDEX idx_user_course (user_id, course_id),
+    level INT NOT NULL,
+    submission_ids JSON NOT NULL,
+    total_questions INT DEFAULT 0,
+    passed_count INT DEFAULT 0,
+    overall_status ENUM('passed', 'failed', 'pending') DEFAULT 'pending',
+    user_feedback TEXT NULL,
+    started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    completed_at TIMESTAMP NULL,
+    INDEX idx_user (user_id),
+    INDEX idx_course_level (course_id, level),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE
 );
 
--- User Assignments Table (for random question assignment)
-CREATE TABLE user_assignments (
+-- Global Test Sessions Table
+CREATE TABLE IF NOT EXISTS global_test_sessions (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id VARCHAR(100) NOT NULL,
     course_id VARCHAR(100) NOT NULL,
     level INT NOT NULL,
-    challenge_id VARCHAR(100) NOT NULL,
-    assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    completed BOOLEAN DEFAULT FALSE,
-    completed_at TIMESTAMP NULL,
-    UNIQUE KEY unique_user_level (user_id, course_id, level),
-    INDEX idx_user_course_level (user_id, course_id, level),
+    duration_minutes INT NOT NULL,
+    created_by VARCHAR(100),
+    is_active BOOLEAN DEFAULT TRUE,
+    start_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    ended_reason VARCHAR(50),
+    forced_end BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Test Attendance Table
+CREATE TABLE IF NOT EXISTS test_attendance (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id VARCHAR(100) NOT NULL,
+    test_identifier VARCHAR(255) NOT NULL,
+    session_id INT NULL,
+    status ENUM('requested', 'approved', 'rejected') DEFAULT 'requested',
+    requested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    approved_at TIMESTAMP NULL,
+    approved_by VARCHAR(100),
+    attempt_started_at TIMESTAMP NULL,
+    attempt_submitted_at TIMESTAMP NULL,
+    is_used BOOLEAN DEFAULT FALSE,
+    locked BOOLEAN DEFAULT FALSE,
+    locked_at TIMESTAMP NULL,
+    locked_reason VARCHAR(255) NULL,
+    violation_count INT DEFAULT 0,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    INDEX idx_user_test (user_id, test_identifier),
+    INDEX idx_session (session_id)
+);
+
+-- Faculty Assignments
+CREATE TABLE IF NOT EXISTS faculty_course_assignments (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    faculty_id VARCHAR(100) NOT NULL,
+    course_id VARCHAR(100) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (faculty_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE,
-    FOREIGN KEY (challenge_id) REFERENCES challenges(id) ON DELETE CASCADE
+    UNIQUE KEY unique_faculty_course (faculty_id, course_id)
+);
+
+-- Submission Assignments
+CREATE TABLE IF NOT EXISTS submission_assignments (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    submission_id VARCHAR(100) NOT NULL,
+    faculty_id VARCHAR(100) NOT NULL,
+    assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    status ENUM('pending', 'evaluated') DEFAULT 'pending',
+    FOREIGN KEY (submission_id) REFERENCES submissions(id) ON DELETE CASCADE,
+    FOREIGN KEY (faculty_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_submission_assignment (submission_id)
+);
+
+-- Manual Evaluations
+CREATE TABLE IF NOT EXISTS manual_evaluations (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    submission_id VARCHAR(100) NOT NULL,
+    faculty_id VARCHAR(100) NOT NULL,
+    code_quality_score INT DEFAULT 0,
+    requirements_score INT DEFAULT 0,
+    expected_output_score INT DEFAULT 0,
+    total_score INT GENERATED ALWAYS AS (code_quality_score + requirements_score + expected_output_score) STORED,
+    comments TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (submission_id) REFERENCES submissions(id) ON DELETE CASCADE,
+    FOREIGN KEY (faculty_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_manual_evaluation (submission_id)
 );
 
 -- Assets Table
-CREATE TABLE assets (
+CREATE TABLE IF NOT EXISTS assets (
     id INT AUTO_INCREMENT PRIMARY KEY,
     filename VARCHAR(255) NOT NULL UNIQUE,
     original_name VARCHAR(255) NOT NULL,
@@ -144,33 +213,29 @@ CREATE TABLE assets (
     size INT,
     category VARCHAR(50) DEFAULT 'general',
     checksum_sha256 CHAR(64) NULL,
+    file_data LONGBLOB,
     uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    last_modified TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    INDEX idx_category (category),
-    INDEX idx_filename (filename),
-    INDEX idx_assets_uploaded_at (uploaded_at),
-    UNIQUE KEY idx_assets_checksum_category (checksum_sha256, category)
+    INDEX idx_category (category)
 );
 
--- Level Completions Table (feedback and scores)
-CREATE TABLE level_completions (
-    id INT AUTO_INCREMENT PRIMARY KEY,
+-- Level Access Restrictions
+CREATE TABLE IF NOT EXISTS level_access (
+    id VARCHAR(100) PRIMARY KEY,
     user_id VARCHAR(100) NOT NULL,
     course_id VARCHAR(100) NOT NULL,
     level INT NOT NULL,
-    total_score DECIMAL(5,2) DEFAULT 0,
-    passed BOOLEAN DEFAULT FALSE,
-    feedback TEXT,
-    question_results JSON,
-    completed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_user_course (user_id, course_id),
-    INDEX idx_completed_at (completed_at),
+    is_locked BOOLEAN DEFAULT FALSE,
+    locked_by VARCHAR(100),
+    locked_at TIMESTAMP NULL,
+    unlocked_at TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE
+    FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_user_level (user_id, course_id, level)
 );
 
--- Admin Activity Log (optional but useful)
-CREATE TABLE activity_logs (
+-- Activity Logs
+CREATE TABLE IF NOT EXISTS activity_logs (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id VARCHAR(100),
     action VARCHAR(100) NOT NULL,
@@ -179,9 +244,6 @@ CREATE TABLE activity_logs (
     details JSON,
     ip_address VARCHAR(50),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_user (user_id),
-    INDEX idx_action (action),
-    INDEX idx_created_at (created_at),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
 );
 

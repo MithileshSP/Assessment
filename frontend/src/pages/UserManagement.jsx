@@ -9,6 +9,7 @@ import {
   Trash2,
   Search,
   User,
+  Users,
   Shield,
   GraduationCap,
   Activity,
@@ -26,6 +27,7 @@ export default function UserManagement() {
   const [csvFile, setCsvFile] = useState(null);
   const [uploadResult, setUploadResult] = useState(null);
   const [search, setSearch] = useState('');
+  const [roleFilter, setRoleFilter] = useState('all');
 
   const [formData, setFormData] = useState({
     username: '',
@@ -100,11 +102,15 @@ export default function UserManagement() {
     }
   };
 
-  const filteredUsers = users.filter(u =>
-    u.username?.toLowerCase().includes(search.toLowerCase()) ||
-    u.fullName?.toLowerCase().includes(search.toLowerCase()) ||
-    u.email?.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredUsers = users.filter(u => {
+    const matchesSearch = u.username?.toLowerCase().includes(search.toLowerCase()) ||
+      u.fullName?.toLowerCase().includes(search.toLowerCase()) ||
+      u.email?.toLowerCase().includes(search.toLowerCase());
+
+    const matchesRole = roleFilter === 'all' || u.role === roleFilter;
+
+    return matchesSearch && matchesRole;
+  });
 
   const getRoleIcon = (role) => {
     switch (role) {
@@ -128,19 +134,19 @@ export default function UserManagement() {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">User Management</h1>
-            <p className="text-slate-500 mt-1">Directly manage accounts for Students, Faculty, and Admins.</p>
+            <h1 className="text-4xl font-black text-slate-900 tracking-tight">User Management</h1>
+            <p className="text-slate-500 mt-1 text-lg">Directly manage accounts for Students, Faculty, and Admins.</p>
           </div>
           <div className="flex items-center gap-3">
             <button
               onClick={() => setShowUploadModal(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 hover:bg-slate-50 transition-colors shadow-sm"
+              className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 rounded-2xl text-sm font-bold text-slate-700 hover:bg-slate-50 transition-colors shadow-sm"
             >
               <Upload size={16} /> Bulk Import
             </button>
             <button
               onClick={() => setShowAddModal(true)}
-              className="flex items-center gap-2 px-6 py-2 bg-slate-900 text-white rounded-xl text-sm font-bold hover:bg-blue-600 transition-all shadow-lg shadow-slate-900/10"
+              className="flex items-center gap-2 px-8 py-2.5 bg-slate-900 text-white rounded-2xl text-sm font-bold hover:bg-blue-600 transition-all shadow-lg shadow-slate-900/10"
             >
               <UserPlus size={16} /> Create User
             </button>
@@ -148,23 +154,47 @@ export default function UserManagement() {
         </div>
 
         {/* Search & Stats Bar */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          <div className="lg:col-span-3 relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-            <input
-              type="text"
-              placeholder="Search by name, email or username..."
-              className="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-2xl focus:ring-2 focus:ring-blue-500 text-sm shadow-sm"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
-          <div className="bg-blue-600 rounded-2xl p-4 text-white flex items-center justify-between shadow-lg shadow-blue-600/20">
-            <div>
-              <p className="text-[10px] font-bold opacity-60 uppercase tracking-widest text-left">Active Base</p>
-              <p className="text-2xl font-bold text-left">{users.length} Users</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 animate-fade-in-up delay-100">
+          <div className="md:col-span-1 lg:col-span-2 xl:col-span-3 flex items-center gap-4">
+            <div className="relative flex-1 group">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={18} />
+              <input
+                type="text"
+                placeholder="Search by name, email or username..."
+                className="w-full pl-12 pr-4 py-4 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none text-sm shadow-sm transition-all"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
             </div>
-            <Activity size={24} className="opacity-40" />
+
+            <div className="relative group">
+              <select
+                value={roleFilter}
+                onChange={(e) => setRoleFilter(e.target.value)}
+                className="appearance-none pl-6 pr-12 py-4 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none text-sm font-bold text-slate-700 shadow-sm transition-all cursor-pointer min-w-[160px]"
+              >
+                <option value="all">All Roles</option>
+                <option value="student">Students</option>
+                <option value="faculty">Faculty</option>
+                <option value="admin">Admins</option>
+              </select>
+              <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 group-hover:text-blue-500 transition-colors">
+                <Users size={16} />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-br from-blue-600 to-indigo-600 rounded-2xl p-5 text-white flex items-center justify-between shadow-xl shadow-blue-600/20 hover:scale-[1.02] transition-transform">
+            <div>
+              <p className="text-[10px] font-black opacity-70 uppercase tracking-[0.2em] text-left">Active Base</p>
+              <p className="text-3xl font-black text-left mt-1">
+                {roleFilter === 'all' ? users.length : filteredUsers.length}
+                <span className="text-xs ml-1 opacity-50 font-medium">Results</span>
+              </p>
+            </div>
+            <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center backdrop-blur-sm">
+              <Activity size={24} className="opacity-80" />
+            </div>
           </div>
         </div>
 

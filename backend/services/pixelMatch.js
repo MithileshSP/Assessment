@@ -176,7 +176,7 @@ class PixelMatcher {
       });
 
       // Wait a bit for any animations or dynamic content
-      await page.waitForTimeout(500);
+      await new Promise(r => setTimeout(r, 500));
 
       // Capture screenshot
       const screenshotPath = path.join(this.screenshotDir, `${filename}.png`);
@@ -237,17 +237,67 @@ class PixelMatcher {
       const diffPath = path.join(this.screenshotDir, `${submissionId}-diff.png`);
       fs.writeFileSync(diffPath, PNG.sync.write(diff));
 
-      // Calculate metrics
-      const totalPixels = width * height;
-      const diffPercentage = (diffPixels / totalPixels) * 100;
-      const similarityScore = Math.max(0, 100 - diffPercentage);
+      // 1. Detection of "Blank" or "Solid" page (Variance check)
+      const isSolidColor = (data) => {
+        let firstR = data[0], firstG = data[1], firstB = data[2];
+        for (let i = 4; i < data.length; i += 4) {
+          if (Math.abs(data[i] - firstR) > 5 || Math.abs(data[i + 1] - firstG) > 5 || Math.abs(data[i + 2] - firstB) > 5) return false;
+        }
+        return true;
+      };
+
+      const candidateIsBlank = isSolidColor(candidateImg.data);
+      const expectedIsBlank = isSolidColor(expectedImg.data);
+
+      // 2. Weighted Calculation
+      let contentMatch = 0, contentTotal = 0;
+      let bgMatch = 0, bgTotal = 0;
+
+      // Sample background color from top-left pixel (assumed background)
+      const bgR = expectedImg.data[0], bgG = expectedImg.data[1], bgB = expectedImg.data[2];
+
+      for (let i = 0; i < expectedImg.data.length; i += 4) {
+        const isContent = Math.abs(expectedImg.data[i] - bgR) > 10 ||
+          Math.abs(expectedImg.data[i + 1] - bgG) > 10 ||
+          Math.abs(expectedImg.data[i + 2] - bgB) > 10;
+
+        // Check if student pixel matches expected within threshold
+        const matches = Math.abs(candidateImg.data[i] - expectedImg.data[i]) < 30 &&
+          Math.abs(candidateImg.data[i + 1] - expectedImg.data[i + 1]) < 30 &&
+          Math.abs(candidateImg.data[i + 2] - expectedImg.data[i + 2]) < 30;
+
+        if (isContent) {
+          contentTotal++;
+          if (matches) contentMatch++;
+        } else {
+          bgTotal++;
+          if (matches) bgMatch++;
+        }
+      }
+
+      // Calculate weighted score: 90% Content area, 10% Background area
+      let similarityScore = 0;
+      if (contentTotal > 0) {
+        const contentRatio = contentMatch / contentTotal;
+        const bgRatio = bgTotal > 0 ? bgMatch / bgTotal : 1;
+        similarityScore = (contentRatio * 90) + (bgRatio * 10);
+      } else {
+        // Fallback to simple pixel match if template is basically empty
+        similarityScore = 100 - ((diffPixels / totalPixels) * 100);
+      }
+
+      // Safety: If student submitted a blank page but template has content, score is 0
+      if (candidateIsBlank && !expectedIsBlank) {
+        similarityScore = Math.min(similarityScore, 5); // Allow tiny score for "trying" but floor it
+      }
 
       return {
         score: Math.round(similarityScore),
         diffPixels,
         totalPixels,
-        diffPercentage: diffPercentage.toFixed(2),
-        matchPercentage: similarityScore.toFixed(2)
+        diffPercentage: ((diffPixels / totalPixels) * 100).toFixed(2),
+        matchPercentage: similarityScore.toFixed(2),
+        isCandidateBlank: candidateIsBlank
       };
 
     } catch (error) {

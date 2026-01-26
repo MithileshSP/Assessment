@@ -25,7 +25,11 @@
   }
 
   .card {
-    @apply bg-white rounded-3xl shadow-sm border border-slate-200 p-8 transition-all duration-300 hover:shadow-xl hover:shadow-slate-200/50;
+    @apply bg-white rounded-3xl shadow-sm border border-slate-200 p-8 transition-all duration-500 hover:shadow-2xl hover:shadow-slate-200/60 hover:-translate-y-1;
+  }
+
+  .glass-card {
+    @apply bg-white/70 backdrop-blur-xl border border-white/20 shadow-xl;
   }
 
   .input {
@@ -48,8 +52,42 @@
     @apply bg-red-100 text-red-800;
   }
 
-  .animate-slide-in {
-    animation: slideIn 0.3s ease-out;
+  .animate-fade-in-up {
+    animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    opacity: 0;
+  }
+
+  /* Staggered Delay Utilities */
+  .delay-100 {
+    animation-delay: 100ms;
+  }
+
+  .delay-200 {
+    animation-delay: 200ms;
+  }
+
+  .delay-300 {
+    animation-delay: 300ms;
+  }
+
+  .delay-400 {
+    animation-delay: 400ms;
+  }
+
+  .delay-500 {
+    animation-delay: 500ms;
+  }
+
+  @keyframes fadeInUp {
+    from {
+      transform: translateY(20px);
+      opacity: 0;
+    }
+
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
   }
 
   @keyframes slideIn {

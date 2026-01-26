@@ -7,7 +7,8 @@ import {
     CheckCircle,
     Clock,
     ArrowRight,
-    ClipboardList
+    ClipboardList,
+    Download
 } from 'lucide-react';
 
 const FacultyDashboard = () => {
@@ -40,16 +41,53 @@ const FacultyDashboard = () => {
         }
     };
 
+    const handleExportBackup = async () => {
+        try {
+            const response = await api.get('/faculty/export-backup', {
+                responseType: 'blob'
+            });
+
+            // If response is JSON (error or no data)
+            const contentType = response.headers['content-type'];
+            if (contentType && contentType.includes('application/json')) {
+                const text = await response.data.text();
+                const json = JSON.parse(text);
+                alert(json.message || 'Export failed');
+                return;
+            }
+
+            // Download the CSV file
+            const blob = new Blob([response.data], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `submissions_backup_${new Date().toISOString().slice(0, 10)}.csv`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
+        } catch (error) {
+            console.error('Export failed:', error);
+            alert('Failed to export backup. Please try again.');
+        }
+    };
+
     return (
         <SaaSLayout>
             <div className="space-y-8">
                 {/* Header */}
                 <div className="flex justify-between items-end">
                     <div>
-                        <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Faculty Workspace</h1>
-                        <p className="text-slate-500 mt-1">Review and grade pending student submissions.</p>
+                        <h1 className="text-3xl font-bold text-slate-900 tracking-tight animate-fade-in-up">Faculty Workspace</h1>
+                        <p className="text-slate-500 mt-1 animate-fade-in-up delay-100">Review and grade pending student submissions.</p>
                     </div>
                     <div className="flex gap-4">
+                        <button
+                            onClick={handleExportBackup}
+                            className="bg-white px-4 py-2 rounded-xl border border-slate-200 shadow-sm flex items-center gap-2 text-sm font-bold text-slate-700 hover:bg-slate-50 transition-colors"
+                        >
+                            <Download size={16} /> Export Backup
+                        </button>
                         <div className="bg-white px-4 py-2 rounded-xl border border-slate-200 shadow-sm flex items-center gap-3">
                             <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                             <span className="text-sm font-bold text-slate-700">{stats.pending} Tasks Pending</span>
@@ -58,7 +96,7 @@ const FacultyDashboard = () => {
                 </div>
 
                 {/* Quick Stats */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 animate-fade-in-up delay-200">
                     <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:border-indigo-200 transition-all group">
                         <div className="flex items-center gap-4 mb-3">
                             <div className="p-3 rounded-xl bg-blue-50 text-blue-600 group-hover:bg-blue-100 transition-colors">

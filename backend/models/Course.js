@@ -45,6 +45,9 @@ class CourseModel {
         levelSettings: Array.isArray(course.level_settings) || typeof course.level_settings === 'object'
           ? course.level_settings
           : JSON.parse(course.level_settings || '{}'),
+        passingThreshold: Array.isArray(course.passing_threshold) || typeof course.passing_threshold === 'object'
+          ? course.passing_threshold
+          : JSON.parse(course.passing_threshold || '{"structure": 80, "visual": 80, "overall": 75}'),
         isLocked: Boolean(course.is_locked),
         isHidden: Boolean(course.is_hidden),
         totalLevels: course.total_levels,
@@ -70,6 +73,9 @@ class CourseModel {
         levelSettings: Array.isArray(course.level_settings) || typeof course.level_settings === 'object'
           ? course.level_settings
           : JSON.parse(course.level_settings || '{}'),
+        passingThreshold: Array.isArray(course.passing_threshold) || typeof course.passing_threshold === 'object'
+          ? course.passing_threshold
+          : JSON.parse(course.passing_threshold || '{"structure": 80, "visual": 80, "overall": 75}'),
         isLocked: Boolean(course.is_locked),
         isHidden: Boolean(course.is_hidden),
         totalLevels: course.total_levels,
@@ -103,6 +109,7 @@ class CourseModel {
         isHidden: courseData.isHidden || false,
         restrictions: courseData.restrictions || {},
         levelSettings: courseData.levelSettings || {},
+        passingThreshold: courseData.passingThreshold || { structure: 80, visual: 80, overall: 75 },
         createdAt: new Date().toISOString()
       };
       courses.push(newCourse);
@@ -129,6 +136,7 @@ class CourseModel {
           courseData.isHidden || false,
           JSON.stringify(courseData.restrictions || {}),
           JSON.stringify(courseData.levelSettings || {}),
+          JSON.stringify(courseData.passingThreshold || { structure: 80, visual: 80, overall: 75 }),
           courseData.createdAt || new Date()
         ]
       );
@@ -150,6 +158,7 @@ class CourseModel {
         isHidden: courseData.isHidden || false,
         restrictions: courseData.restrictions || {},
         levelSettings: courseData.levelSettings || {},
+        passingThreshold: courseData.passingThreshold || { structure: 80, visual: 80, overall: 75 },
         createdAt: new Date().toISOString()
       };
       courses.push(newCourse);
@@ -199,6 +208,7 @@ class CourseModel {
       const isHidden = courseData.isHidden !== undefined ? courseData.isHidden : existing.isHidden;
       const restrictions = courseData.restrictions !== undefined ? JSON.stringify(courseData.restrictions) : JSON.stringify(existing.restrictions);
       const levelSettings = courseData.levelSettings !== undefined ? JSON.stringify(courseData.levelSettings) : JSON.stringify(existing.levelSettings);
+      const passingThreshold = courseData.passingThreshold !== undefined ? JSON.stringify(courseData.passingThreshold) : JSON.stringify(existing.passingThreshold);
 
       console.log('[DEBUG] CourseModel.update executing SQL with isHidden:', isHidden);
 
@@ -218,12 +228,13 @@ class CourseModel {
          is_hidden = ?,
          restrictions = ?,
          level_settings = ?,
+         passing_threshold = ?,
          updated_at = NOW()
          WHERE id = ?`,
         [
           title, description, thumbnail, icon, color,
           totalLevels, estimatedTime, difficulty, tags,
-          isLocked, isHidden, restrictions, levelSettings, id
+          isLocked, isHidden, restrictions, levelSettings, passingThreshold, id
         ]
       );
 

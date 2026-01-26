@@ -1,7 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const { query } = require('../database/connection');
+const { query, queryOne } = require('../database/connection');
 const { verifyToken, verifyAdmin } = require('../middleware/auth');
+const GlobalSession = require('../models/GlobalSession');
 
 // Request attendance
 router.post('/request', verifyToken, async (req, res) => {
@@ -13,7 +14,16 @@ router.post('/request', verifyToken, async (req, res) => {
         return res.status(400).json({ error: 'Missing courseId or level' });
     }
 
+    console.log(`[Attendance Request] User: ${userId}, Identifier: ${testIdentifier}`);
+
     try {
+        // 0. Verify user exists to prevent FK violation
+        const userExists = await queryOne("SELECT id FROM users WHERE id = ?", [userId]);
+        if (!userExists) {
+            console.error(`[Attendance Request] CRITICAL: User ${userId} not found in database!`);
+            return res.status(500).json({ error: `User profile [${userId}] not found. Please re-login.` });
+        }
+
         // 1. Check for active global session
         const activeSession = await GlobalSession.findActive(courseId, level);
         const sessionId = activeSession ? activeSession.id : null;
@@ -52,7 +62,6 @@ router.post('/request', verifyToken, async (req, res) => {
     }
 });
 
-const GlobalSession = require('../models/GlobalSession');
 
 // Check status
 router.get('/status', verifyToken, async (req, res) => {
@@ -66,9 +75,10 @@ router.get('/status', verifyToken, async (req, res) => {
         // 1. Check for active global session
         const activeSession = await GlobalSession.findActive(courseId, level);
 
-        // 2. Get individual attendance record
+        // 2. Get individual attendance record including lock fields
         const result = await query(
-            "SELECT status, approved_at, is_used, session_id FROM test_attendance WHERE user_id = ? AND test_identifier = ? ORDER BY requested_at DESC LIMIT 1",
+            `SELECT status, approved_at, is_used, session_id, locked, locked_reason, violation_count 
+             FROM test_attendance WHERE user_id = ? AND test_identifier = ? ORDER BY requested_at DESC LIMIT 1`,
             [userId, testIdentifier]
         );
 
@@ -76,6 +86,9 @@ router.get('/status', verifyToken, async (req, res) => {
             status: 'none',
             approvedAt: null,
             isUsed: false,
+            locked: false,
+            lockedReason: null,
+            unlockAction: null,  // Will be set when admin unlocks
             session: activeSession
         };
 
@@ -83,11 +96,25 @@ router.get('/status', verifyToken, async (req, res) => {
             response.status = result[0].status;
             response.approvedAt = result[0].approved_at;
             response.isUsed = Boolean(result[0].is_used);
+            response.locked = Boolean(result[0].locked);
+            response.lockedReason = result[0].locked_reason;
+
+            // Determine unlock action based on state changes
+            // If was locked but now not locked, check if is_used to determine action
+            if (!result[0].locked && result[0].locked_reason) {
+                // Admin took action - determine which one based on Admin: prefix
+                if (result[0].locked_reason === 'Admin:submit') {
+                    response.unlockAction = 'submit';
+                } else if (result[0].locked_reason === 'Admin:continue') {
+                    response.unlockAction = 'continue';
+                }
+            }
 
             // If the record is for an older session, it's effectively 'none' for the current session
             if (activeSession && result[0].session_id !== activeSession.id) {
                 response.status = 'none';
                 response.isUsed = false;
+                response.locked = false;
             }
         }
 
@@ -98,21 +125,75 @@ router.get('/status', verifyToken, async (req, res) => {
     }
 });
 
-// Admin: Get pending requests
+// Admin: Get pending requests (with student details)
 router.get('/requests', verifyAdmin, async (req, res) => {
     try {
-        // Get all requested, join with user details
+        // Get all requested, join with user details including email
         const rows = await query(`
-            SELECT ta.id, ta.user_id, u.username, u.full_name, ta.test_identifier, ta.requested_at, ta.status 
+            SELECT ta.id, ta.user_id, u.username, u.full_name, u.email, 
+                   ta.test_identifier, ta.requested_at, ta.status,
+                   ta.locked, ta.locked_reason, ta.violation_count
             FROM test_attendance ta
             JOIN users u ON ta.user_id = u.id
-            WHERE ta.status = 'requested'
-            ORDER BY ta.requested_at ASC
+            WHERE ta.status = 'requested' OR ta.locked = 1
+            ORDER BY ta.locked DESC, ta.requested_at ASC
         `);
         res.json(rows);
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: 'Failed to fetch requests' });
+    }
+});
+
+// Lock a student's test (called from frontend on max violations)
+router.post('/lock', verifyToken, async (req, res) => {
+    const { courseId, level, reason, violationCount } = req.body;
+    const userId = req.user.id;
+    const testIdentifier = `${courseId}_${level}`;
+
+    try {
+        await query(`
+            UPDATE test_attendance 
+            SET locked = 1, locked_at = CURRENT_TIMESTAMP, locked_reason = ?, violation_count = ?
+            WHERE user_id = ? AND test_identifier = ?
+        `, [reason || 'Max violations reached', violationCount || 0, userId, testIdentifier]);
+
+        res.json({ success: true, message: 'Test locked. Waiting for admin decision.' });
+    } catch (err) {
+        console.error('[Lock] Error:', err);
+        res.status(500).json({ error: 'Failed to lock test' });
+    }
+});
+
+// Admin: Unlock a student's test
+router.post('/unlock', verifyAdmin, async (req, res) => {
+    const { attendanceId, action } = req.body; // action: 'continue' or 'submit'
+
+    if (!attendanceId) {
+        return res.status(400).json({ error: 'attendanceId is required' });
+    }
+
+    try {
+        if (action === 'submit') {
+            // Mark as used (force submit their saved code)
+            await query(`
+                UPDATE test_attendance 
+                SET locked = 0, is_used = 1, locked_reason = 'Admin:submit'
+                WHERE id = ?
+            `, [attendanceId]);
+        } else {
+            // Allow them to continue (reset lock, set reason to indicate action)
+            await query(`
+                UPDATE test_attendance 
+                SET locked = 0, locked_at = NULL, locked_reason = 'Admin:continue', violation_count = 0
+                WHERE id = ?
+            `, [attendanceId]);
+        }
+
+        res.json({ success: true, action });
+    } catch (err) {
+        console.error('[Unlock] Error:', err);
+        res.status(500).json({ error: 'Failed to unlock test' });
     }
 });
 

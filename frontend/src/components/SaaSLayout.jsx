@@ -265,8 +265,8 @@ const SaaSLayout = ({ children }) => {
                 </header>
 
                 {/* Page Content */}
-                <main className="flex-1 overflow-y-auto p-4 md:p-8 custom-scrollbar relative">
-                    <div className="max-w-7xl mx-auto animate-fade-in">
+                <main className="flex-1 overflow-y-auto p-4 md:p-10 lg:p-12 custom-scrollbar relative">
+                    <div className="w-full animate-fade-in-up">
                         {children}
                     </div>
                 </main>
@@ -295,12 +295,12 @@ const SaaSLayout = ({ children }) => {
           -ms-overflow-style: none;
           scrollbar-width: none;
         }
-        @keyframes fade-in {
-          from { opacity: 0; transform: translateY(10px); }
+        @keyframes fade-in-up {
+          from { opacity: 0; transform: translateY(20px); }
           to { opacity: 1; transform: translateY(0); }
         }
-        .animate-fade-in {
-          animation: fade-in 0.4s ease-out forwards;
+        .animate-fade-in-up {
+          animation: fade-in-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
       ` }} />
         </div>

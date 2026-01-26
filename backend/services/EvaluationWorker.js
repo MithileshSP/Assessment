@@ -6,11 +6,13 @@ const SubmissionModel = require('../models/Submission');
 const ChallengeModel = require('../models/Challenge');
 const evaluator = require('./evaluator');
 
+const CourseModel = require('../models/Course'); // Added CourseModel
+
 class EvaluationWorker {
     constructor() {
         this.isProcessing = false;
         this.pollInterval = null;
-        this.concurrencyLimit = 2; // Maximum simultaneous evaluations
+        this.concurrencyLimit = 4; // Maximum simultaneous evaluations
         this.activeWorkers = 0;
     }
 
@@ -81,11 +83,24 @@ class EvaluationWorker {
                 throw new Error(`Challenge ${challengeId} not found`);
             }
 
+            // 2. Get Course thresholds (Global Control)
+            const courseId = submission.courseId || challenge.course_id;
+            let courseThresholds = null;
+            if (courseId) {
+                const course = await CourseModel.findById(courseId);
+                if (course && course.passingThreshold) {
+                    courseThresholds = course.passingThreshold;
+                }
+            }
+
+            // Use course thresholds if available, otherwise fallback to challenge
+            const finalThresholds = courseThresholds || challenge.passing_threshold || challenge.passingThreshold || { structure: 80, visual: 80, overall: 75 };
+
             // 3. Run evaluation
             const evaluationResult = await evaluator.evaluate(
                 submission.code,
                 challenge.expected_solution || challenge.expectedSolution,
-                challenge.passing_threshold || challenge.passingThreshold,
+                finalThresholds,
                 submissionId,
                 challengeId
             );

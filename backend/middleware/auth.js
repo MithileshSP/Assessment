@@ -1,7 +1,8 @@
 const jwt = require('jsonwebtoken');
+const { query } = require('../database/connection');
 require('dotenv').config();
 
-const verifyToken = (req, res, next) => {
+const verifyToken = async (req, res, next) => {
     const authHeader = req.headers['authorization'];
     if (!authHeader) {
         return res.status(401).json({ error: 'Access denied. No token provided.' });
@@ -18,12 +19,28 @@ const verifyToken = (req, res, next) => {
     try {
         const decoded = jwt.verify(token, jwtSecret);
         req.user = decoded;
+
+        // Single Session Enforcement: Verify session_id matches DB
+        if (decoded.sessionId) {
+            try {
+                const [user] = await query('SELECT current_session_id FROM users WHERE id = ?', [decoded.id]);
+                if (user && user.current_session_id && user.current_session_id !== decoded.sessionId) {
+                    console.warn(`[Auth] Session mismatch for user ${decoded.id}. Token session: ${decoded.sessionId}, DB session: ${user.current_session_id}`);
+                    return res.status(401).json({ error: 'Session expired. You have logged in from another location.' });
+                }
+            } catch (dbErr) {
+                // If DB check fails, allow request (graceful degradation)
+                console.warn('[Auth] Session check DB error:', dbErr.message);
+            }
+        }
+
         next();
     } catch (err) {
         console.error(`[Auth] Token verification failed for ${req.path}:`, err.message);
         return res.status(403).json({ error: 'Invalid or expired token' });
     }
 };
+
 
 const verifyAdmin = (req, res, next) => {
     verifyToken(req, res, () => {

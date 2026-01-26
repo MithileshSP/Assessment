@@ -1,5 +1,5 @@
 -- Frontend Test Portal: Fresh Schema Initialization
--- Consolidated Schema v2.0 - Complete with all fixes
+-- Consolidated Schema v3.0 - Complete with all fixes and recent migrations
 
 DROP DATABASE IF EXISTS fullstack_test_portal;
 CREATE DATABASE fullstack_test_portal CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -18,9 +18,11 @@ CREATE TABLE users (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     last_login TIMESTAMP NULL,
     picture VARCHAR(500) NULL,
+    current_session_id VARCHAR(100) NULL,
     INDEX idx_username (username),
     INDEX idx_email (email),
-    INDEX idx_role (role)
+    INDEX idx_role (role),
+    INDEX idx_session_id (current_session_id)
 );
 
 -- ==========================================
@@ -37,6 +39,7 @@ CREATE TABLE courses (
     estimated_time VARCHAR(50),
     difficulty ENUM('Beginner', 'Intermediate', 'Advanced') DEFAULT 'Beginner',
     tags JSON,
+    passing_threshold JSON,
     is_locked BOOLEAN DEFAULT FALSE,
     is_hidden BOOLEAN DEFAULT FALSE,
     restrictions JSON,
@@ -101,6 +104,10 @@ CREATE TABLE test_attendance (
     attempt_started_at TIMESTAMP NULL,
     attempt_submitted_at TIMESTAMP NULL,
     is_used BOOLEAN DEFAULT FALSE,
+    locked BOOLEAN DEFAULT FALSE,
+    locked_at TIMESTAMP NULL,
+    locked_reason VARCHAR(255) NULL,
+    violation_count INT DEFAULT 0,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (approved_by) REFERENCES users(id) ON DELETE SET NULL,
     INDEX idx_user_test (user_id, test_identifier),
@@ -116,13 +123,14 @@ CREATE TABLE test_sessions (
     submission_ids JSON NOT NULL,
     total_questions INT DEFAULT 0,
     passed_count INT DEFAULT 0,
-    overall_status ENUM('passed', 'failed') DEFAULT 'failed',
+    overall_status ENUM('passed', 'failed', 'pending') DEFAULT 'pending',
     user_feedback TEXT NULL,
     started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     completed_at TIMESTAMP NULL,
     INDEX idx_user (user_id),
     INDEX idx_course_level (course_id, level),
-    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE
 );
 
 CREATE TABLE user_progress (
@@ -148,9 +156,12 @@ CREATE TABLE level_access (
     locked_at TIMESTAMP NULL,
     unlocked_at TIMESTAMP NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE,
-    UNIQUE KEY unique_user_level (user_id, course_id, level)
+    UNIQUE KEY unique_user_level (user_id, course_id, level),
+    INDEX idx_user_course (user_id, course_id),
+    INDEX idx_is_locked (is_locked)
 );
 
 -- ==========================================
@@ -243,8 +254,11 @@ CREATE TABLE assets (
     category VARCHAR(50) DEFAULT 'general',
     checksum_sha256 CHAR(64) NULL,
     uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    last_modified TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_category (category),
-    INDEX idx_filename (filename)
+    INDEX idx_filename (filename),
+    INDEX idx_assets_uploaded_at (uploaded_at),
+    UNIQUE KEY idx_assets_checksum_category (checksum_sha256, category)
 );
 
 CREATE TABLE activity_logs (
@@ -277,10 +291,12 @@ CREATE TABLE student_feedback (
 -- ==========================================
 
 -- Admin User (Pass: admin123)
+-- Hash: 240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9
 INSERT INTO users (id, username, password, email, full_name, role) VALUES
 ('user-admin-1', 'admin', '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9', 'admin@example.com', 'Administrator', 'admin');
 
 -- Faculty User (Pass: 123456)
+-- Hash: 8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92
 INSERT INTO users (id, username, password, email, full_name, role) VALUES
 ('user-faculty-1', 'faculty', '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92', 'faculty@example.com', 'Professor X', 'faculty');
 
@@ -289,5 +305,5 @@ INSERT INTO users (id, username, password, email, full_name, role) VALUES
 ('user-demo-student', 'student1', '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92', 'student1@example.com', 'Demo Student', 'student');
 
 -- Sample Course
-INSERT INTO courses (id, title, description, thumbnail, total_levels, difficulty) VALUES
-('course-fullstack', 'Fullstack Development', 'Master both frontend and backend technologies.', 'https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&q=80', 12, 'Advanced');
+INSERT INTO courses (id, title, description, thumbnail, total_levels, difficulty, passing_threshold) VALUES
+('course-fullstack', 'Fullstack Development', 'Master both frontend and backend technologies.', 'https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&q=80', 12, 'Advanced', '{"structure": 80, "visual": 80, "overall": 75}');

@@ -55,5 +55,5 @@ class RequestQueue {
 }
 
 // Global singleton instance
-// Limit to 2 concurrent evaluations (safe for 2GB RAM)
-module.exports = new RequestQueue(2);
+// Limit to 4 concurrent evaluations (safe for 4GB+ RAM)
+module.exports = new RequestQueue(4);

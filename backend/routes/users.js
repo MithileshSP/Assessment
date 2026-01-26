@@ -5,6 +5,7 @@ const path = require("path");
 const crypto = require("crypto");
 const multer = require("multer");
 const csv = require("csv-parser");
+const { v4: uuidv4 } = require('uuid');
 const UserModel = require("../models/User");
 const { query } = require("../database/connection");
 const { OAuth2Client } = require("google-auth-library");
@@ -166,10 +167,20 @@ router.post("/google", async (req, res) => {
     }
 
     const jwtSecret = process.env.JWT_SECRET || 'fallback_secret';
+
+    // Generate unique session ID for single-session enforcement
+    const sessionId = uuidv4();
+    try {
+      await query('UPDATE users SET current_session_id = ? WHERE id = ?', [sessionId, user.id]);
+    } catch (e) {
+      console.warn('[Google Login] Failed to set session ID:', e.message);
+    }
+
     const payloadForToken = {
       id: user.id,
       username: user.username,
       role: user.role,
+      sessionId, // Include session ID in JWT
     };
 
     const appToken = jwt.sign(payloadForToken, jwtSecret, { expiresIn: '7d' });
@@ -228,15 +239,24 @@ router.post("/login", async (req, res) => {
       return res.status(401).json({ error: "Invalid username or password" });
     }
 
-    // Generate token
+    // Generate unique session ID for single-session enforcement
+    const sessionId = uuidv4();
     const jwtSecret = process.env.JWT_SECRET || 'fallback_secret';
     const payloadForToken = {
       id: user.id,
       username: user.username,
       role: user.role,
+      sessionId, // Include session ID in JWT
     };
 
     const token = jwt.sign(payloadForToken, jwtSecret, { expiresIn: '7d' });
+
+    // Update session ID in DB
+    try {
+      await query('UPDATE users SET current_session_id = ? WHERE id = ?', [sessionId, user.id]);
+    } catch (e) {
+      console.warn('[Login] Failed to set session ID:', e.message);
+    }
 
     // Update last login (try database, fallback to JSON)
     try {

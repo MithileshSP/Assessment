@@ -243,4 +243,79 @@ router.get('/history', verifyFaculty, async (req, res) => {
     }
 });
 
+// Export all submissions as backup CSV
+router.get('/export-backup', verifyFaculty, async (req, res) => {
+    try {
+        const sql = `
+            SELECT 
+                s.user_id as student_uid,
+                u.full_name as student_name,
+                u.email as student_email,
+                co.title as course_title,
+                s.level,
+                s.course_id,
+                ch.title as challenge_title,
+                ch.description as challenge_description,
+                ch.instructions as challenge_instructions,
+                s.html_code,
+                s.css_code,
+                s.js_code,
+                s.user_screenshot,
+                ch.expected_screenshot_url as expected_screenshot
+            FROM submissions s
+            JOIN users u ON s.user_id = u.id
+            LEFT JOIN courses co ON s.course_id = co.id
+            LEFT JOIN challenges ch ON s.challenge_id = ch.id
+            ORDER BY s.submitted_at DESC
+        `;
+
+        const results = await db.query(sql);
+
+        if (results.length === 0) {
+            return res.status(200).json({ message: 'No submissions found' });
+        }
+
+        // Build CSV content
+        const headers = [
+            'Student UID', 'Student Name', 'Email', 'Course', 'Level', 'courseId',
+            'title', 'description', 'instructions', 'studentHtml', 'studentCss',
+            'studentJs', 'studentScreenshot', 'expectedScreenshot'
+        ];
+        const csvRows = [headers.join('\t')]; // Using Tab as separator for code content compatibility
+
+        for (const row of results) {
+            const escape = (val) => `"${(val || '').toString().replace(/"/g, '""').replace(/\n/g, ' ')}"`;
+
+            const csvRow = [
+                escape(row.student_uid),
+                escape(row.student_name),
+                escape(row.student_email),
+                escape(row.course_title),
+                row.level,
+                escape(row.course_id),
+                escape(row.challenge_title),
+                escape(row.challenge_description),
+                escape(row.challenge_instructions),
+                escape(row.html_code),
+                escape(row.css_code),
+                escape(row.js_code),
+                escape(`${req.protocol}://${req.get('host')}${row.user_screenshot}`),
+                escape(row.expected_screenshot)
+            ];
+            csvRows.push(csvRow.join('\t'));
+        }
+
+        const csvContent = csvRows.join('\n');
+        const filename = `submissions_backup_${new Date().toISOString().slice(0, 10)}.csv`;
+
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+        res.send(csvContent);
+
+    } catch (error) {
+        console.error("Backup export error:", error);
+        res.status(500).json({ error: "Failed to generate backup export" });
+    }
+});
+
 module.exports = router;

@@ -15,7 +15,9 @@ import {
     ChevronDown,
     FileSpreadsheet,
     AlertCircle,
-    CheckCircle
+    CheckCircle,
+    Lock,
+    Unlock
 } from 'lucide-react';
 
 const AdminAttendance = () => {
@@ -183,6 +185,19 @@ const AdminAttendance = () => {
         } catch (error) {
             alert('Action failed');
             fetchRequests(true);
+        }
+    };
+
+    const handleUnlock = async (attendanceId, action) => {
+        try {
+            setSubmitting(true);
+            await api.post('/attendance/unlock', { attendanceId, action });
+            alert(action === 'submit' ? 'Student code submitted.' : 'Student can continue.');
+            fetchRequests(true);
+        } catch (err) {
+            alert('Unlock failed');
+        } finally {
+            setSubmitting(false);
         }
     };
     const handleManualApprove = async () => {
@@ -502,8 +517,9 @@ const AdminAttendance = () => {
                                         <thead>
                                             <tr className="text-left text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-4">
                                                 <th className="pb-4 pl-6">Candidate</th>
+                                                <th className="pb-4">Email</th>
                                                 <th className="pb-4">Assessment Path</th>
-                                                <th className="pb-4">Request Log</th>
+                                                <th className="pb-4">Status</th>
                                                 <th className="pb-4 pr-6 text-right">Action</th>
                                             </tr>
                                         </thead>
@@ -512,49 +528,78 @@ const AdminAttendance = () => {
                                                 <tr key={req.id} className="group bg-white hover:bg-slate-50/80 transition-all border border-slate-100">
                                                     <td className="py-6 pl-6 rounded-l-[1.5rem]">
                                                         <div className="flex items-center gap-4 text-left">
-                                                            <div className="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600 font-black text-sm uppercase shadow-sm group-hover:bg-white transition-colors">
-                                                                {(req.full_name || req.username || 'U')[0]}
+                                                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-sm uppercase shadow-sm ${req.locked ? 'bg-red-50 text-red-600' : 'bg-indigo-50 text-indigo-600'}`}>
+                                                                {req.locked ? <Lock size={20} /> : (req.full_name || req.username || 'U')[0]}
                                                             </div>
                                                             <div>
-                                                                <p className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">{req.full_name || 'Candidate'}</p>
+                                                                <p className="font-bold text-slate-900">{req.full_name || 'Candidate'}</p>
                                                                 <p className="text-xs text-slate-400 font-medium tracking-tight">@{req.username}</p>
                                                             </div>
                                                         </div>
+                                                    </td>
+                                                    <td className="py-6 text-left">
+                                                        <span className="text-xs text-slate-600 font-medium">{req.email || '-'}</span>
                                                     </td>
                                                     <td className="py-6 text-left">
                                                         <div className="flex flex-col gap-1">
                                                             <span className="text-xs font-black text-slate-700 uppercase tracking-tighter">
                                                                 {req.test_identifier?.split('_')[0] || 'Logic Assessment'}
                                                             </span>
-                                                            <div className="flex items-center gap-2">
-                                                                <div className="px-2.5 py-1 bg-slate-100 rounded-lg text-[9px] font-black text-slate-500 uppercase tracking-widest">
-                                                                    Level {req.test_identifier?.split('_')[1] || '1'}
-                                                                </div>
+                                                            <div className="px-2.5 py-1 bg-slate-100 rounded-lg text-[9px] font-black text-slate-500 uppercase tracking-widest inline-block w-fit">
+                                                                Level {req.test_identifier?.split('_')[1] || '1'}
                                                             </div>
                                                         </div>
                                                     </td>
                                                     <td className="py-6 text-left">
-                                                        <div className="flex items-center gap-2 text-slate-400 text-xs font-medium">
-                                                            <Clock size={12} />
-                                                            {new Date(req.requested_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                        </div>
+                                                        {req.locked ? (
+                                                            <span className="px-3 py-1 bg-red-100 text-red-700 rounded-lg text-[10px] font-black uppercase">
+                                                                🔒 Locked ({req.violation_count || 0} violations)
+                                                            </span>
+                                                        ) : (
+                                                            <span className="px-3 py-1 bg-amber-100 text-amber-700 rounded-lg text-[10px] font-black uppercase">
+                                                                ⏳ Requested
+                                                            </span>
+                                                        )}
                                                     </td>
                                                     <td className="py-6 pr-6 text-right rounded-r-[1.5rem]">
                                                         <div className="flex items-center justify-end gap-2">
-                                                            <button
-                                                                onClick={() => handleAction(req.id, 'reject')}
-                                                                className="p-3 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all"
-                                                                title="Reject Request"
-                                                            >
-                                                                <X size={20} />
-                                                            </button>
-                                                            <button
-                                                                onClick={() => handleAction(req.id, 'approve')}
-                                                                className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-bold text-sm tracking-tight hover:bg-emerald-600 hover:scale-105 transition-all shadow-lg shadow-indigo-200 flex items-center gap-2"
-                                                            >
-                                                                <Check size={16} />
-                                                                <span>Mark Present</span>
-                                                            </button>
+                                                            {req.locked ? (
+                                                                <>
+                                                                    <button
+                                                                        onClick={() => handleUnlock(req.id, 'continue')}
+                                                                        disabled={submitting}
+                                                                        className="px-4 py-2 bg-emerald-600 text-white rounded-xl font-bold text-xs hover:bg-emerald-700 flex items-center gap-1"
+                                                                        title="Allow student to continue"
+                                                                    >
+                                                                        <Unlock size={14} /> Continue
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => handleUnlock(req.id, 'submit')}
+                                                                        disabled={submitting}
+                                                                        className="px-4 py-2 bg-rose-600 text-white rounded-xl font-bold text-xs hover:bg-rose-700 flex items-center gap-1"
+                                                                        title="Force submit saved code"
+                                                                    >
+                                                                        <Check size={14} /> Submit
+                                                                    </button>
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <button
+                                                                        onClick={() => handleAction(req.id, 'reject')}
+                                                                        className="p-3 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all"
+                                                                        title="Reject Request"
+                                                                    >
+                                                                        <X size={20} />
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => handleAction(req.id, 'approve')}
+                                                                        className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-bold text-sm tracking-tight hover:bg-emerald-600 hover:scale-105 transition-all shadow-lg shadow-indigo-200 flex items-center gap-2"
+                                                                    >
+                                                                        <Check size={16} />
+                                                                        <span>Mark Present</span>
+                                                                    </button>
+                                                                </>
+                                                            )}
                                                         </div>
                                                     </td>
                                                 </tr>

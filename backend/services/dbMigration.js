@@ -3,6 +3,16 @@ const { query, transaction } = require('../database/connection');
 async function applyMigrations() {
   console.log('🔄 Checking for database migrations...');
 
+  const addColumn = async (sql) => {
+    try {
+      await query(sql);
+    } catch (e) {
+      if (e.code !== 'ER_DUP_FIELDNAME') {
+        console.warn(`⚠️ Migration info: ${e.message}`);
+      }
+    }
+  };
+
   try {
     // 0. Base Tables
     await query(`
@@ -37,10 +47,11 @@ async function applyMigrations() {
         tags JSON,
         time_limit INT DEFAULT 30,
         passing_threshold JSON,
-        expected_html TEXT,
-        expected_css TEXT,
-        expected_js TEXT,
+        expected_html LONGTEXT,
+        expected_css LONGTEXT,
+        expected_js LONGTEXT,
         expected_screenshot_url VARCHAR(255),
+        expected_screenshot_data MEDIUMBLOB,
         course_id VARCHAR(100),
         level INT,
         assets JSON,
@@ -58,10 +69,10 @@ async function applyMigrations() {
         challenge_id VARCHAR(100) NOT NULL,
         user_id VARCHAR(100) NOT NULL,
         candidate_name VARCHAR(100),
-        html_code TEXT,
-        css_code TEXT,
-        js_code TEXT,
-        status ENUM('pending', 'passed', 'failed', 'queued', 'evaluating', 'error') DEFAULT 'pending',
+        html_code LONGTEXT,
+        css_code LONGTEXT,
+        js_code LONGTEXT,
+        status ENUM('pending', 'passed', 'failed', 'queued', 'evaluating', 'error', 'saved') DEFAULT 'pending',
         submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         evaluated_at TIMESTAMP NULL,
         structure_score INT DEFAULT 0,
@@ -71,8 +82,11 @@ async function applyMigrations() {
         passed BOOLEAN DEFAULT FALSE,
         evaluation_result JSON,
         user_screenshot VARCHAR(500),
+        user_screenshot_data MEDIUMBLOB,
         expected_screenshot VARCHAR(500),
+        expected_screenshot_data MEDIUMBLOB,
         diff_screenshot VARCHAR(500),
+        diff_screenshot_data MEDIUMBLOB,
         admin_override_status ENUM('none', 'passed', 'failed') DEFAULT 'none',
         admin_override_reason TEXT,
         course_id VARCHAR(100),
@@ -96,13 +110,14 @@ async function applyMigrations() {
         submission_ids JSON NOT NULL,
         total_questions INT DEFAULT 0,
         passed_count INT DEFAULT 0,
-        overall_status ENUM('passed', 'failed') DEFAULT 'failed',
+        overall_status ENUM('passed', 'failed', 'pending') DEFAULT 'pending',
         user_feedback TEXT NULL,
         started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         completed_at TIMESTAMP NULL,
         INDEX idx_user (user_id),
         INDEX idx_course_level (course_id, level),
-        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
 
@@ -169,15 +184,33 @@ async function applyMigrations() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
 
-    // Ensure session_id is INT if it was created as VARCHAR
+    // Ensure session_id and other security columns exist
     try {
       await query("ALTER TABLE test_attendance MODIFY COLUMN session_id INT NULL");
-      console.log('✅ test_attendance session_id column verified as INT');
+      await addColumn("ALTER TABLE test_attendance ADD COLUMN locked BOOLEAN DEFAULT FALSE AFTER is_used");
+      await addColumn("ALTER TABLE test_attendance ADD COLUMN locked_at TIMESTAMP NULL AFTER locked");
+      await addColumn("ALTER TABLE test_attendance ADD COLUMN locked_reason VARCHAR(255) NULL AFTER locked_at");
+      await addColumn("ALTER TABLE test_attendance ADD COLUMN violation_count INT DEFAULT 0 AFTER locked_reason");
+      console.log('✅ test_attendance columns verified.');
     } catch (e) {
       console.warn('⚠️ test_attendance modification warning:', e.message);
     }
 
-    // 4. Faculty Course Assignments
+    // Ensure test_sessions schema matches v3.0
+    try {
+      const tsColumns = await query("SHOW COLUMNS FROM test_sessions LIKE 'overall_status'");
+      if (tsColumns.length > 0 && !tsColumns[0].Type.includes("'pending'")) {
+        console.log('⚡ Updating test_sessions status enum...');
+        await query("ALTER TABLE test_sessions MODIFY COLUMN overall_status ENUM('passed', 'failed', 'pending') DEFAULT 'pending'");
+      }
+
+      // Ensure course_id FK exists for test_sessions
+      await addColumn("ALTER TABLE test_sessions ADD FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE");
+    } catch (e) {
+      if (e.code !== 'ER_DUP_KEY' && e.code !== 'ER_FK_DUP_NAME') {
+        console.warn('⚠️ test_sessions modification info:', e.message);
+      }
+    }
     await query(`
       CREATE TABLE IF NOT EXISTS faculty_course_assignments (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -238,7 +271,7 @@ async function applyMigrations() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
 
-    // 7.1 level_access table (Missing)
+    // 7.1 level_access table
     await query(`
       CREATE TABLE IF NOT EXISTS level_access (
         id VARCHAR(100) PRIMARY KEY,
@@ -256,6 +289,44 @@ async function applyMigrations() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
 
+    // 7.1.1 user_assignments table (Legacy compatibility)
+    await query(`
+      CREATE TABLE IF NOT EXISTS user_assignments (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id VARCHAR(100) NOT NULL,
+        course_id VARCHAR(100) NOT NULL,
+        level INT NOT NULL,
+        challenge_id VARCHAR(100) NOT NULL,
+        assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        completed BOOLEAN DEFAULT FALSE,
+        completed_at TIMESTAMP NULL,
+        UNIQUE KEY unique_user_level (user_id, course_id, level),
+        INDEX idx_user_course_level (user_id, course_id, level),
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE,
+        FOREIGN KEY (challenge_id) REFERENCES challenges(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    // 7.1.2 level_completions table
+    await query(`
+      CREATE TABLE IF NOT EXISTS level_completions (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id VARCHAR(100) NOT NULL,
+        course_id VARCHAR(100) NOT NULL,
+        level INT NOT NULL,
+        total_score DECIMAL(5,2) DEFAULT 0,
+        passed BOOLEAN DEFAULT FALSE,
+        feedback TEXT,
+        question_results JSON,
+        completed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_user_course (user_id, course_id),
+        INDEX idx_completed_at (completed_at),
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
     // 7.2 assets table
     await query(`
       CREATE TABLE IF NOT EXISTS assets (
@@ -268,6 +339,7 @@ async function applyMigrations() {
         size INT,
         category VARCHAR(50) DEFAULT 'general',
         checksum_sha256 CHAR(64) NULL,
+        file_data LONGBLOB,
         uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
@@ -288,23 +360,30 @@ async function applyMigrations() {
     `);
 
     // 8. Add mission columns to submissions
-    const addColumn = async (sql) => {
-      try {
-        await query(sql);
-      } catch (e) {
-        if (e.code !== 'ER_DUP_FIELDNAME') {
-          console.warn(`⚠️ Migration info: ${e.message}`);
-        }
-      }
-    };
-
     // Update status ENUM to include new states
-    await addColumn("ALTER TABLE submissions MODIFY COLUMN status ENUM('pending', 'passed', 'failed', 'queued', 'evaluating', 'error') DEFAULT 'pending'");
-
+    await addColumn("ALTER TABLE submissions MODIFY COLUMN status ENUM('pending', 'passed', 'failed', 'queued', 'evaluating', 'error', 'saved') DEFAULT 'pending'");
     await addColumn('ALTER TABLE submissions ADD COLUMN user_feedback TEXT NULL AFTER expected_screenshot');
     await addColumn('ALTER TABLE submissions ADD COLUMN diff_screenshot VARCHAR(500) AFTER user_screenshot');
     await addColumn("ALTER TABLE submissions ADD COLUMN admin_override_status ENUM('none', 'passed', 'failed') DEFAULT 'none'");
     await addColumn('ALTER TABLE submissions ADD COLUMN admin_override_reason TEXT');
+
+    // BLOB Columns for stability (if they don't exist in existing DB)
+    await addColumn('ALTER TABLE submissions ADD COLUMN user_screenshot_data MEDIUMBLOB');
+    await addColumn('ALTER TABLE submissions ADD COLUMN expected_screenshot_data MEDIUMBLOB');
+    await addColumn('ALTER TABLE submissions ADD COLUMN diff_screenshot_data MEDIUMBLOB');
+    await addColumn('ALTER TABLE assets ADD COLUMN file_data LONGBLOB');
+    await addColumn('ALTER TABLE challenges ADD COLUMN expected_screenshot_data MEDIUMBLOB');
+
+    // Performance Indexes for Scalability
+    await addColumn('ALTER TABLE submissions ADD INDEX idx_user_challenge_status (user_id, challenge_id, status)');
+
+    // Upgrade text columns for scalability
+    await addColumn('ALTER TABLE submissions MODIFY COLUMN html_code LONGTEXT');
+    await addColumn('ALTER TABLE submissions MODIFY COLUMN css_code LONGTEXT');
+    await addColumn('ALTER TABLE submissions MODIFY COLUMN js_code LONGTEXT');
+    await addColumn('ALTER TABLE challenges MODIFY COLUMN expected_html LONGTEXT');
+    await addColumn('ALTER TABLE challenges MODIFY COLUMN expected_css LONGTEXT');
+    await addColumn('ALTER TABLE challenges MODIFY COLUMN expected_js LONGTEXT');
 
     console.log('✅ Submissions table columns verified.');
 

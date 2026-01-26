@@ -32,6 +32,7 @@ const { scheduleFallbackSync } = require("./services/submissionSync");
 const evaluationWorker = require("./services/EvaluationWorker");
 
 const app = express();
+
 const PORT = process.env.PORT || 5000;
 const { applyMigrations } = require("./services/dbMigration");
 
@@ -260,7 +261,8 @@ if (frontendDistPath && fs.existsSync(frontendDistPath)) {
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error("Error:", err.message);
+  console.error(`[Global Error] ${req.method} ${req.path}:`, err.message);
+  console.error(err.stack);
 
   // Don't leak sensitive error details in production
   const isDev = process.env.NODE_ENV === "development";
@@ -279,11 +281,16 @@ app.use("/api/*", (req, res) => {
 
 // Start server
 app.listen(PORT, async () => {
-  // Apply DB migrations
-  await applyMigrations();
-
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📊 Environment: ${process.env.NODE_ENV}`);
+
+  try {
+    // Apply DB migrations
+    await applyMigrations();
+    console.log("✅ Migrations completed successfully");
+  } catch (err) {
+    console.error("❌ Migration failed:", err.message);
+  }
 
   // Start Evaluation Queue Worker
   evaluationWorker.start();

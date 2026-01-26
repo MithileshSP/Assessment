@@ -1,3 +1,0 @@
-course_id
-course-fullstack
-course-javascript

@@ -51,63 +51,136 @@ const saveSubmissions = (submissions) => {
 /**
  * POST /api/submissions
  * Submit candidate solution
- * Body: { challengeId, candidateName, code: { html, css, js } }
+ * Body: { challengeId, candidateName, code: { html, css, js }, isAutoSave }
  */
 router.post('/', async (req, res) => {
   try {
-    const { challengeId, candidateName, code, userId } = req.body;
+    const { challengeId, candidateName, code, userId, isAutoSave } = req.body;
 
-    if (!challengeId || !code || ((!code.html || code.html.trim() === '') && (!code.js || code.js.trim() === ''))) {
+    // For auto-save, allow empty code (just save current state)
+    if (!isAutoSave && (!code || ((!code.html || code.html.trim() === '') && (!code.js || code.js.trim() === '')))) {
       return res.status(400).json({
         error: 'Incomplete content',
         message: 'Your solution must contain at least some code (HTML or JavaScript) before you can submit.'
       });
     }
 
+    // Get the course_id and level from the challenge
+    let courseId, level;
+    try {
+      const challengeResult = await query(
+        "SELECT course_id, level FROM challenges WHERE id = ?",
+        [challengeId]
+      );
+      courseId = challengeResult[0]?.course_id;
+      level = challengeResult[0]?.level;
+    } catch (e) {
+      console.warn('Failed to get challenge info:', e.message);
+    }
+
+    // Get user's real name if possible
+    let studentName = candidateName;
+    if (userId) {
+      try {
+        const userResult = await query("SELECT full_name FROM users WHERE id = ?", [userId]);
+        if (userResult[0]?.full_name) {
+          studentName = userResult[0].full_name;
+        }
+      } catch (e) { /* ignore */ }
+    }
+
+    // AUTO-SAVE / DRAFT LOGIC: UPSERT to prevent duplicates
+    if (isAutoSave) {
+      try {
+        // Check for existing 'saved' draft for this user + challenge
+        const existingDraft = await query(
+          "SELECT id FROM submissions WHERE user_id = ? AND challenge_id = ? AND status = 'saved' LIMIT 1",
+          [userId || 'user-demo-student', challengeId]
+        );
+
+        if (existingDraft.length > 0) {
+          // UPDATE existing draft
+          await query(
+            `UPDATE submissions SET 
+              html_code = ?, css_code = ?, js_code = ?, 
+              submitted_at = CURRENT_TIMESTAMP 
+            WHERE id = ?`,
+            [code?.html || '', code?.css || '', code?.js || '', existingDraft[0].id]
+          );
+          return res.status(200).json({
+            message: 'Draft saved',
+            submissionId: existingDraft[0].id,
+            isDraft: true
+          });
+        } else {
+          // INSERT new draft with status 'saved'
+          const draftId = uuidv4();
+          await query(
+            `INSERT INTO submissions 
+              (id, challenge_id, user_id, candidate_name, html_code, css_code, js_code, status, course_id, level, submitted_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, 'saved', ?, ?, CURRENT_TIMESTAMP)`,
+            [draftId, challengeId, userId || 'user-demo-student', studentName || 'Anonymous',
+              code?.html || '', code?.css || '', code?.js || '', courseId, level]
+          );
+          return res.status(201).json({
+            message: 'Draft created',
+            submissionId: draftId,
+            isDraft: true
+          });
+        }
+      } catch (draftError) {
+        console.error('[AutoSave] Draft error:', draftError.message);
+        return res.status(500).json({ error: 'Failed to save draft' });
+      }
+    }
+
+    // FINAL SUBMISSION LOGIC
     const submissionData = {
       id: uuidv4(),
       challengeId,
-      userId: userId || 'user-demo-student', // Use demo student as default
-      candidateName: candidateName || 'Anonymous',
+      userId: userId || 'user-demo-student',
+      candidateName: studentName || 'Anonymous',
       code: {
-        html: code.html,
-        css: code.css || '',
-        js: code.js || ''
+        html: code?.html || '',
+        css: code?.css || '',
+        js: code?.js || ''
       },
       status: SubmissionModel.STATUS.QUEUED,
       submittedAt: new Date().toISOString()
     };
 
-    // Try to save to database first
     try {
-      // Get the course_id and level from the challenge
-      const challengeResult = await query(
-        "SELECT course_id, level FROM challenges WHERE id = ?",
-        [challengeId]
+      // Check if there's an existing draft to upgrade to 'pending'
+      const existingDraft = await query(
+        "SELECT id FROM submissions WHERE user_id = ? AND challenge_id = ? AND status = 'saved' LIMIT 1",
+        [submissionData.userId, challengeId]
       );
-      const courseId = challengeResult[0]?.course_id;
-      const level = challengeResult[0]?.level;
 
-      // Get user's real name if possible
-      let studentName = candidateName;
-      if (userId) {
-        const userResult = await query("SELECT full_name FROM users WHERE id = ?", [userId]);
-        if (userResult[0]?.full_name) {
-          studentName = userResult[0].full_name;
-        }
+      let submissionId;
+      if (existingDraft.length > 0) {
+        // Upgrade draft to pending
+        await query(
+          `UPDATE submissions SET 
+            html_code = ?, css_code = ?, js_code = ?, 
+            status = 'pending', submitted_at = CURRENT_TIMESTAMP 
+          WHERE id = ?`,
+          [submissionData.code.html, submissionData.code.css, submissionData.code.js, existingDraft[0].id]
+        );
+        submissionId = existingDraft[0].id;
+      } else {
+        // Create new submission
+        const dbSubmission = await SubmissionModel.create({
+          ...submissionData,
+          courseId,
+          level,
+          candidateName: studentName || candidateName
+        });
+        submissionId = dbSubmission.id;
       }
-
-      const dbSubmission = await SubmissionModel.create({
-        ...submissionData,
-        courseId,
-        level,
-        candidateName: studentName || candidateName
-      });
 
       // Auto-assign to faculty for evaluation
       try {
         if (courseId) {
-          // Find a faculty assigned to this course, or any faculty
           let faculty = await query(
             `SELECT u.id FROM users u 
              INNER JOIN faculty_course_assignments fca ON u.id = fca.faculty_id 
@@ -116,7 +189,6 @@ router.post('/', async (req, res) => {
             [courseId]
           );
 
-          // If no faculty assigned to course, get any faculty
           if (faculty.length === 0) {
             faculty = await query(
               "SELECT id FROM users WHERE role = 'faculty' ORDER BY RAND() LIMIT 1"
@@ -128,26 +200,20 @@ router.post('/', async (req, res) => {
               `INSERT INTO submission_assignments (submission_id, faculty_id, assigned_at, status) 
                VALUES (?, ?, NOW(), 'pending')
                ON DUPLICATE KEY UPDATE faculty_id = VALUES(faculty_id), assigned_at = NOW()`,
-              [dbSubmission.id, faculty[0].id]
+              [submissionId, faculty[0].id]
             );
-            console.log(`[Submissions] Auto-assigned submission ${dbSubmission.id} to faculty ${faculty[0].id}`);
-          } else {
-            console.log(`[Submissions] No faculty available to assign submission ${dbSubmission.id}`);
           }
         }
       } catch (assignError) {
-        // Don't fail the submission if assignment fails
         console.error('[Submissions] Faculty assignment error:', assignError.message);
       }
 
       return res.status(201).json({
         message: 'Submission received',
-        submissionId: dbSubmission.id,
-        submission: dbSubmission
+        submissionId: submissionId
       });
     } catch (dbError) {
       console.log('Database save failed, using JSON fallback:', dbError.message);
-      // Fallback to JSON file
       const submissions = getSubmissions();
       const submission = {
         ...submissionData,
@@ -168,6 +234,7 @@ router.post('/', async (req, res) => {
     res.status(500).json({ error: 'Failed to save submission' });
   }
 });
+
 
 /**
  * GET /api/submissions/user-level

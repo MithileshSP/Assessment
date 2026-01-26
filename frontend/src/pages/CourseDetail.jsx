@@ -159,7 +159,7 @@ export default function CourseDetail() {
             <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Active Curriculum</h2>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-8 animate-fade-in-up delay-200">
             {levels.map((level) => {
               const status = getLevelStatus(level.level);
               const isLocked = status === 'locked';
@@ -209,7 +209,7 @@ export default function CourseDetail() {
         </div>
 
         {/* Support Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-10">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-10 animate-fade-in-up delay-300">
           <div className="bg-white p-8 rounded-[2rem] border border-slate-200 shadow-sm flex gap-6">
             <div className="w-14 h-14 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-500 flex-shrink-0">
               <Star size={28} />

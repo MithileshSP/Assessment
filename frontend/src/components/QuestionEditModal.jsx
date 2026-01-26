@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import Editor from '@monaco-editor/react';
 import { X, Save, Plus, Settings, Shield, Clock, Zap, Target, Code, Maximize2, Minimize2, Image, Link, HelpCircle, Layers } from 'lucide-react';
 
 export default function QuestionEditModal({ question, courseId, onSave, onClose }) {
@@ -21,10 +22,7 @@ export default function QuestionEditModal({ question, courseId, onSave, onClose 
     assetReference: '',
     expectedSolutionHtml: '',
     expectedSolutionCss: '',
-    expectedSolutionJs: '',
-    thresholdStructure: 70,
-    thresholdVisual: 80,
-    thresholdOverall: 75
+    expectedSolutionJs: ''
   });
 
   const [activeTab, setActiveTab] = useState('basic'); // 'basic' | 'solution' | 'assets' | 'evaluation'
@@ -65,10 +63,7 @@ export default function QuestionEditModal({ question, courseId, onSave, onClose 
         assetReference: referencePath,
         expectedSolutionHtml: question.expectedSolution?.html || '',
         expectedSolutionCss: question.expectedSolution?.css || '',
-        expectedSolutionJs: question.expectedSolution?.js || '',
-        thresholdStructure: question.passingThreshold?.structure || 70,
-        thresholdVisual: question.passingThreshold?.visual || 80,
-        thresholdOverall: question.passingThreshold?.overall || 75
+        expectedSolutionJs: question.expectedSolution?.js || ''
       });
     } else {
       // New question - generate ID
@@ -144,11 +139,6 @@ export default function QuestionEditModal({ question, courseId, onSave, onClose 
       ],
       hints: formData.hints.split('\n').filter(h => h.trim()),
       isLocked: formData.isLocked,
-      passingThreshold: {
-        structure: parseInt(formData.thresholdStructure) || 70,
-        visual: parseInt(formData.thresholdVisual) || 80,
-        overall: parseInt(formData.thresholdOverall) || 75
-      },
       expectedSolution: {
         html: formData.expectedSolutionHtml,
         css: formData.expectedSolutionCss,
@@ -194,8 +184,7 @@ export default function QuestionEditModal({ question, courseId, onSave, onClose 
           {[
             { id: 'basic', label: 'Identity & Scope', icon: <Target size={16} /> },
             { id: 'solution', label: 'Grand Truth Solution', icon: <Code size={16} /> },
-            { id: 'assets', label: 'Media Assets', icon: <Image size={16} /> },
-            { id: 'evaluation', label: 'Evaluation Engine', icon: <Shield size={16} /> }
+            { id: 'assets', label: 'Media Assets', icon: <Image size={16} /> }
           ].map(tab => (
             <button
               key={tab.id}
@@ -321,6 +310,16 @@ export default function QuestionEditModal({ question, courseId, onSave, onClose 
                   </label>
                 </div>
               </div>
+
+              <div className="space-y-4 pt-4 border-t border-slate-100 mt-6">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Knowledge Reinforcement (Hints)</label>
+                <textarea
+                  value={formData.hints}
+                  onChange={(e) => setFormData({ ...formData, hints: e.target.value })}
+                  className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium focus:ring-4 focus:ring-indigo-500/5 focus:bg-white transition-all outline-none min-h-[120px]"
+                  placeholder="Provide iterative guidance for stuck candidates..."
+                />
+              </div>
             </div>
           )}
 
@@ -331,12 +330,23 @@ export default function QuestionEditModal({ question, courseId, onSave, onClose 
                   <label className="text-xs font-black text-slate-600 uppercase tracking-widest">HTML Architecture</label>
                   <div className="h-[1px] flex-1 mx-6 bg-slate-100" />
                 </div>
-                <textarea
-                  value={formData.expectedSolutionHtml}
-                  onChange={(e) => setFormData({ ...formData, expectedSolutionHtml: e.target.value })}
-                  className="w-full px-6 py-5 bg-[#0f172a] text-emerald-400 border-none rounded-3xl text-sm font-mono focus:ring-8 focus:ring-emerald-500/5 transition-all outline-none min-h-[180px]"
-                  placeholder="<!-- Structured HTML here -->"
-                />
+                <div className="h-[450px] rounded-3xl overflow-hidden border border-slate-700/50 shadow-2xl">
+                  <Editor
+                    height="100%"
+                    language="html"
+                    value={formData.expectedSolutionHtml}
+                    onChange={(v) => setFormData({ ...formData, expectedSolutionHtml: v })}
+                    theme="vs-dark"
+                    options={{
+                      minimap: { enabled: false },
+                      fontSize: 13,
+                      lineNumbers: 'on',
+                      scrollBeyondLastLine: false,
+                      automaticLayout: true,
+                      tabSize: 2,
+                    }}
+                  />
+                </div>
               </div>
 
               <div className="space-y-4">
@@ -344,12 +354,23 @@ export default function QuestionEditModal({ question, courseId, onSave, onClose 
                   <label className="text-xs font-black text-slate-600 uppercase tracking-widest">CSS Styling System</label>
                   <div className="h-[1px] flex-1 mx-6 bg-slate-100" />
                 </div>
-                <textarea
-                  value={formData.expectedSolutionCss}
-                  onChange={(e) => setFormData({ ...formData, expectedSolutionCss: e.target.value })}
-                  className="w-full px-6 py-5 bg-[#0f172a] text-sky-400 border-none rounded-3xl text-sm font-mono focus:ring-8 focus:ring-sky-500/5 transition-all outline-none min-h-[180px]"
-                  placeholder="/* Modern CSS design here */"
-                />
+                <div className="h-[450px] rounded-3xl overflow-hidden border border-slate-700/50 shadow-2xl">
+                  <Editor
+                    height="100%"
+                    language="css"
+                    value={formData.expectedSolutionCss}
+                    onChange={(v) => setFormData({ ...formData, expectedSolutionCss: v })}
+                    theme="vs-dark"
+                    options={{
+                      minimap: { enabled: false },
+                      fontSize: 13,
+                      lineNumbers: 'on',
+                      scrollBeyondLastLine: false,
+                      automaticLayout: true,
+                      tabSize: 2,
+                    }}
+                  />
+                </div>
               </div>
 
               <div className="space-y-4">
@@ -357,12 +378,23 @@ export default function QuestionEditModal({ question, courseId, onSave, onClose 
                   <label className="text-xs font-black text-slate-600 uppercase tracking-widest">Behavioral Logic (JavaScript)</label>
                   <div className="h-[1px] flex-1 mx-6 bg-slate-100" />
                 </div>
-                <textarea
-                  value={formData.expectedSolutionJs}
-                  onChange={(e) => setFormData({ ...formData, expectedSolutionJs: e.target.value })}
-                  className="w-full px-6 py-5 bg-[#0f172a] text-amber-400 border-none rounded-3xl text-sm font-mono focus:ring-8 focus:ring-amber-500/5 transition-all outline-none min-h-[120px]"
-                  placeholder="// Interactive logic (optional)"
-                />
+                <div className="h-[400px] rounded-3xl overflow-hidden border border-slate-700/50 shadow-2xl">
+                  <Editor
+                    height="100%"
+                    language="javascript"
+                    value={formData.expectedSolutionJs}
+                    onChange={(v) => setFormData({ ...formData, expectedSolutionJs: v })}
+                    theme="vs-dark"
+                    options={{
+                      minimap: { enabled: false },
+                      fontSize: 13,
+                      lineNumbers: 'on',
+                      scrollBeyondLastLine: false,
+                      automaticLayout: true,
+                      tabSize: 2,
+                    }}
+                  />
+                </div>
               </div>
             </div>
           )}
@@ -401,43 +433,7 @@ export default function QuestionEditModal({ question, courseId, onSave, onClose 
             </div>
           )}
 
-          {activeTab === 'evaluation' && (
-            <div className="space-y-10 animate-in slide-in-from-bottom-4 duration-300">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <EvaluationCard
-                  title="Structural Integrity"
-                  description="DOM Hierarchy & Tag Accuracy"
-                  value={formData.thresholdStructure}
-                  onChange={v => setFormData({ ...formData, thresholdStructure: v })}
-                  color="bg-emerald-50 text-emerald-600"
-                />
-                <EvaluationCard
-                  title="Visual Fidelity"
-                  description="Pixel Match & CSS Layout"
-                  value={formData.thresholdVisual}
-                  onChange={v => setFormData({ ...formData, thresholdVisual: v })}
-                  color="bg-sky-50 text-sky-600"
-                />
-                <EvaluationCard
-                  title="Success Threshold"
-                  description="Minimum Passing Requirement"
-                  value={formData.thresholdOverall}
-                  onChange={v => setFormData({ ...formData, thresholdOverall: v })}
-                  color="bg-indigo-50 text-indigo-600"
-                />
-              </div>
 
-              <div className="space-y-4 pt-4">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Knowledge Reinforcement (Hints)</label>
-                <textarea
-                  value={formData.hints}
-                  onChange={(e) => setFormData({ ...formData, hints: e.target.value })}
-                  className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium focus:ring-4 focus:ring-indigo-500/5 focus:bg-white transition-all outline-none min-h-[120px]"
-                  placeholder="Provide iterative guidance for stuck candidates..."
-                />
-              </div>
-            </div>
-          )}
         </form>
 
         {/* Footer */}
@@ -509,25 +505,4 @@ const MetricInput = ({ label, value, onChange, icon }) => (
   </div>
 );
 
-const EvaluationCard = ({ title, description, value, onChange, color }) => (
-  <div className={`p-6 rounded-[2rem] border border-slate-100 shadow-sm flex flex-col items-center text-center space-y-4 ${color.split(' ')[0]}`}>
-    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black ${color}`}>
-      %
-    </div>
-    <div>
-      <h5 className="font-black text-slate-900 text-sm uppercase tracking-tight">{title}</h5>
-      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">{description}</p>
-    </div>
-    <div className="relative group w-full">
-      <input
-        type="number"
-        max="100"
-        min="0"
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-center font-black text-slate-900 focus:ring-4 focus:ring-indigo-500/5 transition-all outline-none"
-      />
-      <div className="absolute inset-y-0 right-4 flex items-center text-slate-300 font-black text-xs pointer-events-none">%</div>
-    </div>
-  </div>
-);
+

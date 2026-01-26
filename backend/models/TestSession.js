@@ -75,8 +75,17 @@ const mergeWithFallbackSubmissions = (dbSubmissions, submissionIds) => {
 
 class TestSession {
   static async create(sessionData) {
-    const id = uuidv4();
+    console.log('[TestSession] Creating session with data:', sessionData);
     const { user_id, course_id, level, submission_ids = [] } = sessionData;
+
+    // Verify user exists to prevent FK violation
+    const user = await db.queryOne("SELECT id FROM users WHERE id = ?", [user_id]);
+    if (!user) {
+      console.error(`[TestSession] CRITICAL: User ${user_id} not found in database!`);
+      throw new Error(`User ${user_id} does not exist. Please log in again.`);
+    }
+
+    const id = uuidv4();
 
     // Check for existing active session
     const existingRows = await db.query(
@@ -88,20 +97,26 @@ class TestSession {
       return this.findById(existingRows[0].id);
     }
 
-    const query = `
-      INSERT INTO test_sessions (
-        id, user_id, course_id, level, submission_ids,
-        total_questions, passed_count, overall_status
-      ) VALUES (?, ?, ?, ?, ?, 0, 0, 'failed')
-    `;
+    try {
+      const query = `
+        INSERT INTO test_sessions (
+          id, user_id, course_id, level, submission_ids,
+          total_questions, passed_count, overall_status
+        ) VALUES (?, ?, ?, ?, ?, 0, 0, 'pending')
+      `;
 
-    await db.query(query, [
-      id,
-      user_id,
-      course_id,
-      level,
-      JSON.stringify(submission_ids),
-    ]);
+      await db.query(query, [
+        id,
+        user_id,
+        course_id,
+        level,
+        JSON.stringify(submission_ids),
+      ]);
+    } catch (dbError) {
+      console.error('[TestSession] INSERT FAILED:', dbError.message);
+      console.error('[TestSession] Failed data:', { id, user_id, course_id, level });
+      throw dbError;
+    }
 
     // Track attempt started (FIX 3)
     try {

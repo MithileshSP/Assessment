@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import SaaSLayout from '../components/SaaSLayout';
 import api from '../services/api';
+import ReadOnlyCodeBlock from '../components/ReadOnlyCodeBlock';
 import {
   Code,
   User,
@@ -306,12 +307,11 @@ export default function AdminSubmissionDetails() {
                       </div>
                       <span className="text-[10px] font-bold text-slate-400">{(submission?.code?.[lang] || '').length} Bytes</span>
                     </div>
-                    <div className="relative group">
-                      <div className="absolute inset-0 bg-blue-500/5 rounded-3xl blur-xl group-hover:bg-blue-500/10 transition-all" />
-                      <pre className="relative p-8 bg-[#0f172a] text-blue-100 rounded-[2rem] text-[12px] font-mono overflow-x-auto shadow-2xl border border-white/5 h-64 custom-scrollbar">
-                        {submission?.code?.[lang] || '// No instructions provided'}
-                      </pre>
-                    </div>
+                    <ReadOnlyCodeBlock
+                      code={submission?.code?.[lang]}
+                      language={lang}
+                      height="450px"
+                    />
                   </div>
                 ))}
               </div>

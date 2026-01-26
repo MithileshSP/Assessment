@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import PreviewFrame from '../components/PreviewFrame';
+import ReadOnlyCodeBlock from '../components/ReadOnlyCodeBlock';
 
 const FacultyEvaluation = () => {
     const { submissionId } = useParams();
@@ -155,7 +156,7 @@ const FacultyEvaluation = () => {
                 </div>
 
                 {/* Middle Panel: Workspace (55%) */}
-                <div className={`${isFullScreen ? 'w-full' : 'w-[55%]'} bg-slate-900 text-white flex flex-col relative`}>
+                <div className={`${isFullScreen ? 'w-full' : 'w-[55%]'} bg-slate-900 text-white flex flex-col relative overflow-hidden`}>
                     <div className="flex bg-slate-800 border-b border-slate-700 items-center justify-between pr-4">
                         <div className="flex overflow-x-auto no-scrollbar">
                             {[
@@ -191,9 +192,9 @@ const FacultyEvaluation = () => {
                         </button>
                     </div>
 
-                    <div className="flex-1 overflow-auto bg-[#0f172a] custom-scrollbar">
+                    <div className="flex-1 overflow-hidden bg-[#0f172a] flex flex-col">
                         {activeTab === 'compare' ? (
-                            <div className="h-full flex flex-col md:flex-row gap-px bg-slate-800">
+                            <div className="flex-1 flex flex-col md:flex-row gap-px bg-slate-800 overflow-hidden">
                                 <div className="flex-1 bg-slate-900 p-4 flex flex-col">
                                     <div className="flex items-center justify-between mb-3">
                                         <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-400">Candidate Output</h4>
@@ -240,7 +241,7 @@ const FacultyEvaluation = () => {
                                 </div>
                             </div>
                         ) : activeTab === 'instructions' ? (
-                            <div className="h-full overflow-auto bg-gray-50/50">
+                            <div className="flex-1 overflow-auto bg-gray-50/50">
                                 <div className="max-w-4xl mx-auto p-8 md:p-12">
                                     {/* Question Header */}
                                     <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100 mb-8">
@@ -285,17 +286,16 @@ const FacultyEvaluation = () => {
                                                 Instructions & Samples
                                             </h4>
                                             <div className="prose prose-slate max-w-none">
-                                                <div
-                                                    className="text-slate-700 leading-[1.8] text-base md:text-lg font-medium"
-                                                    dangerouslySetInnerHTML={{ __html: submission.challenge_instructions || "No instructions provided." }}
-                                                />
+                                                <div className="text-slate-700 leading-[1.8] text-base md:text-lg font-medium whitespace-pre-wrap">
+                                                    {submission.challenge_instructions || "No instructions provided."}
+                                                </div>
                                             </div>
                                         </section>
                                     </div>
                                 </div>
                             </div>
                         ) : activeTab === 'student_live' ? (
-                            <div className="h-full bg-white relative flex flex-col">
+                            <div className="flex-1 bg-white relative flex flex-col overflow-hidden">
                                 <div className="absolute top-2 left-2 z-10 px-2 py-1 rounded bg-slate-900/80 backdrop-blur-sm text-[10px] font-bold text-white uppercase tracking-widest border border-white/10">
                                     Student Live Rendering
                                 </div>
@@ -308,7 +308,7 @@ const FacultyEvaluation = () => {
                                 />
                             </div>
                         ) : activeTab === 'expected_live' ? (
-                            <div className="h-full bg-white relative flex flex-col">
+                            <div className="flex-1 bg-white relative flex flex-col overflow-hidden">
                                 <div className="absolute top-2 left-2 z-10 px-2 py-1 rounded bg-emerald-900/80 backdrop-blur-sm text-[10px] font-bold text-white uppercase tracking-widest border border-white/10">
                                     Expected Result Rendering
                                 </div>
@@ -321,17 +321,19 @@ const FacultyEvaluation = () => {
                                 />
                             </div>
                         ) : (
-                            <div className="p-6 h-full flex flex-col">
+                            <div className="p-8 flex-1 flex flex-col overflow-hidden">
                                 <div className="flex items-center justify-between mb-4">
                                     <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-400">
                                         {activeTab === 'html' ? 'HTML' : activeTab === 'css' ? 'CSS' : 'Javascript'} Code
                                     </h4>
                                     <span className="px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 text-[9px] font-bold uppercase tracking-wider">Candidate Source</span>
                                 </div>
-                                <div className="flex-1 bg-slate-950/50 rounded-xl border border-slate-800/50 overflow-auto p-4 custom-scrollbar">
-                                    <pre className="font-mono text-xs leading-relaxed whitespace-pre text-slate-300">
-                                        {activeTab === 'html' ? submission.html_code : activeTab === 'css' ? submission.css_code : submission.js_code}
-                                    </pre>
+                                <div className="flex-1 min-h-0">
+                                    <ReadOnlyCodeBlock
+                                        code={activeTab === 'html' ? submission.html_code : activeTab === 'css' ? submission.css_code : submission.js_code}
+                                        language={activeTab}
+                                        height="100%"
+                                    />
                                 </div>
                             </div>
                         )}
@@ -341,7 +343,7 @@ const FacultyEvaluation = () => {
                 {/* Right Panel: Scoring (30%) */}
                 <div className={`${isFullScreen ? 'hidden' : 'w-[30%]'} bg-white border-l border-gray-200 overflow-y-auto p-6`}>
                     <div className="mb-8">
-                        <h3 className="font-black text-2xl text-slate-900 tracking-tight">Rubix</h3>
+                        <h3 className="font-black text-2xl text-slate-900 tracking-tight">Rubrix</h3>
                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Assessment Intelligence Engine</p>
                     </div>
 
@@ -367,7 +369,7 @@ const FacultyEvaluation = () => {
                         <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 transition-all hover:bg-white hover:shadow-lg group">
                             <div className="flex justify-between items-center mb-4">
                                 <div>
-                                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wide">Requirements</label>
+                                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wide">Key Requirements</label>
                                     <p className="text-[9px] text-slate-400 font-medium mt-0.5">Core features & logic</p>
                                 </div>
                                 <div className="flex items-center gap-2">
@@ -385,7 +387,7 @@ const FacultyEvaluation = () => {
                         <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 transition-all hover:bg-white hover:shadow-lg group">
                             <div className="flex justify-between items-center mb-4">
                                 <div>
-                                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wide">Visual/UI</label>
+                                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wide">Output</label>
                                     <p className="text-[9px] text-slate-400 font-medium mt-0.5">Pixel perfect matching</p>
                                 </div>
                                 <div className="flex items-center gap-2">
