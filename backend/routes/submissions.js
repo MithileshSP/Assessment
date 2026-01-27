@@ -235,6 +235,74 @@ router.post('/', async (req, res) => {
   }
 });
 
+/**
+ * POST /api/submissions/batch
+ * Batch auto-save for multiple submissions
+ * Body: { submissions: [{ challengeId, code, userId, candidateName }], courseId, level }
+ */
+router.post('/batch', async (req, res) => {
+  try {
+    const { submissions, courseId, level } = req.body;
+
+    if (!Array.isArray(submissions) || submissions.length === 0) {
+      return res.status(200).json({ message: 'No submissions to save' });
+    }
+
+    const { transaction } = require('../database/connection');
+
+    await transaction(async (connection) => {
+      for (const sub of submissions) {
+        const { challengeId, code, userId, candidateName } = sub;
+
+        // SKIP if empty code
+        if (!code || ((!code.html || !code.html.trim()) && (!code.js || !code.js.trim()))) {
+          continue;
+        }
+
+        // Check for existing 'saved' draft
+        const [existingDraft] = await connection.execute(
+          "SELECT id FROM submissions WHERE user_id = ? AND challenge_id = ? AND status = 'saved' LIMIT 1",
+          [userId || 'user-demo-student', challengeId]
+        );
+
+        if (existingDraft.length > 0) {
+          // UPDATE existing draft
+          await connection.execute(
+            `UPDATE submissions SET 
+              html_code = ?, css_code = ?, js_code = ?, 
+              submitted_at = CURRENT_TIMESTAMP 
+            WHERE id = ?`,
+            [code.html || '', code.css || '', code.js || '', existingDraft[0].id]
+          );
+        } else {
+          // INSERT new draft
+          const draftId = uuidv4();
+          // Get candidate name if missing
+          let studentName = candidateName || 'Anonymous';
+          if (!candidateName && userId) {
+            const [users] = await connection.execute("SELECT full_name FROM users WHERE id = ?", [userId]);
+            if (users[0]?.full_name) studentName = users[0].full_name;
+          }
+
+          await connection.execute(
+            `INSERT INTO submissions 
+              (id, challenge_id, user_id, candidate_name, html_code, css_code, js_code, status, course_id, level, submitted_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, 'saved', ?, ?, CURRENT_TIMESTAMP)`,
+            [draftId, challengeId, userId || 'user-demo-student', studentName,
+              code.html || '', code.css || '', code.js || '', courseId, level]
+          );
+        }
+      }
+    });
+
+    return res.json({ message: 'Batch save successful', count: submissions.length });
+
+  } catch (error) {
+    console.error('Batch save error:', error);
+    res.status(500).json({ error: 'Batch save failed' });
+  }
+});
+
 
 /**
  * GET /api/submissions/user-level

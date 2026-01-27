@@ -56,6 +56,11 @@ export default function LevelChallenge() {
   const [startedAt, setStartedAt] = useState(null);
   const [showNavWarning, setShowNavWarning] = useState(false); // Navigation warning state
 
+  // Batch Saving State
+  const [dirtyQuestions, setDirtyQuestions] = useState(new Set()); // IDs of modified questions
+  const [saveStatus, setSaveStatus] = useState('saved'); // 'saved', 'saving', 'error'
+  const [lastSaveTimestamp, setLastSaveTimestamp] = useState(null);
+
 
 
   useEffect(() => {
@@ -257,53 +262,68 @@ export default function LevelChallenge() {
         return;
       }
 
-      // Restore from localStorage if possible - BUT only if questions match
+      // Restore from localStorage if possible
       const storageKey = `assessment_${userId}_${courseId}_${level}`;
       const savedState = localStorage.getItem(storageKey);
+      let restoredFromLocal = false;
+
+      // Initialize answers object
+      const initialAnswers = {};
+
+      // First, populate from Server Data (Cross-Device Persistence)
+      questions.forEach(q => {
+        initialAnswers[q.id] = {
+          html: q.savedCode?.html || "",
+          css: q.savedCode?.css || "",
+          js: q.savedCode?.js || "",
+          submitted: q.savedCode?.status === 'passed', // heuristic
+          result: null
+        };
+      });
 
       if (savedState) {
         try {
           const { questions: savedQs, answers, currentIndex, code: savedCode } = JSON.parse(savedState);
 
           // Compare question IDs from API with saved state
-          // If they differ, a reset has happened - use fresh questions
           const apiQuestionIds = questions.map(q => q.id).sort().join(',');
           const savedQuestionIds = savedQs.map(q => q.id).sort().join(',');
 
           if (apiQuestionIds === savedQuestionIds) {
-            // Same questions - restore saved state
+            // Local state matches current assignment - use it (it's likely more recent)
             setAssignedQuestions(savedQs);
             setUserAnswers(answers);
             setCurrentQuestionIndex(currentIndex);
             setCode(savedCode);
             setLoading(false);
+            restoredFromLocal = true;
             return;
           } else {
-            // Questions have changed (reset occurred) - clear old state
             console.log('Questions reassigned, clearing old localStorage state');
             localStorage.removeItem(storageKey);
           }
         } catch (e) {
-          console.error("Failed to restore state", e);
+          console.error("Failed to restore local state", e);
           localStorage.removeItem(storageKey);
         }
       }
 
-      // If no saved state, initialize new
-      setAssignedQuestions(questions);
+      // If NOT restored from local (new device, cleared cache, or new questions), use Server Data
+      if (!restoredFromLocal) {
+        console.log("Restoring state from Server (Cross-Device)...");
+        setAssignedQuestions(questions);
+        setUserAnswers(initialAnswers);
 
-      // Initialize answers
-      const initialAnswers = {};
-      questions.forEach((q) => {
-        initialAnswers[q.id] = {
-          html: "",
-          css: "",
-          js: "",
-          submitted: false,
-          result: null,
-        };
-      });
-      setUserAnswers(initialAnswers);
+        // Load first question's code into editor
+        if (questions.length > 0) {
+          const firstQ = questions[0];
+          setCode({
+            html: firstQ.savedCode?.html || "",
+            css: firstQ.savedCode?.css || "",
+            js: firstQ.savedCode?.js || ""
+          });
+        }
+      }
 
       // Create test session
       await createTestSession();
@@ -345,18 +365,46 @@ export default function LevelChallenge() {
     }
   };
 
-  // Auto-save to localStorage
+  // Track dirty state when code changes
   useEffect(() => {
-    if (assignedQuestions.length > 0) {
+    if (assignedQuestions.length > 0 && assignedQuestions[currentQuestionIndex]) {
+      const currentQId = assignedQuestions[currentQuestionIndex].id;
+      // Only mark dirty if code is actually different from saved/initial state
+      // For simplicity, we assume any edit makes it dirty, and we clear dirty on save
+      setDirtyQuestions(prev => {
+        const newSet = new Set(prev);
+        newSet.add(currentQId);
+        return newSet;
+      });
+
+      // Update local storage backup immediately
       const storageKey = `assessment_${userId}_${courseId}_${level}`;
       localStorage.setItem(storageKey, JSON.stringify({
         questions: assignedQuestions,
-        answers: userAnswers,
+        answers: {
+          ...userAnswers,
+          [currentQId]: { ...userAnswers[currentQId], ...code } // Update with current code
+        },
         currentIndex: currentQuestionIndex,
         code
       }));
     }
-  }, [code, userAnswers, currentQuestionIndex, assignedQuestions]);
+  }, [code]);
+
+  // Update userAnswers when switching questions or code changes
+  useEffect(() => {
+    if (assignedQuestions[currentQuestionIndex]) {
+      setUserAnswers(prev => ({
+        ...prev,
+        [assignedQuestions[currentQuestionIndex].id]: {
+          ...prev[assignedQuestions[currentQuestionIndex].id],
+          html: code.html,
+          css: code.css,
+          js: code.js
+        }
+      }));
+    }
+  }, [code, currentQuestionIndex, assignedQuestions]);
 
 
   // Fisher-Yates shuffle algorithm for randomizing question order
@@ -559,45 +607,71 @@ export default function LevelChallenge() {
     }, 3000);
   };
 
-  // Auto-save all questions to DB
-  const autoSaveAllQuestions = async () => {
-    if (!assignedQuestions.length || isSaving) return;
+  // Batch Auto-Save function
+  const autoSaveBatch = async () => {
+    if (dirtyQuestions.size === 0 || isSaving) return;
+
     setIsSaving(true);
+    setSaveStatus('saving');
 
     try {
-      for (const question of assignedQuestions) {
-        const savedAnswer = userAnswers[question.id];
-        const currentCode = currentQuestionIndex === assignedQuestions.indexOf(question)
-          ? code
-          : { html: savedAnswer?.html || '', css: savedAnswer?.css || '', js: savedAnswer?.js || '' };
+      const submissionsToSave = [];
 
-        if (currentCode.html || currentCode.css || currentCode.js) {
-          await api.post('/submissions', {
-            challengeId: question.id,
+      dirtyQuestions.forEach(qId => {
+        // Get latest code: if it's current question, use 'code' state, else use 'userAnswers'
+        let qCode;
+        if (assignedQuestions[currentQuestionIndex] && assignedQuestions[currentQuestionIndex].id === qId) {
+          qCode = code;
+        } else {
+          const ans = userAnswers[qId];
+          qCode = { html: ans?.html || '', css: ans?.css || '', js: ans?.js || '' };
+        }
+
+        if (qCode.html || qCode.css || qCode.js) {
+          submissionsToSave.push({
+            challengeId: qId,
             userId,
-            code: currentCode,
-            isAutoSave: true  // Draft/auto-save flag
+            code: qCode,
+            candidateName: localStorage.getItem('username') || 'Student'
           });
         }
+      });
+
+      if (submissionsToSave.length > 0) {
+        await api.post('/submissions/batch', {
+          submissions: submissionsToSave,
+          courseId,
+          level: parseInt(level)
+        });
       }
-      setLastSaveTime(new Date());
+
+      setDirtyQuestions(new Set()); // Clear dirty flags
+      setSaveStatus('saved');
+      setLastSaveTimestamp(new Date());
+
     } catch (err) {
-      console.error('Auto-save failed:', err);
+      console.error('Batch auto-save failed:', err);
+      setSaveStatus('error');
     } finally {
       setIsSaving(false);
     }
   };
 
-  // Auto-save every 30 seconds
+  // Auto-save timer (30 seconds)
   useEffect(() => {
-    if (attendanceStatus !== 'started' || !assignedQuestions.length || isLocked) return;
+    if (attendanceStatus !== 'started' || isLocked) return;
 
-    const autoSaveInterval = setInterval(() => {
-      autoSaveAllQuestions();
-    }, 30000); // 30 seconds
+    const timer = setInterval(() => {
+      autoSaveBatch();
+    }, 30000);
 
-    return () => clearInterval(autoSaveInterval);
-  }, [attendanceStatus, assignedQuestions, code, userAnswers, isLocked]);
+    return () => clearInterval(timer);
+  }, [dirtyQuestions, userAnswers, code, attendanceStatus, isLocked]);
+
+  // Initial save on finish test to ensure everything is synced
+  const ensureAllSaved = async () => {
+    await autoSaveBatch();
+  };
 
   const forceSubmitCurrentCode = async () => {
     if (!challenge) return null;
@@ -1012,6 +1086,10 @@ export default function LevelChallenge() {
 
   const handleFinishLevel = async ({ reason = "manual", forceSubmissionId = null } = {}) => {
     if (finishingLevel) return;
+    // Ensure final state is saved
+    try {
+      await ensureAllSaved();
+    } catch (e) { console.warn("Final save warning:", e); }
     handleFinishTest({ reason, forceSubmissionId });
   };
 
@@ -1413,6 +1491,30 @@ export default function LevelChallenge() {
                 </div>
               )}
 
+              {/* Auto-Save Status Indicator */}
+              <div className="flex items-center gap-2 px-3 py-2 bg-slate-50 border border-slate-200 rounded text-xs font-semibold">
+                {saveStatus === 'saving' && (
+                  <>
+                    <RefreshCw size={14} className="animate-spin text-blue-500" />
+                    <span className="text-blue-500">Saving...</span>
+                  </>
+                )}
+                {saveStatus === 'saved' && (
+                  <>
+                    <CheckCircle size={14} className="text-emerald-500" />
+                    <span className="text-emerald-600">
+                      Saved {lastSaveTimestamp ? lastSaveTimestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                    </span>
+                  </>
+                )}
+                {saveStatus === 'error' && (
+                  <>
+                    <AlertTriangle size={14} className="text-red-500" />
+                    <span className="text-red-500">Save Failed</span>
+                  </>
+                )}
+              </div>
+
               {/* Question Number Boxes */}
               {assignedQuestions.length > 1 && (
                 <div className="flex gap-2">
@@ -1486,25 +1588,15 @@ export default function LevelChallenge() {
               {submitting || evaluating ? (
                 <>
                   <RefreshCw size={20} className="animate-spin" />
-                  Saving...
-                </>
-              ) : isSaving ? (
-                <>
-                  <RefreshCw size={20} className="animate-spin" />
-                  Auto-saving...
+                  Running...
                 </>
               ) : (
                 <>
                   <Check size={20} />
-                  Save Progress
+                  Submit Code
                 </>
               )}
             </button>
-            {lastSaveTime && (
-              <span className="text-xs text-slate-400 self-center">
-                Saved {lastSaveTime.toLocaleTimeString()}
-              </span>
-            )}
           </div>
         </div>
       </header>

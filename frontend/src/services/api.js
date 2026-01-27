@@ -30,6 +30,28 @@ api.interceptors.request.use(config => {
   return config;
 });
 
+// Handle auth errors globally
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+      // Session expired or invalid
+      const currentPath = window.location.pathname;
+      if (currentPath !== '/' && !currentPath.includes('/admin/login')) {
+        // Clear storage
+        localStorage.removeItem('userToken');
+        localStorage.removeItem('userId');
+        localStorage.removeItem('userRole');
+        localStorage.removeItem('fullName');
+
+        // Force redirect to login
+        window.location.href = '/';
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
 // Challenges (Legacy - still used for old system)
 export const getChallenges = () => api.get('/challenges');
 export const getChallenge = (id) => api.get(`/challenges/${id}`);

@@ -7,7 +7,10 @@ async function applyMigrations() {
     try {
       await query(sql);
     } catch (e) {
-      if (e.code !== 'ER_DUP_FIELDNAME') {
+      // 1060: Duplicate column name
+      // 1061: Duplicate key name
+      // 1050: Table already exists
+      if (e.code !== 'ER_DUP_FIELDNAME' && e.errno !== 1060 && e.errno !== 1061) {
         console.warn(`⚠️ Migration info: ${e.message}`);
       }
     }
@@ -146,6 +149,16 @@ async function applyMigrations() {
         console.log('⚡ Updating users role column...');
         await query("ALTER TABLE users MODIFY COLUMN role ENUM('admin', 'student', 'faculty') DEFAULT 'student'");
       }
+    }
+
+    // 1.1 Update Users Table Schema (Match v3.0)
+    try {
+      await addColumn("ALTER TABLE users ADD COLUMN picture VARCHAR(500) NULL AFTER role");
+      await addColumn("ALTER TABLE users ADD COLUMN current_session_id VARCHAR(100) NULL AFTER picture");
+      await addColumn("ALTER TABLE users ADD COLUMN last_login TIMESTAMP NULL AFTER created_at");
+      await addColumn("ALTER TABLE users ADD INDEX idx_session_id (current_session_id)");
+    } catch (e) {
+      console.warn('⚠️ Users table modification info:', e.message);
     }
 
     // 2. Global Test Sessions Table
@@ -408,21 +421,17 @@ async function applyMigrations() {
 
     // 10. Courses Table Enhancements
     try {
-      await query("ALTER TABLE courses ADD COLUMN restrictions JSON NULL AFTER is_hidden");
-      console.log('✅ Column restrictions added to courses.');
+      await addColumn("ALTER TABLE courses ADD COLUMN restrictions JSON NULL AFTER is_hidden");
+      console.log('✅ Column restrictions verified.');
     } catch (e) {
-      if (e.code !== 'ER_DUP_FIELDNAME') {
-        console.warn('⚠️ Column restrictions warning:', e.message);
-      }
+      console.warn('⚠️ Column restrictions warning:', e.message);
     }
 
     try {
-      await query("ALTER TABLE courses ADD COLUMN level_settings JSON NULL AFTER restrictions");
-      console.log('✅ Column level_settings added to courses.');
+      await addColumn("ALTER TABLE courses ADD COLUMN level_settings JSON NULL AFTER restrictions");
+      console.log('✅ Column level_settings verified.');
     } catch (e) {
-      if (e.code !== 'ER_DUP_FIELDNAME') {
-        console.warn('⚠️ Column level_settings warning:', e.message);
-      }
+      console.warn('⚠️ Column level_settings warning:', e.message);
     }
 
     // 11. Seed Courses if empty

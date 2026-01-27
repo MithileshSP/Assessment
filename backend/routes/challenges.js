@@ -186,20 +186,44 @@ router.get('/level-questions', verifyToken, async (req, res) => {
     }
 
     // Get the full question details for assigned questions
-    const assignedFullQuestions = userAssignment.assignedQuestions.map(qId => {
+    const assignedFullQuestions = await Promise.all(userAssignment.assignedQuestions.map(async (qId) => {
       const question = levelQuestions.find(c => c.id === qId);
-      return question ? {
+      if (!question) return null;
+
+      // Fetch latest submission/draft for this question
+      let savedCode = null;
+      try {
+        const [submission] = await query(
+          "SELECT html_code, css_code, js_code, status FROM submissions WHERE user_id = ? AND challenge_id = ? ORDER BY submitted_at DESC LIMIT 1",
+          [userId, qId]
+        );
+        if (submission) {
+          savedCode = {
+            html: submission.html_code || "",
+            css: submission.css_code || "",
+            js: submission.js_code || "",
+            status: submission.status
+          };
+        }
+      } catch (err) {
+        console.warn(`Failed to fetch draft for ${qId}:`, err.message);
+      }
+
+      return {
         id: question.id,
         title: question.title,
         description: question.description,
         points: question.points || 0,
-        level: question.level
-      } : null;
-    }).filter(q => q !== null);
+        level: question.level,
+        savedCode // Attach saved code
+      };
+    }));
+
+    const validQuestions = assignedFullQuestions.filter(q => q !== null);
 
     res.json({
-      assignedQuestions: assignedFullQuestions,
-      totalAssigned: assignedFullQuestions.length,
+      assignedQuestions: validQuestions,
+      totalAssigned: validQuestions.length,
       completedQuestions: userAssignment.completedQuestions || [],
       isLevelComplete: userAssignment.isLevelComplete || false
     });
