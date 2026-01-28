@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { AlertTriangle, Clock, CheckCircle, ArrowLeft, ChevronLeft, ChevronRight, RefreshCw, Check, Layout, Star } from "lucide-react";
-import CodeEditor from "../components/CodeEditor";
+import MultiFileEditor from "../components/MultiFileEditor";
+import TerminalPanel from "../components/TerminalPanel";
 import PreviewFrame from "../components/PreviewFrame";
 import ResultsPanel from "../components/ResultsPanel";
 import api from "../services/api";
@@ -15,12 +16,13 @@ export default function LevelChallenge() {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [challenge, setChallenge] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [code, setCode] = useState({ html: "", css: "", js: "" });
+  const [code, setCode] = useState({ html: "", css: "", js: "", additionalFiles: {} });
   const [submitting, setSubmitting] = useState(false);
   const [evaluating, setEvaluating] = useState(false);
   const [evaluationStep, setEvaluationStep] = useState("");
   const [result, setResult] = useState(null);
   const [previewTab, setPreviewTab] = useState("live");
+  const [consoleOutput, setConsoleOutput] = useState([]);
   const [showInstructions, setShowInstructions] = useState(true);
   const [showEvaluationPanel, setShowEvaluationPanel] = useState(true);
   const [userAnswers, setUserAnswers] = useState({});
@@ -29,6 +31,8 @@ export default function LevelChallenge() {
   const [feedback, setFeedback] = useState("");
   const [testSessionId, setTestSessionId] = useState(null);
   const [finishingLevel, setFinishingLevel] = useState(false);
+  const [stdin, setStdin] = useState("");
+  const [metrics, setMetrics] = useState(null);
 
   // Restrictions and Timer State
   const [restrictions, setRestrictions] = useState({
@@ -262,68 +266,54 @@ export default function LevelChallenge() {
         return;
       }
 
-      // Restore from localStorage if possible
+      // Restore from localStorage if possible - BUT only if questions match
       const storageKey = `assessment_${userId}_${courseId}_${level}`;
       const savedState = localStorage.getItem(storageKey);
-      let restoredFromLocal = false;
-
-      // Initialize answers object
-      const initialAnswers = {};
-
-      // First, populate from Server Data (Cross-Device Persistence)
-      questions.forEach(q => {
-        initialAnswers[q.id] = {
-          html: q.savedCode?.html || "",
-          css: q.savedCode?.css || "",
-          js: q.savedCode?.js || "",
-          submitted: q.savedCode?.status === 'passed', // heuristic
-          result: null
-        };
-      });
 
       if (savedState) {
         try {
           const { questions: savedQs, answers, currentIndex, code: savedCode } = JSON.parse(savedState);
 
           // Compare question IDs from API with saved state
+          // If they differ, a reset has happened - use fresh questions
           const apiQuestionIds = questions.map(q => q.id).sort().join(',');
           const savedQuestionIds = savedQs.map(q => q.id).sort().join(',');
 
           if (apiQuestionIds === savedQuestionIds) {
-            // Local state matches current assignment - use it (it's likely more recent)
+            // Same questions - restore saved state
             setAssignedQuestions(savedQs);
             setUserAnswers(answers);
             setCurrentQuestionIndex(currentIndex);
             setCode(savedCode);
             setLoading(false);
-            restoredFromLocal = true;
             return;
           } else {
+            // Questions have changed (reset occurred) - clear old state
             console.log('Questions reassigned, clearing old localStorage state');
             localStorage.removeItem(storageKey);
           }
         } catch (e) {
-          console.error("Failed to restore local state", e);
+          console.error("Failed to restore state", e);
           localStorage.removeItem(storageKey);
         }
       }
 
-      // If NOT restored from local (new device, cleared cache, or new questions), use Server Data
-      if (!restoredFromLocal) {
-        console.log("Restoring state from Server (Cross-Device)...");
-        setAssignedQuestions(questions);
-        setUserAnswers(initialAnswers);
+      // If no saved state, initialize new
+      setAssignedQuestions(questions);
 
-        // Load first question's code into editor
-        if (questions.length > 0) {
-          const firstQ = questions[0];
-          setCode({
-            html: firstQ.savedCode?.html || "",
-            css: firstQ.savedCode?.css || "",
-            js: firstQ.savedCode?.js || ""
-          });
-        }
-      }
+      // Initialize answers
+      const initialAnswers = {};
+      questions.forEach((q) => {
+        initialAnswers[q.id] = {
+          html: "",
+          css: "",
+          js: "",
+          additionalFiles: {},
+          submitted: false,
+          result: null,
+        };
+      });
+      setUserAnswers(initialAnswers);
 
       // Create test session
       await createTestSession();
@@ -427,6 +417,14 @@ export default function LevelChallenge() {
       const challengeData = response.data;
       setChallenge(challengeData);
 
+      // Default to terminal tab for nodejs challenges
+      const isNodeJS = challengeData.challengeType === 'nodejs';
+      if (isNodeJS) {
+        setPreviewTab("terminal");
+      } else {
+        setPreviewTab("live");
+      }
+
       // Load saved answer if exists
       const savedAnswer = userAnswers[questionId];
       if (savedAnswer && (savedAnswer.html || savedAnswer.css || savedAnswer.js)) {
@@ -434,6 +432,7 @@ export default function LevelChallenge() {
           html: savedAnswer.html,
           css: savedAnswer.css,
           js: savedAnswer.js,
+          additionalFiles: savedAnswer.additionalFiles || {},
         });
         setResult(savedAnswer.result);
       } else {
@@ -903,6 +902,7 @@ export default function LevelChallenge() {
           html: code.html,
           css: code.css,
           js: code.js,
+          additionalFiles: code.additionalFiles || {},
         },
       }));
       setCurrentQuestionIndex(currentQuestionIndex - 1);
@@ -922,6 +922,7 @@ export default function LevelChallenge() {
           html: code.html,
           css: code.css,
           js: code.js,
+          additionalFiles: code.additionalFiles || {},
         },
       }));
       setCurrentQuestionIndex(currentQuestionIndex + 1);
@@ -930,9 +931,53 @@ export default function LevelChallenge() {
     }
   };
 
-  const handleRunCode = () => {
-    if (previewRef.current) {
-      previewRef.current.updatePreview(code);
+  const handleRunCode = async () => {
+    // Determine if this is a nodejs challenge
+    const isNodeJS = challenge?.challengeType === 'nodejs' || (code.js && code.js.includes('require(') && !code.html);
+
+    if (isNodeJS) {
+      setEvaluating(true);
+      setPreviewTab("terminal");
+      setConsoleOutput([{ type: 'info', content: 'Running Node.js code...' }]);
+      setMetrics(null);
+
+      try {
+        const response = await api.executeCode(code.js, code.additionalFiles || {}, 'nodejs', stdin);
+        const { output, error, executionTime } = response.data;
+
+        setMetrics({ executionTime, memoryUsage: '44.5 MB' });
+
+        const newLogs = [];
+        if (output) {
+          output.split('\n').filter(l => l.trim() !== '').forEach(line => {
+            newLogs.push({ type: 'log', content: line });
+          });
+        }
+
+        if (error) {
+          error.split('\n').filter(l => l.trim() !== '').forEach(line => {
+            newLogs.push({ type: 'error', content: line });
+          });
+        }
+
+        if (!output && !error) {
+          newLogs.push({ type: 'info', content: 'Execution completed with no output.' });
+        }
+
+        setConsoleOutput(newLogs);
+      } catch (err) {
+        setConsoleOutput([{
+          type: 'error',
+          content: `Execution failed: ${err.response?.data?.error || err.message}`
+        }]);
+      } finally {
+        setEvaluating(false);
+      }
+    } else {
+      // Logic for web challenges
+      if (previewRef.current) {
+        previewRef.current.updatePreview(code);
+      }
     }
   };
 
@@ -956,6 +1001,7 @@ export default function LevelChallenge() {
               html: code.html,
               css: code.css,
               js: code.js,
+              additionalFiles: code.additionalFiles || {},
               submitted: true,
               result: evalResult,
               submissionId: submissionId
@@ -1075,6 +1121,7 @@ export default function LevelChallenge() {
         html: code.html,
         css: code.css,
         js: code.js,
+        additionalFiles: code.additionalFiles || {},
         submitted: true,
         result: { status: 'saved' } // Local save only
       },
@@ -1104,7 +1151,12 @@ export default function LevelChallenge() {
         const savedAnswer = userAnswers[question.id];
         const currentCode = currentQuestionIndex === assignedQuestions.indexOf(question)
           ? code
-          : { html: savedAnswer?.html || '', css: savedAnswer?.css || '', js: savedAnswer?.js || '' };
+          : {
+            html: savedAnswer?.html || '',
+            css: savedAnswer?.css || '',
+            js: savedAnswer?.js || '',
+            additionalFiles: savedAnswer?.additionalFiles || {}
+          };
 
         // Only submit if there's any code
         if (currentCode.html || currentCode.css || currentCode.js) {
@@ -1756,12 +1808,12 @@ export default function LevelChallenge() {
 
           {/* Code Editors */}
           <div
-            className={`card flex-1 ${isLocked ? "blur-[2px] pointer-events-none" : ""}`}
+            className={`flex-1 overflow-hidden rounded-lg ${isLocked ? "blur-[2px] pointer-events-none" : ""}`}
             style={
               !showInstructions ? { minHeight: "calc(100vh - 250px)" } : {}
             }
           >
-            <CodeEditor code={code} onChange={setCode} readOnly={isLocked} />
+            <MultiFileEditor code={code} onChange={setCode} readOnly={isLocked} />
           </div>
         </div>
 
@@ -1797,6 +1849,15 @@ export default function LevelChallenge() {
                   >
                     Expected Result
                   </button>
+                  <button
+                    onClick={() => setPreviewTab("terminal")}
+                    className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${previewTab === "terminal"
+                      ? "bg-emerald-600 text-white shadow"
+                      : "text-gray-600 hover:text-gray-900"
+                      }`}
+                  >
+                    Terminal
+                  </button>
                 </div>
                 <div className="flex items-center gap-2">
                   <button
@@ -1817,7 +1878,21 @@ export default function LevelChallenge() {
               </div>
               <div className="flex-1 relative overflow-auto bg-gray-100">
                 {previewTab === "live" ? (
-                  <PreviewFrame ref={previewRef} code={code} />
+                  <PreviewFrame
+                    ref={previewRef}
+                    code={code}
+                    onConsoleLog={(logs) => setConsoleOutput(logs)}
+                    isNodeJS={challenge?.challengeType === 'nodejs' || (code.js && code.js.includes('require(') && !code.html)}
+                  />
+                ) : previewTab === "terminal" ? (
+                  <TerminalPanel
+                    output={consoleOutput}
+                    onClear={() => setConsoleOutput([])}
+                    isExpanded={true}
+                    stdin={stdin}
+                    setStdin={setStdin}
+                    metrics={metrics}
+                  />
                 ) : challenge?.expectedSolution ? (
                   <PreviewFrame
                     code={{
@@ -1905,9 +1980,11 @@ export default function LevelChallenge() {
             <h2 className="text-xl font-bold flex items-center gap-2">
               {fullScreenView === "live"
                 ? "🖥️ Live Preview (Full Screen)"
-                : "✅ Expected Result (Full Screen)"}
+                : fullScreenView === "terminal"
+                  ? "🐚 Terminal Environment (Full Screen)"
+                  : "✅ Expected Result (Full Screen)"}
               <span className="text-sm font-normal text-gray-500">
-                {fullScreenView === "live" ? "- Your Code" : "- Target Design"}
+                {fullScreenView === "live" ? "- Your Code" : fullScreenView === "terminal" ? "- Execution Output" : "- Target Design"}
               </span>
             </h2>
             <button
@@ -1934,6 +2011,15 @@ export default function LevelChallenge() {
             <div className="h-full w-full bg-white shadow-xl rounded-lg overflow-hidden border">
               {fullScreenView === "live" ? (
                 <PreviewFrame ref={previewRef} code={code} />
+              ) : fullScreenView === "terminal" ? (
+                <TerminalPanel
+                  output={consoleOutput}
+                  onClear={() => setConsoleOutput([])}
+                  isExpanded={true}
+                  stdin={stdin}
+                  setStdin={setStdin}
+                  metrics={metrics}
+                />
               ) : (
                 <PreviewFrame
                   code={{

@@ -83,8 +83,8 @@ class SubmissionModel {
     const submittedAt = formatDateTime(submissionData.submittedAt);
 
     await query(
-      `INSERT INTO submissions (id, challenge_id, user_id, course_id, level, candidate_name, html_code, css_code, js_code, status, submitted_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO submissions (id, challenge_id, user_id, course_id, level, candidate_name, html_code, css_code, js_code, status, submitted_at, additional_files)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id,
         submissionData.challengeId,
@@ -96,7 +96,8 @@ class SubmissionModel {
         submissionData.code?.css || '',
         submissionData.code?.js || '',
         submissionData.status || 'pending',
-        submittedAt
+        submittedAt,
+        JSON.stringify(submissionData.code?.additionalFiles || {})
       ]
     );
     return await this.findById(id);
@@ -253,7 +254,10 @@ class SubmissionModel {
       code: {
         html: submission.html_code,
         css: submission.css_code,
-        js: submission.js_code
+        js: submission.js_code,
+        additionalFiles: typeof submission.additional_files === 'string'
+          ? JSON.parse(submission.additional_files || '{}')
+          : (submission.additional_files || {})
       },
       status: finalStatus,
       submittedAt: submission.submitted_at,

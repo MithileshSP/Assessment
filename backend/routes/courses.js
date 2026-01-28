@@ -340,12 +340,49 @@ router.get('/:courseId/levels/:level/questions/:questionId', (req, res) => {
   }
 });
 
-/**
- * GET /api/courses/progress/:userId
- * Get user's progress across all courses
- */
 router.get('/progress/:userId', async (req, res) => {
   try {
+    try {
+
+      // Actually, the route is generic /progress/:userId, so we should fetch ALL courses for this user
+      const allDbProgress = await query(
+        `SELECT course_id, current_level, completed_levels, total_points 
+         FROM user_progress 
+         WHERE user_id = ?`,
+        [req.params.userId]
+      );
+
+      if (allDbProgress.length > 0) {
+        const courses = allDbProgress.map(row => {
+          let levels = [];
+          try {
+            // Handle both JSON string and actual array (if driver parses it)
+            levels = typeof row.completed_levels === 'string'
+              ? JSON.parse(row.completed_levels)
+              : (row.completed_levels || []);
+            if (!Array.isArray(levels)) levels = [];
+          } catch (e) { levels = []; }
+
+          return {
+            courseId: row.course_id,
+            currentLevel: row.current_level || 1,
+            completedLevels: levels,
+            totalPoints: row.total_points || 0
+          };
+        });
+
+        return res.json({
+          userId: req.params.userId,
+          courses,
+          totalPoints: courses.reduce((sum, c) => sum + c.totalPoints, 0),
+          achievements: [] // DB doesn't track achievements yet
+        });
+      }
+    } catch (dbErr) {
+      console.error('Database progress fetch failed:', dbErr.message);
+    }
+
+    // 2. Fallback to JSON file
     console.log('[DEBUG] GET /progress/', req.params.userId);
     let allProgress = getProgress();
     console.log('[DEBUG] Total progress entries:', allProgress.length);
@@ -395,6 +432,8 @@ router.get('/progress/:userId', async (req, res) => {
             achievements: [],
           };
 
+          // OPTIONAL: Do not write back to JSON to avoid conflicts, just return inferred
+          // But original code wrote back. We keep it for now.
           allProgress.push(userProgress);
           saveProgress(allProgress);
         }

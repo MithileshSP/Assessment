@@ -61,8 +61,8 @@ class ChallengeModel {
     const id = challengeData.id || `challenge-${Date.now()}`;
     console.log(`[ChallengeModel] Creating challenge ${id}, createdBy: ${challengeData.createdBy}`);
     await query(
-      `INSERT INTO challenges (id, title, description, instructions, tags, passing_threshold, expected_html, expected_css, expected_js, expected_screenshot_url, course_id, level, points, hints, assets, created_at, created_by)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO challenges (id, title, description, instructions, tags, passing_threshold, expected_html, expected_css, expected_js, expected_screenshot_url, course_id, level, points, hints, assets, created_at, created_by, challenge_type, expected_output)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id,
         challengeData.title,
@@ -80,7 +80,9 @@ class ChallengeModel {
         JSON.stringify(challengeData.hints || []),
         JSON.stringify(challengeData.assets || { images: [], reference: '' }),
         challengeData.createdAt ? new Date(challengeData.createdAt) : new Date(),
-        challengeData.createdBy || null
+        challengeData.createdBy || null,
+        challengeData.challengeType || 'web',
+        challengeData.expectedOutput || ''
       ]
     );
     return await this.findById(id);
@@ -104,6 +106,8 @@ class ChallengeModel {
        points = COALESCE(?, points),
        hints = COALESCE(?, hints),
        assets = COALESCE(?, assets),
+       challenge_type = COALESCE(?, challenge_type),
+       expected_output = COALESCE(?, expected_output),
        updated_at = NOW()
        WHERE id = ?`,
       [
@@ -112,21 +116,22 @@ class ChallengeModel {
         challengeData.instructions !== undefined ? challengeData.instructions : null,
         challengeData.tags ? JSON.stringify(challengeData.tags) : null,
         challengeData.passingThreshold ? JSON.stringify(challengeData.passingThreshold) : null,
-        (challengeData.expectedHtml !== undefined ? challengeData.expectedHtml : (challengeData.expectedSolution?.html !== undefined ? challengeData.expectedSolution.html : null)),
-        (challengeData.expectedCss !== undefined ? challengeData.expectedCss : (challengeData.expectedSolution?.css !== undefined ? challengeData.expectedSolution.css : null)),
-        (challengeData.expectedJs !== undefined ? challengeData.expectedJs : (challengeData.expectedSolution?.js !== undefined ? challengeData.expectedSolution.js : null)),
+        challengeData.expectedHtml !== undefined ? challengeData.expectedHtml : (challengeData.expectedSolution?.html !== undefined ? challengeData.expectedSolution.html : null),
+        challengeData.expectedCss !== undefined ? challengeData.expectedCss : (challengeData.expectedSolution?.css !== undefined ? challengeData.expectedSolution.css : null),
+        challengeData.expectedJs !== undefined ? challengeData.expectedJs : (challengeData.expectedSolution?.js !== undefined ? challengeData.expectedSolution.js : null),
         challengeData.expectedScreenshotUrl !== undefined ? challengeData.expectedScreenshotUrl : null,
         challengeData.courseId !== undefined ? challengeData.courseId : null,
         challengeData.level !== undefined ? challengeData.level : null,
         challengeData.points !== undefined ? challengeData.points : null,
         challengeData.hints ? JSON.stringify(challengeData.hints) : null,
         challengeData.assets ? JSON.stringify(challengeData.assets) : null,
+        challengeData.challengeType !== undefined ? challengeData.challengeType : null,
+        challengeData.expectedOutput !== undefined ? challengeData.expectedOutput : null,
         id
       ]
     );
     return await this.findById(id);
   }
-
   // Delete challenge
   static async delete(id) {
     await query('DELETE FROM challenges WHERE id = ?', [id]);
@@ -181,6 +186,8 @@ class ChallengeModel {
       expectedScreenshotUrl: challenge.expected_screenshot_url,
       courseId: challenge.course_id,
       level: challenge.level,
+      challengeType: challenge.challenge_type || 'web',
+      expectedOutput: challenge.expected_output || '',
       assets,
       createdBy: challenge.created_by,
       creatorName: challenge.creator_name || 'System',

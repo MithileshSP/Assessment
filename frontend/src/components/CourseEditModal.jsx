@@ -96,18 +96,9 @@ export default function CourseEditModal({ course, onClose, onSave }) {
           <div className="bg-white rounded-2xl overflow-hidden shadow-2xl flex-1 flex flex-col max-h-[400px]">
             <div
               className="h-32 flex items-center justify-center relative"
-              style={{ backgroundColor: formData.thumbnail ? 'transparent' : formData.color }}
+              style={{ backgroundColor: formData.color }}
             >
-              {formData.thumbnail ? (
-                <img
-                  src={formData.thumbnail}
-                  alt="Course Thumbnail"
-                  className="w-full h-full object-cover"
-                  onError={(e) => { e.target.style.display = 'none'; }}
-                />
-              ) : (
-                <span className="text-5xl filter drop-shadow-lg">{formData.icon || '📚'}</span>
-              )}
+              <span className="text-5xl filter drop-shadow-lg">{formData.icon || '📚'}</span>
               <div className={`absolute top-3 left-3 px-2 py-0.5 ${difficultyColors[formData.difficulty]} text-white text-[10px] font-bold uppercase rounded`}>
                 {formData.difficulty}
               </div>
@@ -215,7 +206,17 @@ export default function CourseEditModal({ course, onClose, onSave }) {
               {/* Visual Settings Row */}
               <div className="col-span-2 grid grid-cols-3 gap-4 p-4 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-2xl">
                 <div>
-                  {/* Icon Field Removed */}
+                  <label className="flex items-center gap-1 text-xs font-bold text-indigo-600 mb-2">
+                    <Palette size={12} /> Icon
+                  </label>
+                  <input
+                    type="text"
+                    name="icon"
+                    value={formData.icon}
+                    onChange={handleChange}
+                    maxLength="2"
+                    className="w-full h-14 bg-white border-2 border-indigo-100 rounded-xl text-3xl text-center focus:border-indigo-500 outline-none transition-all"
+                  />
                 </div>
                 <div>
                   <label className="flex items-center gap-1 text-xs font-bold text-indigo-600 mb-2">

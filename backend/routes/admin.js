@@ -499,6 +499,7 @@ router.post('/reset-level', verifyAdmin, async (req, res) => {
       let completedLevels = [];
       try {
         completedLevels = JSON.parse(existingProgress.completed_levels || '[]');
+        if (!Array.isArray(completedLevels)) completedLevels = [];
       } catch (e) {
         completedLevels = [];
       }

@@ -116,30 +116,15 @@ export default function CourseManager() {
                   {/* Visual Side */}
                   <div
                     className="lg:w-72 h-48 lg:h-auto flex items-center justify-center relative overflow-hidden text-white"
-                    style={{ backgroundColor: course.thumbnail ? 'transparent' : (course.color || '#1e293b') }}
+                    style={{ backgroundColor: course.color || '#1e293b' }}
                   >
-                    {course.thumbnail ? (
-                      <>
-                        <img
-                          src={course.thumbnail}
-                          alt={course.title}
-                          className="absolute inset-0 w-full h-full object-cover"
-                          onError={(e) => { e.target.style.display = 'none'; }}
-                        />
-                        <div className="absolute inset-0 bg-black/40" />
-                      </>
-                    ) : (
-                      <div className="absolute inset-0 bg-black/10" />
-                    )}
-
+                    <div className="absolute inset-0 bg-black/10" />
                     <div className="relative z-10 flex flex-col items-center">
-                      {!course.thumbnail && (
-                        <span className="text-6xl mb-4 group-hover:scale-110 transition-transform duration-500">{course.icon || '📚'}</span>
-                      )}
-                      <span className="text-[10px] font-bold uppercase tracking-widest opacity-60 bg-black/30 px-2 py-1 rounded">ID: {course.id}</span>
+                      <span className="text-6xl mb-4 group-hover:scale-110 transition-transform duration-500">{course.icon || '📚'}</span>
+                      <span className="text-[10px] font-bold uppercase tracking-widest opacity-60">ID: {course.id}</span>
                     </div>
                     {course.isHidden && (
-                      <div className="absolute top-4 left-4 bg-amber-400 text-amber-900 text-[10px] font-bold px-2 py-1 rounded-lg flex items-center gap-1 shadow-lg z-20">
+                      <div className="absolute top-4 left-4 bg-amber-400 text-amber-900 text-[10px] font-bold px-2 py-1 rounded-lg flex items-center gap-1 shadow-lg">
                         <EyeOff size={12} /> PRIVATE
                       </div>
                     )}
@@ -232,7 +217,23 @@ export default function CourseManager() {
           )}
         </div>
 
-        {/* Info Zone Removed as per user request */}
+        {/* Info Zone */}
+        <div className="bg-indigo-600 rounded-3xl p-8 text-white relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-8 opacity-10">
+            <Settings size={120} />
+          </div>
+          <div className="relative z-10 max-w-2xl">
+            <h3 className="text-xl font-bold mb-4">Core Architecture Tips</h3>
+            <p className="text-indigo-100 text-sm leading-relaxed mb-6">
+              Courses are defined by their levels and assessment banks. Changes made here propagate immediately to the student experience.
+              Use the **Private** toggle to work on courses in draft mode before releasing them to the public.
+            </p>
+            <div className="flex gap-4">
+              <button className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-xl text-xs font-bold transition-colors">Documentation</button>
+              <button className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-xl text-xs font-bold transition-colors">Asset Library</button>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Modals are kept as they are functional, but UI is updated via props/context if possible */}

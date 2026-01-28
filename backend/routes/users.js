@@ -570,7 +570,7 @@ router.delete("/:userId", verifyAdmin, async (req, res) => {
 });
 
 // Mark level as complete
-router.post("/complete-level", (req, res) => {
+router.post("/complete-level", async (req, res) => {
   try {
     const { userId, courseId, level } = req.body;
 
@@ -578,17 +578,64 @@ router.post("/complete-level", (req, res) => {
       return res.status(400).json({ error: "Missing required fields" });
     }
 
-    // Read user progress
+    // Verify user progress data in DB
+    const progressCheck = await query(
+      "SELECT * FROM user_progress WHERE user_id = ? AND course_id = ?",
+      [userId, courseId]
+    );
+
+    let currentCompleted = [];
+    let currentLevel = 1;
+
+    if (progressCheck.length > 0) {
+      const row = progressCheck[0];
+      try {
+        currentCompleted = typeof row.completed_levels === 'string'
+          ? JSON.parse(row.completed_levels)
+          : row.completed_levels || [];
+      } catch (e) {
+        currentCompleted = [];
+      }
+      currentLevel = row.current_level || 1;
+    } else {
+      // Create initial if not exists
+      await query(
+        "INSERT INTO user_progress (user_id, course_id, current_level, completed_levels, total_points, last_updated) VALUES (?, ?, ?, '[]', 0, NOW())",
+        [userId, courseId, 1]
+      );
+    }
+
+    // Add level if not present
+    if (!currentCompleted.includes(level)) {
+      currentCompleted.push(level);
+      // Sort numeric
+      currentCompleted.sort((a, b) => a - b);
+    }
+
+    // Next level is current completed + 1, or at least max completed + 1
+    const maxCompleted = currentCompleted.length > 0 ? Math.max(...currentCompleted) : 0;
+    const nextLevel = Math.max(currentLevel, maxCompleted + 1);
+
+    // Update DB
+    await query(
+      "UPDATE user_progress SET completed_levels = ?, current_level = ?, last_updated = NOW() WHERE user_id = ? AND course_id = ?",
+      [JSON.stringify(currentCompleted), nextLevel, userId, courseId]
+    );
+
+    // Also maintain legacy JSON files for backup/backward compatibility 
+    // (Existing JSON logic kept below for safety, can be removed accurately if confirmed unused)
     const progressPath = path.join(__dirname, "../data/user-progress.json");
     let progressData = [];
     try {
-      const data = fs.readFileSync(progressPath, "utf8");
-      progressData = JSON.parse(data);
+      if (fs.existsSync(progressPath)) {
+        const data = fs.readFileSync(progressPath, "utf8");
+        progressData = JSON.parse(data);
+      }
     } catch (error) {
       progressData = [];
     }
 
-    // Find or create user progress
+    // Find or create user progress in JSON
     let userProgress = progressData.find((p) => p.userId === userId);
     if (!userProgress) {
       userProgress = {

@@ -250,9 +250,29 @@ export default function QuestionEditModal({ question, courseId, onSave, onClose 
                 />
               </div>
 
-              <div className="grid grid-cols-3 gap-6">
-                <MetricInput label="Level (1-12)" value={formData.level} onChange={v => setFormData({ ...formData, level: v })} icon={<Layers size={14} />} />
-                <MetricInput label="Display Order" value={formData.questionNumber} onChange={v => setFormData({ ...formData, questionNumber: v })} icon={<Zap size={14} />} />
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1 flex items-center gap-1.5">
+                    <Layers size={14} />
+                    Level
+                  </label>
+                  <div className="relative">
+                    <select
+                      value={formData.level}
+                      onChange={(e) => setFormData({ ...formData, level: parseInt(e.target.value) })}
+                      className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-indigo-500/5 focus:bg-white transition-all outline-none appearance-none cursor-pointer"
+                      required
+                    >
+                      {[...Array(12)].map((_, i) => (
+                        <option key={i + 1} value={i + 1}>Level {i + 1}</option>
+                      ))}
+                    </select>
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                      <Layers size={14} />
+                    </div>
+                  </div>
+                </div>
+
                 <MetricInput label="Points Awarded" value={formData.points} onChange={v => setFormData({ ...formData, points: v })} icon={<Target size={14} />} />
               </div>
 

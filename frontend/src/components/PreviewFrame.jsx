@@ -1,7 +1,11 @@
 import { useImperativeHandle, forwardRef, useRef, useEffect, useState } from "react";
 import { Terminal, ChevronDown, ChevronUp, Trash2, Command, Loader2 } from "lucide-react";
 
-const PreviewFrame = forwardRef(({ code, isRestricted = false }, ref) => {
+/**
+ * PreviewFrame - Renders student code in a sandboxed iframe
+ * Handles both Web (live preview) and Node.js (execution detection)
+ */
+const PreviewFrame = forwardRef(({ code, isRestricted = false, onConsoleLog, isNodeJS = false }, ref) => {
   const iframeRef = useRef(null);
   const [logs, setLogs] = useState([]);
   const [isConsoleOpen, setIsConsoleOpen] = useState(false);
@@ -11,6 +15,13 @@ const PreviewFrame = forwardRef(({ code, isRestricted = false }, ref) => {
   const [isWaitingForInput, setIsWaitingForInput] = useState(false);
   const scrollRef = useRef(null);
   const logCache = useRef(new Set());
+
+  // Forward logs to parent when they change
+  useEffect(() => {
+    if (onConsoleLog) {
+      onConsoleLog(logs);
+    }
+  }, [logs, onConsoleLog]);
 
   // Listen for terminal/console messages
   useEffect(() => {
@@ -54,6 +65,16 @@ const PreviewFrame = forwardRef(({ code, isRestricted = false }, ref) => {
   }, []);
 
   const updatePreview = (codeToRender) => {
+    // SECURITY/CRASH FIX: Don't try to evaluate Node.js code in the browser iframe
+    if (isNodeJS) {
+      setLogs([{
+        type: 'system',
+        content: '[Notice] Browser preview disabled for Node.js code. Use "Run Code" to execute on server.',
+        timestamp: new Date().toLocaleTimeString([], { hour12: true })
+      }]);
+      return;
+    }
+
     setLogs([]); // Clear logs on refresh
     if (!iframeRef.current) return;
 
@@ -61,8 +82,6 @@ const PreviewFrame = forwardRef(({ code, isRestricted = false }, ref) => {
     const document = iframe.contentDocument || iframe.contentWindow.document;
 
     // Inject base tag for assets or rewrite paths
-    // We rewrite paths to use the root-relative /assets path, which Nginx proxies to the backend
-    // This avoids CORS issues and works inside docker/dev environments consistently
     const processedHtml = (codeToRender.html || "")
       .replace(/src=["'](?:http:\/\/localhost:5000)?\/?assets\/([^"']+)["']/g, `src="/assets/$1"`)
       .replace(/url\(["']?(?:http:\/\/localhost:5000)?\/?assets\/([^"']+)["']?\)/g, `url("/assets/$1")`)
@@ -156,9 +175,10 @@ const PreviewFrame = forwardRef(({ code, isRestricted = false }, ref) => {
 
   // Debounced run code to prevent flickering during editing
   useEffect(() => {
+    if (isNodeJS) return; // Skip auto-preview for Node.js challenges
     const timer = setTimeout(() => updatePreview(code), 400);
     return () => clearTimeout(timer);
-  }, [code]);
+  }, [code, isNodeJS]);
 
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -218,60 +238,8 @@ const PreviewFrame = forwardRef(({ code, isRestricted = false }, ref) => {
         <iframe ref={iframeRef} sandbox="allow-scripts allow-same-origin allow-modals allow-forms" className="w-full h-full" title="Preview" />
       </div>
 
-      {/* Terminal UI */}
-      <div className={`transition-all duration-300 flex flex-col ${isConsoleOpen ? 'h-72' : 'h-10'} bg-[#1e1e1e] text-slate-300`}>
-        <div className="flex items-center justify-between px-3 py-2 cursor-pointer hover:bg-[#2d2d2d] border-t border-[#333] select-none" onClick={() => setIsConsoleOpen(!isConsoleOpen)}>
-          <div className="flex items-center gap-2">
-            <Terminal size={14} className={isConsoleOpen ? "text-blue-400" : "text-slate-500"} />
-            <span className="text-[11px] font-bold uppercase tracking-widest font-mono">Terminal Output</span>
-            {logs.length > 0 && !isConsoleOpen && <span className="px-1.5 py-0.5 bg-blue-600 text-white rounded-full text-[9px] font-black">{logs.length} items</span>}
-          </div>
-          <div className="flex items-center gap-4">
-            {isConsoleOpen && <button onClick={(e) => { e.stopPropagation(); setLogs([]); }} className="text-slate-500 hover:text-white transition-colors" title="Clear Terminal"><Trash2 size={13} /></button>}
-            {isConsoleOpen ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
-          </div>
-        </div>
-
-        {isConsoleOpen && (
-          <div className="flex-1 flex flex-col min-h-0 bg-[#0d0d0d]">
-            <div ref={scrollRef} className="flex-1 overflow-auto p-4 font-mono text-[13px] leading-relaxed scrollbar-thin scrollbar-thumb-slate-700">
-              {logs.length === 0 ? (
-                <div className="text-slate-600 italic opacity-50">Terminal ready...</div>
-              ) : (
-                <div className="space-y-1.5">
-                  {logs.map((log, i) => (
-                    <div key={i} className={`flex items-start gap-3 ${log.type === 'error' ? 'text-red-400' :
-                      log.type === 'warn' ? 'text-yellow-400' :
-                        log.type === 'input' ? 'text-blue-400 font-bold' :
-                          log.type === 'system' ? 'text-purple-400 italic' :
-                            'text-green-400'
-                      }`}>
-                      <span className="text-slate-700 min-w-[75px] text-[10px] mt-1 select-none">[{log.timestamp}]</span>
-                      <span className="whitespace-pre-wrap break-all">{log.content}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <form onSubmit={handleCommandSubmit} className="flex items-center gap-2 px-4 py-3 border-t border-[#333] bg-[#1a1a1a]">
-              <span className={`font-black font-mono text-base mt-0.5 ${isWaitingForInput ? 'text-orange-500 animate-pulse' : 'text-blue-500'}`}>
-                {isWaitingForInput ? '?' : '❯'}
-              </span>
-              <input
-                type="text"
-                value={commandInput}
-                onChange={(e) => setCommandInput(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder={isWaitingForInput ? "Waiting for input..." : "Type JS command..."}
-                className="flex-1 bg-transparent border-none outline-none text-white font-mono text-[13px] placeholder-slate-600"
-                autoFocus
-              />
-              {isWaitingForInput && <Loader2 size={14} className="text-orange-500 animate-spin" />}
-              <Command size={12} className="text-slate-500" />
-            </form>
-          </div>
-        )}
+      <div className="flex-1 relative overflow-auto">
+        <iframe ref={iframeRef} sandbox="allow-scripts allow-same-origin allow-modals allow-forms" className="w-full h-full" title="Preview" />
       </div>
     </div>
   );

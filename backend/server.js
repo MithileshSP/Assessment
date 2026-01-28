@@ -221,6 +221,8 @@ app.use("/api/level-access", levelAccessRouter);
 app.use("/api/attendance", attendanceRouter);
 app.use("/api/faculty", facultyRouter);
 app.use("/api/feedback", feedbackRouter);
+const executeRouter = require("./routes/execute");
+app.use("/api/execute", executeRouter);
 
 // Serve frontend static files (optional fallback if frontend container is unavailable)
 // In production with separate frontend container, this warning can be safely ignored

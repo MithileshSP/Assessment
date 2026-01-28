@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import SaaSLayout from '../components/SaaSLayout';
-import { getUserSubmissions } from '../services/api';
+import { getUserSubmissions, getUserProgress, completeLevel } from '../services/api';
 import {
     Trophy,
     CheckCircle,
@@ -10,7 +10,8 @@ import {
     ExternalLink,
     Search,
     Filter,
-    ArrowRight
+    ArrowRight,
+    Unlock
 } from 'lucide-react';
 
 const StudentResults = () => {
@@ -32,10 +33,61 @@ const StudentResults = () => {
             setLoading(true);
             const res = await getUserSubmissions(userId);
             setSubmissions(res.data);
+
+            // Auto-unlock check
+            checkAndUnlockNextLevels(res.data);
         } catch (error) {
             console.error("Failed to fetch results", error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const checkAndUnlockNextLevels = async (subs) => {
+        try {
+            // Get current progress
+            const progressRes = await getUserProgress(userId);
+            const progressData = progressRes.data || [];
+
+            // Group passed submissions by course
+            const passedByCourse = {};
+            subs.forEach(s => {
+                if (s.status === 'passed') {
+                    if (!passedByCourse[s.courseId] || s.level > passedByCourse[s.courseId]) {
+                        passedByCourse[s.courseId] = s.level;
+                    }
+                }
+            });
+
+            // Check against current progress/unlocked levels
+            for (const [courseId, maxPassed] of Object.entries(passedByCourse)) {
+                // Find course progress
+                // progressData structure from courses.js: { courseId, currentLevel, ... } (flattened from JOIN)
+                // Note: courses.js /progress/:userId returns ARRAY of progress rows
+                const courseProg = progressData.find(p => p.courseId === courseId);
+                const currentFromProg = courseProg ? (courseProg.currentLevel || 1) : 1;
+
+                // If we passed level X, level X+1 should be unlocked.
+                // So expected level is maxPassed + 1.
+                // If currentFromProg <= maxPassed, it means next level is LOCKED.
+                // Example: Passed Level 1. Expected Current: 2. Actual Current: 1. -> Unlock!
+                if (currentFromProg <= maxPassed) {
+                    console.log(`[Auto-Unlock] Course ${courseId}: Passed Key Level ${maxPassed}, but Current is ${currentFromProg}. Unlocking...`);
+                    // Call backend to ensure it's unlocked
+                    // Note: 'complete-level' endpoint expects the level that was COMPLETED (i.e., maxPassed).
+                    // It will then unlock maxPassed + 1.
+                    await completeLevel({
+                        userId,
+                        courseId,
+                        level: maxPassed
+                    });
+
+                    // Show silent notification or just log
+                    // Maybe refresh progress?
+                }
+            }
+        } catch (err) {
+            console.error("Auto-unlock check failed", err);
         }
     };
 
@@ -157,7 +209,7 @@ const StudentResults = () => {
                                         </React.Fragment>
                                     ))
                                 )}
-                                
+
                             </tbody>
                         </table>
                     </div>

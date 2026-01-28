@@ -102,10 +102,10 @@ router.post('/', async (req, res) => {
           // UPDATE existing draft
           await query(
             `UPDATE submissions SET 
-              html_code = ?, css_code = ?, js_code = ?, 
+              html_code = ?, css_code = ?, js_code = ?, additional_files = ?,
               submitted_at = CURRENT_TIMESTAMP 
             WHERE id = ?`,
-            [code?.html || '', code?.css || '', code?.js || '', existingDraft[0].id]
+            [code?.html || '', code?.css || '', code?.js || '', JSON.stringify(code?.additionalFiles || {}), existingDraft[0].id]
           );
           return res.status(200).json({
             message: 'Draft saved',
@@ -117,10 +117,10 @@ router.post('/', async (req, res) => {
           const draftId = uuidv4();
           await query(
             `INSERT INTO submissions 
-              (id, challenge_id, user_id, candidate_name, html_code, css_code, js_code, status, course_id, level, submitted_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, 'saved', ?, ?, CURRENT_TIMESTAMP)`,
+              (id, challenge_id, user_id, candidate_name, html_code, css_code, js_code, status, course_id, level, submitted_at, additional_files)
+            VALUES (?, ?, ?, ?, ?, ?, ?, 'saved', ?, ?, CURRENT_TIMESTAMP, ?)`,
             [draftId, challengeId, userId || 'user-demo-student', studentName || 'Anonymous',
-              code?.html || '', code?.css || '', code?.js || '', courseId, level]
+              code?.html || '', code?.css || '', code?.js || '', courseId, level, JSON.stringify(code?.additionalFiles || {})]
           );
           return res.status(201).json({
             message: 'Draft created',
@@ -143,7 +143,8 @@ router.post('/', async (req, res) => {
       code: {
         html: code?.html || '',
         css: code?.css || '',
-        js: code?.js || ''
+        js: code?.js || '',
+        additionalFiles: code?.additionalFiles || {}
       },
       status: SubmissionModel.STATUS.QUEUED,
       submittedAt: new Date().toISOString()
@@ -161,10 +162,10 @@ router.post('/', async (req, res) => {
         // Upgrade draft to pending
         await query(
           `UPDATE submissions SET 
-            html_code = ?, css_code = ?, js_code = ?, 
+            html_code = ?, css_code = ?, js_code = ?, additional_files = ?,
             status = 'pending', submitted_at = CURRENT_TIMESTAMP 
           WHERE id = ?`,
-          [submissionData.code.html, submissionData.code.css, submissionData.code.js, existingDraft[0].id]
+          [submissionData.code.html, submissionData.code.css, submissionData.code.js, JSON.stringify(submissionData.code.additionalFiles), existingDraft[0].id]
         );
         submissionId = existingDraft[0].id;
       } else {
@@ -269,10 +270,10 @@ router.post('/batch', async (req, res) => {
           // UPDATE existing draft
           await connection.execute(
             `UPDATE submissions SET 
-              html_code = ?, css_code = ?, js_code = ?, 
+              html_code = ?, css_code = ?, js_code = ?, additional_files = ?,
               submitted_at = CURRENT_TIMESTAMP 
             WHERE id = ?`,
-            [code.html || '', code.css || '', code.js || '', existingDraft[0].id]
+            [code.html || '', code.css || '', code.js || '', JSON.stringify(code.additionalFiles || {}), existingDraft[0].id]
           );
         } else {
           // INSERT new draft
@@ -286,10 +287,10 @@ router.post('/batch', async (req, res) => {
 
           await connection.execute(
             `INSERT INTO submissions 
-              (id, challenge_id, user_id, candidate_name, html_code, css_code, js_code, status, course_id, level, submitted_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, 'saved', ?, ?, CURRENT_TIMESTAMP)`,
+              (id, challenge_id, user_id, candidate_name, html_code, css_code, js_code, status, course_id, level, submitted_at, additional_files)
+            VALUES (?, ?, ?, ?, ?, ?, ?, 'saved', ?, ?, CURRENT_TIMESTAMP, ?)`,
             [draftId, challengeId, userId || 'user-demo-student', studentName,
-              code.html || '', code.css || '', code.js || '', courseId, level]
+              code.html || '', code.css || '', code.js || '', courseId, level, JSON.stringify(code.additionalFiles || {})]
           );
         }
       }

@@ -200,7 +200,7 @@ export default function CourseDetail() {
                                     ${completed ? 'bg-emerald-50 text-emerald-600' : isLocked ? 'bg-slate-100 text-slate-400' : 'bg-slate-900 text-white hover:bg-blue-600 shadow-xl shadow-slate-900/10 hover:shadow-blue-600/20'}
                                 `}
                   >
-                    {isLocked ? 'Locked' : completed ? 'Retake Exam' : 'Enter Level'}
+                    {isLocked ? 'Locked' : completed ? 'Retake Exam' : 'Enter Stage'}
                   </button>
                 </div>
               );
@@ -208,7 +208,31 @@ export default function CourseDetail() {
           </div>
         </div>
 
-        {/* Support Grid Removed */}
+        {/* Support Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mt-10 animate-fade-in-up delay-300">
+          <div className="bg-white p-8 rounded-[2rem] border border-slate-200 shadow-sm flex gap-6">
+            <div className="w-14 h-14 rounded-2xl bg-amber-50 flex items-center justify-center text-amber-500 flex-shrink-0">
+              <Star size={28} />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-slate-900 mb-2">Academic Honor Code</h3>
+              <p className="text-slate-500 text-sm leading-relaxed font-medium">
+                Ensure all code submitted is your own. Our automated evaluation engine scans for structural similarities across the platform.
+              </p>
+            </div>
+          </div>
+          <div className="bg-white p-8 rounded-[2rem] border border-slate-200 shadow-sm flex gap-6">
+            <div className="w-14 h-14 rounded-2xl bg-purple-50 flex items-center justify-center text-purple-500 flex-shrink-0">
+              <Award size={28} />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-slate-900 mb-2">Certification Path</h3>
+              <p className="text-slate-500 text-sm leading-relaxed font-medium">
+                Upon successful manual evaluation of the final stage, you will be eligible for the **Mastery Certificate** in {course.title}.
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
     </SaaSLayout>
   );

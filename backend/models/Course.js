@@ -119,8 +119,8 @@ class CourseModel {
 
     try {
       await query(
-        `INSERT INTO courses (id, title, description, thumbnail, icon, color, total_levels, estimated_time, difficulty, tags, is_locked, is_hidden, restrictions, level_settings, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO courses (id, title, description, thumbnail, icon, color, total_levels, estimated_time, difficulty, tags, is_locked, is_hidden, restrictions, level_settings, passing_threshold, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           id,
           courseData.title,
@@ -141,6 +141,12 @@ class CourseModel {
         ]
       );
     } catch (error) {
+      // Re-throw duplicate key errors - don't silently fall back
+      if (error.code === 'ER_DUP_ENTRY' || error.errno === 1062) {
+        console.error('Duplicate course ID:', id);
+        throw new Error(`Course with ID "${id}" already exists.`);
+      }
+
       console.warn('Database create failed, falling back to JSON:', error.message);
       const courses = await this.loadFromJSON();
       const newCourse = {

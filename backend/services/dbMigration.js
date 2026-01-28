@@ -57,6 +57,8 @@ async function applyMigrations() {
         expected_screenshot_data MEDIUMBLOB,
         course_id VARCHAR(100),
         level INT,
+        challenge_type ENUM('web', 'nodejs') DEFAULT 'web',
+        expected_output TEXT,
         assets JSON,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -94,6 +96,7 @@ async function applyMigrations() {
         admin_override_reason TEXT,
         course_id VARCHAR(100),
         level INT,
+        additional_files JSON,
         INDEX idx_challenge (challenge_id),
         INDEX idx_user (user_id),
         INDEX idx_status (status),
@@ -379,6 +382,7 @@ async function applyMigrations() {
     await addColumn('ALTER TABLE submissions ADD COLUMN diff_screenshot VARCHAR(500) AFTER user_screenshot');
     await addColumn("ALTER TABLE submissions ADD COLUMN admin_override_status ENUM('none', 'passed', 'failed') DEFAULT 'none'");
     await addColumn('ALTER TABLE submissions ADD COLUMN admin_override_reason TEXT');
+    await addColumn('ALTER TABLE submissions ADD COLUMN additional_files JSON AFTER level');
 
     // BLOB Columns for stability (if they don't exist in existing DB)
     await addColumn('ALTER TABLE submissions ADD COLUMN user_screenshot_data MEDIUMBLOB');
@@ -386,6 +390,8 @@ async function applyMigrations() {
     await addColumn('ALTER TABLE submissions ADD COLUMN diff_screenshot_data MEDIUMBLOB');
     await addColumn('ALTER TABLE assets ADD COLUMN file_data LONGBLOB');
     await addColumn('ALTER TABLE challenges ADD COLUMN expected_screenshot_data MEDIUMBLOB');
+    await addColumn("ALTER TABLE challenges ADD COLUMN challenge_type ENUM('web', 'nodejs') DEFAULT 'web'");
+    await addColumn("ALTER TABLE challenges ADD COLUMN expected_output TEXT");
 
     // Performance Indexes for Scalability
     await addColumn('ALTER TABLE submissions ADD INDEX idx_user_challenge_status (user_id, challenge_id, status)');
