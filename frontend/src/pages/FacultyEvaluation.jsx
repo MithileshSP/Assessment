@@ -157,14 +157,14 @@ const FacultyEvaluation = () => {
                         ? 'bg-emerald-50 text-emerald-600 border-emerald-100 shadow-sm shadow-emerald-500/10'
                         : 'bg-rose-50 text-rose-600 border-rose-100 shadow-sm shadow-rose-500/10'
                         }`}>
-                        {totalScore >= 80 ? 'APPROVED' : 'REJECTED'}
+                        {totalScore >= 80 ? 'PASSED' : 'FAILED'}
                     </div>
                 </div>
             </header>
 
             <div className={`flex-1 flex overflow-hidden ${isFullScreen ? 'fixed inset-0 z-50 bg-[#f8fafc]' : ''}`}>
-                {/* Left Panel: Telemetry (18%) */}
-                <div className={`${isFullScreen ? 'hidden' : 'w-[18%]'} bg-white border-r border-slate-200/60 overflow-y-auto p-6 scrollbar-hide`}>
+                {/* Left Panel: Telemetry (15%) */}
+                <div className={`${isFullScreen ? 'hidden' : 'w-[15%]'} bg-white border-r border-slate-200/60 overflow-y-auto p-6 scrollbar-hide`}>
                     <div className="mb-10">
                         <h3 className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400 mb-8 flex items-center gap-2.5">
                             <div className="p-1.5 rounded-lg bg-slate-100 text-slate-500"><Activity size={10} /></div>
@@ -262,8 +262,8 @@ const FacultyEvaluation = () => {
                     </div>
                 </div>
 
-                {/* Middle Panel: Workspace (55%) */}
-                <div className={`${isFullScreen ? 'w-full' : 'w-[55%]'} bg-[#f1f5f9] flex flex-col relative overflow-hidden`}>
+                {/* Middle Panel: Workspace (65%) */}
+                <div className={`${isFullScreen ? 'w-full' : 'w-[65%]'} bg-white flex flex-col relative overflow-hidden`}>
                     <div className="flex bg-white border-b border-slate-200/80 items-center justify-between pr-4 sticky top-0 z-20 shadow-sm overflow-hidden h-14">
                         <div className="flex items-center overflow-x-auto scrollbar-hide h-full flex-1">
                             {/* Group: Core Files */}
@@ -457,24 +457,21 @@ const FacultyEvaluation = () => {
                                 />
                             </div>
                         ) : activeTab.startsWith('file_') ? (
-                            <div className="p-10 flex-1 flex flex-col overflow-hidden bg-[#f1f5f9]">
-                                <div className="flex items-center justify-between mb-6">
+                            <div className="flex-1 flex flex-col overflow-hidden bg-white">
+                                <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/30">
                                     <div className="flex items-center gap-4">
-                                        <div className="w-10 h-10 rounded-2xl bg-white flex items-center justify-center shadow-sm border border-slate-200">
-                                            <FileCode size={18} className="text-indigo-600" />
+                                        <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center shadow-sm border border-slate-200">
+                                            <FileCode size={14} className="text-indigo-600" />
                                         </div>
-                                        <div>
-                                            <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-900 leading-none">
-                                                {activeTab.replace('file_', '')}
-                                            </h4>
-                                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">Version: SOURCE_V1</p>
-                                        </div>
+                                        <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-900 leading-none">
+                                            {activeTab.replace('file_', '')}
+                                        </h4>
                                     </div>
-                                    <div className="px-4 py-1.5 rounded-full bg-indigo-600 text-white text-[9px] font-black uppercase tracking-widest shadow-lg shadow-indigo-500/20">
-                                        CANDIDATE_FILE
+                                    <div className="px-3 py-1 rounded-full bg-indigo-600 text-white text-[9px] font-black uppercase tracking-widest shadow-md shadow-indigo-500/10">
+                                        SOURCE
                                     </div>
                                 </div>
-                                <div className="flex-1 min-h-0 rounded-[2.5rem] overflow-hidden border border-slate-200 shadow-2xl shadow-slate-200/50 bg-white p-2">
+                                <div className="flex-1 min-h-0">
                                     <ReadOnlyCodeBlock
                                         code={(() => {
                                             const files = typeof submission.additional_files === 'string'
@@ -574,24 +571,21 @@ const FacultyEvaluation = () => {
                                 />
                             </div>
                         ) : (
-                            <div className="p-10 flex-1 flex flex-col overflow-hidden bg-[#f1f5f9]">
-                                <div className="flex items-center justify-between mb-8">
+                            <div className="flex-1 flex flex-col overflow-hidden bg-white">
+                                <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/30">
                                     <div className="flex items-center gap-4">
-                                        <div className="w-10 h-10 rounded-2xl bg-white flex items-center justify-center shadow-sm border border-slate-200">
-                                            <Code size={18} className="text-blue-600" />
+                                        <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center shadow-sm border border-slate-200">
+                                            <Code size={14} className="text-blue-600" />
                                         </div>
-                                        <div>
-                                            <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-900 leading-none">
-                                                {activeTab === 'html' ? 'HTML Structure' : activeTab === 'css' ? 'Styling Matrix' : 'Business Logic'}
-                                            </h4>
-                                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">Version: Candidate 1.0</p>
-                                        </div>
+                                        <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-900 leading-none">
+                                            {activeTab === 'html' ? 'HTML' : activeTab === 'css' ? 'CSS' : 'Javascript'}
+                                        </h4>
                                     </div>
-                                    <div className="px-4 py-1.5 rounded-full bg-blue-600 text-white text-[9px] font-black uppercase tracking-widest shadow-lg shadow-blue-500/20">
-                                        CANDIDATE_SOURCE_V1
+                                    <div className="px-3 py-1 rounded-full bg-blue-600 text-white text-[9px] font-black uppercase tracking-widest shadow-md shadow-blue-500/10">
+                                        SOURCE
                                     </div>
                                 </div>
-                                <div className="flex-1 min-h-0 rounded-[2.5rem] overflow-hidden border border-slate-200 shadow-2xl shadow-slate-200/50 bg-white p-2">
+                                <div className="flex-1 min-h-0">
                                     <ReadOnlyCodeBlock
                                         code={activeTab === 'html' ? submission.html_code : activeTab === 'css' ? submission.css_code : submission.js_code}
                                         language={activeTab}
@@ -603,40 +597,32 @@ const FacultyEvaluation = () => {
                     </div>
                 </div>
 
-                {/* Right Panel: Scoring Intelligence (27%) */}
-                <div className={`${isFullScreen ? 'hidden' : 'w-[27%]'} bg-white border-l border-slate-200/60 overflow-y-auto p-8 scrollbar-hide`}>
+                {/* Right Panel: Scoring (20%) */}
+                <div className={`${isFullScreen ? 'hidden' : 'w-[20%]'} bg-white border-l border-slate-200/60 overflow-y-auto p-6 scrollbar-hide`}>
                     <div className="mb-12">
                         <div className="flex items-center gap-3 mb-2">
                             <h3 className="font-black text-2xl text-slate-900 tracking-tight">Rubrix</h3>
-                            <div className="px-2 py-0.5 rounded-md bg-slate-100 border border-slate-200 text-[8px] font-black text-slate-400 uppercase tracking-widest">v2.4</div>
                         </div>
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] leading-relaxed">Evaluation intelligence engine</p>
                     </div>
 
                     <div className="space-y-6">
                         {/* Scoring Cards: Lux Style */}
                         {[
-                            { id: 'codeQuality', label: 'Code Architecture', sub: 'Naming, efficiency, structure', max: 40 },
-                            { id: 'requirements', label: 'Feature Integrity', sub: 'Requirement checklist coverage', max: 25 },
-                            { id: 'expectedOutput', label: 'Render Precision', sub: 'Pixel & output matching', max: 35 }
+                            { id: 'codeQuality', label: 'Code Quality (/40)', max: 40 },
+                            { id: 'requirements', label: 'Key Requirements (/25)', max: 25 },
+                            { id: 'expectedOutput', label: 'Output (/35)', max: 35 }
                         ].map(pod => (
-                            <div key={pod.id} className="p-6 rounded-[2rem] bg-slate-50 border border-slate-100 relative group transition-all hover:bg-white hover:shadow-xl hover:shadow-slate-200/40 hover:-translate-y-1">
-                                <div className="flex justify-between items-start mb-5">
-                                    <div>
-                                        <label className="text-[10px] font-black text-slate-900 uppercase tracking-[0.1em]">{pod.label}</label>
-                                        <p className="text-[9px] text-slate-400 font-medium mt-1 leading-relaxed">{pod.sub}</p>
-                                    </div>
+                            <div key={pod.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-100 relative group transition-all hover:bg-white hover:shadow-lg hover:shadow-slate-200/40 hover:-translate-y-1">
+                                <div className="flex justify-between items-start mb-3">
+                                    <label className="text-[10px] font-black text-slate-900 uppercase tracking-[0.1em]">{pod.label}</label>
                                 </div>
                                 <div className="relative">
                                     <input
                                         type="number" min="0" max={pod.max}
                                         value={scores[pod.id]}
                                         onChange={e => setScores({ ...scores, [pod.id]: Math.min(pod.max, Math.max(0, parseInt(e.target.value) || 0)) })}
-                                        className="w-full h-12 px-5 bg-white border border-slate-200 rounded-2xl text-xl font-black text-blue-600 focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 outline-none transition-all placeholder-slate-300 shadow-sm"
+                                        className="w-full h-10 px-4 bg-white border border-slate-200 rounded-xl text-lg font-black text-blue-600 focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 outline-none transition-all placeholder-slate-300 shadow-sm"
                                     />
-                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 text-[9px] font-black text-slate-300 uppercase tracking-widest pointer-events-none">
-                                        limit {pod.max}
-                                    </div>
                                 </div>
                             </div>
                         ))}
@@ -651,7 +637,7 @@ const FacultyEvaluation = () => {
                                     ? 'bg-emerald-500 text-slate-900'
                                     : 'bg-rose-500 text-white'
                                     }`}>
-                                    {totalScore >= 80 ? 'APPROVED' : 'REJECTED'}
+                                    {totalScore >= 80 ? 'PASSED' : 'FAILED'}
                                 </div>
                             </div>
 
