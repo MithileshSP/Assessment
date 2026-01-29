@@ -48,6 +48,12 @@ services:
       - ./backend/assets:/var/www/portal-assets
     deploy:
       replicas: 1
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:7000/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     networks:
       - test-portal-network
 
@@ -55,6 +61,9 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        VITE_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+        VITE_API_URL: "/api"
     container_name: portal_frontend
     restart: unless-stopped
     ports:

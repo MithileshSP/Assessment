@@ -62,6 +62,8 @@ CREATE TABLE challenges (
     expected_css TEXT,
     expected_js TEXT,
     expected_screenshot_url VARCHAR(255),
+    challenge_type ENUM('web', 'nodejs') DEFAULT 'web',
+    expected_output TEXT,
     course_id VARCHAR(100),
     level INT,
     points INT DEFAULT 100,
@@ -164,6 +166,38 @@ CREATE TABLE level_access (
     INDEX idx_is_locked (is_locked)
 );
 
+CREATE TABLE user_assignments (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id VARCHAR(100) NOT NULL,
+    course_id VARCHAR(100) NOT NULL,
+    level INT NOT NULL,
+    challenge_id VARCHAR(100) NOT NULL,
+    assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    completed BOOLEAN DEFAULT FALSE,
+    completed_at TIMESTAMP NULL,
+    UNIQUE KEY unique_user_level (user_id, course_id, level),
+    INDEX idx_user_course_level (user_id, course_id, level),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE,
+    FOREIGN KEY (challenge_id) REFERENCES challenges(id) ON DELETE CASCADE
+);
+
+CREATE TABLE level_completions (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id VARCHAR(100) NOT NULL,
+    course_id VARCHAR(100) NOT NULL,
+    level INT NOT NULL,
+    total_score DECIMAL(5,2) DEFAULT 0,
+    passed BOOLEAN DEFAULT FALSE,
+    feedback TEXT,
+    question_results JSON,
+    completed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_user_course (user_id, course_id),
+    INDEX idx_completed_at (completed_at),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE
+);
+
 -- ==========================================
 -- 4. Submissions & Evaluations
 -- ==========================================
@@ -177,6 +211,7 @@ CREATE TABLE submissions (
     html_code TEXT,
     css_code TEXT,
     js_code TEXT,
+    additional_files JSON,
     status ENUM('pending', 'passed', 'failed', 'queued', 'evaluating', 'error') DEFAULT 'pending',
     submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     evaluated_at TIMESTAMP NULL,
