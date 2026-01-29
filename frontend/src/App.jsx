@@ -40,6 +40,7 @@ import AdminLevelReset from "./pages/AdminLevelReset";
 import RestrictionManagement from "./pages/RestrictionManagement";
 import AdminEvaluationTracker from "./pages/AdminEvaluationTracker";
 import AdminAssetManager from "./pages/AdminAssetManager";
+import QuestionEditor from "./pages/QuestionEditor";
 
 // Auth & Components
 import Login from "./pages/Login";
@@ -100,6 +101,8 @@ function App() {
           <Route path="/admin/submission/:submissionId" element={role === 'admin' ? <AdminSubmissionDetails /> : <Navigate to="/admin/login" />} />
           <Route path="/admin/level-management" element={role === 'admin' ? <LevelManagement /> : <Navigate to="/admin/login" />} />
           <Route path="/admin/course/:courseId/questions" element={(role === 'admin' || role === 'faculty') ? <QuestionBank /> : <Navigate to="/admin/login" />} />
+          <Route path="/admin/course/:courseId/question/add" element={(role === 'admin' || role === 'faculty') ? <QuestionEditor /> : <Navigate to="/admin/login" />} />
+          <Route path="/admin/course/:courseId/question/edit/:questionId" element={(role === 'admin' || role === 'faculty') ? <QuestionEditor /> : <Navigate to="/admin/login" />} />
           <Route path="/admin/reset-level" element={role === 'admin' ? <AdminLevelReset /> : <Navigate to="/admin/login" />} />
           <Route path="/admin/restrictions" element={role === 'admin' ? <RestrictionManagement /> : <Navigate to="/admin/login" />} />
           <Route path="/admin/evaluation-tracker" element={role === 'admin' ? <AdminEvaluationTracker /> : <Navigate to="/admin/login" />} />

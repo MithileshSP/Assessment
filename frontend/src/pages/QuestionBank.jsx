@@ -27,7 +27,6 @@ import {
 } from 'lucide-react';
 import { X } from 'lucide-react';
 import SaaSLayout from '../components/SaaSLayout';
-import QuestionEditModal from '../components/QuestionEditModal';
 import * as api from '../services/api';
 import { getUserRole } from '../utils/session';
 
@@ -41,10 +40,6 @@ const QuestionBank = () => {
     const [expandedLevels, setExpandedLevels] = useState({ 1: true });
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
-
-    // Modals / Overlays
-    const [showEditModal, setShowEditModal] = useState(false);
-    const [editingQuestion, setEditingQuestion] = useState(null);
 
 
     // Import Modal
@@ -96,8 +91,7 @@ const QuestionBank = () => {
     };
 
     const handleEdit = (question) => {
-        setEditingQuestion(question);
-        setShowEditModal(true);
+        navigate(`/admin/course/${courseId}/question/edit/${question.id}`);
     };
 
     const handleDelete = async (questionId) => {
@@ -151,20 +145,7 @@ const QuestionBank = () => {
         }
     };
 
-    const handleSaveQuestion = async (questionData) => {
-        try {
-            if (editingQuestion) {
-                await api.updateQuestion(editingQuestion.id, questionData);
-            } else {
-                await api.createQuestion(courseId, questionData);
-            }
-            setShowEditModal(false);
-            setEditingQuestion(null);
-            fetchData();
-        } catch (error) {
-            alert('Failed to save question');
-        }
-    };
+
 
     const totals = {
         questions: Object.values(questionsByLevel).flat().length,
@@ -362,7 +343,7 @@ const QuestionBank = () => {
 
                     <div className="flex items-center gap-3">
                         <button
-                            onClick={() => { setEditingQuestion(null); setShowEditModal(true); }}
+                            onClick={() => navigate(`/admin/course/${courseId}/question/add`)}
                             className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-2xl font-bold shadow-xl shadow-slate-200 hover:bg-black transition-all active:scale-95 text-sm"
                         >
                             <Plus size={18} />
@@ -656,17 +637,7 @@ const QuestionBank = () => {
                     document.body
                 )}
 
-                {showEditModal && (
-                    <QuestionEditModal
-                        question={editingQuestion}
-                        courseId={courseId}
-                        onSave={handleSaveQuestion}
-                        onClose={() => {
-                            setShowEditModal(false);
-                            setEditingQuestion(null);
-                        }}
-                    />
-                )}
+
             </div>
         </SaaSLayout>
     );

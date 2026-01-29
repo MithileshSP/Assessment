@@ -94,7 +94,15 @@ async function query(sql, params) {
     const [rows] = await pool.execute(sql, params);
     return rows;
   } catch (error) {
-    console.error("Database query error:", error);
+    // Suppress logs for common migration "already exists" errors
+    const isDuplicate = error.code === 'ER_DUP_FIELDNAME' ||
+      error.errno === 1060 ||
+      error.code === 'ER_DUP_KEYNAME' ||
+      error.errno === 1061;
+
+    if (!isDuplicate) {
+      console.error("Database query error:", error);
+    }
     throw error;
   }
 }

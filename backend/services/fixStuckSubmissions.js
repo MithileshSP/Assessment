@@ -3,7 +3,7 @@
  * This script updates any submissions with status 'pending' to 'queued'
  * so they can be picked up by the background evaluation worker.
  */
-const { query } = require('./database/connection');
+const { query } = require('../database/connection');
 
 async function fixStuckSubmissions() {
     console.log('🔄 Starting migration: Fix Stuck Submissions');
