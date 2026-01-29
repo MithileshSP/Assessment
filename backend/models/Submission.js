@@ -95,7 +95,7 @@ class SubmissionModel {
         submissionData.code?.html || '',
         submissionData.code?.css || '',
         submissionData.code?.js || '',
-        submissionData.status || 'pending',
+        submissionData.status || SubmissionModel.STATUS.QUEUED,
         submittedAt,
         JSON.stringify(submissionData.code?.additionalFiles || {})
       ]

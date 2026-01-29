@@ -163,9 +163,9 @@ router.post('/', async (req, res) => {
         await query(
           `UPDATE submissions SET 
             html_code = ?, css_code = ?, js_code = ?, additional_files = ?,
-            status = 'pending', submitted_at = CURRENT_TIMESTAMP 
+            status = ?, submitted_at = CURRENT_TIMESTAMP 
           WHERE id = ?`,
-          [submissionData.code.html, submissionData.code.css, submissionData.code.js, JSON.stringify(submissionData.code.additionalFiles), existingDraft[0].id]
+          [submissionData.code.html, submissionData.code.css, submissionData.code.js, JSON.stringify(submissionData.code.additionalFiles), SubmissionModel.STATUS.QUEUED, existingDraft[0].id]
         );
         submissionId = existingDraft[0].id;
       } else {
@@ -174,6 +174,7 @@ router.post('/', async (req, res) => {
           ...submissionData,
           courseId,
           level,
+          status: SubmissionModel.STATUS.QUEUED,
           candidateName: studentName || candidateName
         });
         submissionId = dbSubmission.id;

@@ -290,6 +290,14 @@ app.listen(PORT, async () => {
     // Apply DB migrations
     await applyMigrations();
     console.log("✅ Migrations completed successfully");
+
+    // Fix stuck submissions from previous sessions
+    try {
+      const fixStuckSubmissions = require("./services/fixStuckSubmissions");
+      await fixStuckSubmissions();
+    } catch (err) {
+      console.warn("⚠️ Stuck submission cleanup failed:", err.message);
+    }
   } catch (err) {
     console.error("❌ Migration failed:", err.message);
   }

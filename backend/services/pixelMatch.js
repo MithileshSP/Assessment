@@ -165,24 +165,36 @@ class PixelMatcher {
       // Set consistent viewport
       await page.setViewport({
         width: 1280,
-        height: 720,
+        height: 800, // Slightly larger base viewport
         deviceScaleFactor: 1
       });
 
-      // Set content and wait for rendering
+      // Set content and wait for basic rendering
       await page.setContent(htmlContent, {
-        waitUntil: 'domcontentloaded', // Faster than 'load'
-        timeout: 30000 // 30 second timeout (increased for Docker)
+        waitUntil: ['domcontentloaded', 'networkidle0'],
+        timeout: 30000
       });
 
-      // Wait a bit for any animations or dynamic content
-      await new Promise(r => setTimeout(r, 500));
+      // Wait for all images to actually load (the networkidle0 sometimes misses them if they are small)
+      await page.evaluate(async () => {
+        const selectors = Array.from(document.querySelectorAll('img'));
+        await Promise.all(selectors.map(img => {
+          if (img.complete) return;
+          return new Promise((resolve, reject) => {
+            img.onload = resolve;
+            img.onerror = resolve; // Continue even if image fails
+          });
+        }));
+      });
+
+      // Wait a bit more for any layout shifts or fonts
+      await new Promise(r => setTimeout(r, 1000));
 
       // Capture screenshot
       const screenshotPath = path.join(this.screenshotDir, `${filename}.png`);
       await page.screenshot({
         path: screenshotPath,
-        fullPage: false // Use viewport size for consistency
+        fullPage: true // CRITICAL: capture the entire page
       });
 
       return screenshotPath;
@@ -202,20 +214,18 @@ class PixelMatcher {
   async compareImages(candidatePath, expectedPath, submissionId) {
     try {
       // Read images
-      const candidateImg = PNG.sync.read(fs.readFileSync(candidatePath));
-      const expectedImg = PNG.sync.read(fs.readFileSync(expectedPath));
+      let candidateImg = PNG.sync.read(fs.readFileSync(candidatePath));
+      let expectedImg = PNG.sync.read(fs.readFileSync(expectedPath));
+
+      // 1. Equalize dimensions (pad shorter image)
+      const res = this.equalizeDimensions(candidateImg, expectedImg);
+      candidateImg = res.candidateImg;
+      expectedImg = res.expectedImg;
 
       const { width, height } = expectedImg;
+      const totalPixels = width * height;
 
-      // Ensure images are same size (resize candidate if needed)
-      let candidateData = candidateImg.data;
-      if (candidateImg.width !== width || candidateImg.height !== height) {
-        console.warn('Image size mismatch, using expected dimensions');
-        // In production, you'd resize the image properly
-        // For prototype, we'll proceed with size difference noted
-      }
-
-      // Create diff image
+      // 2. Create diff image
       const diff = new PNG({ width, height });
 
       // Perform pixel comparison
@@ -228,8 +238,7 @@ class PixelMatcher {
         {
           threshold: 0.1, // Sensitivity (0-1, lower = more strict)
           alpha: 0.1,
-          diffColor: [255, 0, 0], // Red for differences
-          diffColorAlt: [0, 255, 0] // Green for matches (optional)
+          diffColor: [255, 0, 0] // Red for differences
         }
       );
 
@@ -304,6 +313,45 @@ class PixelMatcher {
       console.error('Image comparison error:', error);
       throw error;
     }
+  }
+
+  /**
+   * Ensure both images have identical dimensions
+   * Pads smaller image with the background color of the larger image
+   */
+  equalizeDimensions(candidateImg, expectedImg) {
+    const width = Math.max(candidateImg.width, expectedImg.width);
+    const height = Math.max(candidateImg.height, expectedImg.height);
+
+    const pad = (img, targetWidth, targetHeight) => {
+      if (img.width === targetWidth && img.height === targetHeight) return img;
+
+      const newImg = new PNG({ width: targetWidth, height: targetHeight });
+
+      // Fill with background (default to top-left pixel or white)
+      const bgR = img.data[0] || 255;
+      const bgG = img.data[1] || 255;
+      const bgB = img.data[2] || 255;
+      const bgA = img.data[3] || 255;
+
+      for (let i = 0; i < newImg.data.length; i += 4) {
+        newImg.data[i] = bgR;
+        newImg.data[i + 1] = bgG;
+        newImg.data[i + 2] = bgB;
+        newImg.data[i + 3] = bgA;
+      }
+
+      // Copy old image into new centered or top-aligned
+      // Here we top-align
+      img.bitblt(newImg, 0, 0, img.width, img.height, 0, 0);
+
+      return newImg;
+    };
+
+    return {
+      candidateImg: pad(candidateImg, width, height),
+      expectedImg: pad(expectedImg, width, height)
+    };
   }
 }
 
