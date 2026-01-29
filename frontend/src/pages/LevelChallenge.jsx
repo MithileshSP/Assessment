@@ -88,12 +88,11 @@ export default function LevelChallenge() {
 
   const checkAttendance = async () => {
     // Admin bypass - skip attendance check entirely
+    // Admin bypass - set status but allow loading restrictions/session
     const userRole = localStorage.getItem('userRole');
     if (userRole === 'admin') {
       setAttendanceStatus('started');
-      setLoading(false);
-      startTest();
-      return;
+      // Continue to load restrictions and session for timer visibility
     }
 
     try {
@@ -182,7 +181,7 @@ export default function LevelChallenge() {
         setTestSessionId(sessionRes.data.id);
         if (sessionRes.data.started_at) setStartedAt(sessionRes.data.started_at);
 
-        if (status === 'approved') {
+        if (status === 'approved' || userRole === 'admin') {
           startTest();
         }
       }
@@ -1530,39 +1529,40 @@ export default function LevelChallenge() {
             </div>
 
             {/* Question Navigator with Timer */}
-            <div className="flex items-center gap-3">
-              {/* Small Timer - Show if timeRemaining is active regardless of restriction.timeLimit */}
+            <div className="flex items-center gap-6">
+              {/* Small Timer */}
               {timeRemaining !== null && (
                 <div
-                  className={`px-3 py-2 rounded border font-mono font-bold flex items-center gap-2 ${timeRemaining <= 300
-                    ? "bg-red-50 border-red-300 text-red-600"
-                    : "bg-blue-50 border-blue-300 text-blue-600"
+                  className={`px-5 py-2.5 rounded-2xl border font-display font-black text-sm flex items-center gap-3 shadow-sm transition-all duration-300 ${timeRemaining <= 300
+                    ? "bg-rose-50 border-rose-200 text-rose-600 animate-pulse"
+                    : "bg-slate-900 border-slate-800 text-white"
                     }`}
                 >
-                  <Clock size={16} /> {formatTime(timeRemaining)}
+                  <Clock size={18} className={timeRemaining <= 300 ? "text-rose-600" : "text-primary-400"} />
+                  <span className="tracking-widest">{formatTime(timeRemaining)}</span>
                 </div>
               )}
 
               {/* Auto-Save Status Indicator */}
-              <div className="flex items-center gap-2 px-3 py-2 bg-slate-50 border border-slate-200 rounded text-xs font-semibold">
+              <div className="flex items-center gap-3 px-5 py-2.5 bg-white border border-slate-200 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-sm">
                 {saveStatus === 'saving' && (
                   <>
-                    <RefreshCw size={14} className="animate-spin text-blue-500" />
-                    <span className="text-blue-500">Saving...</span>
+                    <RefreshCw size={14} className="animate-spin text-primary-600" />
+                    <span className="text-primary-600">Syncing...</span>
                   </>
                 )}
                 {saveStatus === 'saved' && (
                   <>
-                    <CheckCircle size={14} className="text-emerald-500" />
-                    <span className="text-emerald-600">
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                    <span className="text-slate-500">
                       Saved {lastSaveTimestamp ? lastSaveTimestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
                     </span>
                   </>
                 )}
                 {saveStatus === 'error' && (
                   <>
-                    <AlertTriangle size={14} className="text-red-500" />
-                    <span className="text-red-500">Save Failed</span>
+                    <AlertTriangle size={14} className="text-rose-500" />
+                    <span className="text-rose-500">Sync Failed</span>
                   </>
                 )}
               </div>
@@ -1659,7 +1659,7 @@ export default function LevelChallenge() {
         style={{ height: "calc(100vh - 180px)" }}
       >
         {/* Left Panel: Instructions & Code Editors */}
-        <div className="flex flex-col gap-4 overflow-auto">
+        <div className="flex flex-col gap-4 overflow-y-auto min-h-0 pr-2 custom-scrollbar">
           {/* Toggle Instructions Button */}
           <button
             onClick={() => setShowInstructions(!showInstructions)}
@@ -1688,14 +1688,22 @@ export default function LevelChallenge() {
 
           {/* Instructions */}
           {showInstructions && (
-            <div className="card">
-              <h2 className="text-lg font-bold mb-3">
-                {challenge.description || "Challenge Instructions"}
+            <div className="bg-white rounded-3xl border border-slate-200 p-8 mb-4 shadow-sm">
+
+              <h2 className="text-sm font-black text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-3">
+                <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]" />
+                Technical Protocol
               </h2>
 
-              <div className="text-gray-700 whitespace-pre-wrap mb-4">
-                {challenge.instructions || challenge.description}
+              <div className="mb-8 question-desc whitespace-pre-wrap">
+                {challenge.description}
               </div>
+
+              {challenge.instructions && challenge.instructions !== challenge.description && (
+                <div className="border-t border-slate-100 pt-8 supporting-content whitespace-pre-wrap">
+                  {challenge.instructions}
+                </div>
+              )}
 
               {/* Assets Section */}
               {challenge.assets &&

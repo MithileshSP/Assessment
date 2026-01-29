@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&family=Poppins:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,54 +6,63 @@
 
 @layer base {
   body {
-    @apply bg-[#f8fafc] text-slate-900 antialiased;
+    @apply bg-slate-50 text-slate-900 antialiased selection:bg-primary-100 selection:text-primary-900;
     font-family: 'Inter', sans-serif;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-display font-semibold tracking-tight;
   }
 }
 
 @layer components {
   .btn-primary {
-    @apply bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-6 rounded-xl transition-all duration-300 shadow-lg shadow-blue-600/20 active:scale-95;
+    @apply relative inline-flex items-center justify-center bg-primary-600 hover:bg-primary-700 text-white font-semibold py-2.5 px-6 rounded-2xl transition-all duration-300 shadow-lg shadow-primary-600/20 active:scale-[0.98] overflow-hidden;
   }
 
   .btn-secondary {
-    @apply bg-slate-600 hover:bg-slate-700 text-white font-bold py-2.5 px-6 rounded-xl transition-all duration-300 active:scale-95;
+    @apply relative inline-flex items-center justify-center bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-semibold py-2.5 px-6 rounded-2xl transition-all duration-300 active:scale-[0.98] shadow-sm;
   }
 
   .btn-success {
-    @apply bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 px-6 rounded-xl transition-all duration-300 shadow-lg shadow-emerald-600/20 active:scale-95;
+    @apply relative inline-flex items-center justify-center bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 px-6 rounded-2xl transition-all duration-300 shadow-lg shadow-emerald-600/20 active:scale-[0.98];
   }
 
   .card {
-    @apply bg-white rounded-3xl shadow-sm border border-slate-200 p-8 transition-all duration-500 hover:shadow-2xl hover:shadow-slate-200/60 hover:-translate-y-1;
+    @apply bg-white rounded-[2rem] shadow-premium border border-slate-200/60 p-8 transition-all duration-500 hover:shadow-premium-hover hover:border-primary-100;
   }
 
   .glass-card {
-    @apply bg-white/70 backdrop-blur-xl border border-white/20 shadow-xl;
+    @apply bg-white/80 backdrop-blur-2xl border border-white/40 shadow-premium rounded-[2rem];
   }
 
   .input {
-    @apply w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all duration-200 text-sm font-medium;
+    @apply w-full px-5 py-3.5 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500 outline-none transition-all duration-200 text-sm font-medium placeholder:text-slate-400;
   }
 
   .badge {
-    @apply inline-block px-3 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-lg border;
+    @apply inline-flex items-center px-3 py-1 text-[11px] font-bold uppercase tracking-wider rounded-full border shadow-sm;
   }
 
   .badge-easy {
-    @apply bg-green-100 text-green-800;
+    @apply bg-emerald-50 text-emerald-700 border-emerald-100;
   }
 
   .badge-medium {
-    @apply bg-yellow-100 text-yellow-800;
+    @apply bg-amber-50 text-amber-700 border-amber-100;
   }
 
   .badge-hard {
-    @apply bg-red-100 text-red-800;
+    @apply bg-rose-50 text-rose-700 border-rose-100;
   }
 
   .animate-fade-in-up {
-    animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    animation: fadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     opacity: 0;
   }
 
@@ -80,7 +89,7 @@
 
   @keyframes fadeInUp {
     from {
-      transform: translateY(20px);
+      transform: translateY(30px);
       opacity: 0;
     }
 
@@ -89,52 +98,42 @@
       opacity: 1;
     }
   }
-
-  @keyframes slideIn {
-    from {
-      transform: translateX(400px);
-      opacity: 0;
-    }
-
-    to {
-      transform: translateX(0);
-      opacity: 1;
-    }
-  }
 }
 
-/* Custom Scrollbar */
+/* Custom Scrollbar Refinement */
 .custom-scrollbar::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
+  @apply bg-transparent;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 10px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
+  @apply bg-slate-200/60 rounded-full hover:bg-slate-300/80 transition-colors;
 }
 
 .custom-scrollbar-slate::-webkit-scrollbar {
-  width: 6px;
+  width: 5px;
 }
 
 .custom-scrollbar-slate::-webkit-scrollbar-track {
-  background: #f1f5f9;
+  @apply bg-slate-50;
 }
 
-.custom-scrollbar-slate::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 10px;
+/* Question Typography Refinement */
+.question-desc {
+  font-family: 'Poppins', sans-serif;
+  font-size: 17px;
+  font-weight: 500;
+  line-height: 1.6;
+  @apply text-slate-900;
 }
 
-.custom-scrollbar-slate::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+.supporting-content {
+  font-family: 'Poppins', sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  @apply text-slate-600;
 }

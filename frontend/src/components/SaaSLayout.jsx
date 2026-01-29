@@ -47,25 +47,25 @@ const SaaSLayout = ({ children }) => {
 
     const theme = {
         admin: {
-            accent: 'from-indigo-600 to-violet-600',
+            accent: 'from-indigo-600 to-indigo-800',
             glow: 'shadow-indigo-500/30',
             text: 'text-indigo-500',
             active: 'bg-indigo-600/10 border-indigo-500/20',
             pulse: 'bg-indigo-500 shadow-[0_0_12px_#6366f1]'
         },
         faculty: {
-            accent: 'from-emerald-600 to-teal-600',
+            accent: 'from-emerald-600 to-emerald-800',
             glow: 'shadow-emerald-500/30',
             text: 'text-emerald-500',
             active: 'bg-emerald-600/10 border-emerald-500/20',
             pulse: 'bg-emerald-500 shadow-[0_0_12px_#10b981]'
         },
         student: {
-            accent: 'from-blue-600 to-sky-600',
-            glow: 'shadow-blue-500/30',
-            text: 'text-blue-500',
-            active: 'bg-blue-600/10 border-blue-500/20',
-            pulse: 'bg-blue-500 shadow-[0_0_12px_#3b82f6]'
+            accent: 'from-primary-600 to-primary-800',
+            glow: 'shadow-primary-500/30',
+            text: 'text-primary-500',
+            active: 'bg-primary-600/10 border-primary-500/20',
+            pulse: 'bg-primary-500 shadow-[0_0_12px_#0e8ce9]'
         }
     }[role] || {
         accent: 'from-slate-700 to-slate-900',
@@ -85,22 +85,22 @@ const SaaSLayout = ({ children }) => {
             { id: 'users', label: 'Users', icon: <Users size={20} />, path: '/admin/users' },
             { id: 'courses', label: 'Courses', icon: <BookOpen size={20} />, path: '/admin/courses' },
             { id: 'attendance', label: 'Attendance', icon: <Calendar size={20} />, path: '/admin/attendance' },
-            { id: 'faculty', label: 'Faculty Management', icon: <Briefcase size={20} />, path: '/admin/assignment' },
-            { id: 'results', label: 'Master Results', icon: <Trophy size={20} />, path: '/admin/results' },
-            { id: 'restrictions', label: 'Restriction Hub', icon: <Shield size={20} />, path: '/admin/restrictions' },
+            { id: 'faculty', label: 'Assignment', icon: <Briefcase size={20} />, path: '/admin/assignment' },
+            { id: 'results', label: 'Results', icon: <Trophy size={20} />, path: '/admin/results' },
+            { id: 'restrictions', label: 'Restrictions', icon: <Shield size={20} />, path: '/admin/restrictions' },
             { id: 'reset', label: 'Reset Level', icon: <RefreshCw size={20} />, path: '/admin/reset-level' },
-            { id: 'evaluation', label: 'Evaluation Monitor', icon: <Activity size={20} />, path: '/admin/evaluation-tracker' },
-            { id: 'assets', label: 'Media Assets', icon: <ImageIcon size={20} />, path: '/admin/assets' },
+            { id: 'tracker', label: 'Evaluation Tracker', icon: <Activity size={20} />, path: '/admin/evaluation-tracker' },
+            { id: 'assets', label: 'Assets', icon: <ImageIcon size={20} />, path: '/admin/assets' },
         ],
         faculty: [
-            { id: 'dashboard', label: 'Overview', icon: <Layout size={20} />, path: '/faculty/dashboard' },
-            { id: 'questions', label: 'Question Bank', icon: <BookOpen size={20} />, path: '/faculty/questions' },
-            { id: 'queue', label: 'Pending Reviews', icon: <FileText size={20} />, path: '/faculty/submissions' },
+            { id: 'dashboard', label: 'Dashboard', icon: <Layout size={20} />, path: '/faculty/dashboard' },
+            { id: 'questions', label: 'Questions', icon: <BookOpen size={20} />, path: '/faculty/questions' },
+            { id: 'queue', label: 'Submissions', icon: <FileText size={20} />, path: '/faculty/submissions' },
             { id: 'history', label: 'History', icon: <BarChart2 size={20} />, path: '/faculty/history' },
         ],
         student: [
-            { id: 'dashboard', label: 'My Courses', icon: <BookOpen size={20} />, path: '/' },
-            { id: 'results', label: 'My Results', icon: <Trophy size={20} />, path: '/results' },
+            { id: 'dashboard', label: 'Dashboard', icon: <BookOpen size={20} />, path: '/' },
+            { id: 'results', label: 'Results', icon: <Trophy size={20} />, path: '/results' },
             { id: 'profile', label: 'Profile', icon: <User size={20} />, path: '/profile' },
         ]
     };
@@ -112,7 +112,7 @@ const SaaSLayout = ({ children }) => {
             {/* Mobile Sidebar Overlay */}
             {isSidebarOpen && (
                 <div
-                    className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-40 md:hidden transition-opacity duration-300"
+                    className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40 md:hidden"
                     onClick={() => setSidebarOpen(false)}
                 />
             )}
@@ -125,77 +125,66 @@ const SaaSLayout = ({ children }) => {
                     fixed inset-y-0 left-0 z-50 
                     md:relative md:z-30 md:flex
                     bg-[#0f172a] text-slate-300 
-                    transition-all duration-500 
+                    transition-all duration-300
                     flex flex-col 
-                    shadow-[4px_0_24px_rgba(0,0,0,0.1)] 
-                    border-r border-white/5 overflow-hidden
                     ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
-                    ${isSidebarOpenEffectively ? 'w-64' : 'w-16'}
+                    ${isSidebarOpenEffectively ? 'w-64' : 'w-20'}
                 `}
             >
                 {/* Sidebar Header */}
-                <div className="h-20 flex items-center px-3 bg-[#0f172a] overflow-hidden">
+                <div className="h-16 flex items-center px-6 border-b border-slate-800">
                     <div
-                        className="flex items-center gap-4 group cursor-pointer transition-all duration-500"
+                        className="flex items-center gap-3 cursor-pointer"
                         onClick={() => {
                             if (role === 'admin') navigate('/admin/dashboard');
                             else if (role === 'faculty') navigate('/faculty/dashboard');
                             else navigate('/');
                         }}
                     >
-                        <div className={`w-10 h-10 flex-shrink-0 bg-gradient-to-tr ${theme.accent} rounded-2xl flex items-center justify-center text-white font-black shadow-xl ${theme.glow} group-hover:scale-110 transition-transform duration-300`}>
-                            A
+                        <div className={`w-8 h-8 flex-shrink-0 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold`}>
+                            P
                         </div>
-                        <div className={`flex flex-col transition-all duration-500 ${isSidebarOpenEffectively ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-10 pointer-events-none'}`}>
-                            <span className="font-black text-lg tracking-tight text-white leading-none uppercase whitespace-nowrap">Portal</span>
-                            <span className={`text-[10px] font-black tracking-[0.2em] ${theme.text} mt-1 uppercase whitespace-nowrap`}>{role}</span>
+                        <div className={`transition-all duration-300 ${isSidebarOpenEffectively ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-10 pointer-events-none'}`}>
+                            <span className="font-bold text-lg text-white">Portal</span>
                         </div>
                     </div>
                 </div>
 
                 {/* Sidebar Content */}
-                <nav className={`flex-1 py-8 px-3 space-y-2 overflow-y-auto hide-scrollbar transition-all duration-500`}>
+                <nav className="flex-1 py-6 px-3 space-y-1 overflow-y-auto custom-scrollbar">
                     {currentMenuItems.map((item) => {
                         const isActive = location.pathname === item.path || (item.path !== '/' && location.pathname.startsWith(item.path));
                         return (
                             <Link
                                 key={item.id}
                                 to={item.path}
-                                className={`flex items-center gap-4 py-3.5 rounded-2xl transition-all duration-300 group relative ${isActive
-                                    ? 'bg-blue-600/10 text-white border border-blue-500/20'
-                                    : 'hover:bg-white/5 hover:text-white border border-transparent'
+                                className={`flex items-center gap-4 py-3 px-3 rounded-xl transition-all duration-200 group relative ${isActive
+                                    ? 'bg-blue-600 text-white'
+                                    : 'text-slate-400 hover:bg-slate-800 hover:text-white'
                                     }`}
                             >
-                                <div className="w-10 flex-shrink-0 flex items-center justify-center">
-                                    <span className={`${isActive ? theme.text : 'text-slate-500 group-hover:text-blue-400'} transition-colors duration-300`}>
-                                        {item.icon}
-                                    </span>
+                                <div className="w-6 flex-shrink-0 flex items-center justify-center">
+                                    {isActive ? item.icon : React.cloneElement(item.icon, { size: 20 })}
                                 </div>
-                                <span className={`font-bold text-xs uppercase tracking-widest whitespace-nowrap transition-all duration-500 ${isSidebarOpenEffectively ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-10 pointer-events-none w-0'} ${isActive ? 'text-white' : 'text-slate-400'}`}>
+                                <span className={`text-sm font-medium whitespace-nowrap transition-all duration-300 ${isSidebarOpenEffectively ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-10 pointer-events-none w-0'}`}>
                                     {item.label}
                                 </span>
-                                {isActive && isSidebarOpenEffectively && (
-                                    <div className={`absolute right-4 w-1.5 h-1.5 rounded-full ${theme.pulse} animate-pulse`} />
-                                )}
-                                {isActive && !isSidebarOpenEffectively && (
-                                    <div className={`absolute left-0 w-1 h-8 ${theme.pulse} rounded-r-full`} />
-                                )}
                             </Link>
                         );
                     })}
                 </nav>
 
                 {/* Sidebar Footer */}
-                <div className="p-3 border-t border-white/5 bg-[#0f172a]/50">
+                <div className="p-4 border-t border-slate-800">
                     <button
                         onClick={handleLogout}
-                        className="flex items-center gap-4 py-4 rounded-2xl text-slate-500 hover:bg-rose-500/10 hover:text-rose-400 transition-all duration-300 font-bold text-xs uppercase tracking-widest group"
+                        className="w-full flex items-center gap-4 py-3 px-3 rounded-xl text-slate-400 hover:bg-rose-500/10 hover:text-rose-500 transition-all duration-200 group"
                     >
-                        <div className="w-10 flex-shrink-0 flex items-center justify-center">
-                            <LogOut size={18} />
+                        <div className="w-6 flex-shrink-0 flex items-center justify-center">
+                            <LogOut size={20} />
                         </div>
-                        <span className={`whitespace-nowrap transition-all duration-500 ${isSidebarOpenEffectively ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-10 pointer-events-none w-0'}`}>
-                            Secure Logout
+                        <span className={`text-sm font-medium whitespace-nowrap transition-all duration-300 ${isSidebarOpenEffectively ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-10 pointer-events-none w-0'}`}>
+                            Logout
                         </span>
                     </button>
                 </div>
@@ -204,60 +193,58 @@ const SaaSLayout = ({ children }) => {
             {/* Main Content Area */}
             <div className={`flex-1 flex flex-col overflow-hidden relative transition-all duration-500`}>
                 {/* Top Navigation */}
-                <header className="h-20 bg-white/80 backdrop-blur-xl border-b border-slate-200/60 flex items-center justify-between px-4 md:px-10 z-20 sticky top-0">
-                    <div className="flex items-center gap-6">
+                <header className="h-24 bg-white/80 backdrop-blur-2xl border-b border-slate-200/60 flex items-center justify-between px-8 md:px-12 z-20 sticky top-0 shadow-sm">
+                    <div className="flex items-center gap-10">
                         <button
                             onClick={() => setSidebarOpen(!isSidebarOpen)}
-                            className="bg-slate-50 p-2.5 hover:bg-slate-100 rounded-2xl text-slate-500 transition-all active:scale-90 border border-slate-200/50"
+                            className="bg-slate-50 p-3.5 hover:bg-white rounded-2xl text-slate-600 transition-all active:scale-95 border border-slate-200/60 shadow-sm hover:shadow-md hover:border-primary-100 group"
                         >
-                            {isSidebarOpenEffectively ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
+                            {isSidebarOpenEffectively ? <ChevronLeft size={22} className="group-hover:-translate-x-0.5 transition-transform" /> : <ChevronRight size={22} className="group-hover:translate-x-0.5 transition-transform" />}
                         </button>
 
                         <div className="hidden lg:flex flex-col">
-                            <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                <span>{role}</span>
+                            <div className="flex items-center gap-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1.5">
+                                <span className="hover:text-primary-600 transition-colors cursor-default">{role} system</span>
                                 <ChevronRight size={10} className="text-slate-300" />
-                                <span className={theme.text}>{location.pathname.split('/').pop() || 'Home'}</span>
-                                <span className="mx-2 text-slate-300">/</span>
-                                <span className="text-slate-400 font-medium">Session Active</span>
+                                <span className={`${theme.text} font-black`}>{location.pathname.split('/').filter(Boolean).pop()?.replace('-', ' ') || 'Home'}</span>
                             </div>
-                            <h2 className="text-sm font-bold text-slate-800 mt-0.5 capitalize">
-                                {location.pathname.split('/').pop()?.replace('-', ' ') || 'Dashboard Overview'}
+                            <h2 className="text-xl font-display font-bold text-slate-900 tracking-tight capitalize">
+                                {location.pathname.split('/').filter(Boolean).pop()?.split('-').join(' ') || 'Main Dashboard'}
                             </h2>
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-8">
-                        <div className="hidden md:flex items-center gap-3 bg-slate-50 px-6 py-3 rounded-2xl border border-slate-200/50 group focus-within:ring-4 focus-within:ring-blue-500/5 focus-within:bg-white transition-all">
-                            <Search size={16} className="text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+                    <div className="flex items-center gap-10">
+                        <div className="hidden md:flex items-center gap-4 bg-slate-50 border border-slate-200/60 pl-6 pr-4 py-3.5 rounded-2xl shadow-inner group focus-within:ring-4 focus-within:ring-primary-500/10 focus-within:bg-white transition-all">
+                            <Search size={18} className="text-slate-400 group-focus-within:text-primary-600 transition-colors" />
                             <input
                                 type="text"
-                                placeholder="Search resources..."
-                                className="bg-transparent border-none focus:ring-0 text-sm w-48 text-slate-600 font-medium placeholder:text-slate-300"
+                                placeholder="Search repository..."
+                                className="bg-transparent border-none focus:ring-0 text-sm w-56 text-slate-600 font-semibold placeholder:text-slate-400"
                             />
                         </div>
 
-                        <div className="flex items-center gap-4">
-                            <button className="relative p-2.5 text-slate-400 hover:text-blue-600 transition-all hover:bg-blue-50 rounded-xl">
-                                <Bell size={20} />
-                                <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-blue-600 rounded-full border-2 border-white ring-2 ring-blue-100" />
+                        <div className="flex items-center gap-6">
+                            <button className="relative p-3.5 text-slate-400 hover:text-primary-600 transition-all hover:bg-primary-50 rounded-2xl border border-transparent hover:border-primary-100 group">
+                                <Bell size={22} className="group-hover:rotate-12 transition-transform" />
+                                <span className="absolute top-3.5 right-3.5 w-3 h-3 bg-primary-600 rounded-full border-[3px] border-white ring-4 ring-primary-100 animate-pulse" />
                             </button>
 
-                            <div className="h-10 w-[1px] bg-slate-200 hidden sm:block" />
+                            <div className="h-12 w-[1px] bg-slate-200 hidden sm:block" />
 
                             <div className="flex items-center gap-4 group cursor-pointer pl-2">
                                 <div className="text-right hidden sm:block">
-                                    <p className="text-sm font-black text-slate-900 leading-none group-hover:text-blue-600 transition-colors">
-                                        {userData.fullName || userData.username || 'System User'}
+                                    <p className="text-sm font-display font-bold text-slate-900 leading-none mb-2 group-hover:text-primary-600 transition-colors">
+                                        {userData.fullName || userData.username || 'Unidentified User'}
                                     </p>
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1.5 flex items-center justify-end gap-1.5">
-                                        <div className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" />
-                                        ONLINE
+                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center justify-end gap-2">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                                        System Online
                                     </p>
                                 </div>
-                                <div className="w-12 h-12 rounded-[1.25rem] bg-slate-900 flex items-center justify-center text-white font-black shadow-2xl shadow-slate-900/10 group-hover:rotate-6 transition-all duration-500 relative ring-4 ring-white">
+                                <div className="w-14 h-14 rounded-[1.5rem] bg-slate-950 flex items-center justify-center text-white font-display font-black text-xl shadow-2xl shadow-slate-950/20 group-hover:rotate-6 transition-all duration-500 relative ring-4 ring-white border border-white/10 group-hover:scale-105">
                                     {(userData.fullName || userData.username || 'U').charAt(0).toUpperCase()}
-                                    <div className={`absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-[3px] border-white shadow-sm`} />
+                                    <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-500 rounded-full border-4 border-white shadow-xl" />
                                 </div>
                             </div>
                         </div>
@@ -265,44 +252,12 @@ const SaaSLayout = ({ children }) => {
                 </header>
 
                 {/* Page Content */}
-                <main className="flex-1 overflow-y-auto p-4 md:p-10 lg:p-12 custom-scrollbar relative">
-                    <div className="w-full animate-fade-in-up">
+                <main className="flex-1 overflow-y-auto p-8 md:p-12 lg:p-16 custom-scrollbar relative">
+                    <div className="w-full max-w-[1920px] mx-auto">
                         {children}
                     </div>
                 </main>
             </div>
-
-            <style dangerouslySetInnerHTML={{
-                __html: `
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 6px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: transparent;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: #e2e8f0;
-          border-radius: 10px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: #cbd5e1;
-        }
-        .hide-scrollbar::-webkit-scrollbar {
-          width: 0px;
-          background: transparent;
-        }
-        .hide-scrollbar {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-        }
-        @keyframes fade-in-up {
-          from { opacity: 0; transform: translateY(20px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .animate-fade-in-up {
-          animation: fade-in-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-        }
-      ` }} />
         </div>
     );
 };

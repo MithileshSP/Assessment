@@ -105,46 +105,50 @@ export default function CourseDetail() {
     <SaaSLayout>
       <div className="space-y-10 text-left">
         {/* Course Hero Card */}
-        <div className="bg-[#1e293b] rounded-[2rem] overflow-hidden shadow-2xl shadow-slate-200 group relative">
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-600/20 to-transparent opacity-50" />
-          <div className="relative z-10 p-8 lg:p-12 flex flex-col lg:flex-row items-center gap-10">
-            <div
-              className="w-40 h-40 lg:w-56 lg:h-56 rounded-[2.5rem] bg-white p-1 shadow-2xl flex-shrink-0 group-hover:rotate-3 transition-transform duration-500"
-            >
-              <div className="w-full h-full rounded-[2.2rem] overflow-hidden relative bg-slate-100 flex items-center justify-center">
+        <div className="bg-slate-900 rounded-[2.5rem] overflow-hidden shadow-2xl relative group">
+          <div className="absolute inset-0 bg-gradient-to-br from-primary-600/30 via-primary-900/10 to-transparent opacity-60" />
+          <div className="absolute -top-24 -right-24 w-64 h-64 bg-primary-500/20 rounded-full blur-3xl animate-pulse" />
+
+          <div className="relative z-10 p-10 lg:p-16 flex flex-col lg:flex-row items-center gap-12">
+            <div className="w-48 h-48 lg:w-64 lg:h-64 rounded-[3rem] bg-white/10 backdrop-blur-md p-1.5 shadow-2xl flex-shrink-0 group-hover:rotate-2 transition-transform duration-700 border border-white/20">
+              <div className="w-full h-full rounded-[2.8rem] overflow-hidden relative bg-slate-800 flex items-center justify-center">
                 {course?.thumbnail ? (
-                  <img src={course.thumbnail} className="w-full h-full object-cover" />
+                  <img src={course.thumbnail} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" alt={course.title} />
                 ) : (
-                  <Code size={64} className="text-slate-300" />
+                  <Code size={80} className="text-slate-600" />
                 )}
               </div>
             </div>
 
             <div className="flex-1 text-center lg:text-left">
-              <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-500/20 text-blue-300 rounded-lg text-[10px] font-bold uppercase tracking-widest mb-6">
-                <Zap size={12} fill="currentColor" />
+              <div className="inline-flex items-center gap-2.5 px-4 py-1.5 bg-primary-500/20 text-primary-300 rounded-full text-[11px] font-black uppercase tracking-widest mb-8 backdrop-blur-md border border-primary-500/30">
+                <Zap size={14} fill="currentColor" />
                 {course.difficulty} Difficulty
               </div>
-              <h1 className="text-4xl lg:text-6xl font-bold text-white tracking-tight mb-4">{course.title}</h1>
-              <p className="text-slate-400 text-lg lg:text-xl max-w-2xl leading-relaxed mb-8">{course.description}</p>
+              <h1 className="text-5xl lg:text-7xl font-display font-bold text-white tracking-tight mb-6 leading-tight">
+                {course.title}
+              </h1>
+              <p className="text-slate-400 text-lg lg:text-xl max-w-2xl leading-relaxed mb-10 font-medium">
+                {course.description}
+              </p>
 
-              <div className="flex flex-wrap items-center justify-center lg:justify-start gap-8">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center text-blue-400">
-                    <Clock size={20} />
+              <div className="flex flex-wrap items-center justify-center lg:justify-start gap-10">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-primary-400 backdrop-blur-sm">
+                    <Clock size={22} />
                   </div>
                   <div className="text-left">
-                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Est. Duration</p>
-                    <p className="text-white font-bold">{course.estimatedTime}</p>
+                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-0.5">Est. Duration</p>
+                    <p className="text-white font-bold text-base">{course.estimatedTime}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center text-blue-400">
-                    <Clock size={20} />
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-primary-400 backdrop-blur-sm">
+                    <Layers size={22} />
                   </div>
                   <div className="text-left">
-                    <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Syllabus</p>
-                    <p className="text-white font-bold">{course.totalLevels} Stages</p>
+                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-0.5">Syllabus</p>
+                    <p className="text-white font-bold text-base">{course.totalLevels} Stages</p>
                   </div>
                 </div>
               </div>
@@ -154,12 +158,12 @@ export default function CourseDetail() {
 
         {/* Curriculum Section */}
         <div>
-          <div className="flex items-center gap-3 mb-8">
-            <div className="w-1 h-8 bg-blue-600 rounded-full" />
-            <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Active Curriculum</h2>
+          <div className="flex items-center gap-4 mb-10">
+            <div className="w-1.5 h-10 bg-primary-600 rounded-full shadow-[0_0_12px_rgba(14,140,233,0.4)]" />
+            <h2 className="text-3xl font-display font-bold text-slate-900 tracking-tight">Active Curriculum</h2>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-8 animate-fade-in-up delay-200">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 animate-fade-in-up">
             {levels.map((level) => {
               const status = getLevelStatus(level.level);
               const isLocked = status === 'locked';
@@ -171,33 +175,43 @@ export default function CourseDetail() {
                 <div
                   key={level.level}
                   onClick={() => canAccess && navigate(`/level/${courseId}/${level.level}`)}
-                  className={`bg-white rounded-3xl border border-slate-200 p-8 shadow-sm transition-all duration-300 relative group
-                                ${!canAccess ? 'opacity-60 grayscale cursor-not-allowed' : 'cursor-pointer hover:shadow-2xl hover:shadow-slate-200 hover:-translate-y-2'}
-                            `}
+                  className={`card relative group transition-all duration-500
+                                ${!canAccess ? 'opacity-70 grayscale-[0.5] cursor-not-allowed shadow-none border-slate-100 hover:shadow-none hover:-translate-y-0' : 'cursor-pointer hover:-translate-y-3'}
+                  `}
                 >
-                  <div className="flex justify-between items-start mb-6">
-                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center font-bold text-xl
-                                    ${completed ? 'bg-emerald-50 text-emerald-600' : isLocked ? 'bg-slate-50 text-slate-300' : 'bg-blue-50 text-blue-600'}
+                  <div className="flex justify-between items-start mb-8">
+                    <div className={`w-16 h-16 rounded-2xl flex items-center justify-center font-display font-bold text-2xl shadow-inner
+                                    ${completed ? 'bg-emerald-50 text-emerald-600' : isLocked ? 'bg-slate-50 text-slate-300' : 'bg-primary-50 text-primary-600'}
                                 `}>
                       {level.level}
                     </div>
-                    {isLocked ? <Lock size={20} className="text-slate-300" /> : completed ? <CheckCircle size={20} className="text-emerald-500" /> : <ChevronRight size={20} className="text-blue-500 group-hover:translate-x-1 transition-transform" />}
+                    <div className="w-10 h-10 rounded-full bg-white border border-slate-100 shadow-sm flex items-center justify-center group-hover:border-primary-200 transition-colors">
+                      {isLocked ? (
+                        <Lock size={18} className="text-slate-300" />
+                      ) : completed ? (
+                        <CheckCircle size={18} className="text-emerald-500" />
+                      ) : (
+                        <PlayCircle size={18} className="text-primary-500 group-hover:scale-110 transition-transform" />
+                      )}
+                    </div>
                   </div>
 
-                  <h3 className="text-xl font-bold text-slate-900 mb-2">Level {level.level}</h3>
-                  <p className="text-slate-500 text-sm mb-6 font-medium">
-                    {isLocked ? 'Complete previous Level to unlock this module.' : 'Practical assessment focusing on core concepts.'}
+                  <h3 className="text-2xl font-display font-bold text-slate-900 mb-3 group-hover:text-primary-600 transition-colors">Level {level.level}</h3>
+                  <p className="text-slate-500 text-sm mb-8 font-medium leading-relaxed">
+                    {isLocked ? 'Complete previous Level to unlock this module.' : 'Practical assessment focusing on core industrial concepts.'}
                   </p>
 
-                  <div className="flex items-center gap-2 mb-6 text-xs font-bold text-slate-400 uppercase tracking-widest">
-                    <FileText size={14} className="text-blue-500" />
+                  <div className="flex items-center gap-3 mb-8 text-[11px] font-black text-slate-400 uppercase tracking-[0.1em]">
+                    <div className="p-1.5 bg-primary-50 rounded-lg text-primary-500">
+                      <FileText size={14} />
+                    </div>
                     {level.totalQuestions} Assessments
                   </div>
 
                   <button
                     disabled={!canAccess}
-                    className={`w-full py-4 rounded-2xl font-bold text-sm transition-all
-                                    ${completed ? 'bg-emerald-50 text-emerald-600' : isLocked ? 'bg-slate-100 text-slate-400' : 'bg-slate-900 text-white hover:bg-blue-600 shadow-xl shadow-slate-900/10 hover:shadow-blue-600/20'}
+                    className={`w-full py-4 rounded-2xl font-bold text-sm transition-all duration-300
+                                    ${completed ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : isLocked ? 'bg-slate-50 text-slate-400 cursor-not-allowed' : 'btn-primary'}
                                 `}
                   >
                     {isLocked ? 'Locked' : completed ? 'Retake Exam' : 'Enter Stage'}

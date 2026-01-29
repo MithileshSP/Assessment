@@ -56,33 +56,31 @@ export default function CoursesHome() {
         {/* Welcome Header */}
         <div className="flex justify-between items-end">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Available Courses</h1>
-            <p className="text-slate-500 mt-1">Select a learning path to begin your assessment.</p>
+            <h1 className="text-4xl font-display font-bold text-slate-900 tracking-tight">Available Courses</h1>
+            <p className="text-slate-500 mt-2 text-lg">Select a learning path to begin your assessment.</p>
           </div>
-          <div className="hidden sm:flex items-center gap-3 bg-white px-4 py-2 rounded-xl border border-slate-200 shadow-sm">
-            <span className="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]" />
-            <span className="text-sm font-bold text-slate-700">{courses.length} Courses Active</span>
+          <div className="hidden sm:flex items-center gap-3 bg-white px-5 py-2.5 rounded-2xl border border-slate-200 shadow-premium">
+            <span className="w-2.5 h-2.5 rounded-full bg-primary-500 shadow-[0_0_12px_rgba(14,140,233,0.5)] animate-pulse" />
+            <span className="text-sm font-semibold text-slate-700">{courses.length} Courses Active</span>
           </div>
         </div>
 
         {/* Courses Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 3xl:grid-cols-6 gap-8 animate-fade-in-up delay-100">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 animate-fade-in-up">
           {courses.filter(c => !c.isHidden || isAdmin).map((course) => (
             <div
               key={course.id}
               onClick={() => navigate(`/course/${course.id}`)}
-              className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden cursor-pointer group hover:shadow-xl hover:shadow-slate-200 hover:-translate-y-1 transition-all duration-300 relative"
+              className="card !p-0 overflow-hidden cursor-pointer group relative"
             >
               {course.isHidden && (
-                <div className="absolute top-4 right-4 z-10 bg-amber-400 text-amber-900 text-[10px] font-bold px-2 py-1 rounded-lg flex items-center gap-1 shadow-lg">
+                <div className="absolute top-5 right-5 z-10 bg-amber-400 text-amber-950 text-[10px] font-black px-2.5 py-1.5 rounded-xl flex items-center gap-1.5 shadow-xl backdrop-blur-md">
                   <EyeOff size={12} /> PRIVATE
                 </div>
               )}
 
               {/* Course Thumbnail */}
-              <div
-                className="h-44 flex items-center justify-center relative overflow-hidden bg-slate-100"
-              >
+              <div className="h-52 flex items-center justify-center relative overflow-hidden bg-slate-100">
                 {course.thumbnail ? (
                   <img
                     src={course.thumbnail}
@@ -90,47 +88,50 @@ export default function CoursesHome() {
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
                   />
                 ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
-                    <Code size={48} className="text-white/40" />
+                  <div className="w-full h-full bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center">
+                    <Code size={48} className="text-white/30" />
                   </div>
                 )}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
               </div>
 
               {/* Course Info */}
-              <div className="p-6">
-                <div className="flex items-start justify-between mb-4">
-                  <h3 className="text-lg font-bold text-slate-800 group-hover:text-blue-600 transition-colors leading-tight">
-                    {course.title}
-                  </h3>
-                </div>
+              <div className="p-7">
+                <h3 className="text-xl font-display font-bold text-slate-900 group-hover:text-primary-600 transition-colors leading-tight mb-3">
+                  {course.title}
+                </h3>
 
-                <p className="text-slate-500 text-sm mb-6 line-clamp-2 leading-relaxed">
+                <p className="text-slate-500 text-sm mb-6 line-clamp-2 leading-relaxed font-medium">
                   {course.description}
                 </p>
 
                 {/* Course Meta */}
-                <div className="flex items-center justify-between text-[11px] font-bold tracking-wider uppercase mb-6">
-                  <div className="flex items-center gap-1.5 text-slate-400">
-                    <Layers size={14} className="text-blue-500" />
-                    <span>{course.totalLevels} Levels</span>
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-2 text-slate-400">
+                    <div className="p-1.5 bg-primary-50 rounded-lg text-primary-600">
+                      <Layers size={14} />
+                    </div>
+                    <span className="text-[11px] font-bold uppercase tracking-wider">{course.totalLevels} Levels</span>
                   </div>
-                  <span className={`px-2.5 py-1 rounded-lg ${getDifficultyColor(course.difficulty)}`}>
+                  <span className={`badge ${course.difficulty === 'Beginner' ? 'badge-easy' : course.difficulty === 'Intermediate' ? 'badge-medium' : 'badge-hard'}`}>
                     {course.difficulty}
                   </span>
                 </div>
 
-                <div className="flex items-center justify-between pt-4 border-t border-slate-50">
-                  <div className="flex -space-x-2">
+                <div className="flex items-center justify-between pt-5 border-t border-slate-100">
+                  <div className="flex -space-x-2.5">
                     {[1, 2, 3].map(i => (
-                      <div key={i} className={`w-6 h-6 rounded-full border-2 border-white bg-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-500`}>
+                      <div key={i} className="w-8 h-8 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-500 shadow-sm">
                         {i}
                       </div>
                     ))}
                   </div>
-                  <span className="text-blue-600 font-bold text-sm flex items-center gap-1 group-hover:gap-2 transition-all">
-                    Enter <ArrowRight size={14} />
-                  </span>
+                  <div className="flex items-center gap-2 text-primary-600 font-bold text-sm tracking-tight">
+                    <span>Enter Course</span>
+                    <div className="w-8 h-8 bg-primary-50 rounded-full flex items-center justify-center group-hover:bg-primary-600 group-hover:text-white transition-all">
+                      <ArrowRight size={14} />
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
