@@ -51,6 +51,9 @@ export default function LevelChallenge() {
   const previewRef = useRef();
   const [fullScreenView, setFullScreenView] = useState(null); // 'live' | 'expected' | null
   const [isLocked, setIsLocked] = useState(false); // Test locked due to violations
+  const lockedCodeRef = useRef(null); // Stores code state synchronously at lock time
+  const clockOffsetRef = useRef(0); // Server time offset: serverTime - clientTime
+  const sessionEndTimeRef = useRef(null); // Absolute end time from server
   const [lastSaveTime, setLastSaveTime] = useState(null); // Auto-save indicator
   const [isSaving, setIsSaving] = useState(false);
 
@@ -136,11 +139,21 @@ export default function LevelChallenge() {
       setAttendanceStatus(status);
 
       if (session) {
-        // Sync global timer (FIX 2: End time based)
+        // OFFSET-BASED TIMER: Calculate clock offset from server
+        const clientNow = Date.now();
+        const serverNow = session.server_time_ms || new Date(session.server_time).getTime();
         const endTime = new Date(session.end_time).getTime();
-        const now = Date.now();
-        const remaining = Math.max(0, Math.floor((endTime - now) / 1000));
+
+        // Calculate offset: positive = server ahead, negative = server behind
+        clockOffsetRef.current = serverNow - clientNow;
+        sessionEndTimeRef.current = endTime;
+
+        // Calculate remaining using offset-corrected time
+        const correctedNow = clientNow + clockOffsetRef.current;
+        const remaining = Math.max(0, Math.floor((endTime - correctedNow) / 1000));
         setTimeRemaining(remaining);
+
+        console.log('[Timer] Offset calculated:', clockOffsetRef.current, 'ms, Remaining:', remaining, 's');
 
         // Load session restrictions if needed
         setRestrictions(prev => ({ ...prev, timeLimit: session.duration_minutes }));
@@ -196,10 +209,18 @@ export default function LevelChallenge() {
             clearInterval(timer);
           } else if (pollData.status === 'approved') {
             setAttendanceStatus('approved');
-            // Sync timer on approval
+            // Sync timer on approval using offset-based approach
             if (pollData.session) {
+              const clientNow = Date.now();
+              const serverNow = pollData.session.server_time_ms || new Date(pollData.session.server_time).getTime();
               const endTime = new Date(pollData.session.end_time).getTime();
-              setTimeRemaining(Math.max(0, Math.floor((endTime - Date.now()) / 1000)));
+
+              clockOffsetRef.current = serverNow - clientNow;
+              sessionEndTimeRef.current = endTime;
+
+              const correctedNow = clientNow + clockOffsetRef.current;
+              const remaining = Math.max(0, Math.floor((endTime - correctedNow) / 1000));
+              setTimeRemaining(remaining);
             }
             clearInterval(timer);
           } else if (pollData.status === 'rejected') {
@@ -458,7 +479,7 @@ export default function LevelChallenge() {
     }
   };
 
-  // Sync Timer with Server Session (Robust Sync)
+  // Sync Timer with Server Session (Offset-Based Sync)
   useEffect(() => {
     let syncTimer;
 
@@ -468,13 +489,24 @@ export default function LevelChallenge() {
           const res = await api.get('/attendance/status', { params: { courseId, level } });
           const { session } = res.data;
           if (session) {
+            // OFFSET-BASED SYNC: Recalibrate offset from server
+            const clientNow = Date.now();
+            const serverNow = session.server_time_ms || new Date(session.server_time).getTime();
             const endTime = new Date(session.end_time).getTime();
-            const now = Date.now();
-            const remaining = Math.max(0, Math.floor((endTime - now) / 1000));
+
+            // Update offset (may have drifted)
+            clockOffsetRef.current = serverNow - clientNow;
+            sessionEndTimeRef.current = endTime;
+
+            // Calculate remaining using offset-corrected time
+            const correctedNow = clientNow + clockOffsetRef.current;
+            const remaining = Math.max(0, Math.floor((endTime - correctedNow) / 1000));
             setTimeRemaining(remaining);
 
+            console.log('[Sync] Offset recalibrated:', clockOffsetRef.current, 'ms, Remaining:', remaining, 's');
+
             // If session is expired on server, auto-finish
-            if (remaining <= 0) {
+            if (session.is_expired || remaining <= 0) {
               handleFinishLevel({ reason: "timeout" });
             }
           }
@@ -493,27 +525,29 @@ export default function LevelChallenge() {
     return () => clearInterval(syncTimer);
   }, [attendanceStatus, courseId, level]);
 
-  // Timer countdown
+  // Timer countdown (offset-based, recalculates each tick to prevent drift)
   useEffect(() => {
-    if (timeRemaining === null || timeRemaining <= 0) return;
+    if (sessionEndTimeRef.current === null) return;
 
     const interval = setInterval(() => {
-      setTimeRemaining((prev) => {
-        if (prev <= 1) {
-          clearInterval(interval);
-          // Auto-submission trigger
-          (async () => {
-            await forceSubmitCurrentCode();
-            handleFinishLevel({ reason: "timeout" });
-          })();
-          return 0;
-        }
-        return prev - 1;
-      });
+      // Recalculate remaining using offset-corrected time (drift-proof)
+      const correctedNow = Date.now() + clockOffsetRef.current;
+      const remaining = Math.max(0, Math.floor((sessionEndTimeRef.current - correctedNow) / 1000));
+
+      setTimeRemaining(remaining);
+
+      if (remaining <= 0) {
+        clearInterval(interval);
+        // Auto-submission trigger
+        (async () => {
+          await forceSubmitCurrentCode();
+          handleFinishLevel({ reason: "timeout" });
+        })();
+      }
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [timeRemaining]);
+  }, [sessionEndTimeRef.current]);
 
   // Format time as MM:SS
   const formatTime = (seconds) => {
@@ -559,8 +593,33 @@ export default function LevelChallenge() {
     setViolationMessage("Test Locked. Waiting for admin decision.");
     setShowViolationToast(true);
 
-    // Save current code before locking
-    await autoSaveAllQuestions();
+    // CRITICAL: Capture ALL code synchronously to a ref (React state is async)
+    const capturedAnswers = { ...userAnswers };
+    if (challenge) {
+      capturedAnswers[challenge.id] = {
+        html: code.html,
+        css: code.css,
+        js: code.js,
+        additionalFiles: code.additionalFiles
+      };
+    }
+    lockedCodeRef.current = capturedAnswers;
+    console.log('[Lock] Captured code to ref:', Object.keys(capturedAnswers));
+    console.log('[Lock] Current code state:', { html: code.html?.length || 0, css: code.css?.length || 0, js: code.js?.length || 0 });
+    console.log('[Lock] Captured code value:', capturedAnswers[challenge?.id]);
+
+    // Also try async state update for auto-save
+    if (challenge) {
+      setUserAnswers(prev => ({
+        ...prev,
+        [challenge.id]: { html: code.html, css: code.css, js: code.js, additionalFiles: code.additionalFiles }
+      }));
+      setDirtyQuestions(prev => new Set(prev).add(challenge.id));
+    }
+
+    // Save current code before locking (wait for state to update)
+    await new Promise(resolve => setTimeout(resolve, 100));
+    await autoSaveBatch();
 
     // Notify backend about lock
     try {
@@ -1145,17 +1204,32 @@ export default function LevelChallenge() {
 
     try {
       // Step 1: Submit final code for ALL questions (even if not previously submitted)
-      console.log('[FinishTest] Submitting final code for all questions...');
+      console.log('[FinishTest] Submitting final code for all questions...', { reason, assignedQuestions: assignedQuestions.length });
+
+      // For admin_forced, use the code captured at lock time (synchronous ref)
+      const codeSource = (reason === 'admin_forced' && lockedCodeRef.current)
+        ? lockedCodeRef.current
+        : userAnswers;
+      console.log('[FinishTest] Using code source:', reason === 'admin_forced' ? 'lockedCodeRef' : 'userAnswers');
+
       for (const question of assignedQuestions) {
-        const savedAnswer = userAnswers[question.id];
-        const currentCode = currentQuestionIndex === assignedQuestions.indexOf(question)
-          ? code
-          : {
+        const savedAnswer = codeSource[question.id];
+        const isCurrentQuestion = currentQuestionIndex === assignedQuestions.indexOf(question);
+
+        // Use current 'code' state for current question (only if not admin_forced), fallback to saved
+        let currentCode;
+        if (reason !== 'admin_forced' && isCurrentQuestion && (code.html || code.css || code.js)) {
+          currentCode = code;
+        } else {
+          currentCode = {
             html: savedAnswer?.html || '',
             css: savedAnswer?.css || '',
             js: savedAnswer?.js || '',
             additionalFiles: savedAnswer?.additionalFiles || {}
           };
+        }
+
+        console.log(`[FinishTest] Question ${question.id}: hasCode=${!!(currentCode.html || currentCode.css || currentCode.js)}`);
 
         // Only submit if there's any code
         if (currentCode.html || currentCode.css || currentCode.js) {
@@ -1199,6 +1273,17 @@ export default function LevelChallenge() {
       // Step 4: Redirect
       if (reason === "violations") {
         navigate(`/level-results/${courseId}/${level}`);
+        return;
+      }
+
+      // Admin forced submit should always go to feedback page
+      if (reason === "admin_forced") {
+        if (lastSubmissionId) {
+          navigate(`/student/feedback/${lastSubmissionId}`);
+        } else {
+          // No submission was made, just go back to course page with a message
+          navigate(`/course/${courseId}`, { state: { message: 'Your test was submitted by the administrator.' } });
+        }
         return;
       }
 

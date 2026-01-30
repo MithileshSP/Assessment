@@ -151,12 +151,31 @@ router.post('/lock', verifyToken, async (req, res) => {
     const userId = req.user.id;
     const testIdentifier = `${courseId}_${level}`;
 
+    console.log(`[Lock Request] User: ${userId}, Identifier: ${testIdentifier}, Reason: ${reason}`);
+
     try {
-        await query(`
-            UPDATE test_attendance 
-            SET locked = 1, locked_at = CURRENT_TIMESTAMP, locked_reason = ?, violation_count = ?
-            WHERE user_id = ? AND test_identifier = ?
-        `, [reason || 'Max violations reached', violationCount || 0, userId, testIdentifier]);
+        // 1. Check if record exists
+        const existing = await query(
+            "SELECT id FROM test_attendance WHERE user_id = ? AND test_identifier = ? ORDER BY requested_at DESC LIMIT 1",
+            [userId, testIdentifier]
+        );
+
+        if (existing.length > 0) {
+            // Update existing
+            await query(`
+                UPDATE test_attendance 
+                SET locked = 1, locked_at = CURRENT_TIMESTAMP, locked_reason = ?, violation_count = ?
+                WHERE id = ?
+            `, [reason || 'Max violations reached', violationCount || 0, existing[0].id]);
+            console.log(`[Lock] Updated existing record ${existing[0].id}`);
+        } else {
+            // Create new locked record (likely an admin or bypass user)
+            await query(`
+                INSERT INTO test_attendance (user_id, test_identifier, status, locked, locked_at, locked_reason, violation_count, approved_at)
+                VALUES (?, ?, 'approved', 1, CURRENT_TIMESTAMP, ?, ?, CURRENT_TIMESTAMP)
+            `, [userId, testIdentifier, reason || 'Max violations reached (Bypass)', violationCount || 0]);
+            console.log(`[Lock] Created new locked record for bypass user`);
+        }
 
         res.json({ success: true, message: 'Test locked. Waiting for admin decision.' });
     } catch (err) {

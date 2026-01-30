@@ -17,8 +17,10 @@ import {
     AlertCircle,
     CheckCircle,
     Lock,
-    Unlock
+    Unlock,
+    AlertOctagon
 } from 'lucide-react';
+import ToastContainer from '../components/Toast';
 
 const AdminAttendance = () => {
     const [requests, setRequests] = useState([]);
@@ -37,7 +39,35 @@ const AdminAttendance = () => {
     const [sessionDuration, setSessionDuration] = useState('60');
     const [bulkEmails, setBulkEmails] = useState('');
     const [timeRemaining, setTimeRemaining] = useState(0);
+    const [toasts, setToasts] = useState([]);
+    const notifiedLocks = React.useRef(new Set());
     const fileInputRef = React.useRef(null);
+
+    const addToast = (message, type = 'info') => {
+        const id = Date.now();
+        setToasts(prev => [...prev, { id, message, type }]);
+    };
+
+    const removeToast = (id) => {
+        setToasts(prev => prev.filter(t => t.id !== id));
+    };
+
+    const playAlertSound = () => {
+        try {
+            const context = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = context.createOscillator();
+            const gain = context.createGain();
+            oscillator.type = 'sine';
+            oscillator.frequency.setValueAtTime(440, context.currentTime); // A4
+            oscillator.connect(gain);
+            gain.connect(context.destination);
+            gain.gain.setValueAtTime(0.1, context.currentTime);
+            oscillator.start();
+            oscillator.stop(context.currentTime + 0.5);
+        } catch (e) {
+            console.warn("Audio alert failed", e);
+        }
+    };
 
     const fetchUsers = async () => {
         try {
@@ -80,6 +110,18 @@ const AdminAttendance = () => {
                 pending: res.data.length
             }));
 
+            // Detect new locks
+            res.data.forEach(req => {
+                if (req.locked && !notifiedLocks.current.has(req.id)) {
+                    notifiedLocks.current.add(req.id);
+                    addToast(`LOCK ALERT: ${req.full_name || req.username} has been locked out!`, 'error');
+                    playAlertSound();
+                } else if (!req.locked && notifiedLocks.current.has(req.id)) {
+                    // Remove from notified if unlocked so it can trigger again if re-locked
+                    notifiedLocks.current.delete(req.id);
+                }
+            });
+
             // Also fetch active session if course/level selected
             if (selectedCourse && selectedLevel) {
                 fetchActiveSession();
@@ -105,9 +147,17 @@ const AdminAttendance = () => {
         if (!activeSession) return;
 
         const updateTimer = () => {
-            const end = new Date(activeSession.end_time).getTime();
-            const left = Math.max(0, Math.floor((end - Date.now()) / 1000));
-            setTimeRemaining(left);
+            if (activeSession.remaining_seconds !== undefined) {
+                // The polling happens every 5s, which updates activeSession
+                // We use the last captured remaining_seconds and don't decrement here 
+                // to avoid confusing logic unless we also track the fetch time.
+                // For now, snapping to server time is what the user wants.
+                setTimeRemaining(activeSession.remaining_seconds);
+            } else {
+                const end = new Date(activeSession.end_time).getTime();
+                const left = Math.max(0, Math.floor((end - Date.now()) / 1000));
+                setTimeRemaining(left);
+            }
         };
 
         updateTimer();
@@ -286,6 +336,7 @@ const AdminAttendance = () => {
 
     return (
         <SaaSLayout>
+            <ToastContainer toasts={toasts} removeToast={removeToast} />
             <div className="min-h-screen bg-[#F8FAFC]/30 -m-4 md:-m-8 p-4 md:p-8 font-sans antialiased text-slate-900">
                 {/* --- Premium Header Section --- */}
                 <div className="max-w-7xl mx-auto mb-6 md:mb-10">

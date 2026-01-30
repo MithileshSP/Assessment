@@ -73,13 +73,16 @@ class GlobalSession {
     static _formatSession(session) {
         const start = new Date(session.start_time);
         const end = new Date(start.getTime() + session.duration_minutes * 60000);
+        const now = new Date();
 
         return {
             ...session,
             start_time: start.toISOString(),
             end_time: end.toISOString(),
+            server_time: now.toISOString(),  // For client offset calculation
+            server_time_ms: now.getTime(),   // Milliseconds for precise calculation
             duration_minutes: session.duration_minutes,
-            is_expired: new Date() > end
+            is_expired: now > end
         };
     }
 }
