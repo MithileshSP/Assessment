@@ -205,6 +205,10 @@ app.get("/health", async (req, res) => {
   res.status(200).json(health);
 });
 
+// Serve static assets (screenshots, reference images)
+app.use('/screenshots', express.static(path.join(__dirname, 'public/screenshots')));
+app.use('/reference_images', express.static(path.join(__dirname, 'public/reference_images')));
+
 // API Routes
 app.use("/api/courses", coursesRouter);
 app.use("/api/challenges", challengesRouter);

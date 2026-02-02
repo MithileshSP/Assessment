@@ -91,7 +91,7 @@ async function query(sql, params) {
     throw new Error('Using JSON file storage (USE_JSON=true)');
   }
   try {
-    const [rows] = await pool.execute(sql, params);
+    const [rows] = await pool.query(sql, params);
     return rows;
   } catch (error) {
     // Suppress logs for common migration "already exists" errors

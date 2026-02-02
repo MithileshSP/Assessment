@@ -35,7 +35,7 @@ export const getChallenges = () => api.get('/challenges');
 export const getChallenge = (id) => api.get(`/challenges/${id}`);
 
 // Courses (New course-based system)
-export const getCourses = () => api.get('/courses');
+export const getCourses = (params = {}) => api.get('/courses', { params });
 export const getCourse = (courseId) => api.get(`/courses/${courseId}`);
 export const getCourseLevels = (courseId) => api.get(`/courses/${courseId}/levels`);
 export const getLevelQuestions = (courseId, level, userId = 'default-user') =>

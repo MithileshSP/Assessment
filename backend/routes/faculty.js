@@ -182,26 +182,42 @@ router.post('/evaluate', verifyFaculty, async (req, res) => {
             [submissionId]
         );
 
-        // Level Unlock Logic: If passed, unlock next level in user_progress
+        // Level Unlock Logic: If passed, unlock next level in user_progress and record completion
         if (passed) {
             const sub = submission[0];
             const userId = sub.user_id;
             const courseId = sub.course_id;
             const level = sub.level;
 
-            // Update user_progress: set current_level to level + 1 if it's currently <= level
+            // 1. Record in level_completions for prerequisite checking
+            const levelCompletionQuery = `
+                INSERT INTO level_completions 
+                (user_id, course_id, level, total_score, passed, completed_at)
+                VALUES (?, ?, ?, ?, TRUE, NOW())
+                ON DUPLICATE KEY UPDATE 
+                total_score = VALUES(total_score),
+                completed_at = NOW()
+            `;
+            await db.query(levelCompletionQuery, [userId, courseId, level, totalScore]);
+
+            // 2. Update user_progress: set current_level to level + 1 if it's currently <= level
             await db.query(
                 `INSERT INTO user_progress (user_id, course_id, current_level, completed_levels) 
                  VALUES (?, ?, ?, ?) 
                  ON DUPLICATE KEY UPDATE 
                  current_level = GREATEST(current_level, ?),
-                 completed_levels = JSON_ARRAY_APPEND(IFNULL(completed_levels, JSON_ARRAY()), '$', ?),
+                 completed_levels = CASE 
+                    WHEN JSON_SEARCH(IFNULL(completed_levels, JSON_ARRAY()), 'one', ?) IS NULL 
+                    THEN JSON_ARRAY_APPEND(IFNULL(completed_levels, JSON_ARRAY()), '$', ?)
+                    ELSE completed_levels 
+                 END,
                  last_updated = NOW()`,
-                [userId, courseId, level + 1, JSON.stringify([level]), level + 1, level]
+                [
+                    userId, courseId, level + 1, JSON.stringify([level]),
+                    level + 1,
+                    level.toString(), level
+                ]
             );
-
-            // Clean up duplicates in completed_levels (simplified approach: just let JSON_ARRAY_APPEND grow or use a more complex query)
-            // For now, GREATEST handles current_level unlock correctly.
         }
 
         res.json({

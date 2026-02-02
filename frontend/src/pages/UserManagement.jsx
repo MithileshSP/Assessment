@@ -15,7 +15,10 @@ import {
   Activity,
   CheckCircle,
   AlertCircle,
-  X
+  X,
+  Hash,
+  Lock,
+  Unlock
 } from 'lucide-react';
 
 export default function UserManagement() {
@@ -34,6 +37,7 @@ export default function UserManagement() {
     password: '',
     email: '',
     fullName: '',
+    rollNo: '',
     role: 'student'
   });
 
@@ -58,7 +62,7 @@ export default function UserManagement() {
     try {
       await api.post('/users', formData);
       setShowAddModal(false);
-      setFormData({ username: '', password: '', email: '', fullName: '', role: 'student' });
+      setFormData({ username: '', password: '', email: '', fullName: '', rollNo: '', role: 'student' });
       loadUsers();
     } catch (error) {
       alert(error.response?.data?.error || 'Failed to add user');
@@ -70,7 +74,7 @@ export default function UserManagement() {
     try {
       await api.put(`/users/${editingUser.id}`, formData);
       setEditingUser(null);
-      setFormData({ username: '', password: '', email: '', fullName: '', role: 'student' });
+      setFormData({ username: '', password: '', email: '', fullName: '', rollNo: '', role: 'student' });
       loadUsers();
     } catch (error) {
       alert(error.response?.data?.error || 'Failed to update user');
@@ -84,6 +88,18 @@ export default function UserManagement() {
       loadUsers();
     } catch (error) {
       alert(error.response?.data?.error || 'Failed to delete user');
+    }
+  };
+
+  const handleToggleBlock = async (userId) => {
+    try {
+      const response = await api.patch(`/users/${userId}/toggle-block`);
+      // Update the local state to reflect the change
+      setUsers(users.map(u =>
+        u.id === userId ? { ...u, isBlocked: response.data.isBlocked } : u
+      ));
+    } catch (error) {
+      alert(error.response?.data?.error || 'Failed to toggle block status');
     }
   };
 
@@ -105,7 +121,8 @@ export default function UserManagement() {
   const filteredUsers = users.filter(u => {
     const matchesSearch = u.username?.toLowerCase().includes(search.toLowerCase()) ||
       u.fullName?.toLowerCase().includes(search.toLowerCase()) ||
-      u.email?.toLowerCase().includes(search.toLowerCase());
+      u.email?.toLowerCase().includes(search.toLowerCase()) ||
+      u.rollNo?.toLowerCase().includes(search.toLowerCase());
 
     const matchesRole = roleFilter === 'all' || u.role === roleFilter;
 
@@ -205,17 +222,18 @@ export default function UserManagement() {
               <thead className="bg-slate-50/50 text-slate-500 font-bold text-[11px] uppercase tracking-widest border-b border-slate-100">
                 <tr>
                   <th className="px-6 py-4">User</th>
-                  <th className="px-6 py-4">Contact</th>
+                  <th className="px-6 py-4">Roll No</th>
+                  <th className="px-6 py-4">Email</th>
                   <th className="px-6 py-4">Role</th>
-                  <th className="px-6 py-4">Joined</th>
+                  <th className="px-6 py-4">Status</th>
                   <th className="px-6 py-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
                 {loading ? (
-                  <tr><td colSpan="5" className="p-20 text-center text-slate-400">Loading user records...</td></tr>
+                  <tr><td colSpan="6" className="p-20 text-center text-slate-400">Loading user records...</td></tr>
                 ) : filteredUsers.length === 0 ? (
-                  <tr><td colSpan="5" className="p-20 text-center text-slate-400">No users match your criteria.</td></tr>
+                  <tr><td colSpan="6" className="p-20 text-center text-slate-400">No users match your criteria.</td></tr>
                 ) : (
                   filteredUsers.map((user) => (
                     <tr key={user.id} className="hover:bg-slate-50/50 transition-colors group">
@@ -230,6 +248,12 @@ export default function UserManagement() {
                           </div>
                         </div>
                       </td>
+                      <td className="px-6 py-4">
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 font-mono text-xs">
+                          <Hash size={12} className="text-slate-400" />
+                          {user.rollNo || '—'}
+                        </div>
+                      </td>
                       <td className="px-6 py-4 font-medium text-slate-500">
                         {user.email || '—'}
                       </td>
@@ -239,8 +263,24 @@ export default function UserManagement() {
                           {user.role}
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-slate-400 font-medium">
-                        {new Date(user.createdAt || Date.now()).toLocaleDateString()}
+                      <td className="px-6 py-4">
+                        <button
+                          onClick={() => handleToggleBlock(user.id)}
+                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${user.isBlocked
+                              ? 'bg-rose-500 focus:ring-rose-500'
+                              : 'bg-emerald-500 focus:ring-emerald-500'
+                            }`}
+                          title={user.isBlocked ? 'Click to unblock' : 'Click to block'}
+                        >
+                          <span
+                            className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-lg transition-transform ${user.isBlocked ? 'translate-x-1' : 'translate-x-6'
+                              }`}
+                          />
+                        </button>
+                        <span className={`ml-2 text-xs font-bold ${user.isBlocked ? 'text-rose-600' : 'text-emerald-600'}`}>
+                          {user.isBlocked ? <Lock size={12} className="inline" /> : <Unlock size={12} className="inline" />}
+                          {user.isBlocked ? ' Blocked' : ' Active'}
+                        </span>
                       </td>
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -252,6 +292,7 @@ export default function UserManagement() {
                                 password: '',
                                 email: user.email || '',
                                 fullName: user.fullName || '',
+                                rollNo: user.rollNo || '',
                                 role: user.role || 'student'
                               });
                             }}
@@ -328,6 +369,17 @@ export default function UserManagement() {
                   </div>
 
                   <div>
+                    <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2">Roll No</label>
+                    <input
+                      type="text"
+                      value={formData.rollNo}
+                      onChange={(e) => setFormData({ ...formData, rollNo: e.target.value })}
+                      placeholder="e.g., 7376242AD165"
+                      className="w-full px-4 py-3 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-500 text-sm font-medium font-mono"
+                    />
+                  </div>
+
+                  <div>
                     <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2">Email Address</label>
                     <input
                       type="email"
@@ -379,10 +431,10 @@ export default function UserManagement() {
                     <AlertCircle size={14} /> Format Guidelines
                   </h3>
                   <div className="bg-[#1e293b] p-4 rounded-xl text-blue-300 font-mono text-[10px] mb-4">
-                    username,password,fullName,email,role
+                    username,password,fullName,email,role,rollNo
                   </div>
                   <p className="text-xs text-slate-400 normal-case tracking-normal font-medium leading-relaxed">
-                    Ensure your CSV follows the header structure above. Role defaults to 'student' if omitted.
+                    Ensure your CSV follows the header structure above. Role defaults to 'student' if omitted. Roll No is optional.
                   </p>
                 </div>
 

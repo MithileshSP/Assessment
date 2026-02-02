@@ -313,6 +313,8 @@ router.get("/", verifyAdmin, async (req, res) => {
     const safeUsers = users.map(({ password, ...user }) => ({
       ...user,
       fullName: user.fullName || user.full_name,
+      rollNo: user.rollNo || user.roll_no,
+      isBlocked: user.isBlocked !== undefined ? user.isBlocked : (user.is_blocked !== undefined ? Boolean(user.is_blocked) : true),
       createdAt: user.createdAt || user.created_at,
       lastLogin: user.lastLogin || user.last_login,
     }));
@@ -326,10 +328,10 @@ router.get("/", verifyAdmin, async (req, res) => {
 
 // Download sample CSV template (No auth required for sample data)
 router.get("/sample-csv", (req, res) => {
-  const sampleCsv = `username,password,fullName,email,role
-student1,password123,John Doe,john@example.com,student
-student2,password456,Jane Smith,jane@example.com,student
-admin1,adminpass,Admin User,admin@example.com,admin`;
+  const sampleCsv = `username,password,fullName,email,role,rollNo
+student1,password123,John Doe,john@example.com,student,7376242AD165
+student2,password456,Jane Smith,jane@example.com,student,7376241CS452
+admin1,adminpass,Admin User,admin@example.com,admin,`;
 
   res.setHeader("Content-Type", "text/csv");
   res.setHeader("Content-Disposition", "attachment; filename=users-sample.csv");
@@ -380,9 +382,13 @@ router.get("/:userId", async (req, res) => {
     const { password, ...safeUser } = user;
     // Convert snake_case to camelCase
     safeUser.fullName = safeUser.full_name;
+    safeUser.rollNo = safeUser.roll_no;
+    safeUser.isBlocked = Boolean(safeUser.is_blocked);
     safeUser.createdAt = safeUser.created_at;
     safeUser.lastLogin = safeUser.last_login;
     delete safeUser.full_name;
+    delete safeUser.roll_no;
+    delete safeUser.is_blocked;
     delete safeUser.created_at;
     delete safeUser.last_login;
 
@@ -455,7 +461,9 @@ router.post(
               password: hashPassword(row.password),
               email: row.email || null,
               full_name: row.fullName || "",
+              roll_no: row.rollNo || null,
               role: row.role || "student",
+              is_blocked: (row.role || "student") === "student", // Students blocked by default
               created_at: new Date(),
               last_login: null,
             };
@@ -500,9 +508,35 @@ router.post(
   }
 );
 
+// Bulk unblock users by email (Admin only)
+router.post("/bulk-unblock", verifyAdmin, async (req, res) => {
+  const { emails } = req.body;
+
+  if (!emails || !Array.isArray(emails) || emails.length === 0) {
+    return res.status(400).json({ error: "Invalid emails provided" });
+  }
+
+  try {
+    // Perform bulk update in database
+    await query(
+      "UPDATE users SET is_blocked = 0 WHERE email IN (?)",
+      [emails]
+    );
+
+    res.json({
+      success: true,
+      message: `Successfully processed ${emails.length} emails`,
+      count: emails.length
+    });
+  } catch (error) {
+    console.error("Bulk unblock error:", error);
+    res.status(500).json({ error: "Failed to process bulk unblock" });
+  }
+});
+
 // Update user (Admin only)
 router.put("/:userId", verifyAdmin, async (req, res) => {
-  const { username, password, email, fullName, role } = req.body;
+  const { username, password, email, fullName, rollNo, role, isBlocked } = req.body;
 
   try {
     const user = await UserModel.findById(req.params.userId);
@@ -529,7 +563,9 @@ router.put("/:userId", verifyAdmin, async (req, res) => {
 
     if (email !== undefined) updates.email = email;
     if (fullName !== undefined) updates.full_name = fullName;
+    if (rollNo !== undefined) updates.roll_no = rollNo;
     if (role !== undefined) updates.role = role;
+    if (isBlocked !== undefined) updates.is_blocked = isBlocked;
 
     await UserModel.update(req.params.userId, updates);
     const updatedUser = await UserModel.findById(req.params.userId);
@@ -537,11 +573,15 @@ router.put("/:userId", verifyAdmin, async (req, res) => {
     const {
       password: _,
       full_name,
+      roll_no,
+      is_blocked,
       created_at,
       last_login,
       ...safeUser
     } = updatedUser;
     safeUser.fullName = full_name;
+    safeUser.rollNo = roll_no;
+    safeUser.isBlocked = Boolean(is_blocked);
     safeUser.createdAt = created_at;
     safeUser.lastLogin = last_login;
 
@@ -549,6 +589,29 @@ router.put("/:userId", verifyAdmin, async (req, res) => {
   } catch (error) {
     console.error("Error updating user:", error);
     res.status(500).json({ error: "Failed to update user" });
+  }
+});
+
+// Toggle user block status (Admin only)
+router.patch("/:userId/toggle-block", verifyAdmin, async (req, res) => {
+  try {
+    const user = await UserModel.findById(req.params.userId);
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const newBlockedStatus = !user.is_blocked;
+    await UserModel.update(req.params.userId, { is_blocked: newBlockedStatus });
+
+    res.json({
+      success: true,
+      isBlocked: newBlockedStatus,
+      message: newBlockedStatus ? "User has been blocked" : "User has been unblocked"
+    });
+  } catch (error) {
+    console.error("Error toggling user block status:", error);
+    res.status(500).json({ error: "Failed to toggle block status" });
   }
 });
 
@@ -707,7 +770,7 @@ router.post("/complete-level", async (req, res) => {
 
 // Create new user (Admin only)
 router.post("/", verifyAdmin, async (req, res) => {
-  const { username, password, email, fullName, role = "student" } = req.body;
+  const { username, password, email, fullName, rollNo, role = "student" } = req.body;
 
   if (!username || !password) {
     return res
@@ -728,6 +791,7 @@ router.post("/", verifyAdmin, async (req, res) => {
       password: hashPassword(password),
       email: email || "",
       full_name: fullName || "",
+      roll_no: rollNo || null,
       role: role || "student",
       created_at: new Date(),
       last_login: null,
@@ -742,12 +806,14 @@ router.post("/", verifyAdmin, async (req, res) => {
     const {
       password: _,
       full_name,
+      roll_no,
       created_at,
       last_login,
       ...safeUser
     } = createdUser;
 
     safeUser.fullName = full_name;
+    safeUser.rollNo = roll_no;
     safeUser.createdAt = created_at;
     safeUser.lastLogin = last_login;
 

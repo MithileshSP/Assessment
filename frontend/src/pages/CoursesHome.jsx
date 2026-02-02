@@ -9,7 +9,8 @@ import {
   ArrowRight,
   EyeOff,
   Code,
-  Layout
+  Layout,
+  Lock
 } from 'lucide-react';
 import {
   isAdminSessionActive,
@@ -32,7 +33,9 @@ export default function CoursesHome() {
 
   const loadCourses = async () => {
     try {
-      const response = await getCourses();
+      // Pass userId for prerequisite checking
+      const userId = localStorage.getItem('userId');
+      const response = await getCourses(userId ? { userId } : {});
       setCourses(response.data);
     } catch (error) {
       console.error('Failed to load courses:', error);
@@ -67,75 +70,90 @@ export default function CoursesHome() {
 
         {/* Courses Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 animate-fade-in-up">
-          {courses.filter(c => !c.isHidden || isAdmin).map((course) => (
-            <div
-              key={course.id}
-              onClick={() => navigate(`/course/${course.id}`)}
-              className="card !p-0 overflow-hidden cursor-pointer group relative"
-            >
-              {course.isHidden && (
-                <div className="absolute top-5 right-5 z-10 bg-amber-400 text-amber-950 text-[10px] font-black px-2.5 py-1.5 rounded-xl flex items-center gap-1.5 shadow-xl backdrop-blur-md">
-                  <EyeOff size={12} /> PRIVATE
-                </div>
-              )}
-
-              {/* Course Thumbnail */}
-              <div className="h-52 flex items-center justify-center relative overflow-hidden bg-slate-100">
-                {course.thumbnail ? (
-                  <img
-                    src={course.thumbnail}
-                    alt={course.title}
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                  />
-                ) : (
-                  <div className="w-full h-full bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center">
-                    <Code size={48} className="text-white/30" />
+          {courses
+            .filter(c => {
+              // Hide hidden courses from non-admins
+              if (c.isHidden && !isAdmin) return false;
+              // Hide courses with unmet prerequisites from non-admins
+              if (c.prerequisiteCourseId && !c.isPrerequisiteMet && !isAdmin) return false;
+              return true;
+            })
+            .map((course) => (
+              <div
+                key={course.id}
+                onClick={() => navigate(`/course/${course.id}`)}
+                className="card !p-0 overflow-hidden cursor-pointer group relative"
+              >
+                {course.isHidden && (
+                  <div className="absolute top-5 right-5 z-10 bg-amber-400 text-amber-950 text-[10px] font-black px-2.5 py-1.5 rounded-xl flex items-center gap-1.5 shadow-xl backdrop-blur-md">
+                    <EyeOff size={12} /> PRIVATE
                   </div>
                 )}
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              </div>
 
-              {/* Course Info */}
-              <div className="p-7">
-                <h3 className="text-xl font-display font-bold text-slate-900 group-hover:text-primary-600 transition-colors leading-tight mb-3">
-                  {course.title}
-                </h3>
-
-                <p className="text-slate-500 text-sm mb-6 line-clamp-2 leading-relaxed font-medium">
-                  {course.description}
-                </p>
-
-                {/* Course Meta */}
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center gap-2 text-slate-400">
-                    <div className="p-1.5 bg-primary-50 rounded-lg text-primary-600">
-                      <Layers size={14} />
-                    </div>
-                    <span className="text-[11px] font-bold uppercase tracking-wider">{course.totalLevels} Levels</span>
+                {/* Prerequisite Locked Badge (Admin only) */}
+                {course.prerequisiteCourseId && !course.isPrerequisiteMet && isAdmin && (
+                  <div className="absolute top-5 left-5 z-10 bg-rose-500 text-white text-[10px] font-black px-2.5 py-1.5 rounded-xl flex items-center gap-1.5 shadow-xl backdrop-blur-md">
+                    <Lock size={12} /> Requires: {course.prerequisiteCourseName}
                   </div>
-                  <span className={`badge ${course.difficulty === 'Beginner' ? 'badge-easy' : course.difficulty === 'Intermediate' ? 'badge-medium' : 'badge-hard'}`}>
-                    {course.difficulty}
-                  </span>
+                )}
+
+                {/* Course Thumbnail */}
+                <div className="h-52 flex items-center justify-center relative overflow-hidden bg-slate-100">
+                  {course.thumbnail ? (
+                    <img
+                      src={course.thumbnail}
+                      alt={course.title}
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center">
+                      <Code size={48} className="text-white/30" />
+                    </div>
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                 </div>
 
-                <div className="flex items-center justify-between pt-5 border-t border-slate-100">
-                  <div className="flex -space-x-2.5">
-                    {[1, 2, 3].map(i => (
-                      <div key={i} className="w-8 h-8 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-500 shadow-sm">
-                        {i}
+                {/* Course Info */}
+                <div className="p-7">
+                  <h3 className="text-xl font-display font-bold text-slate-900 group-hover:text-primary-600 transition-colors leading-tight mb-3">
+                    {course.title}
+                  </h3>
+
+                  <p className="text-slate-500 text-sm mb-6 line-clamp-2 leading-relaxed font-medium">
+                    {course.description}
+                  </p>
+
+                  {/* Course Meta */}
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-2 text-slate-400">
+                      <div className="p-1.5 bg-primary-50 rounded-lg text-primary-600">
+                        <Layers size={14} />
                       </div>
-                    ))}
+                      <span className="text-[11px] font-bold uppercase tracking-wider">{course.totalLevels} Levels</span>
+                    </div>
+                    <span className={`badge ${course.difficulty === 'Beginner' ? 'badge-easy' : course.difficulty === 'Intermediate' ? 'badge-medium' : 'badge-hard'}`}>
+                      {course.difficulty}
+                    </span>
                   </div>
-                  <div className="flex items-center gap-2 text-primary-600 font-bold text-sm tracking-tight">
-                    <span>Enter Course</span>
-                    <div className="w-8 h-8 bg-primary-50 rounded-full flex items-center justify-center group-hover:bg-primary-600 group-hover:text-white transition-all">
-                      <ArrowRight size={14} />
+
+                  <div className="flex items-center justify-between pt-5 border-t border-slate-100">
+                    <div className="flex -space-x-2.5">
+                      {[1, 2, 3].map(i => (
+                        <div key={i} className="w-8 h-8 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-500 shadow-sm">
+                          {i}
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex items-center gap-2 text-primary-600 font-bold text-sm tracking-tight">
+                      <span>Enter Course</span>
+                      <div className="w-8 h-8 bg-primary-50 rounded-full flex items-center justify-center group-hover:bg-primary-600 group-hover:text-white transition-all">
+                        <ArrowRight size={14} />
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))}
 
           {courses.length === 0 && !loading && (
             <div className="col-span-full py-20 bg-white rounded-3xl border border-dashed border-slate-300 flex flex-col items-center gap-4 text-slate-400">

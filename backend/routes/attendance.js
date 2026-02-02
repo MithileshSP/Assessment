@@ -1,8 +1,31 @@
 const express = require('express');
 const router = express.Router();
+const fs = require('fs');
+const path = require('path');
+const multer = require('multer');
 const { query, queryOne } = require('../database/connection');
 const { verifyToken, verifyAdmin } = require('../middleware/auth');
 const GlobalSession = require('../models/GlobalSession');
+
+// Configure multer for reference images
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        const dir = path.join(__dirname, '../public/reference_images');
+        if (!fs.existsSync(dir)) {
+            fs.mkdirSync(dir, { recursive: true });
+        }
+        cb(null, dir);
+    },
+    filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, 'ref-' + uniqueSuffix + path.extname(file.originalname));
+    }
+});
+
+const upload = multer({
+    storage,
+    limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
+});
 
 // Request attendance
 router.post('/request', verifyToken, async (req, res) => {
@@ -75,9 +98,17 @@ router.get('/status', verifyToken, async (req, res) => {
         // 1. Check for active global session
         const activeSession = await GlobalSession.findActive(courseId, level);
 
-        // 2. Get individual attendance record including lock fields
+        // 2. Get user details
+        const user = await queryOne("SELECT is_blocked, roll_no, email, full_name FROM users WHERE id = ?", [userId]);
+        const isUserBlocked = user ? Boolean(user.is_blocked) : true;
+
+        // 3. Get course title
+        const course = await queryOne("SELECT title FROM courses WHERE id = ?", [courseId]);
+        const courseTitle = course ? course.title : 'Unknown Course';
+
+        // 4. Get individual attendance record including lock fields
         const result = await query(
-            `SELECT status, approved_at, is_used, session_id, locked, locked_reason, violation_count 
+            `SELECT status, approved_at, is_used, session_id, locked, locked_reason, violation_count, reference_image 
              FROM test_attendance WHERE user_id = ? AND test_identifier = ? ORDER BY requested_at DESC LIMIT 1`,
             [userId, testIdentifier]
         );
@@ -86,10 +117,17 @@ router.get('/status', verifyToken, async (req, res) => {
             status: 'none',
             approvedAt: null,
             isUsed: false,
+            isBlocked: isUserBlocked,
             locked: false,
             lockedReason: null,
-            unlockAction: null,  // Will be set when admin unlocks
-            session: activeSession
+            unlockAction: null,
+            session: activeSession,
+            studentDetails: {
+                fullName: user?.full_name || 'Student',
+                rollNo: user?.roll_no || 'N/A',
+                email: user?.email || 'N/A',
+                courseTitle
+            }
         };
 
         if (result.length > 0) {
@@ -100,21 +138,21 @@ router.get('/status', verifyToken, async (req, res) => {
             response.lockedReason = result[0].locked_reason;
 
             // Determine unlock action based on state changes
-            // If was locked but now not locked, check if is_used to determine action
             if (!result[0].locked && result[0].locked_reason) {
-                // Admin took action - determine which one based on Admin: prefix
                 if (result[0].locked_reason === 'Admin:submit') {
                     response.unlockAction = 'submit';
                 } else if (result[0].locked_reason === 'Admin:continue') {
                     response.unlockAction = 'continue';
                 }
             }
+        }
 
-            // If the record is for an older session, it's effectively 'none' for the current session
-            if (activeSession && result[0].session_id !== activeSession.id) {
-                response.status = 'none';
-                response.isUsed = false;
-                response.locked = false;
+        // GLOBAL UNBLOCK BYPASS: If student is unblocked globally, they are 'approved'
+        // This allows students from different courses to attend simultaneously.
+        if (!isUserBlocked) {
+            // Only override if not already 'used' or 'locked'
+            if (response.status !== 'used' && !response.locked) {
+                response.status = 'approved';
             }
         }
 
@@ -347,6 +385,102 @@ router.get('/sample/csv', (req, res) => {
     } catch (error) {
         console.error('Template generation error:', error);
         res.status(500).json({ error: 'Failed to generate template' });
+    }
+});
+
+// --- RECURRING SCHEDULE MANAGEMENT ---
+
+/**
+ * GET /api/attendance/schedule
+ * Get the current daily recurring schedule
+ */
+router.get('/schedule', verifyAdmin, async (req, res) => {
+    try {
+        const schedules = await query("SELECT id, start_time, end_time, is_active FROM daily_schedules ORDER BY start_time ASC");
+        res.json(schedules);
+    } catch (err) {
+        console.error('[Schedule GET] Error:', err);
+        res.status(500).json({ error: 'Failed to fetch schedules' });
+    }
+});
+
+/**
+ * POST /api/attendance/schedule
+ * Update/Set the daily recurring schedule
+ */
+router.post('/schedule', verifyAdmin, async (req, res) => {
+    const { schedules } = req.body; // Expecting an array of {start_time, end_time, is_active}
+
+    if (!schedules || !Array.isArray(schedules)) {
+        return res.status(400).json({ error: 'Schedules array is required' });
+    }
+
+    try {
+        // 1. Clear existing schedules
+        await query("DELETE FROM daily_schedules");
+
+        // 2. Insert new list
+        if (schedules.length > 0) {
+            for (const s of schedules) {
+                await query(
+                    "INSERT INTO daily_schedules (start_time, end_time, is_active) VALUES (?, ?, ?)",
+                    [s.start_time, s.end_time, s.is_active !== undefined ? s.is_active : true]
+                );
+            }
+        }
+
+        res.json({ success: true, message: 'Daily schedules updated successfully' });
+    } catch (err) {
+        console.error('[Schedule POST] Error:', err);
+        res.status(500).json({ error: 'Failed to update schedules' });
+    }
+});
+
+/**
+ * GET /api/attendance/unblocked-list
+ * Get all students who are currently unblocked (is_blocked = 0)
+ */
+router.get('/unblocked-list', verifyAdmin, async (req, res) => {
+    try {
+        const unblocked = await query(`
+            SELECT id, username, full_name, email, roll_no, updated_at 
+            FROM users 
+            WHERE is_blocked = 0 AND role = 'student'
+            ORDER BY updated_at DESC
+        `);
+        res.json(unblocked);
+    } catch (err) {
+        console.error('[Unblocked List GET] Error:', err);
+        res.status(500).json({ error: 'Failed to fetch unblocked students' });
+    }
+});
+
+// Upload reference image
+router.post('/upload-reference', verifyToken, upload.single('image'), async (req, res) => {
+    const { courseId, level } = req.body;
+    const userId = req.user.id;
+    const testIdentifier = `${courseId}_${level}`;
+
+    if (!req.file) {
+        return res.status(400).json({ error: 'No image uploaded' });
+    }
+
+    try {
+        const imageUrl = `/reference_images/${req.file.filename}`;
+
+        // Update the latest attendance record
+        await query(
+            `UPDATE test_attendance 
+             SET reference_image = ? 
+             WHERE user_id = ? AND test_identifier = ?
+             ORDER BY requested_at DESC LIMIT 1`,
+            [imageUrl, userId, testIdentifier]
+        );
+
+        res.json({ success: true, imageUrl });
+    } catch (error) {
+        console.error('Reference image upload error:', error);
+        res.status(500).json({ error: 'Failed to save reference image' });
     }
 });
 

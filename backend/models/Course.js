@@ -50,6 +50,7 @@ class CourseModel {
           : JSON.parse(course.passing_threshold || '{"structure": 80, "visual": 80, "overall": 75}'),
         isLocked: Boolean(course.is_locked),
         isHidden: Boolean(course.is_hidden),
+        prerequisiteCourseId: course.prerequisite_course_id || null,
         totalLevels: course.total_levels,
         estimatedTime: course.estimated_time
       }));
@@ -78,6 +79,7 @@ class CourseModel {
           : JSON.parse(course.passing_threshold || '{"structure": 80, "visual": 80, "overall": 75}'),
         isLocked: Boolean(course.is_locked),
         isHidden: Boolean(course.is_hidden),
+        prerequisiteCourseId: course.prerequisite_course_id || null,
         totalLevels: course.total_levels,
         estimatedTime: course.estimated_time
       };
@@ -107,6 +109,7 @@ class CourseModel {
         tags: courseData.tags || [],
         isLocked: courseData.isLocked || false,
         isHidden: courseData.isHidden || false,
+        prerequisiteCourseId: courseData.prerequisiteCourseId || null,
         restrictions: courseData.restrictions || {},
         levelSettings: courseData.levelSettings || {},
         passingThreshold: courseData.passingThreshold || { structure: 80, visual: 80, overall: 75 },
@@ -119,8 +122,8 @@ class CourseModel {
 
     try {
       await query(
-        `INSERT INTO courses (id, title, description, thumbnail, icon, color, total_levels, estimated_time, difficulty, tags, is_locked, is_hidden, restrictions, level_settings, passing_threshold, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO courses (id, title, description, thumbnail, icon, color, total_levels, estimated_time, difficulty, tags, is_locked, is_hidden, prerequisite_course_id, restrictions, level_settings, passing_threshold, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           id,
           courseData.title,
@@ -134,6 +137,7 @@ class CourseModel {
           JSON.stringify(courseData.tags || []),
           courseData.isLocked || false,
           courseData.isHidden || false,
+          courseData.prerequisiteCourseId || null,
           JSON.stringify(courseData.restrictions || {}),
           JSON.stringify(courseData.levelSettings || {}),
           JSON.stringify(courseData.passingThreshold || { structure: 80, visual: 80, overall: 75 }),
@@ -162,6 +166,7 @@ class CourseModel {
         tags: courseData.tags || [],
         isLocked: courseData.isLocked || false,
         isHidden: courseData.isHidden || false,
+        prerequisiteCourseId: courseData.prerequisiteCourseId || null,
         restrictions: courseData.restrictions || {},
         levelSettings: courseData.levelSettings || {},
         passingThreshold: courseData.passingThreshold || { structure: 80, visual: 80, overall: 75 },
@@ -212,6 +217,7 @@ class CourseModel {
       const tags = courseData.tags !== undefined ? JSON.stringify(courseData.tags) : JSON.stringify(existing.tags);
       const isLocked = courseData.isLocked !== undefined ? courseData.isLocked : existing.isLocked;
       const isHidden = courseData.isHidden !== undefined ? courseData.isHidden : existing.isHidden;
+      const prerequisiteCourseId = courseData.prerequisiteCourseId !== undefined ? courseData.prerequisiteCourseId : existing.prerequisiteCourseId;
       const restrictions = courseData.restrictions !== undefined ? JSON.stringify(courseData.restrictions) : JSON.stringify(existing.restrictions);
       const levelSettings = courseData.levelSettings !== undefined ? JSON.stringify(courseData.levelSettings) : JSON.stringify(existing.levelSettings);
       const passingThreshold = courseData.passingThreshold !== undefined ? JSON.stringify(courseData.passingThreshold) : JSON.stringify(existing.passingThreshold);
@@ -232,6 +238,7 @@ class CourseModel {
          tags = ?,
          is_locked = ?,
          is_hidden = ?,
+         prerequisite_course_id = ?,
          restrictions = ?,
          level_settings = ?,
          passing_threshold = ?,
@@ -240,7 +247,7 @@ class CourseModel {
         [
           title, description, thumbnail, icon, color,
           totalLevels, estimatedTime, difficulty, tags,
-          isLocked, isHidden, restrictions, levelSettings, passingThreshold, id
+          isLocked, isHidden, prerequisiteCourseId, restrictions, levelSettings, passingThreshold, id
         ]
       );
 

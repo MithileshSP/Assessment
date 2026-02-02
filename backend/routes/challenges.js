@@ -107,15 +107,21 @@ router.get('/level-questions', verifyToken, async (req, res) => {
 
     // --- ENFORCE ATTENDANCE CHECK ---
     const testIdentifier = `${courseId}_${level}`;
+
+    // Check both attendance record AND global user block status
+    const [user] = await query("SELECT is_blocked FROM users WHERE id = ?", [userId]);
     const attendance = await query(
       "SELECT status FROM test_attendance WHERE user_id = ? AND test_identifier = ?",
       [userId, testIdentifier]
     );
 
-    if (attendance.length === 0 || attendance[0].status !== 'approved') {
+    const isGlobalUnblocked = user && user.is_blocked === 0;
+    const isAttendanceApproved = attendance.length > 0 && attendance[0].status === 'approved';
+
+    if (!isGlobalUnblocked && !isAttendanceApproved) {
       return res.status(403).json({
         error: 'Access Denied',
-        message: 'You have not been authorized to attend this test. Please request authorization from the security checkpoint.',
+        message: 'You have not been authorized to attend this test. Please wait for an administrator to unblock you.',
         status: attendance.length > 0 ? attendance[0].status : 'none'
       });
     }

@@ -121,9 +121,11 @@ const saveAssignments = (assignments) => {
 /**
  * GET /api/courses
  * Get all available courses
+ * Query params: userId (optional) - for checking prerequisite completion
  */
 router.get('/', async (req, res) => {
   try {
+    const userId = req.query.userId;
     let courses;
     try {
       courses = await CourseModel.findAll();
@@ -132,17 +134,89 @@ router.get('/', async (req, res) => {
       courses = loadJSON(coursesPath);
     }
 
+    // Create a map of course IDs to titles for prerequisite display
+    const courseTitleMap = {};
+    courses.forEach(c => {
+      courseTitleMap[c.id] = c.title;
+    });
+
+    // Check prerequisite completion for each course if userId provided
+    let userCompletedCourses = new Set();
+    if (userId) {
+      try {
+        // 1. Check from level_completions table (detailed pass records)
+        const completionData = await query(`
+          SELECT course_id, COUNT(DISTINCT level) as completed_levels
+          FROM level_completions
+          WHERE user_id = ? AND passed = TRUE
+          GROUP BY course_id
+        `, [userId]);
+
+        // 2. Check from user_progress table (summary progress)
+        const progressData = await query(`
+          SELECT course_id, completed_levels
+          FROM user_progress
+          WHERE user_id = ?
+        `, [userId]);
+
+        // Build a combined map of completion
+        const completionMap = new Map();
+
+        completionData.forEach(row => {
+          completionMap.set(row.course_id, row.completed_levels);
+        });
+
+        progressData.forEach(row => {
+          let levels = [];
+          try {
+            levels = typeof row.completed_levels === 'string'
+              ? JSON.parse(row.completed_levels)
+              : (row.completed_levels || []);
+          } catch (e) { levels = []; }
+
+          const currentCount = completionMap.get(row.course_id) || 0;
+          completionMap.set(row.course_id, Math.max(currentCount, Array.isArray(levels) ? levels.length : 0));
+        });
+
+        // Mark courses as completed if all levels are done
+        for (const [cid, completedCount] of completionMap.entries()) {
+          const courseInfo = courses.find(c => c.id === cid);
+          const totalLevels = courseInfo?.totalLevels || courseInfo?.total_levels || 1;
+          if (completedCount >= totalLevels) {
+            userCompletedCourses.add(cid);
+          }
+        }
+      } catch (dbErr) {
+        console.log('Could not fetch prerequisite completion status:', dbErr.message);
+      }
+    }
+
     // Convert snake_case to camelCase for frontend
-    const formattedCourses = courses.map(course => ({
-      ...course,
-      imageUrl: course.image_url || course.imageUrl,
-      totalLevels: course.total_levels || course.totalLevels,
-      totalPoints: course.total_points || course.totalPoints,
-      estimatedTime: course.estimated_time || course.estimatedTime,
-      isLocked: course.is_locked || course.isLocked,
-      isHidden: course.is_hidden || course.isHidden,
-      createdAt: course.created_at || course.createdAt
-    }));
+    const formattedCourses = courses.map(course => {
+      const prereqId = course.prerequisite_course_id || course.prerequisiteCourseId;
+      let isPrerequisiteMet = true;
+      let prerequisiteCourseName = null;
+
+      if (prereqId) {
+        prerequisiteCourseName = courseTitleMap[prereqId] || prereqId;
+        // If no userId provided or user hasn't completed the prerequisite course
+        isPrerequisiteMet = userId ? userCompletedCourses.has(prereqId) : false;
+      }
+
+      return {
+        ...course,
+        imageUrl: course.image_url || course.imageUrl,
+        totalLevels: course.total_levels || course.totalLevels,
+        totalPoints: course.total_points || course.totalPoints,
+        estimatedTime: course.estimated_time || course.estimatedTime,
+        isLocked: course.is_locked || course.isLocked,
+        isHidden: course.is_hidden || course.isHidden,
+        prerequisiteCourseId: prereqId || null,
+        prerequisiteCourseName,
+        isPrerequisiteMet,
+        createdAt: course.created_at || course.createdAt
+      };
+    });
 
     res.json(formattedCourses);
   } catch (error) {

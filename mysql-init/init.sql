@@ -14,8 +14,11 @@ CREATE TABLE users (
     password VARCHAR(255) NULL,
     email VARCHAR(100) UNIQUE NOT NULL,
     full_name VARCHAR(100),
+    roll_no VARCHAR(50) NULL,
     role ENUM('admin', 'faculty', 'student') DEFAULT 'student',
+    is_blocked BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     last_login TIMESTAMP NULL,
     picture VARCHAR(500) NULL,
     current_session_id VARCHAR(100) NULL,
@@ -42,11 +45,13 @@ CREATE TABLE courses (
     passing_threshold JSON,
     is_locked BOOLEAN DEFAULT FALSE,
     is_hidden BOOLEAN DEFAULT FALSE,
+    prerequisite_course_id VARCHAR(100) NULL,
     restrictions JSON,
     level_settings JSON,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    INDEX idx_difficulty (difficulty)
+    INDEX idx_difficulty (difficulty),
+    INDEX idx_prerequisite (prerequisite_course_id)
 );
 
 CREATE TABLE challenges (
@@ -79,6 +84,14 @@ CREATE TABLE challenges (
 -- ==========================================
 -- 3. Global Test Sessions & Attendance
 -- ==========================================
+CREATE TABLE daily_schedules (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    start_time TIME NOT NULL DEFAULT '09:00:00',
+    end_time TIME NOT NULL DEFAULT '17:00:00',
+    is_active BOOLEAN DEFAULT TRUE,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
 CREATE TABLE global_test_sessions (
     id INT AUTO_INCREMENT PRIMARY KEY,
     course_id VARCHAR(100) NOT NULL,
@@ -327,17 +340,17 @@ CREATE TABLE student_feedback (
 
 -- Admin User (Pass: admin123)
 -- Hash: 240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9
-INSERT INTO users (id, username, password, email, full_name, role) VALUES
-('user-admin-1', 'admin', '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9', 'admin@example.com', 'Administrator', 'admin');
+INSERT INTO users (id, username, password, email, full_name, role, is_blocked) VALUES
+('user-admin-1', 'admin', '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9', 'admin@example.com', 'Administrator', 'admin', FALSE);
 
 -- Faculty User (Pass: 123456)
 -- Hash: 8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92
-INSERT INTO users (id, username, password, email, full_name, role) VALUES
-('user-faculty-1', 'faculty', '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92', 'faculty@example.com', 'Professor X', 'faculty');
+INSERT INTO users (id, username, password, email, full_name, role, is_blocked) VALUES
+('user-faculty-1', 'faculty', '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92', 'faculty@example.com', 'Professor X', 'faculty', FALSE);
 
 -- Demo Student (Pass: 123456)
-INSERT INTO users (id, username, password, email, full_name, role) VALUES
-('user-demo-student', 'student1', '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92', 'student1@example.com', 'Demo Student', 'student');
+INSERT INTO users (id, username, password, email, full_name, role, is_blocked) VALUES
+('user-demo-student', 'student1', '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92', 'student1@example.com', 'Demo Student', 'student', TRUE);
 
 -- Sample Course
 INSERT INTO courses (id, title, description, thumbnail, total_levels, difficulty, passing_threshold) VALUES

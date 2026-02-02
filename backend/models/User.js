@@ -38,16 +38,23 @@ class UserModel {
 
   // Create new user
   static async create(userData) {
+    // Students are blocked by default, admin/faculty are not
+    const isBlocked = userData.isBlocked !== undefined
+      ? userData.isBlocked
+      : (userData.is_blocked !== undefined ? userData.is_blocked : (userData.role === 'student'));
+
     const result = await query(
-      `INSERT INTO users (id, username, password, email, full_name, role, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO users (id, username, password, email, full_name, roll_no, role, is_blocked, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         userData.id,
         userData.username,
         ensurePasswordValue(userData.password, userData.email || userData.username),
         userData.email,
         userData.fullName || userData.full_name,
+        userData.rollNo || userData.roll_no || null,
         userData.role || 'student',
+        isBlocked,
         userData.createdAt || new Date()
       ]
     );
@@ -61,14 +68,18 @@ class UserModel {
        username = COALESCE(?, username),
        email = COALESCE(?, email),
        full_name = COALESCE(?, full_name),
+       roll_no = COALESCE(?, roll_no),
        role = COALESCE(?, role),
+       is_blocked = COALESCE(?, is_blocked),
        password = COALESCE(?, password)
        WHERE id = ?`,
       [
         userData.username ?? null,
         userData.email ?? null,
         (userData.fullName ?? userData.full_name) ?? null,
+        (userData.rollNo ?? userData.roll_no) ?? null,
         userData.role ?? null,
+        (userData.isBlocked ?? userData.is_blocked) ?? null,
         userData.password ?? null,
         id
       ]

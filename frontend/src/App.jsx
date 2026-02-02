@@ -40,6 +40,7 @@ import AdminLevelReset from "./pages/AdminLevelReset";
 import RestrictionManagement from "./pages/RestrictionManagement";
 import AdminEvaluationTracker from "./pages/AdminEvaluationTracker";
 import AdminAssetManager from "./pages/AdminAssetManager";
+import AdminSchedule from "./pages/AdminSchedule";
 import QuestionEditor from "./pages/QuestionEditor";
 
 // Auth & Components
@@ -94,6 +95,7 @@ function App() {
           {/* Admin Portal */}
           <Route path="/admin/dashboard" element={role === 'admin' ? <AdminDashboard /> : <Navigate to="/admin/login" />} />
           <Route path="/admin/attendance" element={role === 'admin' ? <AdminAttendance /> : <Navigate to="/admin/login" />} />
+          <Route path="/admin/schedule" element={role === 'admin' ? <AdminSchedule /> : <Navigate to="/admin/login" />} />
           <Route path="/admin/courses" element={role === 'admin' ? <CourseManager /> : <Navigate to="/admin/login" />} />
           <Route path="/admin/users" element={role === 'admin' ? <UserManagement /> : <Navigate to="/admin/login" />} />
           <Route path="/admin/results" element={role === 'admin' ? <AdminResults /> : <Navigate to="/admin/login" />} />

@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Save, Plus, Layers, Clock, Zap, Image, Palette, Tag, BookOpen, Shield } from 'lucide-react';
+import { X, Save, Plus, Layers, Clock, Zap, Image, Palette, Tag, BookOpen, Shield, Link } from 'lucide-react';
+import { getCourses } from '../services/api';
 
 export default function CourseEditModal({ course, onClose, onSave }) {
   const [formData, setFormData] = useState(course || {
@@ -14,6 +15,7 @@ export default function CourseEditModal({ course, onClose, onSave }) {
     totalLevels: 6,
     estimatedTime: '10 hours',
     tags: [],
+    prerequisiteCourseId: null,
     restrictions: {
       blockCopy: false,
       blockPaste: false,
@@ -23,6 +25,21 @@ export default function CourseEditModal({ course, onClose, onSave }) {
     }
   });
   const [tagInput, setTagInput] = useState('');
+  const [availableCourses, setAvailableCourses] = useState([]);
+
+  // Fetch available courses for prerequisite dropdown
+  useEffect(() => {
+    const fetchCourses = async () => {
+      try {
+        const response = await getCourses();
+        // Filter out the current course to prevent self-referencing
+        setAvailableCourses(response.data.filter(c => c.id !== course?.id));
+      } catch (error) {
+        console.error('Failed to load courses for prerequisite dropdown:', error);
+      }
+    };
+    fetchCourses();
+  }, [course?.id]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -292,6 +309,27 @@ export default function CourseEditModal({ course, onClose, onSave }) {
                   placeholder="10 hours"
                   className="w-full px-4 py-3 bg-slate-50 border-2 border-transparent rounded-xl text-sm font-medium focus:border-indigo-500 focus:bg-white outline-none transition-all"
                 />
+              </div>
+
+              {/* Prerequisite Course */}
+              <div className="col-span-2">
+                <label className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                  <Link size={12} /> Prerequisite Course
+                </label>
+                <select
+                  name="prerequisiteCourseId"
+                  value={formData.prerequisiteCourseId || ''}
+                  onChange={(e) => setFormData(prev => ({ ...prev, prerequisiteCourseId: e.target.value || null }))}
+                  className="w-full px-4 py-3 bg-slate-50 border-2 border-transparent rounded-xl text-sm font-medium focus:border-indigo-500 focus:bg-white outline-none transition-all cursor-pointer"
+                >
+                  <option value="">No prerequisite (course visible to all)</option>
+                  {availableCourses.map(c => (
+                    <option key={c.id} value={c.id}>{c.title}</option>
+                  ))}
+                </select>
+                <p className="text-xs text-slate-400 mt-2">
+                  Students must complete all levels of the selected course before this course becomes visible.
+                </p>
               </div>
 
               {/* Tags */}

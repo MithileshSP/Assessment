@@ -18,6 +18,10 @@ router.post('/', verifyToken, async (req, res) => {
              ON DUPLICATE KEY UPDATE difficulty_rating = VALUES(difficulty_rating), clarity_rating = VALUES(clarity_rating), comments = VALUES(comments)`,
             [userId, submissionId, difficulty, clarity, comments]
         );
+
+        // AUTO-BLOCK STUDENT: Ensuring is_blocked = 1 (security redundancy)
+        await query(`UPDATE users SET is_blocked = 1 WHERE id = ?`, [userId]);
+
         res.json({ success: true });
     } catch (err) {
         console.error('Feedback submission error:', err);

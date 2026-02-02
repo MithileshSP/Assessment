@@ -376,8 +376,12 @@ class TestSession {
         WHERE user_id = ? AND test_identifier = ? AND is_used = FALSE
         ORDER BY requested_at DESC LIMIT 1
       `, [session.user_id, `${session.course_id}_${session.level}`]);
+
+      // AUTO-BLOCK STUDENT: Ensuring is_blocked = 1 after completion
+      await db.query(`UPDATE users SET is_blocked = 1 WHERE id = ?`, [session.user_id]);
+      console.log(`[TestSession] User ${session.user_id} re-blocked after completion.`);
     } catch (e) {
-      console.warn("Failed to mark attendance as used:", e.message);
+      console.warn("Failed to mark attendance as used or re-block user:", e.message);
     }
 
     return this.findById(sessionId);

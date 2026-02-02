@@ -62,6 +62,7 @@ export default function LevelChallenge() {
   const [attendanceTimer, setAttendanceTimer] = useState(null);
   const [startedAt, setStartedAt] = useState(null);
   const [showNavWarning, setShowNavWarning] = useState(false); // Navigation warning state
+  const [studentInfo, setStudentInfo] = useState(null); // To store Name, RollNo, Email, Course
 
   // Batch Saving State
   const [dirtyQuestions, setDirtyQuestions] = useState(new Set()); // IDs of modified questions
@@ -102,9 +103,15 @@ export default function LevelChallenge() {
       // Note: Submissions check removed from here because it blocks the 'Request New Attempt' flow.
       // The attendance status (isUsed) is now the sole source of truth for blocking.
       const res = await api.get('/attendance/status', { params: { courseId, level } });
-      const { status, session, isUsed, locked, lockedReason } = res.data;
+      const { status, session, isUsed, locked, isBlocked } = res.data;
 
-      // Check if the session is locked on mount
+      // New Logic: Check global is_blocked status first
+      if (isBlocked) {
+        setAttendanceStatus('blocked');
+        setLoading(false);
+        return;
+      }
+
       if (locked) {
         setAttendanceStatus('started');
         setLoading(false);
@@ -137,6 +144,9 @@ export default function LevelChallenge() {
       }
 
       setAttendanceStatus(status);
+      if (res.data.studentDetails) {
+        setStudentInfo(res.data.studentDetails);
+      }
 
       if (session) {
         // OFFSET-BASED TIMER: Calculate clock offset from server
@@ -193,45 +203,27 @@ export default function LevelChallenge() {
       if (sessionRes.data && !sessionRes.data.completed_at) {
         setTestSessionId(sessionRes.data.id);
         if (sessionRes.data.started_at) setStartedAt(sessionRes.data.started_at);
+      }
 
-        if (status === 'approved' || userRole === 'admin') {
-          startTest();
+      // If not blocked, and not in an active session, we basically just let them in
+      if (!isBlocked) {
+        setAttendanceStatus('approved');
+
+        // Timer Fallback: If no server session but we have restrictions
+        if (!session && !sessionEndTimeRef.current && restrictions.timeLimit > 0) {
+          const startTime = startedAt ? new Date(startedAt).getTime() : Date.now();
+          const durationMs = restrictions.timeLimit * 60 * 1000;
+          const endTime = startTime + durationMs;
+
+          sessionEndTimeRef.current = endTime;
+          clockOffsetRef.current = 0; // Local time for local timer
+          const remaining = Math.max(0, Math.floor((endTime - Date.now()) / 1000));
+          setTimeRemaining(remaining);
+          console.log('[Timer] Using local fallback timer. Remaining:', remaining, 's');
         }
       }
 
-      if (status === 'requested' && !attendanceTimer) {
-        const timer = setInterval(async () => {
-          const pollRes = await api.get('/attendance/status', { params: { courseId, level } });
-          const pollData = pollRes.data;
-
-          if (pollData.isUsed) {
-            setAttendanceStatus('used');
-            clearInterval(timer);
-          } else if (pollData.status === 'approved') {
-            setAttendanceStatus('approved');
-            // Sync timer on approval using offset-based approach
-            if (pollData.session) {
-              const clientNow = Date.now();
-              const serverNow = pollData.session.server_time_ms || new Date(pollData.session.server_time).getTime();
-              const endTime = new Date(pollData.session.end_time).getTime();
-
-              clockOffsetRef.current = serverNow - clientNow;
-              sessionEndTimeRef.current = endTime;
-
-              const correctedNow = clientNow + clockOffsetRef.current;
-              const remaining = Math.max(0, Math.floor((endTime - correctedNow) / 1000));
-              setTimeRemaining(remaining);
-            }
-            clearInterval(timer);
-          } else if (pollData.status === 'rejected') {
-            setAttendanceStatus('rejected');
-            clearInterval(timer);
-          }
-        }, 3000);
-        setAttendanceTimer(timer);
-      } else {
-        setLoading(false);
-      }
+      setLoading(false);
     } catch (error) {
       console.error("Attendance check failed", error);
       setAttendanceStatus('none'); // Safe fallback
@@ -242,16 +234,8 @@ export default function LevelChallenge() {
   const [isRequesting, setIsRequesting] = useState(false);
 
   const requestAttendance = async () => {
-    try {
-      setIsRequesting(true);
-      await api.post('/attendance/request', { courseId, level });
-      setAttendanceStatus('requested');
-      checkAttendance(); // Start polling
-    } catch (err) {
-      alert('Failed to request attendance');
-    } finally {
-      setIsRequesting(false);
-    }
+    // This is now disabled
+    alert('Direct unblocking is required by administrator.');
   };
 
   const startTest = () => {
@@ -1318,162 +1302,154 @@ export default function LevelChallenge() {
 
   if (attendanceStatus !== 'started') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6">
-        <div className="bg-white p-10 rounded-[2.5rem] shadow-2xl shadow-slate-200 text-center max-w-lg w-full border border-slate-100 animate-fade-in">
-          <div className="w-20 h-20 bg-blue-50 text-blue-600 rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-xl shadow-blue-500/10">
+      <div className="min-h-screen flex items-center justify-center bg-slate-100 p-8">
+        <div className="bg-white p-12 rounded-[3.5rem] shadow-2xl shadow-slate-200 text-center max-w-5xl w-full border border-slate-100 animate-fade-in relative overflow-hidden">
+          {/* Decorative background element */}
+          <div className="absolute -top-24 -right-24 w-64 h-64 bg-slate-50 rounded-full blur-3xl opacity-50" />
+
+          <div className="w-20 h-20 bg-blue-50 text-blue-600 rounded-3xl flex items-center justify-center mx-auto mb-10 shadow-xl shadow-blue-500/10 relative z-10 transition-transform hover:scale-110 duration-500">
             <Layout size={40} />
           </div>
-          <h2 className="text-3xl font-black text-slate-900 mb-4 tracking-tight">Security Checkpoint</h2>
-          <p className="text-slate-500 font-medium mb-10 leading-relaxed">
-            Standard protocol requires administrative approval for this assessment sequence.
-          </p>
 
-          {attendanceStatus === 'none' && (
-            <div className="space-y-6">
-              {/* Student Details Card */}
-              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 text-left">
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3">Your Details</p>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Name:</span>
-                    <span className="font-bold text-slate-800">{localStorage.getItem('fullName') || localStorage.getItem('userName') || 'Student'}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">Email:</span>
-                    <span className="font-mono text-xs text-slate-600">{localStorage.getItem('userEmail') || 'Not available'}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-500">User ID:</span>
-                    <span className="font-mono text-xs text-slate-600">{userId || 'N/A'}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Instructions */}
-              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 text-left">
-                <p className="text-[10px] font-black uppercase tracking-widest text-amber-600 mb-3">📋 Test Instructions</p>
-                <ul className="text-xs text-amber-800 space-y-2">
-                  <li>• Do NOT switch tabs or minimize the browser</li>
-                  <li>• Do NOT use Developer Tools (F12, Inspect)</li>
-                  <li>• Do NOT copy/paste from external sources</li>
-                  <li>• Your code is auto-saved every 30 seconds</li>
-                  <li>• Maximum violations: <strong>{restrictions.maxViolations || 3}</strong> (test will lock)</li>
-                </ul>
-              </div>
-
-              <button
-                onClick={requestAttendance}
-                className="w-full py-4 bg-slate-900 text-white rounded-2xl font-bold hover:bg-blue-600 transition-all shadow-xl shadow-slate-900/10"
-              >
-                Request Authorization
-              </button>
-              <button
-                onClick={() => navigate(`/course/${courseId}`)}
-                className="w-full py-3 bg-white text-slate-400 font-bold text-[11px] uppercase tracking-widest hover:text-slate-600 transition-colors"
-              >
-                Return to Curriculum
-              </button>
-            </div>
-          )}
-
-          {attendanceStatus === 'requested' && (
-            <div className="space-y-6">
-              {/* Student Details - Repeated for admin verification */}
-              <div className="bg-blue-50 border border-blue-200 rounded-2xl p-5 text-left">
-                <p className="text-[10px] font-black uppercase tracking-widest text-blue-500 mb-3">Your Details (for verification)</p>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-blue-400">Name:</span>
-                    <span className="font-bold text-blue-800">{localStorage.getItem('fullName') || localStorage.getItem('userName') || 'Student'}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-blue-400">Email:</span>
-                    <span className="font-mono text-xs text-blue-700">{localStorage.getItem('userEmail') || 'Not available'}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-indigo-100 border border-indigo-200 rounded-2xl p-6 text-indigo-700 text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-3">
-                <Clock size={16} className="animate-spin" />
-                Waiting for Presence Verification...
-              </div>
-              <p className="text-sm text-slate-400 font-medium">
-                Sequence queued. Please reach out to your faculty to mark you as "Present" to start the test.
-              </p>
-              <p className="text-[10px] text-slate-400 italic">
-                Ensure your faculty can verify your identity before approval.
-              </p>
-            </div>
-          )}
-
-          {attendanceStatus === 'used' && (
-            <div className="space-y-6 animate-fade-in group">
-              <div className="w-20 h-20 bg-amber-50 rounded-3xl flex items-center justify-center mx-auto mb-6 text-amber-600 shadow-inner group-hover:scale-110 transition-transform">
-                <AlertTriangle size={40} />
-              </div>
-              <h3 className="text-2xl font-black text-slate-900">Access Restricted</h3>
-              <p className="text-slate-500 font-medium">
-                Our records show you have already submitted an attempt for this level.
-                <br /><br />
-                <span className="text-[10px] font-black uppercase tracking-widest text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-full inline-block mt-2 font-mono">
-                  Audit State: Session_Closed
-                </span>
+          {attendanceStatus === 'blocked' ? (
+            <div className="animate-fade-in text-center">
+              <h2 className="text-3xl font-black text-slate-900 mb-4 tracking-tight">Access Restricted</h2>
+              <p className="text-slate-500 font-medium mb-10 leading-relaxed">
+                Your entry to this assessment is currently gated.
+                <br />
+                Please wait for your instructor to grant you access.
               </p>
 
-              {/* Student Details Card - Added for re-attempt info */}
-              <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 text-left">
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3 tracking-tighter">Identity Verification</p>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-slate-500 font-medium text-xs">Student:</span>
-                    <span className="font-bold text-slate-800 text-xs">{localStorage.getItem('fullName') || localStorage.getItem('userName') || 'Not Identified'}</span>
-                  </div>
-                  <div className="flex justify-between border-t border-slate-100 pt-2">
-                    <span className="text-slate-500 font-medium text-xs">Email Hash:</span>
-                    <span className="font-mono text-[11px] text-slate-600">{localStorage.getItem('userEmail') || 'not_synced@bitsathy.ac.in'}</span>
+              <div className="space-y-6">
+                <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 text-left">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3">Identity Verification</p>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Student:</span>
+                      <span className="font-bold text-slate-800">{localStorage.getItem('fullName') || 'Unknown Student'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">Email:</span>
+                      <span className="font-mono text-xs text-slate-600">{localStorage.getItem('userEmail') || 'N/A'}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="bg-amber-50 border border-amber-100 rounded-2xl p-6 text-slate-500 text-[11px] font-bold leading-relaxed shadow-sm">
-                To initiate a re-test, please submit a new authorization request. Your faculty must approve this request before the environment re-initializes.
-              </div>
-              <div className="flex flex-col gap-3">
-                <button
-                  onClick={requestAttendance}
-                  disabled={isRequesting}
-                  className="w-full py-4 bg-blue-600 text-white rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-blue-700 transition-all shadow-xl shadow-blue-500/10 disabled:opacity-70 disabled:cursor-not-allowed"
-                >
-                  {isRequesting ? (
-                    <RefreshCw size={18} className="animate-spin" />
-                  ) : (
-                    <RefreshCw size={18} />
-                  )}
-                  {isRequesting ? 'Processing Request...' : 'Request New Attempt'}
-                </button>
                 <button
                   onClick={() => navigate(`/course/${courseId}`)}
-                  className="w-full py-4 bg-slate-900 text-white rounded-2xl font-bold flex items-center justify-center gap-2"
+                  className="w-full py-4 bg-slate-900 text-white rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-slate-800 transition-all shadow-xl shadow-slate-900/10"
                 >
                   <ArrowLeft size={18} />
-                  Return to Course
+                  Return to Dashboard
                 </button>
               </div>
             </div>
-          )}
+          ) : (
+            <>
+              <h2 className="text-3xl font-black text-slate-900 mb-2 tracking-tight">Security Checkpoint</h2>
+              <p className="text-slate-500 text-sm font-medium mb-8 leading-relaxed">
+                Administrative verification successful. Please review the instructions before starting.
+              </p>
 
-          {attendanceStatus === 'rejected' && (
-            <div className="space-y-6">
-              <div className="bg-rose-50 border border-rose-100 rounded-2xl p-6 text-rose-700 text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-3">
-                <AlertTriangle size={16} /> Attendance Rejected
-              </div>
-              <button
-                onClick={() => navigate(`/course/${courseId}`)}
-                className="w-full py-4 bg-slate-900 text-white rounded-2xl font-bold"
-              >
-                Return to Base
-              </button>
-            </div>
+              {(attendanceStatus === 'approved' || attendanceStatus === 'none' || userRole === 'admin') && (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 text-left">
+                  {/* Left Column: Details */}
+                  <div className="space-y-6">
+                    <div className="flex items-center justify-between">
+                      <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">Candidate Information</p>
+                      <div className="flex items-center gap-1.5 bg-emerald-50 text-emerald-600 px-3 py-1 rounded-full text-[10px] font-bold border border-emerald-100 uppercase tracking-tight">
+                        <CheckCircle size={12} />
+                        Verified
+                      </div>
+                    </div>
+
+                    <div className="bg-slate-50/50 border border-slate-100 rounded-[2.5rem] p-8 grid grid-cols-2 gap-y-10 gap-x-6 backdrop-blur-sm shadow-sm">
+                      <div className="space-y-1">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">FullName</p>
+                        <p className="text-lg font-black text-slate-900 leading-tight">{studentInfo?.fullName || localStorage.getItem('fullName') || 'Unknown'}</p>
+                      </div>
+                      <div className="space-y-1 text-right">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Roll Number</p>
+                        <p className="text-lg font-black text-slate-900 leading-tight">{studentInfo?.rollNo || 'N/A'}</p>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Email Address</p>
+                        <p className="text-sm font-bold text-slate-600 truncate max-w-[180px]">{studentInfo?.email || 'N/A'}</p>
+                      </div>
+                      <div className="space-y-1 text-right">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Authorized Course</p>
+                        <p className="text-sm font-black text-indigo-600">{studentInfo?.courseTitle || 'Current Assessment'}</p>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => navigate(`/course/${courseId}`)}
+                      className="w-full py-4 bg-slate-50 text-slate-400 hover:text-slate-600 rounded-3xl font-black text-[10px] uppercase tracking-[0.3em] transition-all flex items-center justify-center gap-3 border border-transparent hover:border-slate-200"
+                    >
+                      <ArrowLeft size={14} /> Back to Dashboard
+                    </button>
+                  </div>
+
+                  {/* Right Column: Instructions & Action */}
+                  <div className="space-y-6 flex flex-col justify-between">
+                    <div className="bg-slate-900 rounded-[2.5rem] p-10 text-white relative overflow-hidden flex-1 shadow-2xl shadow-slate-900/20">
+                      <div className="absolute top-0 right-0 p-6 opacity-10">
+                        <AlertTriangle size={120} />
+                      </div>
+
+                      <div className="flex items-center gap-3 mb-6 relative z-10">
+                        <div className="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center text-amber-400">
+                          <AlertTriangle size={18} />
+                        </div>
+                        <p className="text-[11px] font-black uppercase tracking-[0.2em]">Security Protocols</p>
+                      </div>
+
+                      <ul className="space-y-5 relative z-10">
+                        {[
+                          "Do NOT switch tabs or minimize window",
+                          "Do NOT use Browser Developer Tools",
+                          "Do NOT copy content from external sources",
+                          `Maximum violations: ${restrictions.maxViolations || 3}`,
+                          "Progress is automatically synchronized"
+                        ].map((text, i) => (
+                          <li key={i} className="flex items-start gap-4 text-[13px] font-medium text-slate-300">
+                            <span className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-2 shrink-0 shadow-[0_0_10px_#3b82f6]" />
+                            {text}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    <button
+                      onClick={startTest}
+                      className="w-full py-6 bg-blue-600 text-white rounded-[2rem] font-black text-xl hover:bg-blue-700 transition-all shadow-2xl shadow-blue-600/30 flex items-center justify-center gap-4 group active:scale-[0.98] duration-300"
+                    >
+                      Initialize Assessment
+                      <ArrowLeft className="rotate-180 group-hover:translate-x-2 transition-transform duration-500" size={24} />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {attendanceStatus === 'used' && (
+                <div className="space-y-6 animate-fade-in group">
+                  <div className="w-20 h-20 bg-amber-50 rounded-3xl flex items-center justify-center mx-auto mb-6 text-amber-600 shadow-inner group-hover:scale-110 transition-transform">
+                    <AlertTriangle size={40} />
+                  </div>
+                  <h3 className="text-2xl font-black text-slate-900">Attempt Completed</h3>
+                  <p className="text-slate-500 font-medium">
+                    You have already submitted an attempt for this level.
+                  </p>
+                  <button
+                    onClick={() => navigate(`/course/${courseId}`)}
+                    className="w-full py-4 bg-slate-900 text-white rounded-2xl font-bold flex items-center justify-center gap-2"
+                  >
+                    <ArrowLeft size={18} />
+                    Return to Course
+                  </button>
+                </div>
+              )}
+            </>
           )}
 
           {/* Navigation Attempt Warning */}
@@ -1515,19 +1491,6 @@ export default function LevelChallenge() {
             </div>
           )}
 
-          {attendanceStatus === 'approved' && (
-            <div className="space-y-8 animate-fade-in">
-              <div className="bg-emerald-50 border border-emerald-100 rounded-2xl p-6 text-emerald-700 text-xs font-bold uppercase tracking-widest flex items-center justify-center gap-3">
-                <CheckCircle size={16} /> Attendance Verified: Present
-              </div>
-              <button
-                onClick={startTest}
-                className="w-full py-5 bg-blue-600 text-white rounded-[1.5rem] font-bold text-lg hover:bg-blue-700 transition-all shadow-2xl shadow-blue-600/20 hover:scale-[1.02] active:scale-[0.98]"
-              >
-                Start Assessment
-              </button>
-            </div>
-          )}
         </div>
       </div>
     );
