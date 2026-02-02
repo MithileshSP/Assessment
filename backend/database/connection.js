@@ -54,6 +54,7 @@ const dbConfig = {
   enableKeepAlive: true,
   keepAliveInitialDelay: 0,
   connectTimeout: 10000, // 10 second connection timeout
+  timezone: '+05:30',
   ...(sslConfig ? { ssl: sslConfig } : {}),
 };
 // console.log("Database configuration:", {

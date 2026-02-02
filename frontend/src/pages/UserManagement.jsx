@@ -267,8 +267,8 @@ export default function UserManagement() {
                         <button
                           onClick={() => handleToggleBlock(user.id)}
                           className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${user.isBlocked
-                              ? 'bg-rose-500 focus:ring-rose-500'
-                              : 'bg-emerald-500 focus:ring-emerald-500'
+                            ? 'bg-rose-500 focus:ring-rose-500'
+                            : 'bg-emerald-500 focus:ring-emerald-500'
                             }`}
                           title={user.isBlocked ? 'Click to unblock' : 'Click to block'}
                         >
@@ -431,10 +431,10 @@ export default function UserManagement() {
                     <AlertCircle size={14} /> Format Guidelines
                   </h3>
                   <div className="bg-[#1e293b] p-4 rounded-xl text-blue-300 font-mono text-[10px] mb-4">
-                    username,password,fullName,email,role,rollNo
+                    email,fullName,rollNo,username,password,role
                   </div>
                   <p className="text-xs text-slate-400 normal-case tracking-normal font-medium leading-relaxed">
-                    Ensure your CSV follows the header structure above. Role defaults to 'student' if omitted. Roll No is optional.
+                    <strong>Auto-Mapping:</strong> Users uploaded via CSV will be automatically linked to their Google account if the email matches during login. Username and Password are optional if email is provided.
                   </p>
                 </div>
 

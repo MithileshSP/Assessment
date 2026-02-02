@@ -14,7 +14,11 @@ import {
     FileSpreadsheet,
     CheckCircle,
     Trash2,
-    Shield
+    Shield,
+    Monitor,
+    Clock,
+    ChevronRight,
+    ArrowLeft
 } from 'lucide-react';
 import ToastContainer from '../components/Toast';
 
@@ -28,6 +32,8 @@ const AdminAttendance = () => {
     const [submitting, setSubmitting] = useState(false);
     const [bulkEmails, setBulkEmails] = useState('');
     const [toasts, setToasts] = useState([]);
+    const [activeSessions, setActiveSessions] = useState([]);
+    const [selectedSession, setSelectedSession] = useState(null);
     const fileInputRef = useRef(null);
 
     const addToast = (message, type = 'info') => {
@@ -37,6 +43,15 @@ const AdminAttendance = () => {
 
     const removeToast = (id) => {
         setToasts(prev => prev.filter(t => t.id !== id));
+    };
+
+    const fetchActiveSessions = async () => {
+        try {
+            const res = await api.get('/attendance/active-sessions');
+            setActiveSessions(res.data);
+        } catch (error) {
+            console.error("Failed to load active sessions", error);
+        }
     };
 
     const fetchData = async (showLoading = false) => {
@@ -51,6 +66,7 @@ const AdminAttendance = () => {
 
             setUnblockedUsers(unblockedRes.data);
             setUsers(usersRes.data);
+            fetchActiveSessions();
 
         } catch (error) {
             console.error("Failed to load attendance data", error);
@@ -63,14 +79,17 @@ const AdminAttendance = () => {
 
     useEffect(() => {
         fetchData(true);
-        const interval = setInterval(() => fetchData(false), 5000);
+        const interval = setInterval(() => {
+            fetchData(false);
+        }, 5000);
         return () => clearInterval(interval);
     }, []);
 
     const handleToggleBlock = async (userId, currentState) => {
         try {
             setSubmitting(true);
-            await api.patch(`/users/${userId}/toggle-block`);
+            const params = selectedSession ? { sessionId: selectedSession.id } : {};
+            await api.patch(`/users/${userId}/toggle-block`, params);
             addToast(currentState ? 'Student unblocked' : 'Student blocked', 'success');
             // Immediate UI update while waiting for poll
             setUsers(prev => prev.map(u => u.id === userId ? { ...u, is_blocked: !currentState } : u));
@@ -90,7 +109,10 @@ const AdminAttendance = () => {
         const emails = bulkEmails.split(/[\n,]+/).map(e => e.trim()).filter(e => e);
         try {
             setSubmitting(true);
-            const res = await api.post('/users/bulk-unblock', { emails });
+            const res = await api.post('/users/bulk-unblock', {
+                emails,
+                sessionId: selectedSession?.id
+            });
             addToast(`Bulk unblock complete: ${res.data.count} students.`, "success");
             setBulkEmails('');
             fetchData();
@@ -141,22 +163,119 @@ const AdminAttendance = () => {
         window.open(`${BASE_URL}/attendance/sample/csv`, '_blank');
     };
 
+    // --- RENDER HELPERS ---
+
+    if (!selectedSession) {
+        return (
+            <SaaSLayout>
+                <ToastContainer toasts={toasts} removeToast={removeToast} />
+                <div className="min-h-screen bg-slate-50/30 -m-8 p-8 font-sans antialiased text-slate-900 border border-transparent">
+                    <div className="max-w-7xl mx-auto mb-12 text-left">
+                        <div className="flex items-center gap-3 mb-2">
+                            <Shield className="text-indigo-600" size={24} />
+                            <span className="text-[10px] font-black uppercase tracking-widest text-indigo-600">
+                                Command Center
+                            </span>
+                        </div>
+                        <h1 className="text-4xl font-black text-slate-900 tracking-tight">Access Control Dash</h1>
+                        <p className="text-slate-500 font-medium text-lg mt-2">Select an active assessment window to start monitoring attendance.</p>
+                    </div>
+
+                    <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 text-left">
+                        {/* Active Sessions List */}
+                        {activeSessions.map((session, idx) => (
+                            <div
+                                key={session.id}
+                                onClick={() => setSelectedSession(session)}
+                                className={`group bg-white rounded-[2.5rem] p-10 border-2 transition-all cursor-pointer relative overflow-hidden delay-100 ${session.status === 'live'
+                                    ? 'border-slate-100 shadow-sm hover:shadow-2xl hover:border-emerald-200'
+                                    : session.status === 'upcoming'
+                                        ? 'border-slate-100 opacity-80 hover:opacity-100 hover:border-amber-200'
+                                        : 'border-slate-100 grayscale-[0.5] opacity-60 hover:opacity-80 hover:grayscale-0'
+                                    }`}
+                            >
+                                <div className="relative z-10 flex flex-col h-full justify-between">
+                                    <div>
+                                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-8 border transition-all group-hover:scale-110 ${session.type === 'recurring' ? 'bg-amber-50 text-amber-600 border-amber-100' : 'bg-emerald-50 text-emerald-600 border-emerald-100'}`}>
+                                            {session.type === 'recurring' ? <Clock size={28} /> : <Monitor size={28} />}
+                                        </div>
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${session.type === 'recurring' ? 'bg-amber-100 text-amber-600' : 'bg-emerald-100 text-emerald-600'}`}>
+                                                {session.type === 'recurring' ? 'Auto Schedule' : 'Manual Session'}
+                                            </span>
+                                            {session.status === 'live' ? (
+                                                <span className="flex items-center gap-1.5 text-[10px] font-black text-emerald-600 uppercase tracking-widest">
+                                                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div> Live
+                                                </span>
+                                            ) : session.status === 'upcoming' ? (
+                                                <span className="flex items-center gap-1.5 text-[10px] font-black text-amber-500 uppercase tracking-widest">
+                                                    <Clock size={10} /> Upcoming
+                                                </span>
+                                            ) : (
+                                                <span className="flex items-center gap-1.5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-left">
+                                                    <CheckCircle size={10} /> Ended
+                                                </span>
+                                            )}
+                                        </div>
+                                        <h3 className="text-2xl font-black text-slate-900 group-hover:text-emerald-700 transition-colors uppercase tracking-tight">
+                                            {session.title || `Level ${session.level}`}
+                                        </h3>
+                                        {session.course_id && (
+                                            <p className="text-slate-400 font-bold text-xs uppercase tracking-widest mt-1">Course: {session.course_id}</p>
+                                        )}
+                                    </div>
+                                    <div className="mt-12 flex items-center justify-between border-t border-slate-50 pt-6">
+                                        <div className="flex flex-col">
+                                            <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">End Time</span>
+                                            <span className="font-black text-slate-900">{new Date(session.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                        </div>
+                                        <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-300 group-hover:bg-emerald-50 group-hover:text-emerald-600 transition-all">
+                                            <ChevronRight size={20} />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+
+                        {activeSessions.length === 0 && (
+                            <div className="lg:col-span-3 flex flex-col items-center justify-center bg-slate-100/50 border-4 border-dashed border-slate-200 rounded-[2.5rem] p-20 text-center">
+                                <Activity size={48} className="text-slate-200 mb-6" />
+                                <h4 className="text-slate-400 font-black text-xl mb-2">Passive Observation Mode</h4>
+                                <p className="text-slate-400 max-w-sm font-medium leading-relaxed">No scheduled windows are currently open. Update the master schedule to begin monitoring.</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </SaaSLayout>
+        );
+    }
+
     return (
         <SaaSLayout>
             <ToastContainer toasts={toasts} removeToast={removeToast} />
-            <div className="min-h-screen bg-slate-50/30 -m-8 p-8 font-sans antialiased text-slate-900">
+            <div className="min-h-screen bg-slate-50/30 -m-8 p-8 font-sans antialiased text-slate-900 border border-transparent text-left">
                 {/* Header Section */}
-                <div className="max-w-7xl mx-auto mb-8 text-left">
+                <div className="max-w-7xl mx-auto mb-8">
                     <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-6 border-b border-slate-200">
-                        <div>
-                            <div className="flex items-center gap-3 mb-2">
-                                <Shield className="text-indigo-600" size={24} />
-                                <span className="text-[10px] font-black uppercase tracking-widest text-indigo-600">
-                                    Access Management Console
-                                </span>
+                        <div className="flex items-center gap-6">
+                            <button
+                                onClick={() => setSelectedSession(null)}
+                                className="w-12 h-12 rounded-2xl bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-indigo-600 hover:border-indigo-100 transition-all shadow-sm"
+                            >
+                                <ArrowLeft size={24} />
+                            </button>
+                            <div>
+                                <div className="flex items-center gap-3 mb-1">
+                                    <Shield className="text-indigo-600" size={20} />
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-indigo-600">
+                                        Active Session Pool
+                                    </span>
+                                </div>
+                                <h1 className="text-3xl font-black text-slate-900 tracking-tight">
+                                    {selectedSession.title || `Monitoring Level ${selectedSession.level}`}
+                                </h1>
+                                <p className="text-slate-500 font-medium">Live monitoring dashboard for current assessment window.</p>
                             </div>
-                            <h1 className="text-3xl font-black text-slate-900">Attendance Monitoring</h1>
-                            <p className="text-slate-500 font-medium">Manage student permissions and track live portal access.</p>
                         </div>
                         <div className="flex gap-3">
                             <button

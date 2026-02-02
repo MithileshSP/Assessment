@@ -455,7 +455,14 @@ export default function LevelChallenge() {
         setRestrictions(prev => ({ ...prev, ...response.data }));
         // Initialize timer if timeLimit is set in fetched results AND not already synced from session
         if (response.data.timeLimit > 0 && timeRemaining === null) {
-          setTimeRemaining(response.data.timeLimit * 60); // Convert minutes to seconds
+          const durationSeconds = response.data.timeLimit * 60;
+          setTimeRemaining(durationSeconds);
+
+          // Initializing sessionEndTimeRef for local fallback if not already set by a server session
+          if (sessionEndTimeRef.current === null) {
+            sessionEndTimeRef.current = Date.now() + durationSeconds * 1000;
+            console.log('[Timer] Initialized local end-time ref from restrictions:', response.data.timeLimit, 'm');
+          }
         }
       }
     } catch (error) {
@@ -509,29 +516,35 @@ export default function LevelChallenge() {
     return () => clearInterval(syncTimer);
   }, [attendanceStatus, courseId, level]);
 
-  // Timer countdown (offset-based, recalculates each tick to prevent drift)
   useEffect(() => {
-    if (sessionEndTimeRef.current === null) return;
+    // Only count down if we have started the test
+    if (attendanceStatus !== 'started' || isLocked) return;
 
     const interval = setInterval(() => {
-      // Recalculate remaining using offset-corrected time (drift-proof)
-      const correctedNow = Date.now() + clockOffsetRef.current;
-      const remaining = Math.max(0, Math.floor((sessionEndTimeRef.current - correctedNow) / 1000));
+      let remaining = 0;
 
-      setTimeRemaining(remaining);
+      if (sessionEndTimeRef.current !== null) {
+        // Source A: Absolute end time (drift-proof)
+        const correctedNow = Date.now() + clockOffsetRef.current;
+        remaining = Math.max(0, Math.floor((sessionEndTimeRef.current - correctedNow) / 1000));
+        setTimeRemaining(remaining);
+      } else if (timeRemaining !== null && timeRemaining > 0) {
+        // Source B: Local relative decrement fallback
+        setTimeRemaining(prev => {
+          remaining = Math.max(0, (prev || 0) - 1);
+          return remaining;
+        });
+      }
 
-      if (remaining <= 0) {
+      if (remaining <= 0 && (sessionEndTimeRef.current !== null || (timeRemaining !== null && timeRemaining <= 0))) {
         clearInterval(interval);
-        // Auto-submission trigger
-        (async () => {
-          await forceSubmitCurrentCode();
-          handleFinishLevel({ reason: "timeout" });
-        })();
+        // Unified finish trigger: handleFinishLevel handles both save and submission
+        handleFinishLevel({ reason: "timeout" });
       }
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [sessionEndTimeRef.current]);
+  }, [attendanceStatus, isLocked, sessionEndTimeRef.current === null]);
 
   // Format time as MM:SS
   const formatTime = (seconds) => {
@@ -1175,16 +1188,32 @@ export default function LevelChallenge() {
 
   const handleFinishLevel = async ({ reason = "manual", forceSubmissionId = null } = {}) => {
     if (finishingLevel) return;
+
+    // For timeout, we show a non-dismissible loading state immediately
+    if (reason === "timeout") {
+      setFinishingLevel(true);
+    }
+
     // Ensure final state is saved
     try {
       await ensureAllSaved();
-    } catch (e) { console.warn("Final save warning:", e); }
+    } catch (e) {
+      console.warn("Final save warning:", e);
+    }
+
     handleFinishTest({ reason, forceSubmissionId });
   };
 
   const handleFinishTest = async ({ reason = "manual", forceSubmissionId = null } = {}) => {
     setFinishingLevel(true);
     let lastSubmissionId = forceSubmissionId;
+
+    // If it's a timeout, give the user a clear message
+    if (reason === "timeout") {
+      setEvaluationStep("Time expired. Submitting your work...");
+    } else if (reason === "admin_forced") {
+      setEvaluationStep("Session ended by admin. Submitting work...");
+    }
 
     try {
       // Step 1: Submit final code for ALL questions (even if not previously submitted)
@@ -1194,9 +1223,8 @@ export default function LevelChallenge() {
       const codeSource = (reason === 'admin_forced' && lockedCodeRef.current)
         ? lockedCodeRef.current
         : userAnswers;
-      console.log('[FinishTest] Using code source:', reason === 'admin_forced' ? 'lockedCodeRef' : 'userAnswers');
 
-      for (const question of assignedQuestions) {
+      const submissionRequests = assignedQuestions.map(async (question) => {
         const savedAnswer = codeSource[question.id];
         const isCurrentQuestion = currentQuestionIndex === assignedQuestions.indexOf(question);
 
@@ -1213,8 +1241,6 @@ export default function LevelChallenge() {
           };
         }
 
-        console.log(`[FinishTest] Question ${question.id}: hasCode=${!!(currentCode.html || currentCode.css || currentCode.js)}`);
-
         // Only submit if there's any code
         if (currentCode.html || currentCode.css || currentCode.js) {
           try {
@@ -1224,30 +1250,46 @@ export default function LevelChallenge() {
               code: currentCode,
             });
             const submissionId = response.data.submissionId;
-            lastSubmissionId = submissionId; // Track last successful submission
 
             // Link to test session
             if (testSessionId && submissionId) {
               await api.post(`/test-sessions/${testSessionId}/submissions`, {
                 submission_id: submissionId,
-              });
+              }).catch(e => console.warn(`[FinishTest] Failed to link submission ${submissionId}:`, e.message));
             }
-            console.log(`[FinishTest] Submitted question ${question.id}: ${submissionId}`);
+
+            return submissionId;
           } catch (submitError) {
             console.error(`[FinishTest] Failed to submit question ${question.id}:`, submitError.message);
+            return null;
           }
         }
+        return null;
+      });
+
+      // Execute all submissions in parallel but catch individual errors
+      const results = await Promise.all(submissionRequests);
+      const successfulSubmissions = results.filter(id => id !== null);
+      if (successfulSubmissions.length > 0) {
+        lastSubmissionId = successfulSubmissions[successfulSubmissions.length - 1];
       }
+
+      console.log(`[FinishTest] Successfully submitted ${successfulSubmissions.length} questions.`);
 
       // Step 2: Tell TestSession we are done
       if (testSessionId) {
         let feedbackMsg = "";
         if (reason === "violations") feedbackMsg = "Session terminated due to security violations.";
         else if (reason === "admin_forced") feedbackMsg = "Session terminated by administrator decision.";
+        else if (reason === "timeout") feedbackMsg = "Session terminated due to time limit.";
 
-        await api.put(`/test-sessions/${testSessionId}/complete`, {
-          user_feedback: feedbackMsg
-        });
+        try {
+          await api.put(`/test-sessions/${testSessionId}/complete`, {
+            user_feedback: feedbackMsg
+          });
+        } catch (completeErr) {
+          console.error('[FinishTest] Failed to complete test session:', completeErr.message);
+        }
       }
 
       // Step 3: Clear localStorage to prevent re-entry with cached state
@@ -1260,13 +1302,29 @@ export default function LevelChallenge() {
         return;
       }
 
-      // Admin forced submit should always go to feedback page
-      if (reason === "admin_forced") {
+      // Admin forced or Timeout submit should go to feedback/results
+      if (reason === "admin_forced" || reason === "timeout") {
+        // Fallback: If lastSubmissionId is null (e.g. empty code submitted now), check for ANY existing submission
+        if (!lastSubmissionId) {
+          const allSubmissionIds = Object.values(userAnswers)
+            .map(a => a.submissionId)
+            .filter(id => id);
+          if (allSubmissionIds.length > 0) {
+            lastSubmissionId = allSubmissionIds[allSubmissionIds.length - 1]; // Use the most recent one we have locally
+          }
+        }
+
         if (lastSubmissionId) {
           navigate(`/student/feedback/${lastSubmissionId}`);
         } else {
-          // No submission was made, just go back to course page with a message
-          navigate(`/course/${courseId}`, { state: { message: 'Your test was submitted by the administrator.' } });
+          // Attempt to show results even if no code was submitted during this specific sequence
+          navigate(`/level-results/${courseId}/${level}`, {
+            state: {
+              message: reason === "timeout"
+                ? 'Time expired. Your session has ended.'
+                : 'Your session was ended by the administrator.'
+            }
+          });
         }
         return;
       }
@@ -1279,10 +1337,10 @@ export default function LevelChallenge() {
       }
     } catch (error) {
       console.error('Error finishing test:', error);
-      // Fallback navigation
       navigate(`/course/${courseId}`);
     } finally {
       setFinishingLevel(false);
+      setEvaluationStep("");
     }
   };
 

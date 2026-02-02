@@ -30,6 +30,7 @@ const facultyRouter = require("./routes/faculty");
 const feedbackRouter = require("./routes/feedback");
 const { scheduleFallbackSync } = require("./services/submissionSync");
 const evaluationWorker = require("./services/EvaluationWorker");
+const sessionGuardian = require("./services/SessionGuardian");
 
 const app = express();
 
@@ -225,6 +226,8 @@ app.use("/api/level-access", levelAccessRouter);
 app.use("/api/attendance", attendanceRouter);
 app.use("/api/faculty", facultyRouter);
 app.use("/api/feedback", feedbackRouter);
+const analyticsRouter = require("./routes/analytics");
+app.use("/api/admin/analytics", analyticsRouter);
 const executeRouter = require("./routes/execute");
 app.use("/api/execute", executeRouter);
 
@@ -308,6 +311,9 @@ app.listen(PORT, async () => {
 
   // Start Evaluation Queue Worker
   evaluationWorker.start();
+
+  // Start Session Guardian (runs every 60 seconds)
+  sessionGuardian.start();
 
   console.log(`\n📁 API Endpoints:`);
   console.log(`   GET  /api/challenges`);

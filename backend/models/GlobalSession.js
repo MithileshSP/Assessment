@@ -29,35 +29,55 @@ class GlobalSession {
     }
 
     /**
+     * Get all active sessions (Manual + Recurring)
+     */
+    static async getAllActive() {
+        const now = new Date();
+        const allSessions = [];
+
+        // 1. Daily schedules
+        const dailySchedules = await query("SELECT * FROM daily_schedules WHERE is_active = TRUE");
+
+        // Enforce IST (Asia/Kolkata) for date comparison
+        const today = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+
+        for (const daily of dailySchedules) {
+            const startTime = new Date(`${today}T${daily.start_time}`);
+            const endTime = new Date(`${today}T${daily.end_time}`);
+
+            let status = 'upcoming';
+            if (now > endTime) status = 'ended';
+            else if (now >= startTime) status = 'live';
+
+            allSessions.push({
+                id: `daily_${daily.id}`,
+                type: 'recurring',
+                title: `Daily Window: ${daily.start_time.slice(0, 5)} - ${daily.end_time.slice(0, 5)}`,
+                start_time: startTime.toISOString(),
+                end_time: endTime.toISOString(),
+                server_time: now.toISOString(),
+                server_time_ms: now.getTime(),
+                duration_minutes: (endTime - startTime) / 60000,
+                is_active: status === 'live',
+                status: status
+            });
+        }
+
+        // Sort by start time
+        return allSessions.sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
+    }
+
+    /**
      * Get active session for course/level
      * Refactored to support Daily Recurring Schedules
      */
     static async findActive(course_id, level) {
-        // 1. Check for explicit manual session first
-        const session = await queryOne(
-            "SELECT * FROM global_test_sessions WHERE course_id = ? AND level = ? AND is_active = TRUE",
-            [course_id, level]
-        );
-
-        if (session) {
-            const formatted = this._formatSession(session);
-            const now = new Date();
-            const endTime = new Date(formatted.end_time);
-
-            if (now > endTime) {
-                await this.end(session.id, 'TIMEOUT');
-                // Don't return null yet, check daily schedule fallback
-            } else {
-                return formatted;
-            }
-        }
-
-        // 2. DAILY SCHEDULE FALLBACK: Check all recurring schedules
+        // 1. DAILY SCHEDULE ONLY
         const dailySchedules = await query("SELECT start_time, end_time FROM daily_schedules WHERE is_active = TRUE");
 
         if (dailySchedules && dailySchedules.length > 0) {
             const now = new Date();
-            const today = now.toISOString().split('T')[0];
+            const today = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
 
             for (const daily of dailySchedules) {
                 // Create full date-time objects for today's window

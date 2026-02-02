@@ -7,6 +7,7 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: ${DB_NAME}
+      TZ: Asia/Kolkata
     volumes:
       - portal_mysql_data:/var/lib/mysql
     ports:
@@ -41,6 +42,7 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
+      TZ: Asia/Kolkata
     volumes:
       # Persist generated files
       - ./backend/screenshots:/app/screenshots

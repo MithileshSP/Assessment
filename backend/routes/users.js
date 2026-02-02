@@ -85,15 +85,21 @@ router.post("/google", async (req, res) => {
 
     let user;
     try {
-      user = await UserModel.findByUsername(username);
+      // 1. Primary lookup: by email (essential for CSV mapping)
+      user = await UserModel.findByEmail(email);
+
+      // 2. Secondary lookup: by username (fallback)
+      if (!user) {
+        user = await UserModel.findByUsername(username);
+      }
     } catch (dbLookupError) {
       console.warn(
         "DB lookup error, fallback to JSON file:",
         dbLookupError.message
       );
       const users = loadJSON(usersPath);
-      // Find the MOST RECENT entry for this username (latest created_at)
-      const userMatches = users.filter((u) => u.username === username);
+      // Find the MOST RECENT entry for this username OR email
+      const userMatches = users.filter((u) => u.email === email || u.username === username);
       if (userMatches.length > 0) {
         user = userMatches.reduce((latest, current) => {
           const latestTime = new Date(latest.created_at || 0).getTime();
@@ -117,7 +123,6 @@ router.post("/google", async (req, res) => {
       };
 
       try {
-        // UserModel.create returns the created user object, not just the ID
         const createdUser = await UserModel.create(newUser);
         user = createdUser || (await UserModel.findById(newUser.id));
       } catch (dbCreateError) {
@@ -128,41 +133,25 @@ router.post("/google", async (req, res) => {
         const users = loadJSON(usersPath);
         users.push({
           ...newUser,
-          created_at:
-            newUser.created_at instanceof Date
-              ? newUser.created_at.toISOString()
-              : newUser.created_at,
-          last_login:
-            newUser.last_login instanceof Date
-              ? newUser.last_login.toISOString()
-              : newUser.last_login,
+          created_at: newUser.created_at.toISOString(),
+          last_login: newUser.last_login.toISOString(),
         });
         saveJSON(usersPath, users);
         user = newUser;
       }
     } else {
       try {
-        // Use specific updateLastLogin method
-        if (UserModel.updateLastLogin) {
-          await UserModel.updateLastLogin(user.id);
-        } else {
-          // Fallback if method missing (shouldn't happen with correct User model)
-          await UserModel.update(user.id, { last_login: new Date() });
-        }
+        // Update user metadata from Google
+        const updates = { last_login: new Date() };
+        if (picture && !user.picture) updates.picture = picture;
+        if (name && (!user.full_name || user.full_name === user.username)) updates.full_name = name;
 
-        // Refresh user data (optional, but good for returning latest state)
-        // user = await UserModel.findById(user.id); 
+        await UserModel.update(user.id, updates);
+
+        // Refresh local user object
+        user = await UserModel.findById(user.id);
       } catch (dbUpdateError) {
-        console.log(
-          "DB update failed, updating JSON fallback:",
-          dbUpdateError.message
-        );
-        const users = loadJSON(usersPath);
-        const userIndex = users.findIndex((u) => u.id === user.id);
-        if (userIndex !== -1) {
-          users[userIndex].last_login = new Date().toISOString();
-          saveJSON(usersPath, users);
-        }
+        console.log("DB update failed during Google login:", dbUpdateError.message);
       }
     }
 
@@ -328,10 +317,9 @@ router.get("/", verifyAdmin, async (req, res) => {
 
 // Download sample CSV template (No auth required for sample data)
 router.get("/sample-csv", (req, res) => {
-  const sampleCsv = `username,password,fullName,email,role,rollNo
-student1,password123,John Doe,john@example.com,student,7376242AD165
-student2,password456,Jane Smith,jane@example.com,student,7376241CS452
-admin1,adminpass,Admin User,admin@example.com,admin,`;
+  const sampleCsv = `email,fullName,rollNo,username,password,role
+john@example.com,John Doe,7376242AD165,johndoe,,student
+jane@example.com,Jane Smith,7376241CS452,,,student`;
 
   res.setHeader("Content-Type", "text/csv");
   res.setHeader("Content-Disposition", "attachment; filename=users-sample.csv");
@@ -435,18 +423,41 @@ router.post(
             const row = results[index];
             const lineNum = index + 2; // +2 because CSV header is line 1
 
-            // Validate required fields
-            if (!row.username || !row.password) {
-              errors.push(`Line ${lineNum}: Missing username or password`);
+            // Derive username from email if missing
+            const derivedUsername = row.username || (row.email ? row.email.split("@")[0] : null);
+
+            if (!derivedUsername) {
+              errors.push(`Line ${lineNum}: Missing username and no email to derive it from`);
               skipped++;
               continue;
             }
 
+            // Check if email already exists
+            if (row.email) {
+              const existingByEmail = await UserModel.findByEmail(row.email);
+              if (existingByEmail) {
+                // If it exists, update it with new info (like rollNo) instead of skipping
+                try {
+                  await UserModel.update(existingByEmail.id, {
+                    full_name: row.fullName || undefined,
+                    roll_no: row.rollNo || undefined,
+                    username: row.username || undefined
+                  });
+                  added++;
+                  continue;
+                } catch (updateError) {
+                  errors.push(`Line ${lineNum}: Email "${row.email}" exists, but update failed`);
+                  skipped++;
+                  continue;
+                }
+              }
+            }
+
             // Check if username exists
-            const existingUser = await UserModel.findByUsername(row.username);
+            const existingUser = await UserModel.findByUsername(derivedUsername);
             if (existingUser) {
               errors.push(
-                `Line ${lineNum}: Username "${row.username}" already exists`
+                `Line ${lineNum}: Username "${derivedUsername}" already exists`
               );
               skipped++;
               continue;
@@ -457,13 +468,13 @@ router.post(
               id: `user-${Date.now()}-${Math.random()
                 .toString(36)
                 .substr(2, 9)}`,
-              username: row.username,
-              password: hashPassword(row.password),
+              username: derivedUsername,
+              password: row.password ? hashPassword(row.password) : null,
               email: row.email || null,
               full_name: row.fullName || "",
               roll_no: row.rollNo || null,
               role: row.role || "student",
-              is_blocked: (row.role || "student") === "student", // Students blocked by default
+              is_blocked: (row.role || "student") === "student",
               created_at: new Date(),
               last_login: null,
             };
@@ -510,18 +521,44 @@ router.post(
 
 // Bulk unblock users by email (Admin only)
 router.post("/bulk-unblock", verifyAdmin, async (req, res) => {
-  const { emails } = req.body;
+  const { emails, sessionId } = req.body;
 
   if (!emails || !Array.isArray(emails) || emails.length === 0) {
     return res.status(400).json({ error: "Invalid emails provided" });
   }
 
   try {
-    // Perform bulk update in database
+    // 1. Perform bulk update in database
     await query(
       "UPDATE users SET is_blocked = 0 WHERE email IN (?)",
       [emails]
     );
+
+    // 2. If sessionId provided, link these users to the session for the Guardian
+    if (sessionId) {
+      const session = await queryOne("SELECT course_id, level FROM global_sessions WHERE id = ?", [sessionId]);
+      if (session) {
+        const testIdentifier = `${session.course_id}_${session.level}`;
+        const userRows = await query("SELECT id FROM users WHERE email IN (?)", [emails]);
+
+        for (const user of userRows) {
+          // Check for existing record to avoid duplicates
+          const existing = await queryOne(
+            "SELECT id FROM test_attendance WHERE user_id = ? AND test_identifier = ? AND is_used = 0",
+            [user.id, testIdentifier]
+          );
+
+          if (existing) {
+            await query("UPDATE test_attendance SET session_id = ?, status = 'approved' WHERE id = ?", [sessionId, existing.id]);
+          } else {
+            await query(
+              "INSERT INTO test_attendance (user_id, test_identifier, session_id, status) VALUES (?, ?, ?, 'approved')",
+              [user.id, testIdentifier, sessionId]
+            );
+          }
+        }
+      }
+    }
 
     res.json({
       success: true,
@@ -601,8 +638,29 @@ router.patch("/:userId/toggle-block", verifyAdmin, async (req, res) => {
       return res.status(404).json({ error: "User not found" });
     }
 
+    const { sessionId } = req.body;
     const newBlockedStatus = !user.is_blocked;
     await UserModel.update(req.params.userId, { is_blocked: newBlockedStatus });
+
+    // Link to session if unblocking
+    if (!newBlockedStatus && sessionId) {
+      const session = await queryOne("SELECT course_id, level FROM global_sessions WHERE id = ?", [sessionId]);
+      if (session) {
+        const testIdentifier = `${session.course_id}_${session.level}`;
+        const existing = await queryOne(
+          "SELECT id FROM test_attendance WHERE user_id = ? AND test_identifier = ? AND is_used = 0",
+          [user.id, testIdentifier]
+        );
+        if (existing) {
+          await query("UPDATE test_attendance SET session_id = ?, status = 'approved' WHERE id = ?", [sessionId, existing.id]);
+        } else {
+          await query(
+            "INSERT INTO test_attendance (user_id, test_identifier, session_id, status) VALUES (?, ?, ?, 'approved')",
+            [user.id, testIdentifier, sessionId]
+          );
+        }
+      }
+    }
 
     res.json({
       success: true,

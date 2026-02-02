@@ -201,6 +201,8 @@ router.get('/', async (req, res) => {
         prerequisiteCourseName = courseTitleMap[prereqId] || prereqId;
         // If no userId provided or user hasn't completed the prerequisite course
         isPrerequisiteMet = userId ? userCompletedCourses.has(prereqId) : false;
+
+        console.log(`[Course Prereq Check] Course: ${course.title}, Prereq: ${prerequisiteCourseName} (${prereqId}), User: ${userId}, IsMet: ${isPrerequisiteMet}, CompletedCourses: ${Array.from(userCompletedCourses)}`);
       }
 
       return {

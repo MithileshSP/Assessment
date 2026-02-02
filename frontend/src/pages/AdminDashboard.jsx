@@ -10,7 +10,8 @@ import {
   AlertCircle,
   ArrowRight,
   CheckCircle,
-  Clock
+  Clock,
+  TrendingUp
 } from 'lucide-react';
 
 const AdminDashboard = () => {
@@ -56,9 +57,18 @@ const AdminDashboard = () => {
     <SaaSLayout>
       <div className="space-y-10">
         {/* Welcome Header */}
-        <div className="animate-fade-in-up">
-          <h1 className="text-4xl font-black text-slate-900 tracking-tight">Platform Overview</h1>
-          <p className="text-slate-500 mt-2 text-lg">Monitor system health and pending administrative actions.</p>
+        <div className="animate-fade-in-up flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div>
+            <h1 className="text-4xl font-black text-slate-900 tracking-tight">Platform Overview</h1>
+            <p className="text-slate-500 mt-2 text-lg">Monitor system health and pending administrative actions.</p>
+          </div>
+          <button
+            onClick={() => navigate('/admin/analytics')}
+            className="px-8 py-4 bg-indigo-600 text-white rounded-[2rem] font-black text-sm uppercase tracking-widest flex items-center gap-3 hover:bg-indigo-700 transition-all shadow-2xl shadow-indigo-600/20 active:scale-95 group"
+          >
+            Intelligence Alpha
+            <TrendingUp size={18} className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+          </button>
         </div>
 
         {/* Stats Grid */}

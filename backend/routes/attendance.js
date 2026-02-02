@@ -455,6 +455,20 @@ router.get('/unblocked-list', verifyAdmin, async (req, res) => {
     }
 });
 
+/**
+ * GET /api/attendance/active-sessions
+ * Get all currently active assessment windows (Manual + Recurring)
+ */
+router.get('/active-sessions', verifyAdmin, async (req, res) => {
+    try {
+        const sessions = await GlobalSession.getAllActive();
+        res.json(sessions);
+    } catch (err) {
+        console.error('[Active Sessions GET] Error:', err);
+        res.status(500).json({ error: 'Failed to fetch active sessions' });
+    }
+});
+
 // Upload reference image
 router.post('/upload-reference', verifyToken, upload.single('image'), async (req, res) => {
     const { courseId, level } = req.body;
