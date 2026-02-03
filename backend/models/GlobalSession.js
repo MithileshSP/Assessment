@@ -41,7 +41,8 @@ class GlobalSession {
         // Enforce IST (Asia/Kolkata) for date comparison
         const today = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
 
-        for (const daily of dailySchedules) {
+        for (let i = 0; i < dailySchedules.length; i++) {
+            const daily = dailySchedules[i];
             const startTime = new Date(`${today}T${daily.start_time}`);
             const endTime = new Date(`${today}T${daily.end_time}`);
 
@@ -52,7 +53,7 @@ class GlobalSession {
             allSessions.push({
                 id: `daily_${daily.id}`,
                 type: 'recurring',
-                title: `Daily Window: ${daily.start_time.slice(0, 5)} - ${daily.end_time.slice(0, 5)}`,
+                title: `Session ${i + 1}: ${daily.start_time.slice(0, 5)} - ${daily.end_time.slice(0, 5)}`,
                 start_time: startTime.toISOString(),
                 end_time: endTime.toISOString(),
                 server_time: now.toISOString(),
@@ -63,17 +64,43 @@ class GlobalSession {
             });
         }
 
+        // 2. Manual Global Sessions
+        const manualSessions = await query("SELECT * FROM global_test_sessions WHERE is_active = TRUE");
+        for (const session of manualSessions) {
+            const formatted = this._formatSession(session);
+            allSessions.push({
+                ...formatted,
+                id: session.id,
+                type: 'manual',
+                title: `Manual Session (Level ${session.level})`,
+                status: formatted.is_expired ? 'ended' : 'live'
+            });
+        }
+
         // Sort by start time
         return allSessions.sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
     }
 
     /**
      * Get active session for course/level
-     * Refactored to support Daily Recurring Schedules
+     * Refactored to support BOTH Manual and Daily Recurring Schedules
      */
     static async findActive(course_id, level) {
-        // 1. DAILY SCHEDULE ONLY
-        const dailySchedules = await query("SELECT start_time, end_time FROM daily_schedules WHERE is_active = TRUE");
+        // 1. Check MANUAL GLOBAL SESSION first (Highest priority)
+        const manualSession = await queryOne(
+            "SELECT * FROM global_test_sessions WHERE course_id = ? AND level = ? AND is_active = TRUE",
+            [course_id, level]
+        );
+
+        if (manualSession) {
+            const formatted = this._formatSession(manualSession);
+            if (!formatted.is_expired) {
+                return formatted;
+            }
+        }
+
+        // 2. Check DAILY RECURRING SCHEDULES
+        const dailySchedules = await query("SELECT id, start_time, end_time FROM daily_schedules WHERE is_active = TRUE");
 
         if (dailySchedules && dailySchedules.length > 0) {
             const now = new Date();
@@ -87,7 +114,7 @@ class GlobalSession {
                 if (now >= startTime && now <= endTime) {
                     // Return a "Virtual Session" that behaves like a global session for the student UI
                     return {
-                        id: 'daily_recurring',
+                        id: 'daily_' + daily.id,
                         course_id: course_id,
                         level: level,
                         start_time: startTime.toISOString(),

@@ -20,17 +20,21 @@ const verifyToken = async (req, res, next) => {
         const decoded = jwt.verify(token, jwtSecret);
         req.user = decoded;
 
-        // Single Session Enforcement: Verify session_id matches DB
-        if (decoded.sessionId) {
-            try {
-                const [user] = await query('SELECT current_session_id FROM users WHERE id = ?', [decoded.id]);
-                if (user && user.current_session_id && user.current_session_id !== decoded.sessionId) {
-                    console.warn(`[Auth] Session mismatch for user ${decoded.id}. Token session: ${decoded.sessionId}, DB session: ${user.current_session_id}`);
-                    return res.status(401).json({ error: 'Session expired. You have logged in from another location.' });
-                }
-            } catch (dbErr) {
-                // If DB check fails, allow request (graceful degradation)
-                console.warn('[Auth] Session check DB error:', dbErr.message);
+        // Trace session enforcement
+        const [user] = await query('SELECT current_session_id FROM users WHERE id = ?', [decoded.id]);
+        const dbSession = user ? user.current_session_id : 'USER_NOT_FOUND';
+
+        console.log(`[TraceAuth] User: ${decoded.username || decoded.id}, TokenSession: ${decoded.sessionId}, DBSession: ${dbSession}`);
+
+        // Single Session Enforcement
+        if (decoded.sessionId && dbSession && dbSession !== decoded.sessionId) {
+            // CRITICAL FIX: Allow submission requests to pass even if session mismatch occurs
+            // This prevents data loss when a student's session is auto-terminated/expired
+            if (req.originalUrl.includes('/api/submissions') || req.path.includes('/submissions')) {
+                console.warn(`[Auth] ALLOWING session mismatch for submission from user ${decoded.id}.`);
+            } else {
+                console.warn(`[Auth] Session mismatch for user ${decoded.id}. Token session: ${decoded.sessionId}, DB session: ${dbSession}`);
+                return res.status(401).json({ error: 'Session expired. You have logged in from another location.' });
             }
         }
 

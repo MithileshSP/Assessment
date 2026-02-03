@@ -186,7 +186,7 @@ async function applyMigrations() {
         id INT AUTO_INCREMENT PRIMARY KEY,
         user_id VARCHAR(100) NOT NULL,
         test_identifier VARCHAR(255) NOT NULL,
-        session_id INT NULL,
+        session_id VARCHAR(255) NULL,
         status ENUM('requested', 'approved', 'rejected') DEFAULT 'requested',
         requested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         approved_at TIMESTAMP NULL,
@@ -202,7 +202,7 @@ async function applyMigrations() {
 
     // Ensure session_id and other security columns exist
     try {
-      await query("ALTER TABLE test_attendance MODIFY COLUMN session_id INT NULL");
+      await query("ALTER TABLE test_attendance MODIFY COLUMN session_id VARCHAR(255) NULL");
       await addColumn("ALTER TABLE test_attendance ADD COLUMN locked BOOLEAN DEFAULT FALSE AFTER is_used");
       await addColumn("ALTER TABLE test_attendance ADD COLUMN locked_at TIMESTAMP NULL AFTER locked");
       await addColumn("ALTER TABLE test_attendance ADD COLUMN locked_reason VARCHAR(255) NULL AFTER locked_at");

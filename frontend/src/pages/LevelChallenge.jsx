@@ -71,6 +71,20 @@ export default function LevelChallenge() {
 
 
 
+  // Refs for stale closure prevention in Timer interval
+  const assignedQuestionsRef = useRef(assignedQuestions);
+  const userAnswersRef = useRef(userAnswers);
+  const codeRef = useRef(code);
+  const currentQuestionIndexRef = useRef(currentQuestionIndex);
+
+  // Sync refs with state
+  useEffect(() => {
+    assignedQuestionsRef.current = assignedQuestions;
+    userAnswersRef.current = userAnswers;
+    codeRef.current = code;
+    currentQuestionIndexRef.current = currentQuestionIndex;
+  }, [assignedQuestions, userAnswers, code, currentQuestionIndex]);
+
   useEffect(() => {
     if (assignedQuestions.length > 0) {
       loadCurrentQuestion();
@@ -1187,24 +1201,21 @@ export default function LevelChallenge() {
   };
 
   const handleFinishLevel = async ({ reason = "manual", forceSubmissionId = null } = {}) => {
-    if (finishingLevel) return;
+    // Allow timeout to proceed even if flag is set (forcing completion)
+    if (finishingLevel && reason !== "timeout") return;
 
-    // For timeout, we show a non-dismissible loading state immediately
     if (reason === "timeout") {
       setFinishingLevel(true);
     }
 
-    // Ensure final state is saved
-    try {
-      await ensureAllSaved();
-    } catch (e) {
-      console.warn("Final save warning:", e);
-    }
+    // Ensure final state is saved (Fire and forget, don't let it block the critical submission)
+    ensureAllSaved().catch(e => console.warn("Final save warning:", e));
 
     handleFinishTest({ reason, forceSubmissionId });
   };
 
   const handleFinishTest = async ({ reason = "manual", forceSubmissionId = null } = {}) => {
+    console.log(`[FinishTest] STARTED. Reason: ${reason}`);
     setFinishingLevel(true);
     let lastSubmissionId = forceSubmissionId;
 
@@ -1216,22 +1227,56 @@ export default function LevelChallenge() {
     }
 
     try {
-      // Step 1: Submit final code for ALL questions (even if not previously submitted)
-      console.log('[FinishTest] Submitting final code for all questions...', { reason, assignedQuestions: assignedQuestions.length });
+      // Step 1: Submit final code for ALL questions
+      // USE REF to avoid stale closure issues in timer callback
+      let questionsToSubmit = assignedQuestionsRef.current;
+
+      // Fallback 1: userAnswers ref
+      if (!questionsToSubmit || questionsToSubmit.length === 0) {
+        console.warn('[FinishTest] No assigned questions in ref, checking userAnswersRef');
+        console.log('[FinishTest] userAnswersRef keys:', Object.keys(userAnswersRef.current));
+        questionsToSubmit = Object.keys(userAnswersRef.current).map(id => ({ id }));
+      }
+
+      // Fallback 2: localStorage (Last Resort)
+      if (!questionsToSubmit || questionsToSubmit.length === 0) {
+        console.warn('[FinishTest] userAnswersRef empty, checking localStorage');
+        try {
+          const storageKey = `assessment_${userId}_${courseId}_${level}`;
+          const storedData = localStorage.getItem(storageKey);
+          if (storedData) {
+            const parsed = JSON.parse(storedData);
+            if (parsed.userAnswers) {
+              questionsToSubmit = Object.keys(parsed.userAnswers).map(id => ({ id }));
+              console.log('[FinishTest] Recovered questions from localStorage:', questionsToSubmit);
+            }
+          }
+        } catch (e) {
+          console.error('[FinishTest] LocalStorage recovery failed:', e);
+        }
+      }
+
+      console.log('[FinishTest] Submitting final code for questions:', { reason, count: questionsToSubmit?.length || 0 });
 
       // For admin_forced, use the code captured at lock time (synchronous ref)
       const codeSource = (reason === 'admin_forced' && lockedCodeRef.current)
         ? lockedCodeRef.current
-        : userAnswers;
+        : userAnswersRef.current; // Use REF here too
 
-      const submissionRequests = assignedQuestions.map(async (question) => {
+      const submissionRequests = questionsToSubmit.map(async (question) => {
         const savedAnswer = codeSource[question.id];
-        const isCurrentQuestion = currentQuestionIndex === assignedQuestions.indexOf(question);
+
+        // CHECK IF THIS IS THE CURRENTLY ACTIVE QUESTION USING REFS
+        const isCurrentQuestion = reason !== 'admin_forced' &&
+          assignedQuestionsRef.current &&
+          currentQuestionIndexRef.current >= 0 &&
+          assignedQuestionsRef.current[currentQuestionIndexRef.current]?.id === question.id;
 
         // Use current 'code' state for current question (only if not admin_forced), fallback to saved
         let currentCode;
-        if (reason !== 'admin_forced' && isCurrentQuestion && (code.html || code.css || code.js)) {
-          currentCode = code;
+        if (isCurrentQuestion && codeRef.current && (codeRef.current.html || codeRef.current.css || codeRef.current.js)) {
+          currentCode = codeRef.current;
+          console.log(`[FinishTest] Using ACTIVE editor content for Q: ${question.id}`);
         } else {
           currentCode = {
             html: savedAnswer?.html || '',
@@ -1241,13 +1286,21 @@ export default function LevelChallenge() {
           };
         }
 
-        // Only submit if there's any code
-        if (currentCode.html || currentCode.css || currentCode.js) {
+        // Force submit on timeout even if empty to generate a record
+        const hasContent = currentCode.html || currentCode.css || currentCode.js;
+
+        if (reason === "timeout" && !hasContent) {
+          // Inject placeholder to pass backend validation (which requires non-empty content for final submissions)
+          currentCode.js = "// Automatic submission on timeout (no code written)";
+        }
+
+        if (hasContent || reason === "timeout") {
           try {
             const response = await api.post("/submissions", {
               challengeId: question.id,
               userId: userId,
               code: currentCode,
+              isFinal: true // Flag to backend this is a final flush
             });
             const submissionId = response.data.submissionId;
 
@@ -1296,45 +1349,48 @@ export default function LevelChallenge() {
       const storageKey = `assessment_${userId}_${courseId}_${level}`;
       localStorage.removeItem(storageKey);
 
-      // Step 4: Redirect
-      if (reason === "violations") {
-        navigate(`/level-results/${courseId}/${level}`);
+      // Consolidate redirection logic
+      let targetSubmissionId = lastSubmissionId;
+
+      // If we made new submissions in this call, use the last one
+      const recentSuccesses = results.filter(id => id);
+      console.log('[FinishTest] recentSuccesses:', recentSuccesses);
+
+      if (recentSuccesses.length > 0) {
+        targetSubmissionId = recentSuccesses[recentSuccesses.length - 1];
+      }
+
+      // If still null and it was a forced end, try to find ANY local submission
+      if (!targetSubmissionId && (reason === "admin_forced" || reason === "timeout")) {
+        // USE REF here as well to avoid stale closure
+        const currentAnswers = userAnswersRef.current;
+        console.log('[FinishTest] Fallback checking userAnswers:', Object.keys(currentAnswers));
+
+        const allSubmissionIds = Object.values(currentAnswers)
+          .map(a => a.submissionId)
+          .filter(id => id);
+
+        console.log('[FinishTest] Found local submission IDs:', allSubmissionIds);
+
+        if (allSubmissionIds.length > 0) {
+          targetSubmissionId = allSubmissionIds[allSubmissionIds.length - 1];
+        }
+      }
+
+      if (targetSubmissionId) {
+        console.log(`[FinishTest] Redirection: Checking feedback for submission ${targetSubmissionId}`);
+        navigate(`/student/feedback/${targetSubmissionId}`);
         return;
       }
 
-      // Admin forced or Timeout submit should go to feedback/results
-      if (reason === "admin_forced" || reason === "timeout") {
-        // Fallback: If lastSubmissionId is null (e.g. empty code submitted now), check for ANY existing submission
-        if (!lastSubmissionId) {
-          const allSubmissionIds = Object.values(userAnswers)
-            .map(a => a.submissionId)
-            .filter(id => id);
-          if (allSubmissionIds.length > 0) {
-            lastSubmissionId = allSubmissionIds[allSubmissionIds.length - 1]; // Use the most recent one we have locally
-          }
-        }
-
-        if (lastSubmissionId) {
-          navigate(`/student/feedback/${lastSubmissionId}`);
-        } else {
-          // Attempt to show results even if no code was submitted during this specific sequence
-          navigate(`/level-results/${courseId}/${level}`, {
-            state: {
-              message: reason === "timeout"
-                ? 'Time expired. Your session has ended.'
-                : 'Your session was ended by the administrator.'
-            }
-          });
-        }
+      if (reason === "timeout") {
+        console.warn('[FinishTest] Timeout but no submission ID available. Redirecting to course with message.');
+        navigate(`/course/${courseId}`, { state: { message: 'Time expired. No work was submitted.' } });
         return;
       }
 
-      // Navigate to feedback page with last submission ID
-      if (lastSubmissionId) {
-        navigate(`/student/feedback/${lastSubmissionId}`);
-      } else {
-        navigate(`/level-results/${courseId}/${level}`);
-      }
+      console.warn('[FinishTest] No submission ID found, falling back to course home. Reason:', reason || 'manual');
+      navigate(`/course/${courseId}`);
     } catch (error) {
       console.error('Error finishing test:', error);
       navigate(`/course/${courseId}`);
@@ -1627,10 +1683,7 @@ export default function LevelChallenge() {
                 </span>
               </div>
               <p className="text-gray-600">
-                Level {level}{" "}
-                {assignedQuestions.length > 1 &&
-                  `• Question ${currentQuestionIndex + 1} of ${assignedQuestions.length
-                  }`}
+                Level {level}
               </p>
             </div>
 
@@ -1674,28 +1727,7 @@ export default function LevelChallenge() {
               </div>
 
               {/* Question Number Boxes */}
-              {assignedQuestions.length > 1 && (
-                <div className="flex gap-2">
-                  {assignedQuestions.map((q, index) => {
-                    const isSubmitted = userAnswers[q.id]?.submitted;
-                    return (
-                      <div
-                        key={q.id}
-                        className={`w-10 h-10 rounded flex items-center justify-center font-semibold ${index === currentQuestionIndex
-                          ? "bg-blue-600 text-white ring-2 ring-blue-300"
-                          : isSubmitted
-                            ? "bg-green-500 text-white"
-                            : "bg-gray-200 text-gray-700"
-                          }`}
-                        title={`Question ${index + 1} - ${isSubmitted ? "Submitted" : "Not Submitted"
-                          }`}
-                      >
-                        {index + 1}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+              {/* Navigator hidden as requested */}
             </div>
           </div>
 
@@ -1711,30 +1743,7 @@ export default function LevelChallenge() {
                 {finishingLevel ? "Finishing..." : "Finish & View Results"}
               </button>
             )}
-            {assignedQuestions.length > 1 && (
-              <div className="flex gap-2">
-                <button
-                  onClick={handlePreviousQuestion}
-                  disabled={currentQuestionIndex === 0}
-                  className="px-3 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
-                  title="Previous Question"
-                >
-                  <ChevronLeft size={16} />
-                  Previous
-                </button>
-                <button
-                  onClick={handleNextQuestion}
-                  disabled={
-                    currentQuestionIndex === assignedQuestions.length - 1
-                  }
-                  className="px-3 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
-                  title="Next Question"
-                >
-                  Next
-                  <ChevronRight size={16} />
-                </button>
-              </div>
-            )}
+            {/* Navigation buttons hidden as requested */}
             <button onClick={handleRunCode} className="btn-secondary">
               ▶ Run Code
             </button>

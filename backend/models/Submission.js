@@ -82,7 +82,7 @@ class SubmissionModel {
 
     const submittedAt = formatDateTime(submissionData.submittedAt);
 
-    await query(
+    const result = await query(
       `INSERT INTO submissions (id, challenge_id, user_id, course_id, level, candidate_name, html_code, css_code, js_code, status, submitted_at, additional_files)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
@@ -100,7 +100,10 @@ class SubmissionModel {
         JSON.stringify(submissionData.code?.additionalFiles || {})
       ]
     );
-    return await this.findById(id);
+    console.log(`[SubmissionModel] INSERT result for ${id}:`, result?.affectedRows || result);
+    const found = await this.findById(id);
+    console.log(`[SubmissionModel] Post-insert findById for ${id}:`, !!found);
+    return found;
   }
 
   // Update submission with evaluation result

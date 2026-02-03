@@ -53,9 +53,12 @@ const saveSubmissions = (submissions) => {
  * Submit candidate solution
  * Body: { challengeId, candidateName, code: { html, css, js }, isAutoSave }
  */
-router.post('/', async (req, res) => {
+router.post("/", async (req, res) => {
+  const { challengeId, candidateName, code, userId, isAutoSave } = req.body;
+  console.log(`[SubmissionsAPI] Incoming ${isAutoSave ? 'Draft' : 'Final'} Submission:`, {
+    challengeId, userId, codeKeys: Object.keys(code || {}), hasHTML: !!code?.html
+  });
   try {
-    const { challengeId, candidateName, code, userId, isAutoSave } = req.body;
 
     // For auto-save, allow empty code (just save current state)
     if (!isAutoSave && (!code || ((!code.html || code.html.trim() === '') && (!code.js || code.js.trim() === '')))) {
@@ -177,6 +180,7 @@ router.post('/', async (req, res) => {
           status: SubmissionModel.STATUS.QUEUED,
           candidateName: studentName || candidateName
         });
+        console.log(`[SubmissionsAPI] Successfully created DB record: ${dbSubmission.id}`);
         submissionId = dbSubmission.id;
       }
 
@@ -208,6 +212,33 @@ router.post('/', async (req, res) => {
         }
       } catch (assignError) {
         console.error('[Submissions] Faculty assignment error:', assignError.message);
+      }
+
+      // CRITICAL: Link to active test session if exists (prevents orphan submissions)
+      try {
+        const activeSession = await queryOne(
+          `SELECT id FROM test_sessions WHERE user_id = ? AND course_id = ? AND level = ? AND completed_at IS NULL ORDER BY created_at DESC LIMIT 1`,
+          [userId, courseId, level]
+        );
+
+        if (activeSession) {
+          const TestSession = require('../models/TestSession');
+          await TestSession.addSubmission(activeSession.id, submissionId);
+          console.log(`[Submissions] Linked submission ${submissionId} to session ${activeSession.id}`);
+        } else {
+          // Fallback: Check for ANY recent session (even completed) if within last 5 minutes
+          const recentSession = await queryOne(
+            `SELECT id FROM test_sessions WHERE user_id = ? AND course_id = ? AND level = ? AND completed_at > (NOW() - INTERVAL 5 MINUTE) ORDER BY completed_at DESC LIMIT 1`,
+            [userId, courseId, level]
+          );
+          if (recentSession) {
+            const TestSession = require('../models/TestSession');
+            await TestSession.addSubmission(recentSession.id, submissionId);
+            console.log(`[Submissions] Late-linked submission ${submissionId} to completed session ${recentSession.id}`);
+          }
+        }
+      } catch (linkError) {
+        console.error('[Submissions] Failed to link to session:', linkError.message);
       }
 
       return res.status(201).json({

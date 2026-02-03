@@ -536,9 +536,20 @@ router.post("/bulk-unblock", verifyAdmin, async (req, res) => {
 
     // 2. If sessionId provided, link these users to the session for the Guardian
     if (sessionId) {
-      const session = await queryOne("SELECT course_id, level FROM global_sessions WHERE id = ?", [sessionId]);
-      if (session) {
-        const testIdentifier = `${session.course_id}_${session.level}`;
+      let sessionData = null;
+      if (sessionId.toString().startsWith('daily_')) {
+        const dailyId = sessionId.split('_')[1];
+        sessionData = await queryOne("SELECT * FROM daily_schedules WHERE id = ?", [dailyId]);
+        // Virtual session data doesn't have course_id/level usually, but we might need them
+        // If daily_schedules doesn't have course_id/level, we use 'global' or similar
+      } else {
+        sessionData = await queryOne("SELECT course_id, level FROM global_test_sessions WHERE id = ?", [sessionId]);
+      }
+
+      if (sessionData) {
+        const testIdentifier = sessionData.course_id && sessionData.level
+          ? `${sessionData.course_id}_${sessionData.level}`
+          : 'global'; // Fallback if session is not level-specific
         const userRows = await query("SELECT id FROM users WHERE email IN (?)", [emails]);
 
         for (const user of userRows) {
@@ -639,14 +650,24 @@ router.patch("/:userId/toggle-block", verifyAdmin, async (req, res) => {
     }
 
     const { sessionId } = req.body;
+    console.log(`[ToggleBlock] User: ${user.username}, NewStatus: ${!user.is_blocked}, SessionID: ${sessionId}`);
     const newBlockedStatus = !user.is_blocked;
     await UserModel.update(req.params.userId, { is_blocked: newBlockedStatus });
 
     // Link to session if unblocking
     if (!newBlockedStatus && sessionId) {
-      const session = await queryOne("SELECT course_id, level FROM global_sessions WHERE id = ?", [sessionId]);
-      if (session) {
-        const testIdentifier = `${session.course_id}_${session.level}`;
+      let sessionData = null;
+      if (sessionId.toString().startsWith('daily_')) {
+        const dailyId = sessionId.split('_')[1];
+        sessionData = await queryOne("SELECT * FROM daily_schedules WHERE id = ?", [dailyId]);
+      } else {
+        sessionData = await queryOne("SELECT course_id, level FROM global_test_sessions WHERE id = ?", [sessionId]);
+      }
+
+      if (sessionData) {
+        const testIdentifier = sessionData.course_id && sessionData.level
+          ? `${sessionData.course_id}_${sessionData.level}`
+          : 'global';
         const existing = await queryOne(
           "SELECT id FROM test_attendance WHERE user_id = ? AND test_identifier = ? AND is_used = 0",
           [user.id, testIdentifier]

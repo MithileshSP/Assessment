@@ -164,7 +164,7 @@ router.get('/level-questions', verifyToken, async (req, res) => {
     if (forceNew === 'true' || !userAssignment) {
       // Select 1 random question (or all if less than 1)
       const shuffled = [...uniqueLevelQuestions].sort(() => 0.5 - Math.random());
-      const selectedQuestions = shuffled.slice(0, Math.min(1, shuffled.length));
+      const selectedQuestions = shuffled.slice(0, 1);
 
       // Remove old assignment if it exists and forceNew is true
       if (forceNew === 'true' && userAssignment) {
@@ -191,8 +191,8 @@ router.get('/level-questions', verifyToken, async (req, res) => {
       saveAssignments(assignments);
     }
 
-    // Get the full question details for assigned questions
-    const assignedFullQuestions = userAssignment.assignedQuestions.map(qId => {
+    // Get the full question details for assigned questions (Strictly limit to 1)
+    const assignedFullQuestions = userAssignment.assignedQuestions.slice(0, 1).map(qId => {
       const question = levelQuestions.find(c => c.id === qId);
       return question ? {
         id: question.id,
