@@ -903,5 +903,139 @@ router.post("/", verifyAdmin, async (req, res) => {
   }
 });
 
+// Bulk complete levels for students by email or roll number (Admin only)
+router.post("/bulk-complete", verifyAdmin, async (req, res) => {
+  const { identifiers, courseId, level, type } = req.body;
+
+  if (!identifiers || !Array.isArray(identifiers) || identifiers.length === 0) {
+    return res.status(400).json({ error: "Invalid identifiers provided" });
+  }
+
+  if (!courseId || !level) {
+    return res.status(400).json({ error: "courseId and level are required" });
+  }
+
+  const results = {
+    success: [],
+    failed: [],
+    skipped: []
+  };
+
+  try {
+    for (const identifier of identifiers) {
+      if (!identifier) continue;
+      const cleanIdentifier = identifier.trim();
+
+      try {
+        let user;
+        if (type === 'rollNo') {
+          user = await queryOne("SELECT id, username, email FROM users WHERE roll_no = ?", [cleanIdentifier]);
+        } else {
+          user = await queryOne("SELECT id, username, email FROM users WHERE email = ?", [cleanIdentifier]);
+        }
+
+        if (!user) {
+          results.failed.push({ identifier: cleanIdentifier, reason: "User not found" });
+          continue;
+        }
+
+        // 1. Update user_progress in Database
+        const progressCheck = await query(
+          "SELECT completed_levels, current_level FROM user_progress WHERE user_id = ? AND course_id = ?",
+          [user.id, courseId]
+        );
+
+        let currentCompleted = [];
+        let currentLevel = 1;
+
+        if (progressCheck.length > 0) {
+          const row = progressCheck[0];
+          try {
+            currentCompleted = typeof row.completed_levels === 'string'
+              ? JSON.parse(row.completed_levels)
+              : row.completed_levels || [];
+          } catch (e) {
+            currentCompleted = [];
+          }
+          currentLevel = row.current_level || 1;
+        } else {
+          // Create initial if not exists
+          await query(
+            "INSERT INTO user_progress (user_id, course_id, current_level, completed_levels, total_points, last_updated) VALUES (?, ?, ?, '[]', 0, NOW())",
+            [user.id, courseId, 1]
+          );
+        }
+
+        const levelInt = parseInt(level);
+        if (!currentCompleted.includes(levelInt)) {
+          currentCompleted.push(levelInt);
+          currentCompleted.sort((a, b) => a - b);
+        }
+
+        const nextLevel = Math.max(currentLevel, levelInt + 1);
+
+        await query(
+          "UPDATE user_progress SET completed_levels = ?, current_level = ?, last_updated = NOW() WHERE user_id = ? AND course_id = ?",
+          [JSON.stringify(currentCompleted), nextLevel, user.id, courseId]
+        );
+
+        // 2. Insert into level_completions
+        await query(
+          "INSERT INTO level_completions (user_id, course_id, level, total_score, passed, feedback, completed_at) VALUES (?, ?, ?, 100, 1, 'Bulk cleared by admin', NOW())",
+          [user.id, courseId, levelInt]
+        );
+
+        // 3. Unlock Level Access if it was explicitly locked
+        await query(
+          "UPDATE level_access SET is_locked = 0, unlocked_at = NOW() WHERE user_id = ? AND course_id = ? AND level = ?",
+          [user.id, courseId, nextLevel]
+        );
+
+        // 4. Update Legacy JSON backup
+        const progressPath = path.join(__dirname, "../data/user-progress.json");
+        let progressData = loadJSON(progressPath);
+
+        let userProgress = progressData.find((p) => p.userId === user.id);
+        if (!userProgress) {
+          userProgress = { userId: user.id, courses: [] };
+          progressData.push(userProgress);
+        }
+
+        let courseProgress = userProgress.courses.find((c) => c.courseId === courseId);
+        if (!courseProgress) {
+          courseProgress = { courseId, completedLevels: [], lastAccessedLevel: levelInt };
+          userProgress.courses.push(courseProgress);
+        }
+
+        if (!courseProgress.completedLevels.includes(levelInt)) {
+          courseProgress.completedLevels.push(levelInt);
+        }
+        courseProgress.currentLevel = nextLevel;
+
+        saveJSON(progressPath, progressData);
+
+        results.success.push({ identifier: cleanIdentifier, username: user.username });
+      } catch (innerError) {
+        console.error(`Error processing bulk completion for ${cleanIdentifier}:`, innerError);
+        results.failed.push({ identifier: cleanIdentifier, reason: innerError.message });
+      }
+    }
+
+    res.json({
+      message: "Bulk processing complete",
+      results
+    });
+  } catch (error) {
+    console.error("Bulk completion error:", error);
+    res.status(500).json({ error: "Failed to process bulk level completion" });
+  }
+});
+
+// Helper for single row queries
+async function queryOne(sql, params) {
+  const rows = await query(sql, params);
+  return rows.length > 0 ? rows[0] : null;
+}
+
 module.exports = router;
 module.exports.verifyAdmin = verifyAdmin; // Still export from auth.js reference

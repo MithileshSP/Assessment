@@ -20,7 +20,8 @@ import {
     RefreshCw,
     Shield,
     Activity,
-    Image as ImageIcon
+    Image as ImageIcon,
+    Database
 } from 'lucide-react';
 import { clearAdminSession, getUserRole } from '../utils/session';
 
@@ -93,6 +94,7 @@ const SaaSLayout = ({ children }) => {
             { id: 'reset', label: 'Reset Level', icon: <RefreshCw size={20} />, path: '/admin/reset-level' },
             { id: 'tracker', label: 'Evaluation Tracker', icon: <Activity size={20} />, path: '/admin/evaluation-tracker' },
             { id: 'assets', label: 'Assets', icon: <ImageIcon size={20} />, path: '/admin/assets' },
+            { id: 'bulk-completion', label: 'Bulk Unlock', icon: <Database size={20} />, path: '/admin/bulk-completion' },
         ],
         faculty: [
             { id: 'dashboard', label: 'Dashboard', icon: <Layout size={20} />, path: '/faculty/dashboard' },

@@ -11,7 +11,8 @@ import {
   ArrowRight,
   CheckCircle,
   Clock,
-  TrendingUp
+  TrendingUp,
+  Database
 } from 'lucide-react';
 
 const AdminDashboard = () => {
@@ -51,6 +52,7 @@ const AdminDashboard = () => {
     { label: 'Courses', value: stats.totalCourses, icon: <BookOpen size={24} />, color: 'indigo' },
     { label: 'Submissions', value: stats.totalSubmissions, icon: <FileText size={24} />, color: 'emerald' },
     { label: 'Attendance Requests', value: stats.pendingAttendance, icon: <Calendar size={24} />, color: 'orange', action: '/admin/attendance' },
+    { label: 'Bulk Level Unlock', value: 'Tools', icon: <Database size={24} />, color: 'purple', action: '/admin/bulk-completion' },
   ];
 
   return (

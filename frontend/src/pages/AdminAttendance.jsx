@@ -165,83 +165,140 @@ const AdminAttendance = () => {
 
     // --- RENDER HELPERS ---
 
+    const [filterTab, setFilterTab] = useState('all');
+
+    // --- RENDER HELPERS ---
+
+    const filteredSessions = activeSessions.filter(s => {
+        if (filterTab === 'all') return true;
+        return s.status === filterTab;
+    });
+
     if (!selectedSession) {
         return (
             <SaaSLayout>
                 <ToastContainer toasts={toasts} removeToast={removeToast} />
-                <div className="min-h-screen bg-slate-50/30 -m-8 p-8 font-sans antialiased text-slate-900 border border-transparent">
-                    <div className="max-w-7xl mx-auto mb-12 text-left">
-                        <div className="flex items-center gap-3 mb-2">
-                            <Shield className="text-indigo-600" size={24} />
-                            <span className="text-[10px] font-black uppercase tracking-widest text-indigo-600">
-                                Command Center
-                            </span>
+                <div className="min-h-screen bg-white -m-8 p-12 font-sans antialiased text-slate-900 border border-transparent">
+                    {/* Sticky Header */}
+                    <div className="mx-auto mb-10 pb-8 border-b-2 border-slate-200 flex items-end justify-between">
+                        <div>
+                            <div className="flex items-center gap-2 mb-3">
+                                <Shield className="text-slate-400" size={18} />
+                                <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">
+                                    Administrative Control
+                                </span>
+                            </div>
+                            <h1 className="text-3xl font-medium text-slate-900 tracking-tight">Access Control Dashboard</h1>
+                            <p className="text-slate-500 font-normal text-sm mt-1">Monitor and manage student portal access during assessment windows.</p>
                         </div>
-                        <h1 className="text-4xl font-black text-slate-900 tracking-tight">Access Control Dash</h1>
-                        <p className="text-slate-500 font-medium text-lg mt-2">Select an active assessment window to start monitoring attendance.</p>
+                        {isPolling && (
+                            <div className="flex items-center gap-2 text-[10px] font-bold text-slate-300 uppercase tracking-widest pb-1">
+                                <RefreshCw size={10} className="animate-spin" /> Live Syncing
+                            </div>
+                        )}
                     </div>
 
-                    <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 text-left">
-                        {/* Active Sessions List */}
-                        {activeSessions.map((session, idx) => (
-                            <div
-                                key={session.id}
-                                onClick={() => setSelectedSession(session)}
-                                className={`group bg-white rounded-[2.5rem] p-10 border-2 transition-all cursor-pointer relative overflow-hidden delay-100 ${session.status === 'live'
-                                    ? 'border-slate-100 shadow-sm hover:shadow-2xl hover:border-emerald-200'
-                                    : session.status === 'upcoming'
-                                        ? 'border-slate-100 opacity-80 hover:opacity-100 hover:border-amber-200'
-                                        : 'border-slate-100 grayscale-[0.5] opacity-60 hover:opacity-80 hover:grayscale-0'
-                                    }`}
-                            >
-                                <div className="relative z-10 flex flex-col h-full justify-between">
-                                    <div>
-                                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-8 border transition-all group-hover:scale-110 ${session.type === 'recurring' ? 'bg-amber-50 text-amber-600 border-amber-100' : 'bg-emerald-50 text-emerald-600 border-emerald-100'}`}>
-                                            {session.type === 'recurring' ? <Clock size={28} /> : <Monitor size={28} />}
-                                        </div>
-                                        <div className="flex items-center gap-2 mb-2">
-                                            <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${session.type === 'recurring' ? 'bg-amber-100 text-amber-600' : 'bg-emerald-100 text-emerald-600'}`}>
-                                                {session.type === 'recurring' ? 'Auto Schedule' : 'Manual Session'}
-                                            </span>
-                                            {session.status === 'live' ? (
-                                                <span className="flex items-center gap-1.5 text-[10px] font-black text-emerald-600 uppercase tracking-widest">
-                                                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div> Live
-                                                </span>
-                                            ) : session.status === 'upcoming' ? (
-                                                <span className="flex items-center gap-1.5 text-[10px] font-black text-amber-500 uppercase tracking-widest">
-                                                    <Clock size={10} /> Upcoming
-                                                </span>
-                                            ) : (
-                                                <span className="flex items-center gap-1.5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-left">
-                                                    <CheckCircle size={10} /> Ended
-                                                </span>
-                                            )}
-                                        </div>
-                                        <h3 className="text-2xl font-black text-slate-900 group-hover:text-emerald-700 transition-colors uppercase tracking-tight">
-                                            {session.title || `Level ${session.level}`}
-                                        </h3>
-                                        {session.course_id && (
-                                            <p className="text-slate-400 font-bold text-xs uppercase tracking-widest mt-1">Course: {session.course_id}</p>
-                                        )}
-                                    </div>
-                                    <div className="mt-12 flex items-center justify-between border-t border-slate-50 pt-6">
-                                        <div className="flex flex-col">
-                                            <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">End Time</span>
-                                            <span className="font-black text-slate-900">{new Date(session.end_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                                        </div>
-                                        <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-300 group-hover:bg-emerald-50 group-hover:text-emerald-600 transition-all">
-                                            <ChevronRight size={20} />
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
+                    {/* Filter Tabs */}
+                    <div className="mx-auto mb-8">
+                        <div className="flex items-center gap-1 border-b border-slate-100">
+                            {['all', 'live', 'upcoming', 'ended'].map((tab) => (
+                                <button
+                                    key={tab}
+                                    onClick={() => setFilterTab(tab)}
+                                    className={`px-8 py-4 text-sm font-bold uppercase tracking-[0.1em] transition-all relative ${filterTab === tab
+                                        ? 'text-indigo-600'
+                                        : 'text-slate-400 hover:text-slate-600'
+                                        }`}
+                                >
+                                    {tab}
+                                    {filterTab === tab && (
+                                        <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600" />
+                                    )}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
 
-                        {activeSessions.length === 0 && (
-                            <div className="lg:col-span-3 flex flex-col items-center justify-center bg-slate-100/50 border-4 border-dashed border-slate-200 rounded-[2.5rem] p-20 text-center">
-                                <Activity size={48} className="text-slate-200 mb-6" />
-                                <h4 className="text-slate-400 font-black text-xl mb-2">Passive Observation Mode</h4>
-                                <p className="text-slate-400 max-w-sm font-medium leading-relaxed">No scheduled windows are currently open. Update the master schedule to begin monitoring.</p>
+                    <div className="mx-auto overflow-hidden">
+                        {/* Session Table */}
+                        <table className="w-full border-collapse border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+                            <thead>
+                                <tr className="bg-slate-50/50 border-b border-slate-200">
+                                    <th className="px-6 py-5 text-left text-xs font-black text-slate-500 uppercase tracking-widest w-1/3">Session Name</th>
+                                    <th className="px-6 py-5 text-left text-xs font-black text-slate-500 uppercase tracking-widest">Mode</th>
+                                    <th className="px-6 py-5 text-left text-xs font-black text-slate-500 uppercase tracking-widest">Time Window</th>
+                                    <th className="px-6 py-5 text-left text-xs font-black text-slate-500 uppercase tracking-widest">Status</th>
+                                    <th className="px-6 py-5 text-right text-xs font-black text-slate-500 uppercase tracking-widest">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {filteredSessions.map((session) => (
+                                    <tr
+                                        key={session.id}
+                                        onClick={() => session.status !== 'ended' && setSelectedSession(session)}
+                                        className={`group border-b border-slate-100 transition-colors ${session.status === 'ended'
+                                            ? 'opacity-50 cursor-not-allowed'
+                                            : 'hover:bg-indigo-50/20 cursor-pointer'
+                                            }`}
+                                    >
+                                        <td className="px-6 py-8">
+                                            <div className="flex items-center gap-5">
+                                                <div className={`w-2.5 h-2.5 rounded-full ${session.status === 'live' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)] animate-pulse' :
+                                                    session.status === 'upcoming' ? 'bg-amber-500' : 'bg-slate-300'
+                                                    }`} />
+                                                <div>
+                                                    <p className="font-black text-slate-900 text-base mb-1">
+                                                        {session.session_name}
+                                                    </p>
+                                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                                                        {session.course_title || 'Global Session'}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-8">
+                                            <span className="px-3 py-1.5 bg-slate-50 border border-slate-100 rounded-lg text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                                                {session.mode}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-8">
+                                            <div className="flex items-center gap-2 text-slate-600 font-bold text-sm">
+                                                <Clock size={14} className="text-slate-400" />
+                                                {session.start_time} - {session.end_time}
+                                            </div>
+                                        </td>
+                                        <td className="px-6 py-8">
+                                            <div className="flex items-center gap-2">
+                                                <p className={`text-[11px] font-black uppercase tracking-widest ${session.status === 'live' ? 'text-emerald-600' :
+                                                    session.status === 'upcoming' ? 'text-amber-600' : 'text-slate-400'
+                                                    }`}>
+                                                    {session.status}
+                                                    {session.status === 'live' && session.expires_at && (
+                                                        <span className="ml-2 text-[9px] opacity-70">(Ends {new Date(session.expires_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})</span>
+                                                    )}
+                                                </p>
+                                            </div>
+                                        </td>
+                                        <td className="px-4 py-6 text-right">
+                                            <button
+                                                className={`text-[10px] font-bold uppercase tracking-widest flex items-center gap-1 ml-auto transition-all ${session.status === 'ended'
+                                                    ? 'text-slate-300'
+                                                    : 'text-indigo-600 group-hover:gap-2'
+                                                    }`}
+                                            >
+                                                {session.status === 'live' ? 'Monitor' : 'View'}
+                                                <ChevronRight size={14} />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+
+                        {filteredSessions.length === 0 && (
+                            <div className="py-24 text-center border border-dashed border-slate-100 rounded-lg mt-4">
+                                <Activity size={32} className="text-slate-100 mx-auto mb-4" />
+                                <p className="text-slate-400 font-medium text-sm">No {filterTab !== 'all' ? filterTab : ''} sessions found.</p>
                             </div>
                         )}
                     </div>

@@ -43,6 +43,7 @@ import AdminAssetManager from "./pages/AdminAssetManager";
 import AdminSchedule from "./pages/AdminSchedule";
 import QuestionEditor from "./pages/QuestionEditor";
 import AdminAnalytics from "./pages/AdminAnalytics";
+import AdminBulkCompletion from "./pages/AdminBulkCompletion";
 
 // Auth & Components
 import Login from "./pages/Login";
@@ -111,6 +112,7 @@ function App() {
           <Route path="/admin/evaluation-tracker" element={role === 'admin' ? <AdminEvaluationTracker /> : <Navigate to="/admin/login" />} />
           <Route path="/admin/assets" element={role === 'admin' ? <AdminAssetManager /> : <Navigate to="/admin/login" />} />
           <Route path="/admin/analytics" element={role === 'admin' ? <AdminAnalytics /> : <Navigate to="/admin/login" />} />
+          <Route path="/admin/bulk-completion" element={role === 'admin' ? <AdminBulkCompletion /> : <Navigate to="/admin/login" />} />
 
           {/* Fallback */}
           <Route path="*" element={<Navigate to="/login" />} />

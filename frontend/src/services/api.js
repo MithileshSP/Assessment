@@ -118,6 +118,7 @@ export const resetLevel = (userId, courseId, level) =>
   api.post('/admin/reset-level', { userId, courseId, level });
 
 export const completeLevel = (data) => api.post('/users/complete-level', data);
+export const bulkCompleteLevel = (data) => api.post('/users/bulk-complete', data);
 
 // Code Execution (Node.js)
 api.executeCode = (code, files = {}, language = 'nodejs', stdin = "") =>

@@ -22,6 +22,7 @@ services:
       start_period: 60s
 
   backend:
+    image: gokulv456/assessment-backend:v3.0
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -49,7 +50,7 @@ services:
       - ./backend/data:/app/data
       - ./backend/assets:/var/www/portal-assets
     deploy:
-      replicas: 1
+      replicas: 3
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:7000/health" ]
       interval: 30s
@@ -60,6 +61,7 @@ services:
       - test-portal-network
 
   frontend:
+    image: gokulv456/assessment-frontend:v3.0
     build:
       context: ./frontend
       dockerfile: Dockerfile

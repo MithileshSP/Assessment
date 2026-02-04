@@ -414,6 +414,16 @@ router.post('/reset-level', verifyAdmin, async (req, res) => {
       );
     }
 
+    // 10. Delete from level_completions table (CRITICAL FIX for course completion status)
+    try {
+      await db.query(
+        `DELETE FROM level_completions WHERE user_id = ? AND course_id = ? AND level = ?`,
+        [userId, courseId, levelNum]
+      );
+    } catch (e) {
+      console.warn('level_completions cleanup failed:', e.message);
+    }
+
     // 6. Update user-progress.json (legacy sync)
     if (fs.existsSync(progressPath)) {
       try {
