@@ -6,12 +6,17 @@ import {
     History,
     CheckCircle,
     ArrowRight,
-    Trophy
+    Trophy,
+    Trash2,
+    Calendar,
+    AlertTriangle
 } from 'lucide-react';
 
 const FacultyHistory = () => {
     const [history, setHistory] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [deleteDate, setDeleteDate] = useState('');
+    const [isDeleting, setIsDeleting] = useState(false);
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -29,14 +34,75 @@ const FacultyHistory = () => {
         }
     };
 
+    const handleBulkDelete = async () => {
+        if (!deleteDate) {
+            alert("Please select a cutoff date.");
+            return;
+        }
+
+        const confirmed = window.confirm(
+            `WARNING: This will permanently delete all evaluated submissions BEFORE ${deleteDate}.\n\n` +
+            `This action will:\n` +
+            `1. Delete database records\n` +
+            `2. Delete associated screenshots to free up storage\n\n` +
+            `Are you sure you want to proceed?`
+        );
+
+        if (!confirmed) return;
+
+        setIsDeleting(true);
+        try {
+            const res = await api.post('/faculty/bulk-delete', { beforeDate: deleteDate });
+            alert(res.data.message);
+            setDeleteDate('');
+            fetchHistory();
+        } catch (error) {
+            console.error("Bulk delete failed", error);
+            alert("Failed to perform bulk delete: " + (error.response?.data?.error || error.message));
+        } finally {
+            setIsDeleting(false);
+        }
+    };
+
     return (
         <SaaSLayout>
             <div className="space-y-8 text-left">
                 {/* Header */}
-                <div className="flex justify-between items-end">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
                     <div>
                         <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Evaluation History</h1>
                         <p className="text-slate-500 mt-1">Review your previously graded assessment sequences.</p>
+                    </div>
+
+                    {/* Storage Management */}
+                    <div className="bg-amber-50/50 border border-amber-100 rounded-2xl p-4 flex flex-col sm:flex-row items-center gap-4">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600">
+                                <Trash2 size={20} />
+                            </div>
+                            <div>
+                                <p className="text-[10px] font-black uppercase tracking-wider text-amber-700">Storage Cleanup</p>
+                                <p className="text-xs text-amber-600/80">Delete logs before date</p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <input
+                                type="date"
+                                value={deleteDate}
+                                onChange={(e) => setDeleteDate(e.target.value)}
+                                className="px-3 py-2 bg-white border border-amber-200 rounded-xl text-xs font-bold text-slate-700 focus:ring-2 focus:ring-amber-500 outline-none transition-all"
+                            />
+                            <button
+                                onClick={handleBulkDelete}
+                                disabled={!deleteDate || isDeleting}
+                                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${!deleteDate || isDeleting
+                                        ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                                        : 'bg-amber-600 text-white hover:bg-amber-700 shadow-sm shadow-amber-200 hover:shadow-md'
+                                    }`}
+                            >
+                                {isDeleting ? 'Processing...' : 'Bulk Delete'}
+                            </button>
+                        </div>
                     </div>
                 </div>
 

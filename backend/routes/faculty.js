@@ -1,5 +1,7 @@
 const express = require('express');
 const router = express.Router();
+const fs = require('fs');
+const path = require('path');
 const db = require('../database/connection');
 const { verifyToken, verifyFaculty } = require('../middleware/auth');
 
@@ -256,6 +258,80 @@ router.get('/history', verifyFaculty, async (req, res) => {
     } catch (error) {
         console.error("Error fetching faculty history:", error);
         res.status(500).json({ error: "Failed to fetch faculty history" });
+    }
+});
+
+// Bulk delete old submissions
+router.post('/bulk-delete', verifyFaculty, async (req, res) => {
+    try {
+        const { beforeDate } = req.body;
+        const facultyId = req.user.id;
+
+        if (!beforeDate) {
+            return res.status(400).json({ error: 'beforeDate is required' });
+        }
+
+        // 1. Get submissions to be deleted
+        // We only delete submissions that were evaluated by this faculty (to maintain their history view integrity)
+        // If admin, we could potentially allow deleting everything, but the request was "in /faculty/history"
+        const sqlFind = `
+            SELECT s.id, s.user_screenshot, s.expected_screenshot, s.diff_screenshot
+            FROM submission_assignments sa
+            JOIN submissions s ON sa.submission_id = s.id
+            WHERE sa.faculty_id = ? AND sa.status = 'evaluated' AND s.submitted_at < ?
+        `;
+        const submissions = await db.query(sqlFind, [facultyId, beforeDate]);
+
+        if (submissions.length === 0) {
+            return res.json({ message: 'No submissions found to delete before this date', deletedCount: 0 });
+        }
+
+        const deletedIds = submissions.map(s => s.id);
+
+        // 2. Delete files from filesystem
+        const screenshotDir = path.join(__dirname, '../screenshots');
+        submissions.forEach(sub => {
+            ['user_screenshot', 'expected_screenshot', 'diff_screenshot'].forEach(field => {
+                if (sub[field]) {
+                    // sub[field] might be a path like /screenshots/xyz.png or a full URL
+                    const filename = path.basename(sub[field]);
+                    // Check standard locations
+                    const possiblePaths = [
+                        path.join(screenshotDir, filename),
+                        path.join(__dirname, '../public', filename), // checking public just in case
+                        path.join(__dirname, '../../frontend/public', filename) // checking frontend public if linked
+                    ];
+
+                    possiblePaths.forEach(p => {
+                        if (fs.existsSync(p)) {
+                            try {
+                                fs.unlinkSync(p);
+                                console.log(`✓ Deleted file: ${p}`);
+                            } catch (err) {
+                                console.error(`Failed to delete file ${p}:`, err.message);
+                            }
+                        }
+                    });
+                }
+            });
+        });
+
+        // 3. Delete from database
+        // Foreign key cascades handle assignments and evaluations
+        const sqlDelete = `DELETE FROM submissions WHERE id IN (?)`;
+        await db.query(sqlDelete, [deletedIds]);
+
+        res.json({
+            message: `Successfully deleted ${submissions.length} submissions and associated files`,
+            deletedCount: submissions.length
+        });
+
+    } catch (error) {
+        console.error("Bulk delete error:", error);
+        res.status(500).json({
+            error: "Failed to perform bulk delete",
+            details: error.message
+        });
     }
 });
 
