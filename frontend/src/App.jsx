@@ -49,6 +49,13 @@ import AdminBulkCompletion from "./pages/AdminBulkCompletion";
 import Login from "./pages/Login";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { getUserRole } from "./utils/session";
+import { useParams } from "react-router-dom";
+
+// LSP Helper: Redirect /course/:id to /course/:id/level/1
+function CourseRedirect() {
+  const { courseId } = useParams();
+  return <Navigate to={`/course/${courseId}/level/1`} replace />;
+}
 
 function App() {
   const [role, setRole] = useState(() => getUserRole());
@@ -74,11 +81,19 @@ function App() {
           <Route path="/admin/login" element={<Login isAdmin={true} onLogin={handleLogin} />} />
 
           {/* Student Portal */}
+          {/* Student Portal */}
           <Route path="/" element={<ProtectedRoute><CoursesHome /></ProtectedRoute>} />
-          <Route path="/course/:courseId" element={<ProtectedRoute><CourseDetail /></ProtectedRoute>} />
-          <Route path="/course/:courseId/level/:level" element={<ProtectedRoute><LevelPage /></ProtectedRoute>} />
-          <Route path="/level/:courseId/:level" element={<ProtectedRoute><LevelChallenge /></ProtectedRoute>} />
-          <Route path="/level-results/:courseId/:level" element={<ProtectedRoute><LevelResults /></ProtectedRoute>} />
+
+          {/* LSP Flow: Direct Level Access (New Simplified Route) */}
+          <Route path="/level/:levelId" element={<ProtectedRoute><LevelChallenge /></ProtectedRoute>} />
+
+          {/* Backward Compatibility: Old course routes redirect to new level routes */}
+          <Route path="/course/:courseId/level/:level" element={<ProtectedRoute><LevelChallenge /></ProtectedRoute>} />
+          <Route path="/course/:courseId" element={<ProtectedRoute><CourseRedirect /></ProtectedRoute>} />
+
+
+          {/* Legacy Redirects or Fallbacks if needed, but we try to move forward */}
+          <Route path="/level-results/:courseId" element={<ProtectedRoute><LevelResults /></ProtectedRoute>} />
           <Route path="/test-results/:sessionId" element={<ProtectedRoute><TestResultsPage /></ProtectedRoute>} />
           <Route path="/challenges" element={<ProtectedRoute><CandidateDashboard /></ProtectedRoute>} />
           <Route path="/challenge/:id" element={<ProtectedRoute><ChallengeView /></ProtectedRoute>} />

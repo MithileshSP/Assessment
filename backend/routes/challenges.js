@@ -90,23 +90,25 @@ router.get('/', async (req, res) => {
 });
 
 const { verifyToken } = require('../middleware/auth');
+const { checkPrerequisites } = require('../middleware/prerequisites');
 
 /**
  * GET /api/challenges/level-questions
  * Get assigned questions for a user's level with random assignment
  * ENFORCES ATTENDANCE CHECK
  */
-router.get('/level-questions', verifyToken, async (req, res) => {
+router.get('/level-questions', verifyToken, checkPrerequisites, async (req, res) => {
   try {
-    const { courseId, level, forceNew } = req.query;
+    const { courseId, level, forceNew } = req.query; // level is deprecated/optional
     const userId = req.user.id; // Use ID from token for security
 
-    if (!courseId || !level) {
-      return res.status(400).json({ error: 'Missing required parameters' });
+    if (!courseId) {
+      return res.status(400).json({ error: 'Missing required parameters: courseId' });
     }
 
-    // --- ENFORCE ATTENDANCE CHECK ---
-    const testIdentifier = `${courseId}_${level}`;
+    // --- ENFORCE ATTENDANCE CHECK (LINEAR SKILL PATH) ---
+    // Test identifier is now just the courseId, as each course = 1 unique level
+    const testIdentifier = courseId;
 
     // Check both attendance record AND global user block status
     const [user] = await query("SELECT is_blocked FROM users WHERE id = ?", [userId]);
@@ -130,21 +132,21 @@ router.get('/level-questions', verifyToken, async (req, res) => {
     // Read user assignments
     let assignments = getAssignments();
 
-    // Check if user already has assigned questions for this level
-    const assignmentKey = `${userId}-${courseId}-${level}`;
+    // Check if user already has assigned questions for this course
+    const assignmentKey = `${userId}-${courseId}`;
     let userAssignment = assignments.find(a => a.key === assignmentKey);
 
-    // Get all questions for this course and level from database
+    // Get all questions for this course (Skill Path Step) from database
     let levelQuestions;
     try {
-      levelQuestions = await ChallengeModel.findByCourseLevel(courseId, parseInt(level));
+      levelQuestions = await ChallengeModel.findByCourse(courseId);
     } catch (dbError) {
-      console.log('Database error, using JSON file:', dbError.message);
+      console.log('Database error, using JSON file (fallback):', dbError.message);
       const allChallenges = getAllChallenges();
-      levelQuestions = allChallenges.filter(c =>
-        c.courseId === courseId && c.level === parseInt(level)
-      );
+      levelQuestions = allChallenges.filter(c => c.courseId === courseId);
     }
+
+    console.log(`[LevelQuestions] fetching for courseId: ${courseId}, found: ${levelQuestions?.length}`);
 
     // Ensure we never assign the same challenge twice
     const uniqueLevelQuestions = [];
@@ -160,14 +162,26 @@ router.get('/level-questions', verifyToken, async (req, res) => {
       return res.status(404).json({ error: 'No questions found for this level' });
     }
 
-    // If forceNew=true or no assignment exists, create a new random assignment
-    if (forceNew === 'true' || !userAssignment) {
+    // Check if assignment is stale (all assigned questions deleted/missing)
+    let isStale = false;
+    if (userAssignment) {
+      const validQuestions = userAssignment.assignedQuestions.filter(qId =>
+        levelQuestions.some(lq => lq.id === qId)
+      );
+      if (validQuestions.length === 0) {
+        console.log(`Assignment for ${userId} is stale (questions missing). Re-assigning.`);
+        isStale = true;
+      }
+    }
+
+    // If forceNew=true or no assignment exists OR STALE, create a new random assignment
+    if (forceNew === 'true' || !userAssignment || isStale) {
       // Select 1 random question (or all if less than 1)
       const shuffled = [...uniqueLevelQuestions].sort(() => 0.5 - Math.random());
       const selectedQuestions = shuffled.slice(0, 1);
 
-      // Remove old assignment if it exists and forceNew is true
-      if (forceNew === 'true' && userAssignment) {
+      // Remove old assignment if it exists and forceNew is true OR stale
+      if ((forceNew === 'true' || isStale) && userAssignment) {
         assignments = assignments.filter(a => a.key !== assignmentKey);
       }
 
@@ -202,6 +216,8 @@ router.get('/level-questions', verifyToken, async (req, res) => {
         level: question.level
       } : null;
     }).filter(q => q !== null);
+
+    console.log(`[LevelQuestions] Final Assigned Questions Count: ${assignedFullQuestions.length}`);
 
     res.json({
       assignedQuestions: assignedFullQuestions,

@@ -16,7 +16,8 @@ import {
 } from 'lucide-react';
 
 export default function LevelPage() {
-  const { courseId, level } = useParams();
+  const { courseId } = useParams(); // LSP: No level param
+  const level = 1; // LSP: Always Level 1
   const navigate = useNavigate();
   const [course, setCourse] = useState(null);
   const [questions, setQuestions] = useState([]);
@@ -24,7 +25,7 @@ export default function LevelPage() {
 
   useEffect(() => {
     loadLevelData();
-  }, [courseId, level]);
+  }, [courseId]);
 
   const loadLevelData = async () => {
     try {
@@ -34,7 +35,19 @@ export default function LevelPage() {
         getLevelQuestions(courseId, level, userId)
       ]);
       setCourse(courseRes.data);
-      setQuestions(questionsRes.data);
+
+      const loadedQuestions = questionsRes.data || [];
+
+      // LSP Optimization: If only one question, skip overview and go straight to play
+      // Check if it's not already completed to allow review, or just enforce strict flow?
+      // User said: "remove module type student can attend only one question so directly redirect"
+      // This implies bypassing the overview.
+      if (loadedQuestions.length === 1) {
+        navigate(`/course/${courseId}/level/1`, { replace: true });
+        return;
+      }
+
+      setQuestions(loadedQuestions);
     } catch (error) {
       console.error('Failed to load level:', error);
     } finally {
@@ -61,7 +74,9 @@ export default function LevelPage() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 mb-2">
-              <span className="px-2 py-0.5 bg-blue-50 text-blue-600 rounded text-[10px] font-bold uppercase tracking-widest">Stage {level}</span>
+              <span className="px-2 py-0.5 bg-blue-50 text-blue-600 rounded text-[10px] font-bold uppercase tracking-widest">
+                Module Overview
+              </span>
               <span className="text-slate-300">/</span>
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{course?.title}</span>
             </div>
@@ -85,10 +100,9 @@ export default function LevelPage() {
             <Dices size={24} />
           </div>
           <div className="relative z-10 flex-1">
-            <h3 className="text-sm font-bold mb-1">Randomized Logic Distribution</h3>
+            <h3 className="text-sm font-bold mb-1">Module Assessment</h3>
             <p className="text-slate-400 text-xs leading-relaxed max-w-2xl">
-              Our platform has dynamically allocated {questions.length} unique challenges from the curriculum bank for your profile.
-              These assessments must be successfully validated to unlock **Stage {parseInt(level) + 1}**.
+              This module contains {questions.length} challenges. Complete them to master this skill set and unlock the next module in your path.
             </p>
           </div>
         </div>
@@ -140,10 +154,15 @@ export default function LevelPage() {
                   )}
                 </div>
 
-                <button className={`w-full py-4 rounded-2xl font-bold text-sm transition-all flex items-center justify-center gap-2
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate(`/course/${courseId}/level/1`);
+                  }}
+                  className={`w-full py-4 rounded-2xl font-bold text-sm transition-all flex items-center justify-center gap-2
                     ${question.isCompleted ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-900 text-white group-hover:bg-blue-600 shadow-xl shadow-slate-900/10'}
                 `}>
-                  {question.isCompleted ? 'Enter Review Lounge' : 'Initialize Challenge'}
+                  {question.isCompleted ? 'Review Solution' : 'Start Assessment'}
                   {!question.isCompleted && <ChevronRight size={16} className="group-hover:translate-x-1 transition-transform" />}
                 </button>
               </div>
@@ -163,10 +182,9 @@ export default function LevelPage() {
           <div className="bg-white p-10 rounded-[2.5rem] border border-slate-200 shadow-sm">
             <div className="flex flex-col lg:flex-row items-center justify-between gap-10">
               <div className="max-w-xl">
-                <h2 className="text-2xl font-bold text-slate-900 mb-2">Advance to Logic Block {parseInt(level) + 1}</h2>
+                <h2 className="text-2xl font-bold text-slate-900 mb-2">Module Progress</h2>
                 <p className="text-slate-500 font-medium leading-relaxed">
-                  To unlock the next sequence in your curriculum, you must achieve 100% validation on the current distributed challenges.
-                  Manual evaluations may be required for specific complex implementations.
+                  Achieve 100% validation to complete this module.
                 </p>
               </div>
 

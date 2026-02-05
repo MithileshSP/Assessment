@@ -76,7 +76,12 @@ const mergeWithFallbackSubmissions = (dbSubmissions, submissionIds) => {
 class TestSession {
   static async create(sessionData) {
     console.log('[TestSession] Creating session with data:', sessionData);
-    const { user_id, course_id, level, submission_ids = [] } = sessionData;
+    let { user_id, course_id, level, submission_ids = [] } = sessionData;
+
+    // Linear Skill Path: Default level to 1 if not provided
+    if (level === undefined || level === null) {
+      level = 1;
+    }
 
     // Verify user exists to prevent FK violation
     const user = await db.queryOne("SELECT id FROM users WHERE id = ?", [user_id]);
@@ -121,12 +126,13 @@ class TestSession {
     // Track attempt started (FIX 3)
     try {
       // Find the most recent active attendance (or any approved one if session_id is missing)
+      // Linear Skill Path: test_identifier is just course_id
       await db.query(`
         UPDATE test_attendance 
         SET attempt_started_at = CURRENT_TIMESTAMP 
         WHERE user_id = ? AND test_identifier = ? AND is_used = FALSE
         ORDER BY requested_at DESC LIMIT 1
-      `, [user_id, `${course_id}_${level}`]);
+      `, [user_id, course_id]);
     } catch (e) {
       console.warn("Failed to update attempt_started_at:", e.message);
     }
@@ -370,12 +376,13 @@ class TestSession {
 
     // Track attempt submission and mark used (FIX 3 & 4)
     try {
+      // Linear Skill Path: test_identifier is just course_id
       await db.query(`
         UPDATE test_attendance 
         SET attempt_submitted_at = CURRENT_TIMESTAMP, is_used = TRUE 
         WHERE user_id = ? AND test_identifier = ? AND is_used = FALSE
         ORDER BY requested_at DESC LIMIT 1
-      `, [session.user_id, `${session.course_id}_${session.level}`]);
+      `, [session.user_id, session.course_id]);
 
       // AUTO-BLOCK STUDENT: Ensuring is_blocked = 1 after completion
       await db.query(`UPDATE users SET is_blocked = 1 WHERE id = ?`, [session.user_id]);

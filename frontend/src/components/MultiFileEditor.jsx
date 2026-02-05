@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, memo } from 'react';
 import { createPortal } from 'react-dom';
 import Editor from '@monaco-editor/react';
 import { Plus, X, Edit3, File, FileText, Code, Palette } from 'lucide-react';
@@ -9,11 +9,11 @@ import { Plus, X, Edit3, File, FileText, Code, Palette } from 'lucide-react';
  * Supports: HTML, CSS, JS, and TXT files
  * Features: Add, rename, delete files
  */
-export default function MultiFileEditor({
+const MultiFileEditor = ({
     code = { html: '', css: '', js: '' },
     onChange,
     readOnly = false
-}) {
+}) => {
     // Map legacy code format to files format
     const codeToFiles = (codeObj) => ({
         'index.html': codeObj.html || '',
@@ -225,7 +225,7 @@ export default function MultiFileEditor({
     );
 
     return (
-        <div className="flex flex-col h-full bg-[#1e1e2e] rounded-xl">
+        <div className="flex flex-col h-full bg-[#1e1e2e] rounded-md border border-[#313244] overflow-hidden">
             {/* File Tab Bar */}
             <div className="relative flex items-center bg-[#181825] border-b border-[#313244]">
                 <div className="flex items-center overflow-x-auto flex-1">
@@ -239,7 +239,7 @@ export default function MultiFileEditor({
                             <div
                                 key={filename}
                                 onClick={() => !renamingFile && setActiveFile(filename)}
-                                className={`group flex items-center gap-2 px-4 py-2.5 cursor-pointer border-r border-[#313244] transition-all
+                                className={`group flex items-center gap-2 px-3 py-2 cursor-pointer border-r border-[#313244] transition-all
                 ${isActive
                                         ? 'bg-[#1e1e2e] text-white border-t-2 border-t-indigo-500'
                                         : 'text-gray-400 hover:bg-[#1e1e2e]/50 hover:text-white'
@@ -326,4 +326,6 @@ export default function MultiFileEditor({
             </div>
         </div>
     );
-}
+};
+
+export default memo(MultiFileEditor);

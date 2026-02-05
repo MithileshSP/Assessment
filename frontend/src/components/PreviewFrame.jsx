@@ -5,20 +5,13 @@ import { Terminal, ChevronDown, ChevronUp, Trash2, Command, Loader2 } from "luci
  * PreviewFrame - Renders student code in a sandboxed iframe
  * Handles both Web (live preview) and Node.js (execution detection)
  */
-const PreviewFrame = forwardRef(({ code, isRestricted = false, onConsoleLog, isNodeJS = false }, ref) => {
+const PreviewFrame = forwardRef(({ code, isRestricted = false, onConsoleLog, isNodeJS = false, autoRun = false }, ref) => {
   const iframeRef = useRef(null);
   const [logs, setLogs] = useState([]);
   const [isConsoleOpen, setIsConsoleOpen] = useState(false);
+  const [previewKey, setPreviewKey] = useState(0); // Force iframe refresh
+  const [viewingFile, setViewingFile] = useState('index.html');
   const scrollRef = useRef(null);
-  const logCache = useRef(new Set());
-  const blobUrls = useRef({});
-
-  // Cleanup Blob URLs on unmount
-  useEffect(() => {
-    return () => {
-      Object.values(blobUrls.current).forEach(url => URL.revokeObjectURL(url));
-    };
-  }, []);
 
   // Forward logs to parent when they change
   useEffect(() => {
@@ -30,32 +23,25 @@ const PreviewFrame = forwardRef(({ code, isRestricted = false, onConsoleLog, isN
   // Listen for terminal/console messages
   useEffect(() => {
     const handleMessage = (event) => {
-      if (iframeRef.current && event.source === iframeRef.current.contentWindow) {
-        // Handle Console Logs
-        if (event.data && event.data.type === 'CONSOLE_LOG') {
-          const { logType, content } = event.data;
-          const logKey = `${logType}:${content}`;
-          const now = Date.now();
-
-          // Strict Deduplication: skip if identical message logged in last 500ms
-          if (logCache.current.has(logKey)) return;
-          logCache.current.add(logKey);
-          setTimeout(() => logCache.current.delete(logKey), 500);
-
-          setLogs(prev => [...prev.slice(-99), {
-            type: logType,
-            content,
-            timestamp: new Date().toLocaleTimeString([], { hour12: true }),
-            rawTimestamp: now
-          }]);
-          if (logType === 'error') setIsConsoleOpen(true);
-        }
+      if (event.data && event.data.type === 'CONSOLE_LOG') {
+        const { logType, content } = event.data;
+        // console.log("INTERNAL CAPTURE:", logType, content); // Debug
+        setLogs(prev => [...prev.slice(-199), {
+          type: logType,
+          content,
+          timestamp: new Date().toLocaleTimeString([], { hour12: true })
+        }]);
+        if (logType === 'error') setIsConsoleOpen(true);
+      } else if (event.data && event.data.type === 'NAVIGATE_TO') {
+        const target = event.data.file;
+        setViewingFile(target);
+        updatePreview(code); // Refresh with new file
       }
     };
 
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
-  }, []);
+  }, [code]);
 
   const updatePreview = (codeToRender) => {
     if (isNodeJS) {
@@ -68,183 +54,153 @@ const PreviewFrame = forwardRef(({ code, isRestricted = false, onConsoleLog, isN
     }
 
     setLogs([]); // Clear logs on refresh
-    if (!iframeRef.current) return;
+    setPreviewKey(prev => prev + 1); // Force a completely new iframe mount to clear global scope
+  };
+
+  // When previewKey changes, wait for ref and update
+  useEffect(() => {
+    if (previewKey === 0 || !iframeRef.current || isNodeJS) return;
 
     const iframe = iframeRef.current;
-    const doc = iframe.contentDocument || iframe.contentWindow.document;
 
-    // 1. Revoke old Blob URLs
-    Object.values(blobUrls.current).forEach(url => URL.revokeObjectURL(url));
-    blobUrls.current = {};
-
-    // 2. Prepare file map
+    // 1. Prepare file map
     const allFiles = {
-      'styles.css': codeToRender.css || '',
-      'script.js': codeToRender.js || '',
-      ...(codeToRender.additionalFiles || {})
+      'index.html': code.html || '',
+      'styles.css': code.css || '',
+      'script.js': code.js || '',
+      ...(code.additionalFiles || {})
     };
 
-    // 3. Create Blob URLs for all files
-    Object.entries(allFiles).forEach(([name, content]) => {
-      const type = name.endsWith('.css') ? 'text/css' : (name.endsWith('.js') ? 'text/javascript' : 'text/plain');
-      const blob = new Blob([content], { type });
-      blobUrls.current[name] = URL.createObjectURL(blob);
-    });
+    // 3. Determine content to show
+    let mainHtml = allFiles[viewingFile] || allFiles['index.html'] || '';
 
-    // 4. Transform HTML - Replace file references with Blob URLs
-    let processedHtml = codeToRender.html || '';
-
-    // Handle Asset paths (backward compatibility)
-    processedHtml = processedHtml
+    // 4. Transform Asset paths
+    mainHtml = mainHtml
       .replace(/src=["'](?:http:\/\/localhost:5000)?\/?assets\/([^"']+)["']/g, `src="/assets/$1"`)
       .replace(/url\(["']?(?:http:\/\/localhost:5000)?\/?assets\/([^"']+)["']?\)/g, `url("/assets/$1")`)
       .replace(/src=["'](?!(?:http|\/|assets|images))([^"']+\.(?:png|jpg|jpeg|gif|svg|webp))["']/g, `src="/assets/images/$1"`)
       .replace(/url\(["']?(?!(?:http|\/|assets|images))([^"']+\.(?:png|jpg|jpeg|gif|svg|webp))["']?\)/g, `url("/assets/images/$1")`);
 
-    // Replace internal file references (script src and link href)
-    Object.entries(blobUrls.current).forEach(([name, url]) => {
-      // Escape name for regex
+    // 5. INLINE Internal Files (Replacing Blobs with direct content)
+    Object.entries(allFiles).forEach(([name, content]) => {
       const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      // Replace <script src="name"> or <script src="./name">
-      const scriptRegex = new RegExp(`(<script[^>]+src=["'])(?:\\.\\/)?${escapedName}(["'][^>]*>)`, 'g');
-      processedHtml = processedHtml.replace(scriptRegex, `$1${url}$2`);
 
-      // Replace <link[^>]+href="name"> or <link[^>]+href="./name">
-      const linkRegex = new RegExp(`(<link[^>]+href=["'])(?:\\.\\/)?${escapedName}(["'][^>]*>)`, 'g');
-      processedHtml = processedHtml.replace(linkRegex, `$1${url}$2`);
+      if (name.endsWith('.css')) {
+        // Replace <link rel="stylesheet" href="filename.css"> with <style>content</style>
+        const linkRegex = new RegExp(`<link[^>]+href=["']([^"']*/)?${escapedName}["'][^>]*>`, 'g');
+        mainHtml = mainHtml.replace(linkRegex, '<style data-file="' + name + '">' + content + '</style>');
+      } else if (name.endsWith('.js')) {
+        // Replace <script src="filename.js"></script> with <script>content</script>
+        const scriptRegex = new RegExp(`<script[^>]+src=["']([^"']*/)?${escapedName}["'][^>]*>\\s*</script>`, 'g');
+        mainHtml = mainHtml.replace(scriptRegex, '<script data-file="' + name + '">' + content.replace(/<\/script>/g, '<\\/script>') + '</script>');
+      }
     });
 
-    // 5. Build full HTML with helper scripts
-    const helperScript = `
-      (function() {
-        const studentFiles = ${JSON.stringify(allFiles)};
-        window.__STUDENT_FILES__ = studentFiles;
+    const helperScript = [
+      '(function() {',
+      '  window.__STUDENT_FILES__ = ' + JSON.stringify(allFiles).replace(/<\/script>/g, '<\\/script>') + ';',
+      '  if (window._node_env_setup) return;',
+      '  ',
+      '  const _vfs = {',
+      '    readFileSync: function(p) {',
+      '      const cp = p.startsWith("./") ? p.slice(2) : p;',
+      '      const res = window.__STUDENT_FILES__[cp];',
+      '      if (res === undefined) throw new Error("File not found: " + p);',
+      '      return res;',
+      '    },',
+      '    readdirSync: function(p) {',
+      '      return Object.keys(window.__STUDENT_FILES__);',
+      '    }',
+      '  };',
+      '',
+      '  window._internalFs = _vfs;',
+      '  window.require = function(m) {',
+      '    if (m === "fs") return window._internalFs;',
+      '    throw new Error("Module not found: " + m);',
+      '  };',
+      '',
+      '  const _sp = (t, a) => {',
+      '    window.parent.postMessage({',
+      '      type: "CONSOLE_LOG",',
+      '      logType: t,',
+      '      content: Array.from(a).map(x => {',
+      '        try { ',
+      '          if (x === null) return "null";',
+      '          if (x === undefined) return "undefined";',
+      '          return typeof x === "object" ? JSON.stringify(x, null, 2) : String(x); ',
+      '        }',
+      '        catch (e) { return "[Circular or Non-Stringifiable]"; }',
+      '      }).join(" ")',
+      '    }, "*");',
+      '  };',
+      '',
+      '  const ol = console.log;',
+      '  console.log = function() { _sp("log", arguments); ol.apply(console, arguments); };',
+      '  console.error = function() { _sp("error", arguments); ol.apply(console, arguments); };',
+      '  console.warn = function() { _sp("warn", arguments); ol.apply(console, arguments); };',
+      '  window.onerror = function(m) { _sp("error", [m]); };',
+      '',
+      '  document.addEventListener("click", e => {',
+      '    const a = e.target.closest("a");',
+      '    if (a && a.getAttribute("href")) {',
+      '       const href = a.getAttribute("href").replace(/^\\.\\//, "");',
+      '       if (window.__STUDENT_FILES__[href]) {',
+      '         e.preventDefault();',
+      '         window.parent.postMessage({ type: "NAVIGATE_TO", file: href }, "*");',
+      '       }',
+      '    }',
+      '  });',
+      '  ',
+      '  window._node_env_setup = true;',
+      '})();'
+    ].join('\n');
 
-        // Mock fs module
-        const fsMock = {
-          readFileSync: function(path, options) {
-            // Clean path (remove ./ if present)
-            const cleanPath = path.startsWith('./') ? path.slice(2) : path;
-            const content = studentFiles[cleanPath];
-            if (content === undefined) {
-              throw new Error("File not found: " + path);
-            }
-            return content;
-          },
-          readdirSync: function(path) {
-            if (path === '.' || path === './') {
-              return Object.keys(studentFiles);
-            }
-            // Basic support for deeper paths if needed
-            const prefix = path.endsWith('/') ? path : path + '/';
-            const cleanPrefix = prefix.startsWith('./') ? prefix.slice(2) : prefix;
-            return Object.keys(studentFiles)
-              .filter(f => f.startsWith(cleanPrefix))
-              .map(f => f.slice(cleanPrefix.length).split('/')[0]);
-          },
-          exists: function(path) {
-             const cleanPath = path.startsWith('./') ? path.slice(2) : path;
-             return studentFiles[cleanPath] !== undefined;
-          }
-        };
-
-        window.fs = fsMock;
-
-        // Mock require for basic node-like support
-        window.require = function(moduleName) {
-          if (moduleName === 'fs') return fsMock;
-          throw new Error("Module not found: " + moduleName);
-        };
-
-        const originalLog = console.log;
-        const originalError = console.error;
-        const originalWarn = console.warn;
-
-        const sendToParent = (type, args) => {
-          window.parent.postMessage({
-            type: 'CONSOLE_LOG',
-            logType: type,
-            content: Array.from(args).map(arg => {
-              try { return typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg); }
-              catch (e) { return String(arg); }
-            }).join(' ')
-          }, '*');
-        };
-
-        console.log = function() { sendToParent('info', arguments); originalLog.apply(console, arguments); };
-        console.error = function() { sendToParent('error', arguments); originalError.apply(console, arguments); };
-        console.warn = function() { sendToParent('warn', arguments); originalWarn.apply(console, arguments); };
-        window.onerror = function(msg) { sendToParent('error', [msg]); };
-
-        // Async Prompt Mock
-        window.prompt = function(msg) {
-          return new Promise(resolve => {
-            window.parent.postMessage({ type: 'PROMPT_REQUEST', message: msg }, '*');
-            const handler = (e) => {
-              if (e.data.type === 'PROMPT_RESPONSE') {
-                window.removeEventListener('message', handler);
-                resolve(e.data.value);
-              }
-            };
-            window.addEventListener('message', handler);
-          });
-        };
-
-        window.addEventListener('message', (e) => {
-          if (e.data.type === 'EXEC_CMD') {
-            try {
-              const result = window.eval(e.data.code);
-              if (result !== undefined) console.log('=> ' + (typeof result === 'object' ? JSON.stringify(result, null, 2) : result));
-            } catch (err) { console.error(err.message); }
-          }
-        });
-      })();
-    `;
-
-    // Determine if we need to inject default script/style (if not already linked)
-    const hasScriptJs = new RegExp(`<script[^>]+src=["'][^"']*${blobUrls.current['script.js']}["']`, 'i').test(processedHtml);
-    const hasStylesCss = new RegExp(`<link[^>]+href=["'][^"']*${blobUrls.current['styles.css']}["']`, 'i').test(processedHtml);
-
+    // Auto-inject missing core files if they weren't matched by name above
     const injectionTags = [];
-    if (!hasStylesCss && allFiles['styles.css'].trim()) {
-      injectionTags.push(`<link rel="stylesheet" href="${blobUrls.current['styles.css']}">`);
+    const hasStylesCss = mainHtml.includes('data-file="styles.css"');
+    const hasScriptJs = mainHtml.includes('data-file="script.js"');
+
+    if (!hasStylesCss && allFiles['styles.css']?.trim()) {
+      injectionTags.push('<style>' + allFiles['styles.css'] + '</style>');
     }
-    if (!hasScriptJs && allFiles['script.js'].trim()) {
-      injectionTags.push(`<script src="${blobUrls.current['script.js']}"></script>`);
+    if (!hasScriptJs && allFiles['script.js']?.trim()) {
+      injectionTags.push('<script>' + allFiles['script.js'].replace(/<\/script>/g, '<\\/script>') + '</script>');
     }
 
-    const fullHTML = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <style>
-          * { margin: 0; padding: 0; box-sizing: border-box; }
-          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-        </style>
-        <script>${helperScript}</script>
-      </head>
-      <body>
-        ${processedHtml}
-        ${injectionTags.join('\n')}
-      </body>
-      </html>
-    `;
+    const fullHTML = [
+      '<!DOCTYPE html>',
+      '<html>',
+      '<head>',
+      '  <meta charset="UTF-8">',
+      '  <script>' + helperScript + '</script>',
+      '</head>',
+      '<body>',
+      '  ' + mainHtml,
+      '  ' + injectionTags.join('\n'),
+      '</body>',
+      '</html>'
+    ].join('\n');
 
-    doc.open();
-    doc.write(fullHTML);
-    doc.close();
-  };
+    iframe.srcdoc = fullHTML;
+  }, [previewKey]);
 
   useImperativeHandle(ref, () => ({ updatePreview }));
 
-  // Debounced run code to prevent flickering during editing
+  // Debounced auto-run (restored per user request for live preview)
   useEffect(() => {
     if (isNodeJS) return;
-    const timer = setTimeout(() => updatePreview(code), 400);
+
+    // Immediate run on mount or if autoRun prop is true
+    if (autoRun || previewKey === 0) {
+      updatePreview(code);
+      if (autoRun) return; // Don't setup timer if it's a static autoRun (like Expected)
+    }
+
+    const timer = setTimeout(() => {
+      if (!isNodeJS) updatePreview(code);
+    }, 1000);
     return () => clearTimeout(timer);
-  }, [code, isNodeJS]);
+  }, [code, isNodeJS, autoRun]);
 
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -252,12 +208,12 @@ const PreviewFrame = forwardRef(({ code, isRestricted = false, onConsoleLog, isN
 
   return (
     <div
-      className="w-full h-full border-2 border-slate-200 rounded-lg overflow-hidden bg-white flex flex-col relative shadow-sm"
+      className="w-full h-full border border-slate-200 rounded-md overflow-hidden bg-white flex flex-col relative"
       onContextMenu={isRestricted ? (e) => e.preventDefault() : undefined}
       style={isRestricted ? { userSelect: 'none' } : undefined}
     >
       <div className="flex-1 relative overflow-auto">
-        <iframe ref={iframeRef} sandbox="allow-scripts allow-same-origin allow-modals allow-forms" className="w-full h-full" title="Preview" />
+        <iframe key={previewKey} ref={iframeRef} sandbox="allow-scripts allow-modals allow-forms" className="w-full h-full" title="Preview" />
       </div>
     </div>
   );

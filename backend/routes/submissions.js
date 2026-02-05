@@ -56,9 +56,23 @@ const saveSubmissions = (submissions) => {
 router.post("/", async (req, res) => {
   const { challengeId, candidateName, code, userId, isAutoSave } = req.body;
   console.log(`[SubmissionsAPI] Incoming ${isAutoSave ? 'Draft' : 'Final'} Submission:`, {
-    challengeId, userId, codeKeys: Object.keys(code || {}), hasHTML: !!code?.html
+    challengeId, userId, codeKeys: Object.keys(code || {}), hasHTML: !!code?.html, sessionId: req.body.sessionId
   });
+
   try {
+    const { sessionId } = req.body;
+
+    // AUTHORITATIVE TIMER CHECK
+    if (sessionId) {
+      const { validateSessionActive } = require('../services/sessionValidator');
+      const isValid = await validateSessionActive(sessionId, userId);
+      if (!isValid) {
+        return res.status(403).json({
+          error: 'Session Expired',
+          message: 'Your test session has ended or is invalid. No further submissions are allowed.'
+        });
+      }
+    }
 
     // For auto-save, allow empty code (just save current state)
     if (!isAutoSave && (!code || ((!code.html || code.html.trim() === '') && (!code.js || code.js.trim() === '')))) {
@@ -275,7 +289,21 @@ router.post("/", async (req, res) => {
  */
 router.post('/batch', async (req, res) => {
   try {
-    const { submissions, courseId, level } = req.body;
+    const { submissions, courseId, level, sessionId } = req.body;
+
+    // AUTHORITATIVE TIMER CHECK
+    if (sessionId) {
+      const { validateSessionActive } = require('../services/sessionValidator');
+      // We assume all submissions in a batch belong to the same user
+      const userId = submissions[0]?.userId;
+      const isValid = await validateSessionActive(sessionId, userId);
+      if (!isValid) {
+        return res.status(403).json({
+          error: 'Session Expired',
+          message: 'Your test session has ended. Auto-save failed to persist.'
+        });
+      }
+    }
 
     if (!Array.isArray(submissions) || submissions.length === 0) {
       return res.status(200).json({ message: 'No submissions to save' });

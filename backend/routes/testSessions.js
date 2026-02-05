@@ -7,16 +7,17 @@ router.post('/', async (req, res) => {
   try {
     const { user_id, course_id, level } = req.body;
 
-    if (!user_id || !course_id || level === undefined) {
+    // Linear Skill Path: level is optional/deprecated
+    if (!user_id || !course_id) {
       return res.status(400).json({
-        error: 'Missing required fields: user_id, course_id, level'
+        error: 'Missing required fields: user_id, course_id'
       });
     }
 
     const session = await TestSession.create({
       user_id,
       course_id,
-      level
+      level: level || 1 // Default to 1
     });
 
     res.status(201).json(session);

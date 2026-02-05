@@ -34,10 +34,11 @@ class CourseModel {
   // Get all courses
   static async findAll() {
     try {
-      const courses = await query('SELECT * FROM courses ORDER BY created_at DESC');
+      const courses = await query('SELECT * FROM courses ORDER BY order_index ASC');
       // Parse JSON fields (mysql2 may auto-parse JSON columns, handle both cases)
       return courses.map(course => ({
         ...course,
+        orderIndex: course.order_index,
         tags: Array.isArray(course.tags) ? course.tags : JSON.parse(course.tags || '[]'),
         restrictions: Array.isArray(course.restrictions) || typeof course.restrictions === 'object'
           ? course.restrictions
@@ -51,7 +52,7 @@ class CourseModel {
         isLocked: Boolean(course.is_locked),
         isHidden: Boolean(course.is_hidden),
         prerequisiteCourseId: course.prerequisite_course_id || null,
-        totalLevels: course.total_levels,
+        totalLevels: 1, // Linear Skill Path: 1 Level per Course
         estimatedTime: course.estimated_time
       }));
     } catch (error) {
@@ -67,6 +68,7 @@ class CourseModel {
       if (!course) return null;
       return {
         ...course,
+        orderIndex: course.order_index,
         tags: Array.isArray(course.tags) ? course.tags : JSON.parse(course.tags || '[]'),
         restrictions: Array.isArray(course.restrictions) || typeof course.restrictions === 'object'
           ? course.restrictions
@@ -76,11 +78,11 @@ class CourseModel {
           : JSON.parse(course.level_settings || '{}'),
         passingThreshold: Array.isArray(course.passing_threshold) || typeof course.passing_threshold === 'object'
           ? course.passing_threshold
-          : JSON.parse(course.passing_threshold || '{"structure": 80, "visual": 80, "overall": 75}'),
+          : JSON.parse(course.passing_threshold || '{"structure": 80, "visual": 80, " overall": 75}'),
         isLocked: Boolean(course.is_locked),
         isHidden: Boolean(course.is_hidden),
         prerequisiteCourseId: course.prerequisite_course_id || null,
-        totalLevels: course.total_levels,
+        totalLevels: 1, // Linear Skill Path
         estimatedTime: course.estimated_time
       };
     } catch (error) {
@@ -121,9 +123,17 @@ class CourseModel {
     }
 
     try {
+      // Calculate next order index if not provided
+      let orderIndex = courseData.orderIndex;
+      if (orderIndex === undefined || orderIndex === null) {
+        const maxOrderResult = await queryOne('SELECT MAX(order_index) as maxOrder FROM courses');
+        const maxOrder = maxOrderResult?.maxOrder || 0;
+        orderIndex = Math.floor(maxOrder / 10) * 10 + 10; // Round to next 10s for padding
+      }
+
       await query(
-        `INSERT INTO courses (id, title, description, thumbnail, icon, color, total_levels, estimated_time, difficulty, tags, is_locked, is_hidden, prerequisite_course_id, restrictions, level_settings, passing_threshold, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO courses (id, title, description, thumbnail, icon, color, total_levels, estimated_time, difficulty, tags, is_locked, is_hidden, prerequisite_course_id, restrictions, level_settings, passing_threshold, order_index, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           id,
           courseData.title,
@@ -131,7 +141,7 @@ class CourseModel {
           courseData.thumbnail || null,
           courseData.icon || '📚',
           courseData.color || '#3B82F6',
-          courseData.totalLevels || 1,
+          1, // total_levels always 1
           courseData.estimatedTime || '1 hour',
           courseData.difficulty || 'Beginner',
           JSON.stringify(courseData.tags || []),
@@ -141,6 +151,7 @@ class CourseModel {
           JSON.stringify(courseData.restrictions || {}),
           JSON.stringify(courseData.levelSettings || {}),
           JSON.stringify(courseData.passingThreshold || { structure: 80, visual: 80, overall: 75 }),
+          orderIndex,
           courseData.createdAt || new Date()
         ]
       );
@@ -224,6 +235,8 @@ class CourseModel {
 
       console.log('[DEBUG] CourseModel.update executing SQL with isHidden:', isHidden);
 
+      const orderIndex = courseData.orderIndex !== undefined ? courseData.orderIndex : (existing.order_index || 0);
+
       // 3. Update with explicit values
       await query(
         `UPDATE courses SET
@@ -232,7 +245,7 @@ class CourseModel {
          thumbnail = ?,
          icon = ?,
          color = ?,
-         total_levels = ?,
+         total_levels = 1,
          estimated_time = ?,
          difficulty = ?,
          tags = ?,
@@ -242,12 +255,13 @@ class CourseModel {
          restrictions = ?,
          level_settings = ?,
          passing_threshold = ?,
+         order_index = ?,
          updated_at = NOW()
          WHERE id = ?`,
         [
           title, description, thumbnail, icon, color,
-          totalLevels, estimatedTime, difficulty, tags,
-          isLocked, isHidden, prerequisiteCourseId, restrictions, levelSettings, passingThreshold, id
+          estimatedTime, difficulty, tags,
+          isLocked, isHidden, prerequisiteCourseId, restrictions, levelSettings, passingThreshold, orderIndex, id
         ]
       );
 

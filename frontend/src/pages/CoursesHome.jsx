@@ -55,114 +55,129 @@ export default function CoursesHome() {
 
   return (
     <SaaSLayout>
-      <div className="space-y-8">
-        {/* Welcome Header */}
-        <div className="flex justify-between items-end">
-          <div>
-            <h1 className="text-4xl font-display font-bold text-slate-900 tracking-tight">Available Courses</h1>
-            <p className="text-slate-500 mt-2 text-lg">Select a learning path to begin your assessment.</p>
+      <div className="max-w-4xl mx-auto space-y-12 pb-20">
+        {/* Header */}
+        <div className="text-center space-y-4 animate-fade-in-up">
+          <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-xs font-bold uppercase tracking-wider">
+            <Layers size={14} />
+            <span>Structured Curriculum</span>
           </div>
-          <div className="hidden sm:flex items-center gap-3 bg-white px-5 py-2.5 rounded-2xl border border-slate-200 shadow-premium">
-            <span className="w-2.5 h-2.5 rounded-full bg-primary-500 shadow-[0_0_12px_rgba(14,140,233,0.5)] animate-pulse" />
-            <span className="text-sm font-semibold text-slate-700">{courses.length} Courses Active</span>
-          </div>
+          <h1 className="text-4xl md:text-5xl font-display font-bold text-slate-900 tracking-tight">
+            Your Skill Path
+          </h1>
+          <p className="text-lg text-slate-500 max-w-2xl mx-auto leading-relaxed">
+            Progress through each level to master your skills. Complete each level to unlock the next.
+          </p>
         </div>
 
-        {/* Courses Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 animate-fade-in-up">
-          {courses
-            .filter(c => {
-              // Hide hidden courses from non-admins
-              if (c.isHidden && !isAdmin) return false;
-              // Hide courses with unmet prerequisites from non-admins
-              if (c.prerequisiteCourseId && !c.isPrerequisiteMet && !isAdmin) return false;
-              return true;
-            })
-            .map((course) => (
-              <div
-                key={course.id}
-                onClick={() => navigate(`/course/${course.id}`)}
-                className="card !p-0 overflow-hidden cursor-pointer group relative"
-              >
-                {course.isHidden && (
-                  <div className="absolute top-5 right-5 z-10 bg-amber-400 text-amber-950 text-[10px] font-black px-2.5 py-1.5 rounded-xl flex items-center gap-1.5 shadow-xl backdrop-blur-md">
-                    <EyeOff size={12} /> PRIVATE
-                  </div>
-                )}
+        {/* Timeline */}
+        <div className="relative pl-8 md:pl-0">
+          {/* Vertical Line (Desktop: Center, Mobile: Left) */}
+          <div className="absolute left-8 md:left-1/2 top-4 bottom-10 w-0.5 bg-slate-200 -translate-x-1/2 hidden md:block" />
+          <div className="absolute left-0 top-4 bottom-10 w-0.5 bg-slate-200 block md:hidden" />
 
-                {/* Prerequisite Locked Badge (Admin only) */}
-                {course.prerequisiteCourseId && !course.isPrerequisiteMet && isAdmin && (
-                  <div className="absolute top-5 left-5 z-10 bg-rose-500 text-white text-[10px] font-black px-2.5 py-1.5 rounded-xl flex items-center gap-1.5 shadow-xl backdrop-blur-md">
-                    <Lock size={12} /> Requires: {course.prerequisiteCourseName}
-                  </div>
-                )}
+          <div className="space-y-12">
+            {courses
+              .sort((a, b) => (a.orderIndex || 0) - (b.orderIndex || 0)) // Enforce Linear Order
+              .filter(c => {
+                // Hide hidden courses from non-admins
+                if (c.isHidden && !isAdmin) return false;
+                // Show all other courses (even if locked, so they appear on timeline)
+                return true;
+              })
+              .map((course, index) => {
+                // Status Logic
+                const isLocked = course.prerequisiteCourseId && !course.isPrerequisiteMet && !isAdmin;
+                // If not locked and not completed, it's active. (We assume "completed" flag exists or we infer it)
+                // For now, if Prereq Met, we treat as Active/Available. 
+                // Ideally backend sends `isCompleted` if we check `user_progress` or `test_sessions`.
+                // Let's assume strict Lock Check is the main gate.
 
-                {/* Course Thumbnail */}
-                <div className="h-52 flex items-center justify-center relative overflow-hidden bg-slate-100">
-                  {course.thumbnail ? (
-                    <img
-                      src={course.thumbnail}
-                      alt={course.title}
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700"
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center">
-                      <Code size={48} className="text-white/30" />
+                const isEven = index % 2 === 0;
+
+                return (
+                  <div key={course.id} className={`relative flex items-center md:justify-between ${isEven ? 'md:flex-row' : 'md:flex-row-reverse'} group animate-fade-in-up`} style={{ animationDelay: `${index * 100}ms` }}>
+
+                    {/* Timeline Node */}
+                    <div className={`absolute left-0 md:left-1/2 -translate-x-1/2 w-10 h-10 rounded-full border-4 border-white shadow-md z-10 flex items-center justify-center transition-transform hover:scale-110
+                      ${isLocked
+                        ? 'bg-slate-200 text-slate-400'
+                        : 'bg-primary-600 text-white shadow-[0_0_20px_rgba(37,99,235,0.4)]'
+                      }
+                    `}>
+                      {isLocked ? <Lock size={16} /> : <span className="font-bold text-sm">{index + 1}</span>}
                     </div>
-                  )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                </div>
 
-                {/* Course Info */}
-                <div className="p-7">
-                  <h3 className="text-xl font-display font-bold text-slate-900 group-hover:text-primary-600 transition-colors leading-tight mb-3">
-                    {course.title}
-                  </h3>
+                    {/* Spacer for Desktop Alignment */}
+                    <div className="hidden md:block w-5/12" />
 
-                  <p className="text-slate-500 text-sm mb-6 line-clamp-2 leading-relaxed font-medium">
-                    {course.description}
-                  </p>
+                    {/* Card */}
+                    <div
+                      onClick={() => !isLocked && navigate(`/level/${course.id}`)}
+                      className={`
+                        w-full md:w-5/12 ml-12 md:ml-0 cursor-pointer transition-all duration-300 relative
+                        ${isLocked
+                          ? 'opacity-60 grayscale cursor-not-allowed'
+                          : 'hover:-translate-y-2 hover:shadow-2xl'
+                        }
+                      `}
+                    >
+                      <div className="bg-white rounded-[2rem] p-2 border border-slate-100 shadow-xl overflow-hidden relative">
+                        {/* Card Content */}
+                        <div className="relative z-10 bg-white rounded-[1.5rem] p-6 border border-slate-50">
+                          {/* Top: Status Badges */}
+                          <div className="flex justify-between items-start mb-4">
+                            <span className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider ${course.difficulty === 'Beginner' ? 'bg-emerald-50 text-emerald-600' :
+                              course.difficulty === 'Intermediate' ? 'bg-amber-50 text-amber-600' :
+                                'bg-rose-50 text-rose-600'
+                              }`}>
+                              {course.difficulty}
+                            </span>
+                            {isLocked && (
+                              <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-rose-500">
+                                <Lock size={10} /> Locked
+                              </span>
+                            )}
+                          </div>
 
-                  {/* Course Meta */}
-                  <div className="flex items-center justify-between mb-6">
-                    <div className="flex items-center gap-2 text-slate-400">
-                      <div className="p-1.5 bg-primary-50 rounded-lg text-primary-600">
-                        <Layers size={14} />
-                      </div>
-                      <span className="text-[11px] font-bold uppercase tracking-wider">{course.totalLevels} Levels</span>
-                    </div>
-                    <span className={`badge ${course.difficulty === 'Beginner' ? 'badge-easy' : course.difficulty === 'Intermediate' ? 'badge-medium' : 'badge-hard'}`}>
-                      {course.difficulty}
-                    </span>
-                  </div>
+                          <h3 className="text-xl font-bold text-slate-900 mb-2 group-hover:text-primary-600 transition-colors">
+                            Level {index}: {course.title}
+                          </h3>
+                          <p className="text-slate-500 text-sm leading-relaxed line-clamp-2 mb-6">
+                            {course.description}
+                          </p>
 
-                  <div className="flex items-center justify-between pt-5 border-t border-slate-100">
-                    <div className="flex -space-x-2.5">
-                      {[1, 2, 3].map(i => (
-                        <div key={i} className="w-8 h-8 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-500 shadow-sm">
-                          {i}
+                          {/* Action Footer */}
+                          <div className="flex items-center justify-between pt-4 border-t border-slate-50">
+                            <div className="flex items-center gap-2 text-slate-400 text-xs font-semibold">
+                              <Clock size={14} />
+                              <span>{course.estimatedTime}</span>
+                            </div>
+
+                            <button
+                              disabled={isLocked}
+                              className={`
+                                flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all
+                                ${isLocked
+                                  ? 'bg-slate-100 text-slate-400'
+                                  : 'bg-primary-50 text-primary-600 group-hover:bg-primary-600 group-hover:text-white'
+                                }
+                              `}
+                            >
+                              {isLocked ? 'Locked' : 'Start Level'}
+                              {!isLocked && <ArrowRight size={16} />}
+                            </button>
+                          </div>
                         </div>
-                      ))}
-                    </div>
-                    <div className="flex items-center gap-2 text-primary-600 font-bold text-sm tracking-tight">
-                      <span>Enter Course</span>
-                      <div className="w-8 h-8 bg-primary-50 rounded-full flex items-center justify-center group-hover:bg-primary-600 group-hover:text-white transition-all">
-                        <ArrowRight size={14} />
+
+                        {/* Background Decoration */}
+                        <div className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none bg-gradient-to-br ${isLocked ? 'from-slate-100 to-slate-200' : 'from-blue-500/5 to-purple-500/5'}`} />
                       </div>
                     </div>
                   </div>
-                </div>
-              </div>
-            ))}
-
-          {courses.length === 0 && !loading && (
-            <div className="col-span-full py-20 bg-white rounded-3xl border border-dashed border-slate-300 flex flex-col items-center gap-4 text-slate-400">
-              <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center text-slate-200">
-                <Layout size={32} />
-              </div>
-              <p className="font-medium">No courses available at the moment.</p>
-            </div>
-          )}
+                );
+              })}
+          </div>
         </div>
       </div>
     </SaaSLayout>

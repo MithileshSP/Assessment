@@ -14,6 +14,7 @@ export default function CourseEditModal({ course, onClose, onSave }) {
     difficulty: 'Beginner',
     totalLevels: 6,
     estimatedTime: '10 hours',
+    orderIndex: null,
     tags: [],
     prerequisiteCourseId: null,
     restrictions: {
@@ -151,7 +152,7 @@ export default function CourseEditModal({ course, onClose, onSave }) {
               </div>
               <div>
                 <h2 className="text-xl font-black text-slate-900">
-                  {course ? 'Edit Course' : 'New Course'}
+                  {course ? 'Edit Level' : 'New Level'}
                 </h2>
                 <p className="text-slate-400 text-sm">Fill in the details below</p>
               </div>
@@ -172,7 +173,7 @@ export default function CourseEditModal({ course, onClose, onSave }) {
               <div className="col-span-2 sm:col-span-1">
                 <label className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
                   <span className="w-5 h-5 rounded bg-slate-100 flex items-center justify-center text-[10px] font-black text-slate-400">1</span>
-                  Course ID
+                  Level ID
                 </label>
                 <input
                   type="text"
@@ -181,7 +182,7 @@ export default function CourseEditModal({ course, onClose, onSave }) {
                   onChange={handleChange}
                   disabled={!!course}
                   required
-                  placeholder="course-react-fundamentals"
+                  placeholder="level-0"
                   className="w-full px-4 py-3 bg-slate-50 border-2 border-transparent rounded-xl text-sm font-medium focus:border-indigo-500 focus:bg-white outline-none transition-all disabled:opacity-50"
                 />
               </div>
@@ -282,18 +283,19 @@ export default function CourseEditModal({ course, onClose, onSave }) {
                 />
               </div>
 
-              {/* Levels and Time */}
+              {/* Order and Time */}
               <div>
                 <label className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                  <Layers size={12} /> Total Levels
+                  <Layers size={12} /> Order Index
                 </label>
                 <input
                   type="number"
-                  name="totalLevels"
-                  value={formData.totalLevels}
+                  name="orderIndex"
+                  value={formData.orderIndex === null ? '' : formData.orderIndex}
                   onChange={handleChange}
-                  min="1"
-                  max="20"
+                  min="0"
+                  max="9999"
+                  placeholder="Auto-assign"
                   className="w-full px-4 py-3 bg-slate-50 border-2 border-transparent rounded-xl text-sm font-medium focus:border-indigo-500 focus:bg-white outline-none transition-all"
                 />
               </div>
@@ -314,7 +316,7 @@ export default function CourseEditModal({ course, onClose, onSave }) {
               {/* Prerequisite Course */}
               <div className="col-span-2">
                 <label className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
-                  <Link size={12} /> Prerequisite Course
+                  <Link size={12} /> Prerequisite Level
                 </label>
                 <select
                   name="prerequisiteCourseId"

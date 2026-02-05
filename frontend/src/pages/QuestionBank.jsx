@@ -62,13 +62,10 @@ const QuestionBank = () => {
 
             setCourse(courseRes.data);
 
-            // Group questions by level
-            const grouped = (questionsRes.data || []).reduce((acc, q) => {
-                const lv = q.level || 1;
-                if (!acc[lv]) acc[lv] = [];
-                acc[lv].push(q);
-                return acc;
-            }, {});
+            // FLATTEN LEVELS: Treat all questions as belonging to the current single level
+            const grouped = {
+                1: questionsRes.data || []
+            };
 
             setQuestionsByLevel(grouped);
 
@@ -99,6 +96,7 @@ const QuestionBank = () => {
         try {
             await api.deleteQuestion(questionId);
             setSelectedQuestions(prev => prev.filter(id => id !== questionId));
+            // No fetch needed if we update local state, but fetching is safer
             fetchData();
         } catch (error) {
             alert('Failed to delete question');
@@ -149,7 +147,7 @@ const QuestionBank = () => {
 
     const totals = {
         questions: Object.values(questionsByLevel).flat().length,
-        levels: course?.totalLevels || 0
+        levels: 1 // Single level view
     };
 
 
@@ -332,12 +330,12 @@ const QuestionBank = () => {
                         <div className="text-left">
                             <div className="flex items-center gap-2 text-[10px] font-black text-indigo-500 uppercase tracking-[0.2em] mb-1">
                                 <BookOpen size={10} />
-                                <span>Course Management</span>
+                                <span>Level Management</span>
                             </div>
                             <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
                                 {course?.title || 'Loading...'}
                             </h1>
-                            <p className="text-slate-500 text-sm mt-1">Manage question repository and exam security configurations.</p>
+                            <p className="text-slate-500 text-sm mt-1">Manage question repository and settings.</p>
                         </div>
                     </div>
 
@@ -377,7 +375,7 @@ const QuestionBank = () => {
                                 </div>
                                 <div className="bg-indigo-50 p-4 rounded-3xl border border-indigo-100 text-left">
                                     <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest leading-none">Levels</p>
-                                    <p className="text-2xl font-black text-indigo-600 mt-2">{totals.levels}</p>
+                                    <p className="text-2xl font-black text-indigo-600 mt-2">1</p>
                                 </div>
                             </div>
 
@@ -463,9 +461,10 @@ const QuestionBank = () => {
                             </div>
                         </div>
                     </div>
-                    {/* Questions List Area */}
+                    {/* Questions List Area - Single Level View */}
                     <div className="lg:col-span-3 space-y-4">
-                        {Array.from({ length: course?.totalLevels || course?.total_levels || 1 }, (_, i) => i + 1).map((lv) => {
+                        {/* Always Render Level 1 Only */}
+                        {[1].map((lv) => {
                             const questions = questionsByLevel[lv] || [];
                             const isExpanded = expandedLevels[lv];
                             const filtered = questions.filter(q =>

@@ -32,6 +32,7 @@ async function applyMigrations() {
         tags JSON,
         is_locked BOOLEAN DEFAULT FALSE,
         is_hidden BOOLEAN DEFAULT FALSE,
+        order_index INT UNIQUE NOT NULL DEFAULT 0,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         INDEX idx_difficulty (difficulty),
@@ -102,6 +103,7 @@ async function applyMigrations() {
         INDEX idx_status (status),
         INDEX idx_submitted_at (submitted_at),
         INDEX idx_course_level (course_id, level),
+        INDEX idx_submissions_session (session_id, status),
         FOREIGN KEY (challenge_id) REFERENCES challenges(id) ON DELETE CASCADE,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -156,10 +158,13 @@ async function applyMigrations() {
 
     // 1.1 Update Users Table Schema (Match v3.0)
     try {
-      await addColumn("ALTER TABLE users ADD COLUMN picture VARCHAR(500) NULL AFTER role");
+      await addColumn("ALTER TABLE users ADD COLUMN roll_no VARCHAR(50) NULL AFTER full_name");
+      await addColumn("ALTER TABLE users ADD COLUMN is_blocked BOOLEAN DEFAULT TRUE AFTER role");
+      await addColumn("ALTER TABLE users ADD COLUMN picture VARCHAR(500) NULL AFTER is_blocked");
       await addColumn("ALTER TABLE users ADD COLUMN current_session_id VARCHAR(100) NULL AFTER picture");
       await addColumn("ALTER TABLE users ADD COLUMN last_login TIMESTAMP NULL AFTER created_at");
       await addColumn("ALTER TABLE users ADD INDEX idx_session_id (current_session_id)");
+      console.log('✅ Users table columns verified.');
     } catch (e) {
       console.warn('⚠️ Users table modification info:', e.message);
     }
@@ -196,7 +201,8 @@ async function applyMigrations() {
         is_used BOOLEAN DEFAULT FALSE,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
         INDEX idx_user_test (user_id, test_identifier),
-        INDEX idx_session (session_id)
+        INDEX idx_session (session_id),
+        INDEX idx_attendance_active (test_identifier, status)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
 
@@ -392,17 +398,18 @@ async function applyMigrations() {
     await addColumn('ALTER TABLE challenges ADD COLUMN expected_screenshot_data MEDIUMBLOB');
     await addColumn("ALTER TABLE challenges ADD COLUMN challenge_type ENUM('web', 'nodejs') DEFAULT 'web'");
     await addColumn("ALTER TABLE challenges ADD COLUMN expected_output TEXT");
+    await addColumn("ALTER TABLE challenges ADD COLUMN html LONGTEXT AFTER passing_threshold");
+    await addColumn("ALTER TABLE challenges ADD COLUMN css LONGTEXT AFTER html");
+    await addColumn("ALTER TABLE challenges ADD COLUMN js LONGTEXT AFTER css");
+    await addColumn("ALTER TABLE challenges ADD COLUMN additional_files JSON AFTER js");
 
     // Performance Indexes for Scalability
     await addColumn('ALTER TABLE submissions ADD INDEX idx_user_challenge_status (user_id, challenge_id, status)');
+    await addColumn('ALTER TABLE submissions ADD INDEX idx_submissions_session (session_id, status)');
+    await addColumn('ALTER TABLE test_attendance ADD INDEX idx_attendance_active (test_identifier, status)');
 
-    // Upgrade text columns for scalability
-    await addColumn('ALTER TABLE submissions MODIFY COLUMN html_code LONGTEXT');
-    await addColumn('ALTER TABLE submissions MODIFY COLUMN css_code LONGTEXT');
-    await addColumn('ALTER TABLE submissions MODIFY COLUMN js_code LONGTEXT');
-    await addColumn('ALTER TABLE challenges MODIFY COLUMN expected_html LONGTEXT');
-    await addColumn('ALTER TABLE challenges MODIFY COLUMN expected_css LONGTEXT');
-    await addColumn('ALTER TABLE challenges MODIFY COLUMN expected_js LONGTEXT');
+    // Ensure session_id exists in submissions if not already there
+    await addColumn("ALTER TABLE submissions ADD COLUMN session_id VARCHAR(100) AFTER level");
 
     console.log('✅ Submissions table columns verified.');
 

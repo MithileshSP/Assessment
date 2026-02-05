@@ -14,12 +14,6 @@ services:
       - "3307:3306"
     networks:
       - test-portal-network
-    healthcheck:
-      test: [ "CMD-SHELL", "mysqladmin ping -h 127.0.0.1 --silent" ]
-      interval: 10s
-      timeout: 5s
-      retries: 30
-      start_period: 60s
 
   backend:
     image: gokulv456/assessment-backend:v3.0
@@ -28,8 +22,7 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     depends_on:
-      portal_mysql:
-        condition: service_healthy
+      - portal_mysql
     environment:
       NODE_ENV: production
       PORT: 7000
@@ -38,7 +31,7 @@ services:
       DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}
       DB_NAME: ${DB_NAME}
-      USE_JSON: ${USE_JSON}
+      USE_JSON: "false"
       ASSETS_ROOT: /var/www/portal-assets
       JWT_SECRET: ${JWT_SECRET}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
@@ -50,13 +43,7 @@ services:
       - ./backend/data:/app/data
       - ./backend/assets:/var/www/portal-assets
     deploy:
-      replicas: 3
-    healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:7000/health" ]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+      replicas: 1
     networks:
       - test-portal-network
 

@@ -16,7 +16,9 @@ import {
   Layers,
   HelpCircle,
   ExternalLink,
-  Briefcase // Added Briefcase icon
+  Briefcase,
+  ChevronUp,
+  ChevronDown
 } from 'lucide-react';
 
 export default function CourseManager() {
@@ -47,10 +49,10 @@ export default function CourseManager() {
     try {
       if (editingCourse) {
         await updateCourse(editingCourse.id, courseData);
-        alert('Course updated successfully!');
+        alert('Level updated successfully!');
       } else {
         await createCourse(courseData);
-        alert('Course created successfully!');
+        alert('Level created successfully!');
       }
       setEditingCourse(null);
       setShowCreateModal(false);
@@ -83,21 +85,48 @@ export default function CourseManager() {
     }
   };
 
+  const handleMove = async (index, direction) => {
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= courses.length) return;
+
+    // 1. Create a reordered copy
+    const reordered = [...courses];
+    const temp = reordered[index];
+    reordered[index] = reordered[targetIndex];
+    reordered[targetIndex] = temp;
+
+    // 2. Persist new sequential orders to avoid duplicates/loops
+    try {
+      // Optimistic UI update
+      const optimisticCourses = reordered.map((c, i) => ({ ...c, orderIndex: (i + 1) * 10 }));
+      setCourses(optimisticCourses);
+
+      await Promise.all(optimisticCourses.map(c =>
+        updateCourse(c.id, { orderIndex: c.orderIndex })
+      ));
+
+      await loadCourses();
+    } catch (error) {
+      alert('Failed to reorder: ' + error.message);
+      await loadCourses();
+    }
+  };
+
   return (
     <SaaSLayout>
       <div className="space-y-8 text-left">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Course Architecture</h1>
-            <p className="text-slate-500 mt-1">Design curricula, establish levels, and manage assessment banks.</p>
+            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Level Management</h1>
+            <p className="text-slate-500 mt-1">Design skill path levels and manage question banks.</p>
           </div>
           <div className="flex items-center gap-3">
             <button
               onClick={() => setShowCreateModal(true)}
               className="flex items-center gap-2 px-6 py-2 bg-slate-900 text-white rounded-xl text-sm font-bold hover:bg-blue-600 transition-all shadow-lg shadow-slate-900/10"
             >
-              <Plus size={16} /> Architect New Course
+              <Plus size={16} /> Create New Level
             </button>
           </div>
         </div>
@@ -107,10 +136,10 @@ export default function CourseManager() {
           {loading ? (
             <div className="flex flex-col items-center justify-center py-20 bg-white rounded-3xl border border-slate-100 italic text-slate-400">
               <Database size={48} className="animate-bounce mb-4 opacity-10" />
-              Querying course registry...
+              Querying level registry...
             </div>
           ) : (
-            courses.map((course) => (
+            courses.map((course, index) => (
               <div key={course.id} className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden group hover:shadow-xl transition-all duration-300">
                 <div className="flex flex-col lg:flex-row">
                   {/* Visual Side */}
@@ -157,32 +186,49 @@ export default function CourseManager() {
                           <button
                             onClick={() => setEditingCourse(course)}
                             className="p-2 bg-slate-50 text-slate-400 hover:text-blue-600 rounded-xl transition-colors"
-                            title="Edit Metadata"
+                            title="Edit Level"
                           >
                             <Edit size={18} />
                           </button>
                           <button
                             onClick={() => handleDeleteCourse(course.id, course.title)}
                             className="p-2 bg-slate-50 text-slate-400 hover:text-rose-600 rounded-xl transition-colors"
-                            title="Destroy Course"
+                            title="Delete Level"
                           >
                             <Trash2 size={18} />
                           </button>
                         </div>
                       </div>
 
-                      <div className="flex flex-wrap gap-6 mt-6">
-                        <div className="flex items-center gap-2">
-                          <Layers size={16} className="text-blue-500" />
-                          <span className="text-sm font-bold text-slate-700">{course.totalLevels} Stages</span>
+                      <div className="flex items-center gap-4 mb-4">
+                        <div className="flex flex-col gap-1">
+                          <button
+                            disabled={index === 0}
+                            onClick={() => handleMove(index, 'up')}
+                            className="p-1 hover:bg-slate-100 rounded-md disabled:opacity-20 text-slate-400 hover:text-blue-600 transition-colors"
+                            title="Move Up"
+                          >
+                            <ChevronUp size={20} />
+                          </button>
+                          <button
+                            disabled={index === courses.length - 1}
+                            onClick={() => handleMove(index, 'down')}
+                            className="p-1 hover:bg-slate-100 rounded-md disabled:opacity-20 text-slate-400 hover:text-blue-600 transition-colors"
+                            title="Move Down"
+                          >
+                            <ChevronDown size={20} />
+                          </button>
                         </div>
-                        <div className="flex items-center gap-2">
-                          <Clock size={16} className="text-slate-400" />
-                          <span className="text-sm font-medium text-slate-500">{course.estimatedTime}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <HelpCircle size={16} className="text-slate-400" />
-                          <span className="text-sm font-medium text-slate-500">Manual Evaluation Enabled</span>
+                        <div className="h-10 w-px bg-slate-100 mx-2" />
+                        <div className="flex flex-wrap gap-6">
+                          <div className="flex items-center gap-2">
+                            <Layers size={16} className="text-blue-500" />
+                            <span className="text-sm font-bold text-slate-700">Sequence: {course.orderIndex || 0}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Clock size={16} className="text-slate-400" />
+                            <span className="text-sm font-medium text-slate-500">{course.estimatedTime}</span>
+                          </div>
                         </div>
                       </div>
                     </div>

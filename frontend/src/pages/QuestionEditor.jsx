@@ -361,15 +361,9 @@ export default function QuestionEditor() {
 
                     {/* Additional Parameters (Integrated in professional UI) */}
                     <div className="bg-slate-50 p-8 rounded-xl border border-slate-200 grid grid-cols-1 md:grid-cols-4 gap-6">
-                        <div className="space-y-2">
-                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Level</label>
-                            <select
-                                value={formData.level}
-                                onChange={(e) => setFormData({ ...formData, level: parseInt(e.target.value) })}
-                                className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold focus:ring-2 focus:ring-indigo-500/20 transition-all outline-none"
-                            >
-                                {[...Array(15)].map((_, i) => <option key={i + 1} value={i + 1}>Level {i + 1}</option>)}
-                            </select>
+                        {/* Level selection removed for Single Level Architecture */}
+                        <div className="hidden">
+                            <input type="hidden" value={formData.level} />
                         </div>
                         <div className="space-y-2">
                             <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Points</label>

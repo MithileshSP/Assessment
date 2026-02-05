@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { AlertTriangle, Clock, CheckCircle, ArrowLeft, ChevronLeft, ChevronRight, RefreshCw, Check, Layout, Star } from "lucide-react";
+import { AlertTriangle, Clock, CheckCircle, ArrowLeft, ChevronLeft, ChevronRight, RefreshCw, Check, Layout, Star, ChevronUp, ChevronDown, Eye, Maximize2, X } from "lucide-react";
 import MultiFileEditor from "../components/MultiFileEditor";
 import TerminalPanel from "../components/TerminalPanel";
 import PreviewFrame from "../components/PreviewFrame";
@@ -8,7 +8,9 @@ import ResultsPanel from "../components/ResultsPanel";
 import api from "../services/api";
 
 export default function LevelChallenge() {
-  const { courseId, level } = useParams();
+  const { levelId, courseId: oldCourseId, level: levelParam } = useParams();
+  const courseId = levelId || oldCourseId;
+  const level = levelParam || 1;
   const navigate = useNavigate();
   const userId = localStorage.getItem("userId") || "default-user";
 
@@ -69,7 +71,42 @@ export default function LevelChallenge() {
   const [saveStatus, setSaveStatus] = useState('saved'); // 'saved', 'saving', 'error'
   const [lastSaveTimestamp, setLastSaveTimestamp] = useState(null);
 
+  // Resize State
+  const [leftWidth, setLeftWidth] = useState(58); // Percentage
+  const [isResizing, setIsResizing] = useState(false);
 
+  const startResizing = (e) => {
+    setIsResizing(true);
+    e.preventDefault();
+  };
+
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      if (!isResizing) return;
+      const newWidth = (e.clientX / window.innerWidth) * 100;
+      if (newWidth > 20 && newWidth < 80) {
+        setLeftWidth(newWidth);
+      }
+    };
+
+    const stopResizing = () => setIsResizing(false);
+
+    if (isResizing) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', stopResizing);
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+      document.body.style.pointerEvents = 'none'; // Prevent any clicks while dragging
+    }
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', stopResizing);
+      document.body.style.cursor = 'default';
+      document.body.style.userSelect = 'auto';
+      document.body.style.pointerEvents = 'auto';
+    };
+  }, [isResizing]);
 
   // Refs for stale closure prevention in Timer interval
   const assignedQuestionsRef = useRef(assignedQuestions);
@@ -95,31 +132,33 @@ export default function LevelChallenge() {
   useEffect(() => {
     if (courseId && level) {
       checkAttendance();
-      loadRestrictions(); // Initial load for instant application
+      loadRestrictions();
     }
     return () => {
-      clearInterval(attendanceTimer);
+      if (attendanceTimer) clearInterval(attendanceTimer);
       if (unlockPollRef.current) clearInterval(unlockPollRef.current);
     };
   }, [courseId, level]);
 
+  useEffect(() => {
+    if (consoleOutput.length > 0) {
+      console.log(`[UI Terminal] Received ${consoleOutput.length} lines. Latest:`, consoleOutput[consoleOutput.length - 1].content);
+    }
+  }, [consoleOutput]);
 
   const checkAttendance = async () => {
-    // Admin bypass - skip attendance check entirely
-    // Admin bypass - set status but allow loading restrictions/session
     const userRole = localStorage.getItem('userRole');
     if (userRole === 'admin') {
       setAttendanceStatus('started');
-      // Continue to load restrictions and session for timer visibility
+      loadLevelQuestions(); // ADMIN FIX
+      loadRestrictions();
+      return;
     }
 
     try {
-      // Note: Submissions check removed from here because it blocks the 'Request New Attempt' flow.
-      // The attendance status (isUsed) is now the sole source of truth for blocking.
       const res = await api.get('/attendance/status', { params: { courseId, level } });
       const { status, session, isUsed, locked, isBlocked } = res.data;
 
-      // New Logic: Check global is_blocked status first
       if (isBlocked) {
         setAttendanceStatus('blocked');
         setLoading(false);
@@ -128,14 +167,13 @@ export default function LevelChallenge() {
 
       if (locked) {
         setAttendanceStatus('started');
+        loadLevelQuestions(); // LOCKED FIX
         setLoading(false);
-        // Delay to ensure attendanceStatus is 'started' before handleLockTest runs
         setTimeout(() => handleLockTest(restrictions.maxViolations || 3), 100);
         return;
       }
 
       if (isUsed) {
-        // Check if there are pending submissions (not yet evaluated)
         try {
           const submissionsRes = await api.get('/submissions/user-level', {
             params: { userId, courseId, level }
@@ -163,34 +201,23 @@ export default function LevelChallenge() {
       }
 
       if (session) {
-        // OFFSET-BASED TIMER: Calculate clock offset from server
         const clientNow = Date.now();
         const serverNow = session.server_time_ms || new Date(session.server_time).getTime();
         const endTime = new Date(session.end_time).getTime();
-
-        // Calculate offset: positive = server ahead, negative = server behind
         clockOffsetRef.current = serverNow - clientNow;
         sessionEndTimeRef.current = endTime;
-
-        // Calculate remaining using offset-corrected time
         const correctedNow = clientNow + clockOffsetRef.current;
         const remaining = Math.max(0, Math.floor((endTime - correctedNow) / 1000));
         setTimeRemaining(remaining);
-
-        console.log('[Timer] Offset calculated:', clockOffsetRef.current, 'ms, Remaining:', remaining, 's');
-
-        // Load session restrictions if needed
         setRestrictions(prev => ({ ...prev, timeLimit: session.duration_minutes }));
       }
 
-      // Check for active test session to auto-resume
       const sessionRes = await api.post("/test-sessions", {
         user_id: userId,
         course_id: courseId,
         level: parseInt(level),
       });
 
-      // If session already completed, check for pending submissions
       if (sessionRes.data && sessionRes.data.completed_at) {
         try {
           const submissionsRes = await api.get('/submissions/user-level', {
@@ -204,7 +231,6 @@ export default function LevelChallenge() {
             setLoading(false);
             return;
           } else {
-            // Test completed and evaluated - show 'used' status
             setAttendanceStatus('used');
             setLoading(false);
             return;
@@ -219,45 +245,31 @@ export default function LevelChallenge() {
         if (sessionRes.data.started_at) setStartedAt(sessionRes.data.started_at);
       }
 
-      // If not blocked, and not in an active session, we basically just let them in
       if (!isBlocked) {
         setAttendanceStatus('approved');
-
-        // Timer Fallback: If no server session but we have restrictions
         if (!session && !sessionEndTimeRef.current && restrictions.timeLimit > 0) {
           const startTime = startedAt ? new Date(startedAt).getTime() : Date.now();
           const durationMs = restrictions.timeLimit * 60 * 1000;
           const endTime = startTime + durationMs;
-
           sessionEndTimeRef.current = endTime;
-          clockOffsetRef.current = 0; // Local time for local timer
+          clockOffsetRef.current = 0;
           const remaining = Math.max(0, Math.floor((endTime - Date.now()) / 1000));
           setTimeRemaining(remaining);
-          console.log('[Timer] Using local fallback timer. Remaining:', remaining, 's');
         }
       }
 
       setLoading(false);
     } catch (error) {
       console.error("Attendance check failed", error);
-      setAttendanceStatus('none'); // Safe fallback
+      setAttendanceStatus('none');
       setLoading(false);
     }
-  };
-
-  const [isRequesting, setIsRequesting] = useState(false);
-
-  const requestAttendance = async () => {
-    // This is now disabled
-    alert('Direct unblocking is required by administrator.');
   };
 
   const startTest = () => {
     loadLevelQuestions();
     loadRestrictions();
-    setAttendanceStatus('started'); // distinct state to hide the wall
-
-    // Request fullscreen on user gesture (Button click)
+    setAttendanceStatus('started');
     if (restrictions.forceFullscreen) {
       document.documentElement.requestFullscreen?.().catch((err) => {
         console.warn('Initial fullscreen request failed:', err.message);
@@ -267,38 +279,30 @@ export default function LevelChallenge() {
 
   const loadLevelQuestions = async () => {
     try {
+      setLoading(true); // LOADING FIX
       const response = await api.get(`/challenges/level-questions`, {
-        params: {
-          userId,
-          courseId,
-          level: parseInt(level),
-          // Removed forceNew: "true" to allow persistence
-        },
+        params: { userId, courseId, level: parseInt(level) },
       });
 
       let questions = response.data.assignedQuestions || [];
 
       if (questions.length === 0) {
-        alert("No questions assigned for this level");
-        navigate(`/course/${courseId}`);
+        // alert("No questions assigned for this level");
+        // navigate(`/course/${courseId}`);
+        setLoading(false);
         return;
       }
 
-      // Restore from localStorage if possible - BUT only if questions match
       const storageKey = `assessment_${userId}_${courseId}_${level}`;
       const savedState = localStorage.getItem(storageKey);
 
       if (savedState) {
         try {
           const { questions: savedQs, answers, currentIndex, code: savedCode } = JSON.parse(savedState);
-
-          // Compare question IDs from API with saved state
-          // If they differ, a reset has happened - use fresh questions
           const apiQuestionIds = questions.map(q => q.id).sort().join(',');
           const savedQuestionIds = savedQs.map(q => q.id).sort().join(',');
 
           if (apiQuestionIds === savedQuestionIds) {
-            // Same questions - restore saved state
             setAssignedQuestions(savedQs);
             setUserAnswers(answers);
             setCurrentQuestionIndex(currentIndex);
@@ -306,8 +310,6 @@ export default function LevelChallenge() {
             setLoading(false);
             return;
           } else {
-            // Questions have changed (reset occurred) - clear old state
-            console.log('Questions reassigned, clearing old localStorage state');
             localStorage.removeItem(storageKey);
           }
         } catch (e) {
@@ -316,41 +318,27 @@ export default function LevelChallenge() {
         }
       }
 
-      // If no saved state, initialize new
       setAssignedQuestions(questions);
-
-      // Initialize answers
       const initialAnswers = {};
       questions.forEach((q) => {
         initialAnswers[q.id] = {
-          html: "",
-          css: "",
-          js: "",
-          additionalFiles: {},
-          submitted: false,
-          result: null,
+          html: "", css: "", js: "", additionalFiles: {}, submitted: false, result: null,
         };
       });
       setUserAnswers(initialAnswers);
-
-      // Create test session
       await createTestSession();
 
       try {
         const restrictionsRes = await api.get(`/courses/${courseId}/restrictions`);
         if (restrictionsRes.data) {
-          // Merge with existing state (to preserve timeLimit set by session)
           setRestrictions(prev => ({ ...prev, ...restrictionsRes.data }));
-          console.log('Loaded restrictions (merged):', restrictionsRes.data);
         }
       } catch (e) {
-        console.warn('Failed to load restrictions, using defaults:', e.message);
+        console.warn('Failed to load restrictions:', e.message);
       }
-
       setLoading(false);
     } catch (error) {
       console.error("Failed to load level questions:", error);
-      alert("Failed to load questions");
       setLoading(false);
     }
   };
@@ -358,103 +346,64 @@ export default function LevelChallenge() {
   const createTestSession = async () => {
     try {
       const response = await api.post("/test-sessions", {
-        user_id: userId,
-        course_id: courseId,
-        level: parseInt(level),
+        user_id: userId, course_id: courseId, level: parseInt(level),
       });
-
-      console.log("Session sync:", response.data.id);
       setTestSessionId(response.data.id);
-      if (response.data.started_at) {
-        setStartedAt(response.data.started_at);
-      }
+      if (response.data.started_at) setStartedAt(response.data.started_at);
     } catch (error) {
       console.error("Failed to sync session:", error);
     }
   };
 
-  // Track dirty state when code changes
   useEffect(() => {
     if (assignedQuestions.length > 0 && assignedQuestions[currentQuestionIndex]) {
       const currentQId = assignedQuestions[currentQuestionIndex].id;
-      // Only mark dirty if code is actually different from saved/initial state
-      // For simplicity, we assume any edit makes it dirty, and we clear dirty on save
-      setDirtyQuestions(prev => {
-        const newSet = new Set(prev);
-        newSet.add(currentQId);
-        return newSet;
-      });
-
-      // Update local storage backup immediately
+      setDirtyQuestions(prev => new Set(prev).add(currentQId));
       const storageKey = `assessment_${userId}_${courseId}_${level}`;
       localStorage.setItem(storageKey, JSON.stringify({
         questions: assignedQuestions,
-        answers: {
-          ...userAnswers,
-          [currentQId]: { ...userAnswers[currentQId], ...code } // Update with current code
-        },
+        answers: { ...userAnswers, [currentQId]: { ...userAnswers[currentQId], ...code } },
         currentIndex: currentQuestionIndex,
         code
       }));
     }
   }, [code]);
 
-  // Update userAnswers when switching questions or code changes
   useEffect(() => {
     if (assignedQuestions[currentQuestionIndex]) {
       setUserAnswers(prev => ({
         ...prev,
         [assignedQuestions[currentQuestionIndex].id]: {
           ...prev[assignedQuestions[currentQuestionIndex].id],
-          html: code.html,
-          css: code.css,
-          js: code.js
+          html: code.html, css: code.css, js: code.js
         }
       }));
     }
   }, [code, currentQuestionIndex, assignedQuestions]);
 
-
-  // Fisher-Yates shuffle algorithm for randomizing question order
-  const shuffleArray = (array) => {
-    const shuffled = [...array];
-    for (let i = shuffled.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-    }
-    return shuffled;
-  };
-
   const loadCurrentQuestion = async () => {
     if (!assignedQuestions[currentQuestionIndex]) return;
-
     const questionId = assignedQuestions[currentQuestionIndex].id;
-
     try {
       const response = await api.get(`/challenges/${questionId}`);
       const challengeData = response.data;
       setChallenge(challengeData);
-
-      // Default to terminal tab for nodejs challenges
-      const isNodeJS = challengeData.challengeType === 'nodejs';
-      if (isNodeJS) {
-        setPreviewTab("terminal");
-      } else {
-        setPreviewTab("live");
-      }
-
-      // Load saved answer if exists
+      setPreviewTab(challengeData.challengeType === 'nodejs' ? "terminal" : "live");
       const savedAnswer = userAnswers[questionId];
       if (savedAnswer && (savedAnswer.html || savedAnswer.css || savedAnswer.js)) {
         setCode({
-          html: savedAnswer.html,
-          css: savedAnswer.css,
-          js: savedAnswer.js,
+          html: savedAnswer.html, css: savedAnswer.css, js: savedAnswer.js,
           additionalFiles: savedAnswer.additionalFiles || {},
         });
         setResult(savedAnswer.result);
       } else {
-        // Fallback to localStorage or keep current
+        // Initialize from challenge data if no saved answer
+        setCode({
+          html: challengeData.html || "",
+          css: challengeData.css || "",
+          js: challengeData.js || "",
+          additionalFiles: challengeData.additionalFiles || (typeof challengeData.assets === 'object' ? {} : JSON.parse(challengeData.additional_files || '{}'))
+        });
       }
     } catch (error) {
       console.error("Failed to load question:", error);
@@ -465,17 +414,12 @@ export default function LevelChallenge() {
     try {
       const response = await api.get(`/courses/${courseId}/restrictions`);
       if (response.data) {
-        // Merge with existing state (to preserve timeLimit set by session)
         setRestrictions(prev => ({ ...prev, ...response.data }));
-        // Initialize timer if timeLimit is set in fetched results AND not already synced from session
         if (response.data.timeLimit > 0 && timeRemaining === null) {
           const durationSeconds = response.data.timeLimit * 60;
           setTimeRemaining(durationSeconds);
-
-          // Initializing sessionEndTimeRef for local fallback if not already set by a server session
           if (sessionEndTimeRef.current === null) {
             sessionEndTimeRef.current = Date.now() + durationSeconds * 1000;
-            console.log('[Timer] Initialized local end-time ref from restrictions:', response.data.timeLimit, 'm');
           }
         }
       }
@@ -484,925 +428,256 @@ export default function LevelChallenge() {
     }
   };
 
-  // Sync Timer with Server Session (Offset-Based Sync)
   useEffect(() => {
-    let syncTimer;
-
     const syncWithServer = async () => {
       if (attendanceStatus === 'approved' || attendanceStatus === 'started') {
         try {
           const res = await api.get('/attendance/status', { params: { courseId, level } });
           const { session } = res.data;
           if (session) {
-            // OFFSET-BASED SYNC: Recalibrate offset from server
             const clientNow = Date.now();
             const serverNow = session.server_time_ms || new Date(session.server_time).getTime();
             const endTime = new Date(session.end_time).getTime();
-
-            // Update offset (may have drifted)
             clockOffsetRef.current = serverNow - clientNow;
             sessionEndTimeRef.current = endTime;
-
-            // Calculate remaining using offset-corrected time
             const correctedNow = clientNow + clockOffsetRef.current;
             const remaining = Math.max(0, Math.floor((endTime - correctedNow) / 1000));
             setTimeRemaining(remaining);
-
-            console.log('[Sync] Offset recalibrated:', clockOffsetRef.current, 'ms, Remaining:', remaining, 's');
-
-            // If session is expired on server, auto-finish
-            if (session.is_expired || remaining <= 0) {
-              handleFinishLevel({ reason: "timeout" });
-            }
+            if (session.is_expired || remaining <= 0) handleFinishLevel({ reason: "timeout" });
           }
-        } catch (err) {
-          console.error("Timer sync failed:", err);
-        }
+        } catch (err) { }
       }
     };
-
-    // Initial sync
     syncWithServer();
-
-    // Periodic sync every 30 seconds to prevent drift 
-    syncTimer = setInterval(syncWithServer, 30000);
-
+    const syncTimer = setInterval(syncWithServer, 30000);
     return () => clearInterval(syncTimer);
   }, [attendanceStatus, courseId, level]);
 
   useEffect(() => {
-    // Only count down if we have started the test
     if (attendanceStatus !== 'started' || isLocked) return;
-
     const interval = setInterval(() => {
       let remaining = 0;
-
       if (sessionEndTimeRef.current !== null) {
-        // Source A: Absolute end time (drift-proof)
-        const correctedNow = Date.now() + clockOffsetRef.current;
+        const correctedNow = Date.now() + (clockOffsetRef.current || 0);
         remaining = Math.max(0, Math.floor((sessionEndTimeRef.current - correctedNow) / 1000));
         setTimeRemaining(remaining);
       } else if (timeRemaining !== null && timeRemaining > 0) {
-        // Source B: Local relative decrement fallback
-        setTimeRemaining(prev => {
-          remaining = Math.max(0, (prev || 0) - 1);
-          return remaining;
-        });
+        setTimeRemaining(prev => { remaining = Math.max(0, (prev || 0) - 1); return remaining; });
       }
-
       if (remaining <= 0 && (sessionEndTimeRef.current !== null || (timeRemaining !== null && timeRemaining <= 0))) {
         clearInterval(interval);
-        // Unified finish trigger: handleFinishLevel handles both save and submission
         handleFinishLevel({ reason: "timeout" });
       }
     }, 1000);
-
     return () => clearInterval(interval);
-  }, [attendanceStatus, isLocked, sessionEndTimeRef.current === null]);
+  }, [attendanceStatus, isLocked, sessionEndTimeRef.current]);
 
-  // Format time as MM:SS
   const formatTime = (seconds) => {
     if (seconds === null) return "";
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
-    return `${mins.toString().padStart(2, "0")}:${secs
-      .toString()
-      .padStart(2, "0")}`;
+    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
 
-  // Handle violations
   const handleViolation = (type) => {
     const now = Date.now();
-    if (now - lastViolationTime < 2000) return; // 2 second cooldown
-    if (isLocked) return; // Already locked, ignore further violations
-
+    if (now - lastViolationTime < 2000 || isLocked) return;
     setLastViolationTime(now);
     const newViolations = violations + 1;
     setViolations(newViolations);
-
     setViolationMessage(`${type}`);
     setShowViolationToast(true);
     setTimeout(() => setShowViolationToast(false), 3000);
-
-    if (newViolations >= restrictions.maxViolations) {
-      // LOCK TEST instead of auto-submit - only if not already locked
-      if (!isLocked) {
-        handleLockTest(newViolations);
-      }
-    }
+    if (newViolations >= restrictions.maxViolations && !isLocked) handleLockTest(newViolations);
   };
 
-  // Ref to store unlock poll interval for cleanup
   const unlockPollRef = useRef(null);
 
-  // Lock test on max violations
   const handleLockTest = async (violationCount) => {
-    // Prevent duplicate calls
     if (isLocked) return;
-
     setIsLocked(true);
     setViolationMessage("Test Locked. Waiting for admin decision.");
     setShowViolationToast(true);
-
-    // CRITICAL: Capture ALL code synchronously to a ref (React state is async)
     const capturedAnswers = { ...userAnswers };
     if (challenge) {
-      capturedAnswers[challenge.id] = {
-        html: code.html,
-        css: code.css,
-        js: code.js,
-        additionalFiles: code.additionalFiles
-      };
+      capturedAnswers[challenge.id] = { html: code.html, css: code.css, js: code.js, additionalFiles: code.additionalFiles };
     }
     lockedCodeRef.current = capturedAnswers;
-    console.log('[Lock] Captured code to ref:', Object.keys(capturedAnswers));
-    console.log('[Lock] Current code state:', { html: code.html?.length || 0, css: code.css?.length || 0, js: code.js?.length || 0 });
-    console.log('[Lock] Captured code value:', capturedAnswers[challenge?.id]);
-
-    // Also try async state update for auto-save
     if (challenge) {
-      setUserAnswers(prev => ({
-        ...prev,
-        [challenge.id]: { html: code.html, css: code.css, js: code.js, additionalFiles: code.additionalFiles }
-      }));
+      setUserAnswers(prev => ({ ...prev, [challenge.id]: capturedAnswers[challenge.id] }));
       setDirtyQuestions(prev => new Set(prev).add(challenge.id));
     }
-
-    // Save current code before locking (wait for state to update)
     await new Promise(resolve => setTimeout(resolve, 100));
     await autoSaveBatch();
-
-    // Notify backend about lock
     try {
-      await api.post('/attendance/lock', {
-        courseId,
-        level: parseInt(level),
-        reason: 'Max violations reached',
-        violationCount
-      });
-    } catch (err) {
-      console.error('Failed to notify lock:', err);
-    }
-
-    // Clear any existing poll
-    if (unlockPollRef.current) {
-      clearInterval(unlockPollRef.current);
-    }
-
-    // Start polling for unlock (only proceed if admin explicitly unlocks)
+      await api.post('/attendance/lock', { courseId, level: parseInt(level), reason: 'Max violations reached', violationCount });
+    } catch (err) { }
+    if (unlockPollRef.current) clearInterval(unlockPollRef.current);
     unlockPollRef.current = setInterval(async () => {
       try {
         const res = await api.get('/attendance/status', { params: { courseId, level } });
-        // Only unlock if locked is explicitly false AND there's an unlock action
         if (res.data && res.data.locked === false && res.data.unlockAction) {
           clearInterval(unlockPollRef.current);
           unlockPollRef.current = null;
-
           if (res.data.unlockAction === 'submit' || res.data.isUsed) {
-            // Admin forced submit
             setIsLocked(false);
             handleFinishTest({ reason: "admin_forced" });
           } else if (res.data.unlockAction === 'continue') {
-            // Admin allowed continue
-            setIsLocked(false);
-            setViolations(0);
-            setShowViolationToast(false);
+            setIsLocked(false); setViolations(0); setShowViolationToast(false);
           }
         }
-      } catch (e) {
-        console.error('Unlock poll error:', e);
-      }
+      } catch (e) { }
     }, 3000);
   };
 
-  // Batch Auto-Save function
   const autoSaveBatch = async () => {
     if (dirtyQuestions.size === 0 || isSaving) return;
-
-    setIsSaving(true);
-    setSaveStatus('saving');
-
+    setIsSaving(true); setSaveStatus('saving');
     try {
       const submissionsToSave = [];
-
       dirtyQuestions.forEach(qId => {
-        // Get latest code: if it's current question, use 'code' state, else use 'userAnswers'
-        let qCode;
-        if (assignedQuestions[currentQuestionIndex] && assignedQuestions[currentQuestionIndex].id === qId) {
-          qCode = code;
-        } else {
-          const ans = userAnswers[qId];
-          qCode = { html: ans?.html || '', css: ans?.css || '', js: ans?.js || '' };
-        }
-
-        if (qCode.html || qCode.css || qCode.js) {
-          submissionsToSave.push({
-            challengeId: qId,
-            userId,
-            code: qCode,
-            candidateName: localStorage.getItem('username') || 'Student'
-          });
-        }
+        let qCode = (assignedQuestions[currentQuestionIndex]?.id === qId) ? code : {
+          html: userAnswers[qId]?.html || '', css: userAnswers[qId]?.css || '', js: userAnswers[qId]?.js || ''
+        };
+        if (qCode.html || qCode.css || qCode.js) submissionsToSave.push({ challengeId: qId, userId, code: qCode, candidateName: localStorage.getItem('fullName') || 'Student' });
       });
-
       if (submissionsToSave.length > 0) {
-        await api.post('/submissions/batch', {
-          submissions: submissionsToSave,
-          courseId,
-          level: parseInt(level)
-        });
+        await api.post('/submissions/batch', { submissions: submissionsToSave, courseId, level: parseInt(level) });
       }
-
-      setDirtyQuestions(new Set()); // Clear dirty flags
-      setSaveStatus('saved');
-      setLastSaveTimestamp(new Date());
-
+      setDirtyQuestions(new Set()); setSaveStatus('saved'); setLastSaveTimestamp(new Date());
     } catch (err) {
-      console.error('Batch auto-save failed:', err);
       setSaveStatus('error');
-    } finally {
-      setIsSaving(false);
-    }
+    } finally { setIsSaving(false); }
   };
 
-  // Auto-save timer (30 seconds)
   useEffect(() => {
     if (attendanceStatus !== 'started' || isLocked) return;
-
-    const timer = setInterval(() => {
-      autoSaveBatch();
-    }, 30000);
-
+    const timer = setInterval(() => autoSaveBatch(), 30000);
     return () => clearInterval(timer);
   }, [dirtyQuestions, userAnswers, code, attendanceStatus, isLocked]);
 
-  // Initial save on finish test to ensure everything is synced
-  const ensureAllSaved = async () => {
-    await autoSaveBatch();
+  const handleFinishLevel = async ({ reason = "manual", forceSubmissionId = null } = {}) => {
+    if (finishingLevel && reason !== "timeout") return;
+    if (reason === "timeout") setFinishingLevel(true);
+    autoSaveBatch().catch(() => { });
+    handleFinishTest({ reason, forceSubmissionId });
   };
 
-  const forceSubmitCurrentCode = async () => {
-    if (!challenge) return null;
+  const handleFinishTest = async ({ reason = "manual", forceSubmissionId = null } = {}) => {
+    setFinishingLevel(true);
+    let lastSubmissionId = forceSubmissionId;
+    if (reason === "timeout") setEvaluationStep("Time expired. Submitting your work...");
+    else if (reason === "admin_forced") setEvaluationStep("Session ended by admin. Submitting work...");
+
     try {
-      const response = await api.post("/submissions", {
-        challengeId: challenge.id,
-        userId: userId,
-        code: {
-          html: code.html,
-          css: code.css,
-          js: code.js,
-        },
-      });
-      const submissionId = response.data.submissionId;
-      if (testSessionId && submissionId) {
-        await api.post(`/test-sessions/${testSessionId}/submissions`, {
-          submission_id: submissionId,
-        });
+      let questionsToSubmit = assignedQuestionsRef.current;
+      if (!questionsToSubmit || questionsToSubmit.length === 0) {
+        questionsToSubmit = Object.keys(userAnswersRef.current).map(id => ({ id }));
       }
-      // Update local state so handleFinish can find it
-      const updatedAnswers = {
-        ...userAnswers,
-        [challenge.id]: {
-          html: code.html,
-          css: code.css,
-          js: code.js,
-          submitted: true,
-          submissionId: submissionId
+      const codeSource = (reason === 'admin_forced' && lockedCodeRef.current) ? lockedCodeRef.current : userAnswersRef.current;
+      const submissionRequests = questionsToSubmit.map(async (question) => {
+        const savedAnswer = codeSource[question.id];
+        const isCurrent = reason !== 'admin_forced' && assignedQuestionsRef.current[currentQuestionIndexRef.current]?.id === question.id;
+        let c = isCurrent && codeRef.current ? codeRef.current : {
+          html: savedAnswer?.html || '', css: savedAnswer?.css || '', js: savedAnswer?.js || '', additionalFiles: savedAnswer?.additionalFiles || {}
+        };
+        if (reason === "timeout" && !c.html && !c.js) c.js = "// Automatic submission on timeout";
+        if (c.html || c.js || reason === "timeout") {
+          try {
+            const r = await api.post("/submissions", { challengeId: question.id, userId: userId, code: c, isFinal: true });
+            const sId = r.data.submissionId;
+            if (testSessionId && sId) await api.post(`/test-sessions/${testSessionId}/submissions`, { submission_id: sId });
+            return sId;
+          } catch (e) { return null; }
         }
-      };
-      setUserAnswers(updatedAnswers);
-      return submissionId;
-    } catch (err) {
-      console.error("Force submission failed", err);
-      return null;
-    }
+        return null;
+      });
+      const results = await Promise.all(submissionRequests);
+      const successful = results.filter(id => id);
+      if (successful.length > 0) lastSubmissionId = successful[successful.length - 1];
+      if (testSessionId) {
+        let msg = reason === "violations" ? "Violations" : (reason === "timeout" ? "Timeout" : "Manual");
+        await api.put(`/test-sessions/${testSessionId}/complete`, { user_feedback: msg });
+      }
+      localStorage.removeItem(`assessment_${userId}_${courseId}_${level}`);
+      if (lastSubmissionId) { navigate(`/student/feedback/${lastSubmissionId}`); return; }
+      navigate(`/course/${courseId}`);
+    } catch (error) { navigate(`/course/${courseId}`); }
+    finally { setFinishingLevel(false); setEvaluationStep(""); }
   };
 
-  // Restriction enforcement
+  const handleSubmit = async () => {
+    setSubmitting(true);
+    if ((!code.html || !code.html.trim()) && (!code.js || !code.js.trim())) {
+      alert("Please write some code."); setSubmitting(false); return;
+    }
+    setUserAnswers(prev => ({ ...prev, [challenge.id]: { ...prev[challenge.id], html: code.html, css: code.css, js: code.js, submitted: true, result: { status: 'saved' } } }));
+    setSubmitting(false);
+  };
+
   useEffect(() => {
-    if (
-      !restrictions.blockCopy &&
-      !restrictions.blockPaste &&
-      !restrictions.forceFullscreen
-    )
-      return;
-
-    const handleCopy = (e) => {
-      if (restrictions.blockCopy) {
-        e.preventDefault();
-        handleViolation("Copy blocked");
-      }
+    if (!restrictions.blockCopy && !restrictions.blockPaste && !restrictions.forceFullscreen) return;
+    const hc = (e) => { if (restrictions.blockCopy) { e.preventDefault(); handleViolation("Copy blocked"); } };
+    const hp = (e) => { if (restrictions.blockPaste) { e.preventDefault(); handleViolation("Paste blocked"); } };
+    const hk = (e) => {
+      if (e.key === 'F12' || (e.ctrlKey && e.shiftKey && ['I', 'J', 'C'].includes(e.key.toUpperCase()))) { e.preventDefault(); handleViolation("DevTools Blocked"); }
     };
-    const handlePaste = (e) => {
-      if (restrictions.blockPaste) {
-        e.preventDefault();
-        handleViolation("Paste blocked");
-      }
-    };
-    const handleContextMenu = (e) => {
-      if (restrictions.blockCopy || restrictions.blockPaste) {
-        e.preventDefault();
-      }
-    };
-    const handleKeyDown = (e) => {
-      // Block F12 (DevTools)
-      if (e.key === 'F12' || e.keyCode === 123) {
-        e.preventDefault();
-        e.stopPropagation();
-        handleViolation("Security Alert: Developer Tools Access Blocked");
-        return false;
-      }
-
-      // Block Ctrl+Shift+I/J/C (DevTools shortcuts)
-      if ((e.ctrlKey || e.metaKey) && e.shiftKey &&
-        ['I', 'i', 'J', 'j', 'C', 'c'].includes(e.key)) {
-        e.preventDefault();
-        e.stopPropagation();
-        handleViolation("Security Alert: Inspect Element Blocked");
-        return false;
-      }
-
-      // Block Ctrl+U (View Source)
-      if ((e.ctrlKey || e.metaKey) && (e.key === 'u' || e.key === 'U')) {
-        e.preventDefault();
-        e.stopPropagation();
-        handleViolation("Security Alert: View Source Blocked");
-        return false;
-      }
-
-      // Block F5 (Refresh) - optional but prevents accidental loss
-      if (e.key === 'F5' || e.keyCode === 116) {
-        e.preventDefault();
-        return false;
-      }
-
-      // Block Alt + Left Arrow (Back), Alt + Right Arrow (Forward), Alt + Home
-      if (e.altKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'Home')) {
-        e.preventDefault();
-        e.stopPropagation();
-        handleViolation("Security Alert: Browser Navigation Shortcut Blocked");
-        return false;
-      }
-
-      // Block Escape key when locked
-      if (isLocked && e.key === 'Escape') {
-        e.preventDefault();
-        e.stopPropagation();
-        return false;
-      }
-
-      // Block copy shortcuts
-      if (
-        (e.ctrlKey || e.metaKey) &&
-        restrictions.blockCopy &&
-        (e.key === "c" || e.key === "C" || e.key === "x" || e.key === "X")
-      ) {
-        e.preventDefault();
-        handleViolation("Copy shortcut blocked");
-      }
-      // Block paste shortcuts
-      if (
-        (e.ctrlKey || e.metaKey) &&
-        restrictions.blockPaste &&
-        (e.key === "v" || e.key === "V")
-      ) {
-        e.preventDefault();
-        handleViolation("Paste shortcut blocked");
-      }
-    };
-    const handleVisibilityChange = () => {
-      // Detection: tab switch, window minimize, or backgrounding
-      if (document.hidden) {
-        handleViolation("Security Threat: Unauthorized Window Switch Detected");
-      }
-    };
-
-    const handleFullscreenChange = () => {
-      if (
-        restrictions.forceFullscreen &&
-        !document.fullscreenElement &&
-        violations < restrictions.maxViolations
-      ) {
-        handleViolation("Security Bypass: User attempted to exit secure mode");
-        // Aggressively try to re-enter fullscreen
-        const reenterFullscreen = () => {
-          if (!document.fullscreenElement) {
-            document.documentElement.requestFullscreen().catch(() => {
-              // If first attempt fails, keep trying every 500ms
-              setTimeout(reenterFullscreen, 500);
-            });
-          }
-        };
-        setTimeout(reenterFullscreen, 100);
-      }
-    };
-
-    document.addEventListener("copy", handleCopy, { capture: true });
-    document.addEventListener("cut", handleCopy, { capture: true });
-    document.addEventListener("paste", handlePaste, { capture: true });
-    document.addEventListener("contextmenu", handleContextMenu);
-    document.addEventListener("keydown", handleKeyDown, { capture: true });
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    document.addEventListener("fullscreenchange", handleFullscreenChange);
-
-    // Auto-enter fullscreen on click if not in fullscreen
-    const handleClickForFullscreen = () => {
-      if (restrictions.forceFullscreen && !document.fullscreenElement) {
-        document.documentElement.requestFullscreen().catch(() => { });
-      }
-    };
-    document.addEventListener("click", handleClickForFullscreen);
-
-    if (restrictions.blockCopy) document.body.style.userSelect = "none";
-
+    const hv = () => { if (document.hidden && restrictions.forceFullscreen) handleViolation("Window Switch Detected"); };
+    const hf = () => { if (restrictions.forceFullscreen && !document.fullscreenElement && violations < restrictions.maxViolations) handleViolation("Fullscreen Exit Attempted"); };
+    document.addEventListener("copy", hc, { capture: true });
+    document.addEventListener("paste", hp, { capture: true });
+    document.addEventListener("keydown", hk, { capture: true });
+    if (restrictions.forceFullscreen) {
+      document.addEventListener("visibilitychange", hv);
+      document.addEventListener("fullscreenchange", hf);
+    }
     return () => {
-      document.removeEventListener("click", handleClickForFullscreen);
-      document.removeEventListener("copy", handleCopy, { capture: true });
-      document.removeEventListener("cut", handleCopy, { capture: true });
-      document.removeEventListener("paste", handlePaste, { capture: true });
-      document.removeEventListener("contextmenu", handleContextMenu);
-      document.removeEventListener("keydown", handleKeyDown, { capture: true });
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-      document.removeEventListener("fullscreenchange", handleFullscreenChange);
-      if (restrictions.blockCopy) document.body.style.userSelect = "";
+      document.removeEventListener("copy", hc, { capture: true });
+      document.removeEventListener("paste", hp, { capture: true });
+      document.removeEventListener("keydown", hk, { capture: true });
+      document.removeEventListener("visibilitychange", hv);
+      document.removeEventListener("fullscreenchange", hf);
     };
   }, [restrictions, violations, lastViolationTime, isLocked]);
 
-  // Navigation blocking - prevent back/forward during test
   useEffect(() => {
     if (attendanceStatus !== 'started') return;
-
-    // Push a state to prevent back navigation
     window.history.pushState({ testInProgress: true }, '', window.location.href);
-
-    const handlePopState = (e) => {
-      // Re-push state to keep them on current page
-      window.history.pushState({ testInProgress: true }, '', window.location.href);
-
-      // Trigger warning notification
-      setShowNavWarning(true);
-      setTimeout(() => setShowNavWarning(false), 4000);
-    };
-
-    const handleBeforeUnload = (e) => {
-      const msg = "Assessment in progress! Are you sure you want to leave? Your progress will be saved, but this session may be invalidated.";
-      e.preventDefault();
-      e.returnValue = msg;
-      return msg;
-    };
-
-    window.addEventListener('popstate', handlePopState);
-    window.addEventListener('beforeunload', handleBeforeUnload);
-
-    return () => {
-      window.removeEventListener('popstate', handlePopState);
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-    };
-  }, [attendanceStatus, isLocked]);
+    const hp = () => { window.history.pushState({ testInProgress: true }, '', window.location.href); setShowNavWarning(true); setTimeout(() => setShowNavWarning(false), 4000); };
+    const hb = (e) => { e.preventDefault(); e.returnValue = "Assessment in progress!"; return "Assessment in progress!"; };
+    window.addEventListener('popstate', hp);
+    window.addEventListener('beforeunload', hb);
+    return () => { window.removeEventListener('popstate', hp); window.removeEventListener('beforeunload', hb); };
+  }, [attendanceStatus]);
 
   const handlePreviousQuestion = () => {
     if (currentQuestionIndex > 0) {
-      // Save current code
-      const currentId = assignedQuestions[currentQuestionIndex].id;
-      setUserAnswers((prev) => ({
-        ...prev,
-        [currentId]: {
-          ...prev[currentId],
-          html: code.html,
-          css: code.css,
-          js: code.js,
-          additionalFiles: code.additionalFiles || {},
-        },
-      }));
-      setCurrentQuestionIndex(currentQuestionIndex - 1);
-      setResult(null);
-      setPreviewTab("live");
+      setUserAnswers(prev => ({ ...prev, [assignedQuestions[currentQuestionIndex].id]: { ...prev[assignedQuestions[currentQuestionIndex].id], html: code.html, css: code.css, js: code.js } }));
+      setCurrentQuestionIndex(currentQuestionIndex - 1); setPreviewTab("live");
     }
   };
 
   const handleNextQuestion = () => {
     if (currentQuestionIndex < assignedQuestions.length - 1) {
-      // Save current code
-      const currentId = assignedQuestions[currentQuestionIndex].id;
-      setUserAnswers((prev) => ({
-        ...prev,
-        [currentId]: {
-          ...prev[currentId],
-          html: code.html,
-          css: code.css,
-          js: code.js,
-          additionalFiles: code.additionalFiles || {},
-        },
-      }));
-      setCurrentQuestionIndex(currentQuestionIndex + 1);
-      setResult(null);
-      setPreviewTab("live");
+      setUserAnswers(prev => ({ ...prev, [assignedQuestions[currentQuestionIndex].id]: { ...prev[assignedQuestions[currentQuestionIndex].id], html: code.html, css: code.css, js: code.js } }));
+      setCurrentQuestionIndex(currentQuestionIndex + 1); setPreviewTab("live");
     }
   };
 
   const handleRunCode = async () => {
-    // Determine if this is a nodejs challenge
-    const isNodeJS = challenge?.challengeType === 'nodejs' || (code.js && code.js.includes('require(') && !code.html);
-
+    setConsoleOutput([]); // Clear previous output
+    const isNodeJS = challenge?.challengeType === 'nodejs';
     if (isNodeJS) {
-      setEvaluating(true);
-      setPreviewTab("terminal");
-      setConsoleOutput([{ type: 'info', content: 'Running Node.js code...' }]);
-      setMetrics(null);
-
+      setEvaluating(true); setPreviewTab("terminal");
       try {
-        const response = await api.executeCode(code.js, code.additionalFiles || {}, 'nodejs', stdin);
-        const { output, error, executionTime } = response.data;
-
-        setMetrics({ executionTime, memoryUsage: '44.5 MB' });
-
-        const newLogs = [];
-        if (output) {
-          output.split('\n').filter(l => l.trim() !== '').forEach(line => {
-            newLogs.push({ type: 'log', content: line });
-          });
-        }
-
-        if (error) {
-          error.split('\n').filter(l => l.trim() !== '').forEach(line => {
-            newLogs.push({ type: 'error', content: line });
-          });
-        }
-
-        if (!output && !error) {
-          newLogs.push({ type: 'info', content: 'Execution completed with no output.' });
-        }
-
-        setConsoleOutput(newLogs);
-      } catch (err) {
-        setConsoleOutput([{
-          type: 'error',
-          content: `Execution failed: ${err.response?.data?.error || err.message}`
-        }]);
-      } finally {
-        setEvaluating(false);
-      }
+        const r = await api.executeCode(code.js, code.additionalFiles || {}, 'nodejs', stdin);
+        setConsoleOutput((r.data.output || '').split('\n').map(l => ({ type: 'log', content: l })));
+      } catch (e) { setConsoleOutput([{ type: 'error', content: e.message }]); }
+      finally { setEvaluating(false); }
     } else {
-      // Logic for web challenges
-      if (previewRef.current) {
-        previewRef.current.updatePreview(code);
-      }
+      // For Web challenges, stay on current tab (Live Preview) but update it
+      previewRef.current?.updatePreview(code);
     }
-  };
-
-  const pollEvaluationResult = async (submissionId, questionId) => {
-    let attempts = 0;
-    const maxAttempts = 60; // 5 minutes at 5s interval
-    const interval = 5000;
-
-    const poll = async () => {
-      try {
-        const response = await api.post("/evaluate", { submissionId });
-        const data = response.data;
-
-        if (data.status === 'passed' || data.status === 'failed') {
-          const evalResult = data.result;
-
-          // Save result
-          setUserAnswers((prev) => ({
-            ...prev,
-            [questionId]: {
-              html: code.html,
-              css: code.css,
-              js: code.js,
-              additionalFiles: code.additionalFiles || {},
-              submitted: true,
-              result: evalResult,
-              submissionId: submissionId
-            },
-          }));
-
-          setEvaluationStep("");
-          setEvaluating(false);
-          setSubmitting(false);
-          alert(`Evaluation complete! Result: ${evalResult.passed ? 'PASSED' : 'FAILED'}`);
-          return true;
-        }
-
-        if (data.status === 'evaluating') {
-          setEvaluationStep("Evaluation in progress...");
-        } else {
-          setEvaluationStep("In execution queue...");
-        }
-
-        return false;
-      } catch (error) {
-        console.error("Polling error:", error);
-        return false;
-      }
-    };
-
-    const timer = setInterval(async () => {
-      attempts++;
-      const isDone = await poll();
-      if (isDone || attempts >= maxAttempts) {
-        clearInterval(timer);
-        if (attempts >= maxAttempts) {
-          setEvaluating(false);
-          setSubmitting(false);
-          setEvaluationStep("");
-          alert("Evaluation timed out. Please check results later.");
-        }
-      }
-    }, interval);
-  };
-
-  const computeProgressSummary = () => {
-    const results = assignedQuestions.map((q) => {
-      const answer = userAnswers[q.id];
-      const res = answer?.result || {};
-      return {
-        questionId: q.id,
-        questionTitle: q.title,
-        submitted: !!answer?.submitted,
-        score: res.finalScore || 0,
-        passed: !!res.passed,
-      };
-    });
-
-    const submittedCount = results.filter((r) => r.submitted).length;
-    const passedCount = results.filter((r) => r.passed).length;
-    const totalQuestions = assignedQuestions.length;
-    const avgScore = totalQuestions > 0 ? results.reduce((sum, r) => sum + r.score, 0) / totalQuestions : 0;
-
-    return {
-      results,
-      submittedCount,
-      passedCount,
-      totalQuestions,
-      avgScore: Math.round(avgScore),
-    };
-  };
-
-  const saveCompletionProgress = async (summary, feedbackData = {}) => {
-    const payload = {
-      userId,
-      courseId,
-      level: parseInt(level),
-      completedAt: new Date().toISOString(),
-      finalScore: summary.avgScore,
-      passed: summary.passedCount === summary.totalQuestions,
-      questionsSubmitted: summary.submittedCount,
-      questionsPassed: summary.passedCount,
-      totalQuestions: summary.totalQuestions,
-      feedback: feedbackData.feedback || "",
-      results: summary.results
-    };
-
-    try {
-      // Step 1: Tell TestSession we are done (updates session state and attendance)
-      if (testSessionId) {
-        await api.put(`/test-sessions/${testSessionId}/complete`, {
-          user_feedback: payload.feedback
-        });
-      }
-
-      // Step 2: Save high-level completion progress (for course stats/unlocking)
-      const response = await api.post('/level-completion', payload);
-      return response.data;
-    } catch (err) {
-      console.error("Save completion failed:", err);
-      throw err;
-    }
-  };
-
-  const handleSubmit = async () => {
-    setSubmitting(true);
-    setResult(null);
-
-    const questionId = challenge.id;
-
-    if ((!code.html || code.html.trim() === '') && (!code.js || code.js.trim() === '')) {
-      alert("Please write some code (HTML or JavaScript) before submitting.");
-      setSubmitting(false);
-      return;
-    }
-
-    // Save locally only - actual DB submission happens on Finish Test
-    setUserAnswers((prev) => ({
-      ...prev,
-      [questionId]: {
-        html: code.html,
-        css: code.css,
-        js: code.js,
-        additionalFiles: code.additionalFiles || {},
-        submitted: true,
-        result: { status: 'saved' } // Local save only
-      },
-    }));
-
-    // Answer saved silently - final submission happens on Finish Test
-    setSubmitting(false);
-  };
-
-  const handleFinishLevel = async ({ reason = "manual", forceSubmissionId = null } = {}) => {
-    // Allow timeout to proceed even if flag is set (forcing completion)
-    if (finishingLevel && reason !== "timeout") return;
-
-    if (reason === "timeout") {
-      setFinishingLevel(true);
-    }
-
-    // Ensure final state is saved (Fire and forget, don't let it block the critical submission)
-    ensureAllSaved().catch(e => console.warn("Final save warning:", e));
-
-    handleFinishTest({ reason, forceSubmissionId });
-  };
-
-  const handleFinishTest = async ({ reason = "manual", forceSubmissionId = null } = {}) => {
-    console.log(`[FinishTest] STARTED. Reason: ${reason}`);
-    setFinishingLevel(true);
-    let lastSubmissionId = forceSubmissionId;
-
-    // If it's a timeout, give the user a clear message
-    if (reason === "timeout") {
-      setEvaluationStep("Time expired. Submitting your work...");
-    } else if (reason === "admin_forced") {
-      setEvaluationStep("Session ended by admin. Submitting work...");
-    }
-
-    try {
-      // Step 1: Submit final code for ALL questions
-      // USE REF to avoid stale closure issues in timer callback
-      let questionsToSubmit = assignedQuestionsRef.current;
-
-      // Fallback 1: userAnswers ref
-      if (!questionsToSubmit || questionsToSubmit.length === 0) {
-        console.warn('[FinishTest] No assigned questions in ref, checking userAnswersRef');
-        console.log('[FinishTest] userAnswersRef keys:', Object.keys(userAnswersRef.current));
-        questionsToSubmit = Object.keys(userAnswersRef.current).map(id => ({ id }));
-      }
-
-      // Fallback 2: localStorage (Last Resort)
-      if (!questionsToSubmit || questionsToSubmit.length === 0) {
-        console.warn('[FinishTest] userAnswersRef empty, checking localStorage');
-        try {
-          const storageKey = `assessment_${userId}_${courseId}_${level}`;
-          const storedData = localStorage.getItem(storageKey);
-          if (storedData) {
-            const parsed = JSON.parse(storedData);
-            if (parsed.userAnswers) {
-              questionsToSubmit = Object.keys(parsed.userAnswers).map(id => ({ id }));
-              console.log('[FinishTest] Recovered questions from localStorage:', questionsToSubmit);
-            }
-          }
-        } catch (e) {
-          console.error('[FinishTest] LocalStorage recovery failed:', e);
-        }
-      }
-
-      console.log('[FinishTest] Submitting final code for questions:', { reason, count: questionsToSubmit?.length || 0 });
-
-      // For admin_forced, use the code captured at lock time (synchronous ref)
-      const codeSource = (reason === 'admin_forced' && lockedCodeRef.current)
-        ? lockedCodeRef.current
-        : userAnswersRef.current; // Use REF here too
-
-      const submissionRequests = questionsToSubmit.map(async (question) => {
-        const savedAnswer = codeSource[question.id];
-
-        // CHECK IF THIS IS THE CURRENTLY ACTIVE QUESTION USING REFS
-        const isCurrentQuestion = reason !== 'admin_forced' &&
-          assignedQuestionsRef.current &&
-          currentQuestionIndexRef.current >= 0 &&
-          assignedQuestionsRef.current[currentQuestionIndexRef.current]?.id === question.id;
-
-        // Use current 'code' state for current question (only if not admin_forced), fallback to saved
-        let currentCode;
-        if (isCurrentQuestion && codeRef.current && (codeRef.current.html || codeRef.current.css || codeRef.current.js)) {
-          currentCode = codeRef.current;
-          console.log(`[FinishTest] Using ACTIVE editor content for Q: ${question.id}`);
-        } else {
-          currentCode = {
-            html: savedAnswer?.html || '',
-            css: savedAnswer?.css || '',
-            js: savedAnswer?.js || '',
-            additionalFiles: savedAnswer?.additionalFiles || {}
-          };
-        }
-
-        // Force submit on timeout even if empty to generate a record
-        const hasContent = currentCode.html || currentCode.css || currentCode.js;
-
-        if (reason === "timeout" && !hasContent) {
-          // Inject placeholder to pass backend validation (which requires non-empty content for final submissions)
-          currentCode.js = "// Automatic submission on timeout (no code written)";
-        }
-
-        if (hasContent || reason === "timeout") {
-          try {
-            const response = await api.post("/submissions", {
-              challengeId: question.id,
-              userId: userId,
-              code: currentCode,
-              isFinal: true // Flag to backend this is a final flush
-            });
-            const submissionId = response.data.submissionId;
-
-            // Link to test session
-            if (testSessionId && submissionId) {
-              await api.post(`/test-sessions/${testSessionId}/submissions`, {
-                submission_id: submissionId,
-              }).catch(e => console.warn(`[FinishTest] Failed to link submission ${submissionId}:`, e.message));
-            }
-
-            return submissionId;
-          } catch (submitError) {
-            console.error(`[FinishTest] Failed to submit question ${question.id}:`, submitError.message);
-            return null;
-          }
-        }
-        return null;
-      });
-
-      // Execute all submissions in parallel but catch individual errors
-      const results = await Promise.all(submissionRequests);
-      const successfulSubmissions = results.filter(id => id !== null);
-      if (successfulSubmissions.length > 0) {
-        lastSubmissionId = successfulSubmissions[successfulSubmissions.length - 1];
-      }
-
-      console.log(`[FinishTest] Successfully submitted ${successfulSubmissions.length} questions.`);
-
-      // Step 2: Tell TestSession we are done
-      if (testSessionId) {
-        let feedbackMsg = "";
-        if (reason === "violations") feedbackMsg = "Session terminated due to security violations.";
-        else if (reason === "admin_forced") feedbackMsg = "Session terminated by administrator decision.";
-        else if (reason === "timeout") feedbackMsg = "Session terminated due to time limit.";
-
-        try {
-          await api.put(`/test-sessions/${testSessionId}/complete`, {
-            user_feedback: feedbackMsg
-          });
-        } catch (completeErr) {
-          console.error('[FinishTest] Failed to complete test session:', completeErr.message);
-        }
-      }
-
-      // Step 3: Clear localStorage to prevent re-entry with cached state
-      const storageKey = `assessment_${userId}_${courseId}_${level}`;
-      localStorage.removeItem(storageKey);
-
-      // Consolidate redirection logic
-      let targetSubmissionId = lastSubmissionId;
-
-      // If we made new submissions in this call, use the last one
-      const recentSuccesses = results.filter(id => id);
-      console.log('[FinishTest] recentSuccesses:', recentSuccesses);
-
-      if (recentSuccesses.length > 0) {
-        targetSubmissionId = recentSuccesses[recentSuccesses.length - 1];
-      }
-
-      // If still null and it was a forced end, try to find ANY local submission
-      if (!targetSubmissionId && (reason === "admin_forced" || reason === "timeout")) {
-        // USE REF here as well to avoid stale closure
-        const currentAnswers = userAnswersRef.current;
-        console.log('[FinishTest] Fallback checking userAnswers:', Object.keys(currentAnswers));
-
-        const allSubmissionIds = Object.values(currentAnswers)
-          .map(a => a.submissionId)
-          .filter(id => id);
-
-        console.log('[FinishTest] Found local submission IDs:', allSubmissionIds);
-
-        if (allSubmissionIds.length > 0) {
-          targetSubmissionId = allSubmissionIds[allSubmissionIds.length - 1];
-        }
-      }
-
-      if (targetSubmissionId) {
-        console.log(`[FinishTest] Redirection: Checking feedback for submission ${targetSubmissionId}`);
-        navigate(`/student/feedback/${targetSubmissionId}`);
-        return;
-      }
-
-      if (reason === "timeout") {
-        console.warn('[FinishTest] Timeout but no submission ID available. Redirecting to course with message.');
-        navigate(`/course/${courseId}`, { state: { message: 'Time expired. No work was submitted.' } });
-        return;
-      }
-
-      console.warn('[FinishTest] No submission ID found, falling back to course home. Reason:', reason || 'manual');
-      navigate(`/course/${courseId}`);
-    } catch (error) {
-      console.error('Error finishing test:', error);
-      navigate(`/course/${courseId}`);
-    } finally {
-      setFinishingLevel(false);
-      setEvaluationStep("");
-    }
-  };
-
-
-  const allQuestionsSubmitted = () => {
-    return assignedQuestions.every((q) => userAnswers[q.id]?.submitted);
   };
 
   if (loading && attendanceStatus === 'loading') {
@@ -1416,195 +691,62 @@ export default function LevelChallenge() {
 
   if (attendanceStatus !== 'started') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-100 p-8">
-        <div className="bg-white p-12 rounded-[3.5rem] shadow-2xl shadow-slate-200 text-center max-w-5xl w-full border border-slate-100 animate-fade-in relative overflow-hidden">
-          {/* Decorative background element */}
-          <div className="absolute -top-24 -right-24 w-64 h-64 bg-slate-50 rounded-full blur-3xl opacity-50" />
-
-          <div className="w-20 h-20 bg-blue-50 text-blue-600 rounded-3xl flex items-center justify-center mx-auto mb-10 shadow-xl shadow-blue-500/10 relative z-10 transition-transform hover:scale-110 duration-500">
-            <Layout size={40} />
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6">
+        <div className="bg-white p-10 rounded-xl shadow-xl text-center max-w-4xl w-full border border-slate-200 relative overflow-hidden">
+          <div className="w-16 h-16 bg-slate-50 text-slate-900 rounded-lg flex items-center justify-center mx-auto mb-8 border border-slate-100 transition-all hover:bg-slate-100">
+            <Layout size={32} />
           </div>
-
           {attendanceStatus === 'blocked' ? (
-            <div className="animate-fade-in text-center">
-              <h2 className="text-3xl font-black text-slate-900 mb-4 tracking-tight">Access Restricted</h2>
-              <p className="text-slate-500 font-medium mb-10 leading-relaxed">
-                Your entry to this assessment is currently gated.
-                <br />
-                Please wait for your instructor to grant you access.
-              </p>
-
-              <div className="space-y-6">
-                <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 text-left">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-3">Identity Verification</p>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">Student:</span>
-                      <span className="font-bold text-slate-800">{localStorage.getItem('fullName') || 'Unknown Student'}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-500">Email:</span>
-                      <span className="font-mono text-xs text-slate-600">{localStorage.getItem('userEmail') || 'N/A'}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <button
-                  onClick={() => navigate(`/course/${courseId}`)}
-                  className="w-full py-4 bg-slate-900 text-white rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-slate-800 transition-all shadow-xl shadow-slate-900/10"
-                >
-                  <ArrowLeft size={18} />
-                  Return to Dashboard
-                </button>
-              </div>
+            <div className="text-center">
+              <h2 className="text-2xl font-bold text-slate-900 mb-2 tracking-tight">Access Restricted</h2>
+              <p className="text-slate-500 mb-8">Access is gated. Please wait for instructor authorization.</p>
+              <button onClick={() => navigate("/")} className="w-full py-3 bg-slate-900 text-white rounded-lg font-bold flex items-center justify-center gap-2">
+                <ArrowLeft size={16} /> Return to Dashboard
+              </button>
             </div>
           ) : (
             <>
-              <h2 className="text-3xl font-black text-slate-900 mb-2 tracking-tight">Security Checkpoint</h2>
-              <p className="text-slate-500 text-sm font-medium mb-8 leading-relaxed">
-                Administrative verification successful. Please review the instructions before starting.
-              </p>
-
-              {(attendanceStatus === 'approved' || attendanceStatus === 'none' || userRole === 'admin') && (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 text-left">
-                  {/* Left Column: Details */}
+              <h2 className="text-2xl font-bold text-slate-900 mb-1 tracking-tight">Security Checkpoint</h2>
+              <p className="text-slate-500 text-xs font-medium mb-10">Verification successful. Please review the security protocols below.</p>
+              {(attendanceStatus === 'approved' || attendanceStatus === 'none' || localStorage.getItem('userRole') === 'admin') && (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 text-left">
                   <div className="space-y-6">
-                    <div className="flex items-center justify-between">
-                      <p className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">Candidate Information</p>
-                      <div className="flex items-center gap-1.5 bg-emerald-50 text-emerald-600 px-3 py-1 rounded-full text-[10px] font-bold border border-emerald-100 uppercase tracking-tight">
-                        <CheckCircle size={12} />
-                        Verified
-                      </div>
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Candidate Information</p>
+                    <div className="bg-slate-50 border border-slate-200 rounded-lg p-6 grid grid-cols-2 gap-y-8 backdrop-blur-sm">
+                      <div><p className="text-[9px] font-bold text-slate-400 uppercase">FullName</p><p className="text-base font-bold text-slate-900">{studentInfo?.fullName || localStorage.getItem('fullName') || 'Unknown'}</p></div>
+                      <div className="text-right"><p className="text-[9px] font-bold text-slate-400 uppercase">Roll Number</p><p className="text-base font-bold text-slate-900">{studentInfo?.rollNo || 'N/A'}</p></div>
+                      <div><p className="text-[9px] font-bold text-slate-400 uppercase">Authorized Course</p><p className="text-xs font-bold text-indigo-600 truncate">{studentInfo?.courseTitle || 'Technical Assessment'}</p></div>
                     </div>
-
-                    <div className="bg-slate-50/50 border border-slate-100 rounded-[2.5rem] p-8 grid grid-cols-2 gap-y-10 gap-x-6 backdrop-blur-sm shadow-sm">
-                      <div className="space-y-1">
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">FullName</p>
-                        <p className="text-lg font-black text-slate-900 leading-tight">{studentInfo?.fullName || localStorage.getItem('fullName') || 'Unknown'}</p>
-                      </div>
-                      <div className="space-y-1 text-right">
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Roll Number</p>
-                        <p className="text-lg font-black text-slate-900 leading-tight">{studentInfo?.rollNo || 'N/A'}</p>
-                      </div>
-                      <div className="space-y-1">
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Email Address</p>
-                        <p className="text-sm font-bold text-slate-600 truncate max-w-[180px]">{studentInfo?.email || 'N/A'}</p>
-                      </div>
-                      <div className="space-y-1 text-right">
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Authorized Course</p>
-                        <p className="text-sm font-black text-indigo-600">{studentInfo?.courseTitle || 'Current Assessment'}</p>
-                      </div>
-                    </div>
-
-                    <button
-                      onClick={() => navigate(`/course/${courseId}`)}
-                      className="w-full py-4 bg-slate-50 text-slate-400 hover:text-slate-600 rounded-3xl font-black text-[10px] uppercase tracking-[0.3em] transition-all flex items-center justify-center gap-3 border border-transparent hover:border-slate-200"
-                    >
+                    <button onClick={() => navigate("/")} className="w-full py-3 bg-white border text-slate-500 rounded-lg font-bold text-xs flex items-center justify-center gap-2 hover:bg-slate-50 transition-colors">
                       <ArrowLeft size={14} /> Back to Dashboard
                     </button>
                   </div>
-
-                  {/* Right Column: Instructions & Action */}
-                  <div className="space-y-6 flex flex-col justify-between">
-                    <div className="bg-slate-900 rounded-[2.5rem] p-10 text-white relative overflow-hidden flex-1 shadow-2xl shadow-slate-900/20">
-                      <div className="absolute top-0 right-0 p-6 opacity-10">
-                        <AlertTriangle size={120} />
-                      </div>
-
-                      <div className="flex items-center gap-3 mb-6 relative z-10">
-                        <div className="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center text-amber-400">
-                          <AlertTriangle size={18} />
-                        </div>
-                        <p className="text-[11px] font-black uppercase tracking-[0.2em]">Security Protocols</p>
-                      </div>
-
-                      <ul className="space-y-5 relative z-10">
+                  <div className="space-y-6 flex flex-col">
+                    <div className="bg-slate-900 rounded-lg p-8 text-white flex-1 shadow-lg">
+                      <p className="text-[10px] font-bold uppercase tracking-wider mb-6 text-slate-400">Security Protocols</p>
+                      <ul className="space-y-5">
                         {[
-                          "Do NOT switch tabs or minimize window",
-                          "Do NOT use Browser Developer Tools",
-                          "Do NOT copy content from external sources",
-                          `Maximum violations: ${restrictions.maxViolations || 3}`,
-                          "Progress is automatically synchronized"
-                        ].map((text, i) => (
-                          <li key={i} className="flex items-start gap-4 text-[13px] font-medium text-slate-300">
-                            <span className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-2 shrink-0 shadow-[0_0_10px_#3b82f6]" />
-                            {text}
+                          { label: "No tab switching", active: restrictions.forceFullscreen },
+                          { label: "No DevTools", active: true },
+                          { label: "No Copy/Paste", active: restrictions.blockCopy || restrictions.blockPaste },
+                          { label: "Auto-sync active", active: true }
+                        ].map((t, i) => (
+                          <li key={i} className={`flex items-start gap-4 text-[13px] font-medium ${t.active ? 'text-slate-300' : 'text-slate-600 line-through opacity-50'}`}>
+                            <span className={`w-1.5 h-1.5 rounded-full mt-2 ${t.active ? 'bg-blue-500 shadow-[0_0_10px_#3b82f6]' : 'bg-slate-700'}`} /> {t.label}
                           </li>
                         ))}
                       </ul>
                     </div>
-
-                    <button
-                      onClick={startTest}
-                      className="w-full py-6 bg-blue-600 text-white rounded-[2rem] font-black text-xl hover:bg-blue-700 transition-all shadow-2xl shadow-blue-600/30 flex items-center justify-center gap-4 group active:scale-[0.98] duration-300"
-                    >
-                      Initialize Assessment
-                      <ArrowLeft className="rotate-180 group-hover:translate-x-2 transition-transform duration-500" size={24} />
+                    <button onClick={startTest} className="w-full py-4 bg-slate-900 text-white rounded-lg font-bold text-lg hover:bg-slate-800 shadow-md flex items-center justify-center gap-3 group transition-all">
+                      Initialize Assessment <ArrowLeft className="rotate-180 group-hover:translate-x-1 transition-transform" size={20} />
                     </button>
                   </div>
                 </div>
               )}
-
-              {attendanceStatus === 'used' && (
-                <div className="space-y-6 animate-fade-in group">
-                  <div className="w-20 h-20 bg-amber-50 rounded-3xl flex items-center justify-center mx-auto mb-6 text-amber-600 shadow-inner group-hover:scale-110 transition-transform">
-                    <AlertTriangle size={40} />
-                  </div>
-                  <h3 className="text-2xl font-black text-slate-900">Attempt Completed</h3>
-                  <p className="text-slate-500 font-medium">
-                    You have already submitted an attempt for this level.
-                  </p>
-                  <button
-                    onClick={() => navigate(`/course/${courseId}`)}
-                    className="w-full py-4 bg-slate-900 text-white rounded-2xl font-bold flex items-center justify-center gap-2"
-                  >
-                    <ArrowLeft size={18} />
-                    Return to Course
-                  </button>
-                </div>
-              )}
+              {attendanceStatus === 'used' && <div className="text-center"><p>Attempt Completed</p><button onClick={() => navigate("/")}>Back</button></div>}
+              {attendanceStatus === 'pending_evaluation' && <div className="text-center"><p>Evaluation in Progress</p><button onClick={() => navigate("/")}>Back</button></div>}
             </>
           )}
-
-          {/* Navigation Attempt Warning */}
-          {showNavWarning && (
-            <div className="fixed top-20 left-1/2 -translate-x-1/2 z-[10000] animate-bounce">
-              <div className="bg-amber-600 text-white px-8 py-4 rounded-2xl shadow-2xl flex items-center gap-4 border-2 border-amber-400">
-                <AlertTriangle size={32} className="animate-pulse" />
-                <div className="text-left">
-                  <p className="font-black text-lg leading-tight">NAVIGATION BLOCKED</p>
-                  <p className="text-sm font-bold opacity-90">Please finish your assessment before leaving.</p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {attendanceStatus === 'pending_evaluation' && (
-            <div className="space-y-6 animate-fade-in group">
-              <div className="w-20 h-20 bg-blue-50 rounded-3xl flex items-center justify-center mx-auto mb-6 text-blue-600 shadow-inner group-hover:scale-110 transition-transform">
-                <Clock size={40} className="animate-pulse" />
-              </div>
-              <h3 className="text-2xl font-black text-slate-900">Evaluation in Progress</h3>
-              <p className="text-slate-500 font-medium">
-                Your submission is currently being evaluated by the faculty.
-                <br /><br />
-                <span className="text-[10px] font-black uppercase tracking-widest text-blue-600 bg-blue-50 px-3 py-1.5 rounded-full inline-block mt-2">
-                  Status: Pending Review
-                </span>
-              </p>
-              <div className="bg-slate-50 border border-slate-100 rounded-2xl p-6 text-slate-400 text-xs font-bold leading-relaxed">
-                Please wait for your faculty to complete the evaluation. You will be able to view your results once the evaluation is finished.
-              </div>
-              <button
-                onClick={() => navigate(`/course/${courseId}`)}
-                className="w-full py-4 bg-slate-900 text-white rounded-2xl font-bold flex items-center justify-center gap-2"
-              >
-                <ArrowLeft size={18} />
-                Return to Course
-              </button>
-            </div>
-          )}
-
         </div>
       </div>
     );
@@ -1614,527 +756,191 @@ export default function LevelChallenge() {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50">
         <div className="w-12 h-12 border-4 border-slate-200 border-t-blue-600 rounded-full animate-spin mb-4" />
-        <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Assembling Challenge Module...</p>
+        <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">Assembling Challenge...</p>
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Violation Toast Notification */}
-      {showViolationToast && (
-        <div className="fixed top-4 right-4 z-50 animate-slide-in">
-          <div className="bg-red-500 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2">
-            <AlertTriangle size={24} />
-            <span className="font-semibold">{violationMessage}</span>
+      {showViolationToast && <div className="fixed top-4 right-4 z-50 bg-red-500 text-white px-4 py-2 rounded-lg flex items-center gap-2"><AlertTriangle /> <span>{violationMessage}</span></div>}
+      {isLocked && <div className="fixed inset-0 z-[9999] bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-6"><div className="bg-white p-8 rounded-xl text-center max-w-lg w-full shadow-2xl border">
+        <h2 className="text-2xl font-bold text-red-600 mb-3">TEST LOCKED</h2>
+        <p className="text-slate-600 font-medium mb-4">Security violations detected. Code saved. Wait for admin.</p>
+      </div></div>}
+
+      <header className="bg-white border-b sticky top-0 z-20 px-4 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => setShowInstructions(!showInstructions)}
+            className={`px-3 py-2 rounded-md transition-all flex items-center gap-2 ${showInstructions ? 'bg-slate-100 text-slate-900 border' : 'bg-slate-900 text-white shadow-md'}`}
+            title={showInstructions ? "Hide Instructions" : "Show Instructions"}
+          >
+            <Layout size={18} />
+            <span className="text-[10px] font-bold uppercase tracking-wider">{showInstructions ? 'Hide Task' : 'Show Task'}</span>
+          </button>
+          <div className="h-6 w-px bg-slate-200" />
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-lg font-bold text-slate-900">{challenge.title}</h1>
+              <span className="px-1.5 py-0.5 bg-slate-100 text-slate-400 text-[9px] font-mono rounded border underline decoration-slate-300">BUILD: v2.6</span>
+            </div>
+            <p className="text-xs text-slate-500 font-medium">Level {level} • Question {currentQuestionIndex + 1} / {assignedQuestions.length}</p>
           </div>
         </div>
-      )}
 
-      {/* LOCKED OVERLAY - Shows when test is locked due to violations */}
-      {isLocked && (
-        <div
-          className="fixed inset-0 z-[9999] bg-slate-900 flex items-center justify-center p-6"
-          onContextMenu={(e) => e.preventDefault()}
-          style={{ userSelect: 'none' }}
-        >
-          <div className="bg-white p-10 rounded-[2.5rem] shadow-2xl text-center max-w-lg w-full animate-fade-in">
-            <div className="w-24 h-24 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-8 animate-pulse">
-              <AlertTriangle size={48} />
+        <div className="flex items-center gap-4">
+          {timeRemaining !== null && (
+            <div className={`px-4 py-1.5 rounded-md border font-bold text-sm flex items-center gap-2 transition-colors ${timeRemaining <= 300 ? "bg-red-50 border-red-200 text-red-600 animate-pulse" : "bg-slate-900 text-white"}`}>
+              <Clock size={16} /> <span>{formatTime(timeRemaining)}</span>
             </div>
-            <h2 className="text-3xl font-black text-red-600 mb-4">⚠️ TEST LOCKED ⚠️</h2>
-            <p className="text-slate-700 font-bold mb-4">
-              Maximum security violations detected.
-            </p>
-            <p className="text-slate-500 text-sm mb-6">
-              Your code has been automatically saved. Do NOT close this browser or navigate away.
-            </p>
-            <div className="bg-amber-50 border-2 border-amber-300 rounded-2xl p-6 mb-6">
-              <div className="flex items-center justify-center gap-2 text-amber-800 text-sm font-bold mb-2">
-                <Clock size={18} className="animate-pulse" />
-                WAITING FOR ADMINISTRATOR
-              </div>
-              <p className="text-amber-700 text-xs">
-                An administrator will review your case and decide whether you can continue or if your work will be submitted as-is.
-              </p>
-            </div>
-            <div className="bg-slate-100 rounded-xl p-4 mb-4">
-              <p className="text-xs text-slate-500 font-mono">
-                Violations: <span className="text-red-600 font-bold">{violations}</span> / {restrictions.maxViolations}
-              </p>
-            </div>
-            <p className="text-[10px] text-slate-400 uppercase tracking-widest">
-              🔒 Screen is locked • All actions are being monitored
-            </p>
-          </div>
-        </div>
-      )}
+          )}
 
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-10 shadow-sm">
-        <div className="px-6 py-4">
-          <div className="flex items-center justify-between mb-3">
-            <div>
-              {/* Back to Course button removed during active test */}
-              <div className="flex items-center gap-3">
-                <h1 className="text-2xl font-bold">{challenge.title}</h1>
-                <span className="px-2 py-0.5 bg-slate-100 text-slate-400 text-[10px] font-mono rounded border border-slate-200">
-                  BUILD: v2.6
-                </span>
-              </div>
-              <p className="text-gray-600">
-                Level {level}
-              </p>
-            </div>
-
-            {/* Question Navigator with Timer */}
-            <div className="flex items-center gap-6">
-              {/* Small Timer */}
-              {timeRemaining !== null && (
-                <div
-                  className={`px-5 py-2.5 rounded-2xl border font-display font-black text-sm flex items-center gap-3 shadow-sm transition-all duration-300 ${timeRemaining <= 300
-                    ? "bg-rose-50 border-rose-200 text-rose-600 animate-pulse"
-                    : "bg-slate-900 border-slate-800 text-white"
-                    }`}
-                >
-                  <Clock size={18} className={timeRemaining <= 300 ? "text-rose-600" : "text-primary-400"} />
-                  <span className="tracking-widest">{formatTime(timeRemaining)}</span>
-                </div>
-              )}
-
-              {/* Auto-Save Status Indicator */}
-              <div className="flex items-center gap-3 px-5 py-2.5 bg-white border border-slate-200 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-sm">
-                {saveStatus === 'saving' && (
-                  <>
-                    <RefreshCw size={14} className="animate-spin text-primary-600" />
-                    <span className="text-primary-600">Syncing...</span>
-                  </>
-                )}
-                {saveStatus === 'saved' && (
-                  <>
-                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
-                    <span className="text-slate-500">
-                      Saved {lastSaveTimestamp ? lastSaveTimestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
-                    </span>
-                  </>
-                )}
-                {saveStatus === 'error' && (
-                  <>
-                    <AlertTriangle size={14} className="text-rose-500" />
-                    <span className="text-rose-500">Sync Failed</span>
-                  </>
-                )}
-              </div>
-
-              {/* Question Number Boxes */}
-              {/* Navigator hidden as requested */}
-            </div>
+          <div className="flex items-center gap-2 px-3 py-1.5 bg-white border rounded-md text-[9px] font-bold uppercase tracking-wider">
+            <div className={`w-1.5 h-1.5 rounded-full ${saveStatus === 'saved' ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'}`} />
+            <span className="text-slate-500">{saveStatus === 'saving' ? 'Syncing' : 'Saved'}</span>
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex gap-3">
-            {allQuestionsSubmitted() && (
-              <button
-                onClick={handleFinishTest}
-                disabled={finishingLevel}
-                className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2"
-              >
-                {finishingLevel ? <RefreshCw size={20} className="animate-spin" /> : <CheckCircle size={20} />}
-                {finishingLevel ? "Finishing..." : "Finish & View Results"}
+          <div className="h-6 w-px bg-slate-200" />
+
+          {assignedQuestions.length > 1 && (
+            <div className="flex gap-1">
+              <button onClick={handlePreviousQuestion} disabled={currentQuestionIndex === 0} className="p-1.5 border rounded-md hover:bg-slate-50 disabled:opacity-30"><ChevronLeft size={18} /></button>
+              <button onClick={handleNextQuestion} disabled={currentQuestionIndex === assignedQuestions.length - 1} className="p-1.5 border rounded-md hover:bg-slate-50 disabled:opacity-30"><ChevronRight size={18} /></button>
+            </div>
+          )}
+
+          <div className="flex items-center gap-2">
+            <button onClick={handleRunCode} className="px-3 py-1.5 bg-slate-100 rounded-md hover:bg-slate-200 font-bold text-xs flex items-center gap-2">
+              <RefreshCw size={14} /> Run
+            </button>
+            <button onClick={handleSubmit} disabled={submitting} className="px-3 py-1.5 bg-slate-900 text-white rounded-md hover:bg-slate-800 font-bold text-xs">
+              Submit
+            </button>
+            {assignedQuestions.every(q => userAnswers[q.id]?.submitted) && (
+              <button onClick={() => handleFinishLevel({ reason: "manual" })} className="px-3 py-1.5 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 font-bold text-xs flex items-center gap-1">
+                <CheckCircle size={14} /> Finish
               </button>
             )}
-            {/* Navigation buttons hidden as requested */}
-            <button onClick={handleRunCode} className="btn-secondary">
-              ▶ Run Code
-            </button>
-            <button
-              onClick={handleSubmit}
-              disabled={submitting || evaluating || isSaving}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-semibold disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-            >
-              {submitting || evaluating ? (
-                <>
-                  <RefreshCw size={20} className="animate-spin" />
-                  Running...
-                </>
-              ) : (
-                <>
-                  <Check size={20} />
-                  Submit Code
-                </>
-              )}
-            </button>
           </div>
         </div>
       </header>
 
-      {/* Main Content */}
-      <div
-        className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-6"
-        style={{ height: "calc(100vh - 180px)" }}
-      >
-        {/* Left Panel: Instructions & Code Editors */}
-        <div className="flex flex-col gap-4 overflow-y-auto min-h-0 pr-2 custom-scrollbar">
-          {/* Toggle Instructions Button */}
-          <button
-            onClick={() => setShowInstructions(!showInstructions)}
-            className="flex items-center justify-between px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-          >
-            <span className="font-semibold">
-              {showInstructions
-                ? "📖 Hide Instructions"
-                : "📖 Show Instructions"}
-            </span>
-            <svg
-              className={`w-5 h-5 transition-transform ${showInstructions ? "rotate-180" : ""
-                }`}
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M19 9l-7 7-7-7"
-              />
-            </svg>
-          </button>
-
-          {/* Instructions */}
+      <main className="flex gap-0 p-3 overflow-hidden bg-slate-50" style={{ height: "calc(100vh - 61px)" }}>
+        {/* Left Column: Instructions & Editor */}
+        <div style={{ width: `${leftWidth}%` }} className="flex flex-col gap-3 min-w-0 pr-1 select-none">
           {showInstructions && (
-            <div className="bg-white rounded-3xl border border-slate-200 p-8 mb-4 shadow-sm">
-
-              <h2 className="text-sm font-black text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-3">
-                <div className="w-1.5 h-1.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]" />
-                Technical Protocol
-              </h2>
-
-              <div className="mb-8 question-desc whitespace-pre-wrap">
-                {challenge.description}
+            <div className={`flex-[0.6] bg-white rounded-md border border-slate-200 shadow-sm flex flex-col overflow-hidden min-h-[150px] transition-all`}>
+              <div className="px-4 py-2 border-b flex items-center justify-between bg-slate-50/50 shrink-0">
+                <h2 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Task Details</h2>
+                <button 
+                  onClick={() => setShowInstructions(false)}
+                  className="p-1 text-slate-400 hover:text-slate-600 rounded transition-colors"
+                  title="Hide Instructions"
+                >
+                  <ChevronUp size={14} />
+                </button>
               </div>
-
-              {challenge.instructions && challenge.instructions !== challenge.description && (
-                <div className="border-t border-slate-100 pt-8 supporting-content whitespace-pre-wrap">
-                  {challenge.instructions}
-                </div>
-              )}
-
-              {/* Assets Section */}
-              {challenge.assets &&
-                (Array.isArray(challenge.assets)
-                  ? challenge.assets.length > 0
-                  : challenge.assets.images?.length > 0) && (
-                  <div className="mt-4 p-4 bg-purple-50 border border-purple-200 rounded-lg">
-                    <h3 className="font-semibold text-purple-900 mb-3 flex items-center gap-2">
-                      <svg
-                        className="w-5 h-5"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                        />
-                      </svg>
-                      Description
-                    </h3>
-                    <div className="space-y-2">
-                      {(Array.isArray(challenge.assets)
-                        ? challenge.assets
-                        : challenge.assets?.images || []
-                      ).map((asset, index) => {
-                        // Normalize path
-                        const assetPath =
-                          typeof asset === "string" ? asset : asset.path;
-                        const filename = assetPath.split("/").pop();
-                        let codePath = assetPath;
-                        if (!codePath.startsWith("http")) {
-                          codePath = codePath.startsWith("/")
-                            ? codePath.slice(1)
-                            : codePath;
-                          const isImage =
-                            /\.(png|jpg|jpeg|gif|svg|webp)$/i.test(codePath);
-                          if (
-                            isImage &&
-                            !codePath.includes("images/") &&
-                            !codePath.includes("assets/")
-                          ) {
-                            codePath = `images/${codePath}`;
-                          }
-                          if (!codePath.startsWith("assets/")) {
-                            codePath = `assets/${codePath}`;
-                          }
-                          codePath = `/${codePath}`;
-                        }
-
-                        return (
-                          <div
-                            key={index}
-                            className="bg-white p-2 rounded border border-purple-100 flex items-center justify-between"
-                          >
-                            <a
-                              href={codePath}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-blue-600 hover:underline text-sm truncate max-w-[200px]"
-                              title={filename}
-                            >
-                              {filename}
-                            </a>
-                            <code className="ml-2 px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded border border-gray-200 select-all">
-                              {codePath}
-                            </code>
-                          </div>
-                        );
-                      })}
-                    </div>
+              <div className="flex-1 p-4 overflow-y-auto leading-relaxed scroll-smooth">
+                <div className="question-desc text-slate-700 text-sm font-medium mb-4 break-words">{challenge.description}</div>
+                {challenge.instructions && (
+                  <div className="mt-4 pt-4 border-t border-slate-100">
+                    <h3 className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-2">Technical Guidance</h3>
+                    <div className="text-xs text-slate-500 italic space-y-2">{challenge.instructions}</div>
                   </div>
                 )}
-
-              {/* Hints Section */}
-              {challenge.hints && challenge.hints.length > 0 && (
-                <details className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg cursor-pointer">
-                  <summary className="font-semibold text-yellow-900 cursor-pointer flex items-center gap-2">
-                    <svg
-                      className="w-5 h-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
-                      />
-                    </svg>
-                    💡 Hints ({challenge.hints.length})
-                  </summary>
-                  <div className="mt-3 space-y-2">
-                    {challenge.hints.map((hint, index) => (
-                      <p
-                        key={index}
-                        className="text-sm text-yellow-800 pl-4 border-l-2 border-yellow-300"
-                      >
-                        {index + 1}. {hint}
-                      </p>
-                    ))}
-                  </div>
-                </details>
-              )}
+              </div>
             </div>
           )}
-
-          {/* Code Editors */}
-          <div
-            className={`flex-1 overflow-hidden rounded-lg ${isLocked ? "blur-[2px] pointer-events-none" : ""}`}
-            style={
-              !showInstructions ? { minHeight: "calc(100vh - 250px)" } : {}
-            }
-          >
+          <div className="flex-1 bg-white rounded-md border border-slate-200 shadow-sm overflow-hidden flex flex-col min-h-0">
             <MultiFileEditor code={code} onChange={setCode} readOnly={isLocked} />
           </div>
         </div>
 
-        {/* Right Panel: Preview & Results */}
-        <div className="flex flex-col h-full overflow-hidden relative">
-          <div className="flex-1 flex flex-col min-h-0">
-            <div className="card flex-1 flex flex-col min-h-0 p-0 overflow-hidden">
-              <div className="p-3 border-b flex flex-wrap gap-3 items-center justify-between bg-gray-50">
-                <div className="inline-flex rounded-md border bg-white p-1 shadow-sm">
-                  <button
-                    onClick={() => setPreviewTab("live")}
-                    className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${previewTab === "live"
-                      ? "bg-blue-600 text-white shadow"
-                      : "text-gray-600 hover:text-gray-900"
-                      }`}
-                  >
-                    Live Preview
-                  </button>
-                  <button
-                    onClick={() => {
-                      if (challenge?.expectedSolution) {
-                        setPreviewTab("expected");
-                      }
-                    }}
-                    disabled={!challenge?.expectedSolution}
-                    className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${previewTab === "expected"
-                      ? "bg-green-600 text-white shadow"
-                      : "text-gray-600 hover:text-gray-900"
-                      } ${!challenge?.expectedSolution
-                        ? "opacity-50 cursor-not-allowed"
-                        : ""
-                      }`}
-                  >
-                    Expected Result
-                  </button>
-                  <button
-                    onClick={() => setPreviewTab("terminal")}
-                    className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${previewTab === "terminal"
-                      ? "bg-emerald-600 text-white shadow"
-                      : "text-gray-600 hover:text-gray-900"
-                      }`}
-                  >
-                    Terminal
-                  </button>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => {
-                      if (
-                        previewTab === "expected" &&
-                        !challenge?.expectedSolution
-                      ) {
-                        return;
-                      }
-                      setFullScreenView(previewTab);
-                    }}
-                    className="text-xs px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 text-gray-700 flex items-center gap-1"
-                  >
-                    ⤢ Full Screen
-                  </button>
-                </div>
-              </div>
-              <div className="flex-1 relative overflow-auto bg-gray-100">
-                {previewTab === "live" ? (
-                  <PreviewFrame
-                    ref={previewRef}
-                    code={code}
-                    onConsoleLog={(logs) => setConsoleOutput(logs)}
-                    isNodeJS={challenge?.challengeType === 'nodejs' || (code.js && code.js.includes('require(') && !code.html)}
-                  />
-                ) : previewTab === "terminal" ? (
-                  <TerminalPanel
-                    output={consoleOutput}
-                    onClear={() => setConsoleOutput([])}
-                    isExpanded={true}
-                    stdin={stdin}
-                    setStdin={setStdin}
-                    metrics={metrics}
-                  />
-                ) : challenge?.expectedSolution ? (
-                  <PreviewFrame
-                    code={{
-                      html: challenge.expectedSolution.html || "",
-                      css: challenge.expectedSolution.css || "",
-                      js: challenge.expectedSolution.js || "",
-                    }}
-                    isRestricted={true}
-                  />
-                ) : (
-                  <div className="h-full flex items-center justify-center text-sm text-gray-500">
-                    Expected design not available for this challenge.
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Results (Below Split View) */}
-          {evaluating && (
-            <div className="card mt-4 shrink-0 transition-all duration-300 flex flex-col max-h-[40%]">
-              <div className="text-center py-8">
-                <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-slate-900 mb-4"></div>
-                <p className="text-lg font-black text-slate-900 tracking-tight mb-2">
-                  {evaluationStep || "Evaluating..."}
-                </p>
-                <div className="max-w-md mx-auto text-left bg-slate-50 p-6 rounded-3xl border border-slate-100">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">
-                    🔄 Submission Pipeline Active
-                  </p>
-                  <ul className="text-xs text-slate-600 font-medium space-y-2">
-                    <li className="flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 bg-slate-900 rounded-full" />
-                      Capturing code state
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 bg-slate-900 rounded-full" />
-                      Queuing for visual verification
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <div className="w-1.5 h-1.5 bg-slate-900 rounded-full" />
-                      Wait for final results in summary
-                    </li>
-                  </ul>
-                </div>
-              </div>
-            </div>
+        {/* Drag Handle */}
+        <div
+          onMouseDown={startResizing}
+          className={`relative w-2 group cursor-col-resize flex items-center justify-center transition-all z-30 ${isResizing ? 'bg-slate-200' : 'hover:bg-slate-100'}`}
+          style={{ pointerEvents: 'auto' }}
+        >
+          <div className={`w-0.5 h-10 rounded-full transition-all ${isResizing ? 'bg-slate-900 h-20 w-[3px]' : 'bg-slate-300 group-hover:bg-slate-500'}`} />
+          
+          {/* Invisible Overlay to capture mouse events when dragging (STOPS IFRAME FROM STEALING FOCUS) */}
+          {isResizing && (
+            <div className="fixed inset-0 z-[9999] cursor-col-resize pointer-events-auto" style={{ background: 'transparent' }} />
           )}
+        </div>
 
-          {/* Results Panel - Admin Only */}
-          {result && localStorage.getItem('userRole') === 'admin' && (
-            <div
-              className={`card mt-4 shrink-0 transition-all duration-300 flex flex-col ${showEvaluationPanel ? "max-h-[40%]" : "max-h-14 overflow-hidden"
-                }`}
-            >
-              <div
-                className={`flex items-center justify-between ${showEvaluationPanel ? "mb-3" : "mb-0"
-                  }`}
-              >
-                <h2 className="text-lg font-bold">Admin: Evaluation Results</h2>
+        {/* Right Column: Preview/Terminal */}
+        <div style={{ width: `${100 - leftWidth}%` }} className="flex flex-col min-w-0 gap-3 pl-1">
+          <div className="flex-1 bg-white rounded-md border border-slate-200 shadow-sm flex flex-col overflow-hidden">
+            <div className="h-10 border-b flex items-center justify-between bg-slate-50 px-2 shrink-0">
+              <div className="flex gap-1 h-full">
                 <button
-                  onClick={() => setShowEvaluationPanel((prev) => !prev)}
-                  className="text-xs px-3 py-1 rounded bg-gray-100 hover:bg-gray-200 text-gray-700"
+                  onClick={() => setPreviewTab("live")}
+                  className={`px-3 py-1 text-[10px] font-bold transition-all flex items-center gap-1.5 border-b-2 ${previewTab === 'live' ? 'border-slate-900 text-slate-900 bg-white' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
                 >
-                  {showEvaluationPanel ? "Hide Panel" : "Show Panel"}
+                  <Layout size={12} /> Live Preview
+                </button>
+                {(challenge.expectedHtml || challenge.expectedCss || challenge.expectedJs || (challenge.assets && challenge.assets.reference)) && (
+                  <button
+                    onClick={() => setPreviewTab("expected")}
+                    className={`px-3 py-1 text-[10px] font-bold transition-all flex items-center gap-1.5 border-b-2 ${previewTab === 'expected' ? 'border-slate-900 text-slate-900 bg-white' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
+                  >
+                    <Eye size={12} /> Expected Result
+                  </button>
+                )}
+                <button
+                  onClick={() => setPreviewTab("terminal")}
+                  className={`px-3 py-1 text-[10px] font-bold transition-all flex items-center gap-1.5 border-b-2 ${previewTab === 'terminal' ? 'border-slate-900 text-slate-900 bg-white' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
+                >
+                  <RefreshCw size={12} /> Execution Output
                 </button>
               </div>
-              {showEvaluationPanel && (
-                <div className="flex-1 overflow-auto pr-2">
-                  <ResultsPanel result={result} />
+              <button
+                onClick={() => setFullScreenView(previewTab)}
+                className="p-1 px-2 text-slate-400 hover:text-slate-900 transition-all rounded"
+                title="Fullscreen"
+              >
+                <Maximize2 size={12} />
+              </button>
+            </div>
+
+            <div className="flex-1 bg-white relative overflow-hidden">
+              <div className={previewTab === 'live' ? 'h-full w-full overflow-hidden' : 'hidden'}>
+                <PreviewFrame
+                  ref={previewRef}
+                  code={code}
+                  isNodeJS={challenge?.challengeType === 'nodejs'}
+                  onConsoleLog={setConsoleOutput}
+                />
+              </div>
+
+              {previewTab === 'expected' && (
+                <div className="w-full h-full p-4 overflow-auto flex items-center justify-center bg-slate-50">
+                  {challenge.assets?.reference ? (
+                    <img
+                      src={challenge.assets.reference}
+                      alt="Expected Reference"
+                      className="max-w-full shadow-lg rounded border"
+                      onError={(e) => { e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><text x="10" y="50" fill="gray">No Reference</text></svg>' }}
+                    />
+                  ) : (challenge.expectedHtml || challenge.expectedCss || challenge.expectedJs) ? (
+                    <PreviewFrame
+                      autoRun={true}
+                      code={{
+                        html: challenge.expectedHtml || "",
+                        css: challenge.expectedCss || "",
+                        js: challenge.expectedJs || ""
+                      }}
+                    />
+                  ) : (
+                    <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">No expected output</p>
+                  )}
                 </div>
               )}
-            </div>
-          )}
-          {/* Reverted Popup Modal - Navigate directly instead */}
-        </div>
-      </div>
-      {/* Full Screen Modal */}
-      {fullScreenView && (
-        <div className="fixed inset-0 z-50 bg-white flex flex-col">
-          <div
-            className={`p-4 border-b flex justify-between items-center ${fullScreenView === "expected" ? "bg-green-50" : "bg-gray-50"
-              }`}
-          >
-            <h2 className="text-xl font-bold flex items-center gap-2">
-              {fullScreenView === "live"
-                ? "🖥️ Live Preview (Full Screen)"
-                : fullScreenView === "terminal"
-                  ? "🐚 Terminal Environment (Full Screen)"
-                  : "✅ Expected Result (Full Screen)"}
-              <span className="text-sm font-normal text-gray-500">
-                {fullScreenView === "live" ? "- Your Code" : fullScreenView === "terminal" ? "- Execution Output" : "- Target Design"}
-              </span>
-            </h2>
-            <button
-              onClick={() => setFullScreenView(null)}
-              className="px-4 py-2 bg-gray-800 text-white rounded hover:bg-gray-700 flex items-center gap-2"
-            >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-              Exit Full Screen
-            </button>
-          </div>
-          <div className="flex-1 relative bg-gray-100 overflow-hidden p-4">
-            <div className="h-full w-full bg-white shadow-xl rounded-lg overflow-hidden border">
-              {fullScreenView === "live" ? (
-                <PreviewFrame ref={previewRef} code={code} />
-              ) : fullScreenView === "terminal" ? (
+
+              {previewTab === 'terminal' && (
                 <TerminalPanel
                   output={consoleOutput}
                   onClear={() => setConsoleOutput([])}
@@ -2143,17 +949,56 @@ export default function LevelChallenge() {
                   setStdin={setStdin}
                   metrics={metrics}
                 />
-              ) : (
-                <PreviewFrame
-                  code={{
-                    html: challenge.expectedSolution.html || "",
-                    css: challenge.expectedSolution.css || "",
-                    js: challenge.expectedSolution.js || "",
-                  }}
-                  isRestricted={true}
-                />
               )}
             </div>
+          </div>
+          {evaluating && <div className="p-4 bg-slate-900 text-white rounded-md animate-pulse flex items-center gap-3"><RefreshCw className="animate-spin" size={16} /> <span className="font-bold text-xs uppercase tracking-wider">Evaluating Submission...</span></div>}
+          {result && localStorage.getItem('userRole') === 'admin' && <div className="h-48 overflow-auto border rounded-md p-4 bg-white shadow-inner"><ResultsPanel result={result} /></div>}
+        </div>
+      </main>
+
+      {/* Full Screen Preview Modal */}
+      {fullScreenView && (
+        <div className="fixed inset-0 z-[100] bg-slate-900 flex flex-col backdrop-blur-sm">
+          {/* Floating Close Button */}
+          <button
+            onClick={() => setFullScreenView(null)}
+            className="fixed top-4 right-4 z-[110] w-10 h-10 rounded-full bg-slate-900/50 hover:bg-slate-900 text-white flex items-center justify-center transition-all shadow-lg border border-white/10 backdrop-blur-md"
+            title="Exit Fullscreen"
+          >
+            <X size={20} />
+          </button>
+
+          <div className="flex-1 bg-white overflow-hidden relative">
+            {fullScreenView === 'live' ? (
+              <PreviewFrame
+                code={code}
+                isNodeJS={challenge?.challengeType === 'nodejs'}
+                autoRun={true}
+                onConsoleLog={setConsoleOutput}
+                isRestricted={restrictions.blockCopy}
+              />
+            ) : (
+              <div className="w-full h-full p-4 overflow-auto flex items-center justify-center bg-slate-100/30">
+                {challenge.assets?.reference ? (
+                  <img
+                    src={challenge.assets.reference}
+                    alt="Expected Reference"
+                    className="max-h-full shadow-2xl border border-slate-200 object-contain"
+                    onError={(e) => { e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><text x="10" y="50" fill="gray">No Reference Found</text></svg>' }}
+                  />
+                ) : (
+                  <PreviewFrame
+                    autoRun={true}
+                    code={{
+                      html: challenge.expectedHtml || "",
+                      css: challenge.expectedCss || "",
+                      js: challenge.expectedJs || ""
+                    }}
+                  />
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}

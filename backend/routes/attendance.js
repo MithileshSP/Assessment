@@ -31,10 +31,11 @@ const upload = multer({
 router.post('/request', verifyToken, async (req, res) => {
     const { courseId, level } = req.body;
     const userId = req.user.id;
-    const testIdentifier = `${courseId}_${level}`;
+    // Linear Skill Path: testIdentifier is just courseId
+    const testIdentifier = courseId;
 
-    if (!courseId || !level) {
-        return res.status(400).json({ error: 'Missing courseId or level' });
+    if (!courseId) {
+        return res.status(400).json({ error: 'Missing courseId' });
     }
 
     console.log(`[Attendance Request] User: ${userId}, Identifier: ${testIdentifier}`);
@@ -90,9 +91,9 @@ router.post('/request', verifyToken, async (req, res) => {
 router.get('/status', verifyToken, async (req, res) => {
     const { courseId, level } = req.query;
     const userId = req.user.id;
-    const testIdentifier = `${courseId}_${level}`;
+    const testIdentifier = courseId;
 
-    if (!courseId || !level) return res.status(400).json({ error: 'Missing params' });
+    if (!courseId) return res.status(400).json({ error: 'Missing params: courseId' });
 
     try {
         // 1. Check for active global session
@@ -156,6 +157,7 @@ router.get('/status', verifyToken, async (req, res) => {
             }
         }
 
+        console.log(`[Attendance Status] User: ${userId}, Identifier: ${testIdentifier}, Final Status: ${response.status}, isUsed: ${response.isUsed}, locked: ${response.locked}`);
         res.json(response);
     } catch (err) {
         console.error(err);
@@ -187,7 +189,7 @@ router.get('/requests', verifyAdmin, async (req, res) => {
 router.post('/lock', verifyToken, async (req, res) => {
     const { courseId, level, reason, violationCount } = req.body;
     const userId = req.user.id;
-    const testIdentifier = `${courseId}_${level}`;
+    const testIdentifier = courseId;
 
     console.log(`[Lock Request] User: ${userId}, Identifier: ${testIdentifier}, Reason: ${reason}`);
 
@@ -282,9 +284,9 @@ router.post('/approve', verifyAdmin, async (req, res) => {
 router.post('/manual-approve', verifyAdmin, async (req, res) => {
     const { userId, courseId, level } = req.body;
     const adminId = req.user.id;
-    const testIdentifier = `${courseId}_${level}`;
+    const testIdentifier = courseId;
 
-    if (!userId || !courseId || !level) {
+    if (!userId || !courseId) {
         return res.status(400).json({ error: 'Missing required fields' });
     }
 
@@ -318,9 +320,9 @@ router.post('/manual-approve', verifyAdmin, async (req, res) => {
 router.post('/bulk-approve', verifyAdmin, async (req, res) => {
     const { emails, courseId, level } = req.body; // emails is an array
     const adminId = req.user.id;
-    const testIdentifier = `${courseId}_${level}`;
+    const testIdentifier = courseId;
 
-    if (!emails || !Array.isArray(emails) || !courseId || !level) {
+    if (!emails || !Array.isArray(emails) || !courseId) {
         return res.status(400).json({ error: 'Invalid payload' });
     }
 
@@ -473,7 +475,7 @@ router.get('/active-sessions', verifyAdmin, async (req, res) => {
 router.post('/upload-reference', verifyToken, upload.single('image'), async (req, res) => {
     const { courseId, level } = req.body;
     const userId = req.user.id;
-    const testIdentifier = `${courseId}_${level}`;
+    const testIdentifier = courseId;
 
     if (!req.file) {
         return res.status(400).json({ error: 'No image uploaded' });

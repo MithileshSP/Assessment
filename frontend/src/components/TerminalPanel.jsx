@@ -24,7 +24,7 @@ export default function TerminalPanel({
     }, [output]);
 
     return (
-        <div className={`flex flex-col bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden transition-all ${isExpanded ? 'h-full' : 'h-10'}`}>
+        <div className={`flex flex-col bg-white rounded-md border border-gray-200 shadow-sm overflow-hidden transition-all ${isExpanded ? 'h-full' : 'h-10'}`}>
             {/* Terminal Header */}
             <div className="flex items-center justify-between px-4 py-2 bg-gray-50 border-b border-gray-200">
                 <div className="flex items-center gap-2">
