@@ -68,23 +68,33 @@ const pool = mysql.createPool(dbConfig);
 
 let isConnected = false;
 
-// Test connection
-pool
-  .getConnection()
-  .then((connection) => {
-    console.log("✅ MySQL Database connected successfully");
-    isConnected = true;
-    connection.release();
-  })
-  .catch((err) => {
-    console.error("❌ MySQL connection error:", err.message);
-    if (isProduction) {
-      console.error("FATAL: MySQL is required in production! Shutting down...");
-      process.exit(1);
+// Test connection with retries (10 attempts, every 5s = 50s total window)
+async function testConnection(retries = 10, delay = 5000) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      const connection = await pool.getConnection();
+      console.log("✅ MySQL Database connected successfully");
+      isConnected = true;
+      connection.release();
+      return true;
+    } catch (err) {
+      console.error(`❌ MySQL connection attempt ${i + 1} failed:`, err.message);
+      if (i === retries - 1) {
+        if (isProduction) {
+          console.error("FATAL: MySQL is required in production! Shutting down...");
+          process.exit(1);
+        }
+        console.log("📁 Using JSON file storage as fallback");
+        isConnected = false;
+        return false;
+      }
+      console.log(`⏳ Retrying in ${delay / 1000}s...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
     }
-    console.log("📁 Using JSON file storage as fallback");
-    isConnected = false;
-  });
+  }
+}
+
+testConnection();
 
 // Helper function to execute queries
 async function query(sql, params) {
@@ -98,8 +108,11 @@ async function query(sql, params) {
     // Suppress logs for common migration "already exists" errors
     const isDuplicate = error.code === 'ER_DUP_FIELDNAME' ||
       error.errno === 1060 ||
+      error.code === 'ER_DUP_INDEX' ||
       error.code === 'ER_DUP_KEYNAME' ||
-      error.errno === 1061;
+      error.errno === 1061 ||
+      error.code === 'ER_CANT_DROP_FIELD_OR_KEY' ||
+      error.errno === 1091;
 
     if (!isDuplicate) {
       console.error("Database query error:", error);

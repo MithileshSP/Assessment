@@ -40,7 +40,8 @@ const SaaSLayout = ({ children }) => {
             if (studentUser) return JSON.parse(studentUser);
             return {
                 fullName: localStorage.getItem('fullName'),
-                username: localStorage.getItem('username')
+                username: localStorage.getItem('username'),
+                rollNo: localStorage.getItem('rollNo')
             };
         } catch (e) {
             return { username: localStorage.getItem('username') };
@@ -238,11 +239,16 @@ const SaaSLayout = ({ children }) => {
 
                             <div className="flex items-center gap-4 group cursor-pointer pl-2">
                                 <div className="text-right hidden sm:block">
-                                    <p className="text-sm font-display font-bold text-slate-900 leading-none mb-2 group-hover:text-primary-600 transition-colors">
+                                    <p className="text-[11px] font-display font-bold text-slate-900 leading-none mb-1 group-hover:text-primary-600 transition-colors">
                                         {userData.fullName || userData.username || 'Unidentified User'}
                                     </p>
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center justify-end gap-2">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                                    {userData.rollNo && (
+                                        <p className="text-[11px] font-display font-bold text-slate-500 leading-none mb-2 uppercase tracking-tight">
+                                            {userData.rollNo}
+                                        </p>
+                                    )}
+                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest flex items-center justify-end gap-1.5">
+                                        <div className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
                                         System Online
                                     </p>
                                 </div>

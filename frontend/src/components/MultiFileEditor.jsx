@@ -17,7 +17,7 @@ const MultiFileEditor = ({
     // Map legacy code format to files format
     const codeToFiles = (codeObj) => ({
         'index.html': codeObj.html || '',
-        'styles.css': codeObj.css || '',
+        'style.css': codeObj.css || '',
         'script.js': codeObj.js || '',
         ...(codeObj.additionalFiles || {})
     });
@@ -25,11 +25,11 @@ const MultiFileEditor = ({
     // Map files back to legacy format
     const filesToCode = (filesObj) => ({
         html: filesObj['index.html'] || '',
-        css: filesObj['styles.css'] || '',
+        css: filesObj['style.css'] || '',
         js: filesObj['script.js'] || '',
         additionalFiles: Object.fromEntries(
             Object.entries(filesObj).filter(([name]) =>
-                !['index.html', 'styles.css', 'script.js'].includes(name)
+                !['index.html', 'style.css', 'script.js'].includes(name)
             )
         )
     });
@@ -45,14 +45,14 @@ const MultiFileEditor = ({
     const menuRef = useRef(null);
 
     // Default files that cannot be renamed/deleted
-    const defaultFiles = ['index.html', 'styles.css', 'script.js'];
+    const defaultFiles = ['index.html', 'style.css', 'script.js'];
 
     // Sync only default files when code prop changes (don't overwrite additional files)
     useEffect(() => {
         setFiles(prev => ({
             ...prev,
             'index.html': code.html || '',
-            'styles.css': code.css || '',
+            'style.css': code.css || '',
             'script.js': code.js || '',
             ...(code.additionalFiles || {})
         }));

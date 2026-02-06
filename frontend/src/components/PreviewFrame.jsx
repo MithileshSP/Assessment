@@ -5,13 +5,23 @@ import { Terminal, ChevronDown, ChevronUp, Trash2, Command, Loader2 } from "luci
  * PreviewFrame - Renders student code in a sandboxed iframe
  * Handles both Web (live preview) and Node.js (execution detection)
  */
-const PreviewFrame = forwardRef(({ code, isRestricted = false, onConsoleLog, isNodeJS = false, autoRun = false }, ref) => {
+const PreviewFrame = forwardRef(({ code, isRestricted = false, onConsoleLog, isNodeJS = false, autoRun = false, onHistoryChange, initialFile }, ref) => {
   const iframeRef = useRef(null);
   const [logs, setLogs] = useState([]);
   const [isConsoleOpen, setIsConsoleOpen] = useState(false);
-  const [previewKey, setPreviewKey] = useState(0); // Force iframe refresh
-  const [viewingFile, setViewingFile] = useState('index.html');
+  const [previewKey, setPreviewKey] = useState(1); // Start at 1 to allow immediate mount injection
+  const [viewingFile, setViewingFile] = useState(initialFile || 'index.html');
+  const [history, setHistory] = useState([initialFile || 'index.html']);
+  const [historyIndex, setHistoryIndex] = useState(0);
   const scrollRef = useRef(null);
+
+  // Sync viewingFile if initialFile changes (optional, but good for parent-driven nav)
+  useEffect(() => {
+    if (initialFile && initialFile !== viewingFile) {
+      // We don't want to force state reset every time, 
+      // but onFullscreen toggle handles mount/unmount anyway.
+    }
+  }, [initialFile]);
 
   // Forward logs to parent when they change
   useEffect(() => {
@@ -23,6 +33,9 @@ const PreviewFrame = forwardRef(({ code, isRestricted = false, onConsoleLog, isN
   // Listen for terminal/console messages
   useEffect(() => {
     const handleMessage = (event) => {
+      // Security/Context check: Only listen to messages from our own iframe
+      if (event.source !== iframeRef.current?.contentWindow) return;
+
       if (event.data && event.data.type === 'CONSOLE_LOG') {
         const { logType, content } = event.data;
         // console.log("INTERNAL CAPTURE:", logType, content); // Debug
@@ -34,8 +47,7 @@ const PreviewFrame = forwardRef(({ code, isRestricted = false, onConsoleLog, isN
         if (logType === 'error') setIsConsoleOpen(true);
       } else if (event.data && event.data.type === 'NAVIGATE_TO') {
         const target = event.data.file;
-        setViewingFile(target);
-        updatePreview(code); // Refresh with new file
+        updatePreview(code, target); // Refresh with new file and update history
       }
     };
 
@@ -43,7 +55,7 @@ const PreviewFrame = forwardRef(({ code, isRestricted = false, onConsoleLog, isN
     return () => window.removeEventListener('message', handleMessage);
   }, [code]);
 
-  const updatePreview = (codeToRender) => {
+  const updatePreview = (codeToRender, fileToView, isHistoryNav = false) => {
     if (isNodeJS) {
       setLogs([{
         type: 'system',
@@ -53,20 +65,64 @@ const PreviewFrame = forwardRef(({ code, isRestricted = false, onConsoleLog, isN
       return;
     }
 
+    const targetFile = fileToView || viewingFile || 'index.html';
+
+    if (!isHistoryNav) {
+      const newHistory = history.slice(0, historyIndex + 1);
+      if (newHistory[newHistory.length - 1] !== targetFile) {
+        newHistory.push(targetFile);
+        setHistory(newHistory);
+        setHistoryIndex(newHistory.length - 1);
+      }
+    }
+
+    setViewingFile(targetFile);
     setLogs([]); // Clear logs on refresh
     setPreviewKey(prev => prev + 1); // Force a completely new iframe mount to clear global scope
   };
 
+  const goBack = () => {
+    if (historyIndex > 0) {
+      const newIndex = historyIndex - 1;
+      setHistoryIndex(newIndex);
+      updatePreview(code, history[newIndex], true);
+    }
+  };
+
+  const goForward = () => {
+    if (historyIndex < history.length - 1) {
+      const newIndex = historyIndex + 1;
+      setHistoryIndex(newIndex);
+      updatePreview(code, history[newIndex], true);
+    }
+  };
+
+  // Use the callback if provided
+  const propsRef = useRef({ onHistoryChange });
+  useEffect(() => {
+    propsRef.current = { onHistoryChange };
+  });
+
+  useEffect(() => {
+    if (propsRef.current.onHistoryChange) {
+      propsRef.current.onHistoryChange({
+        canGoBack: historyIndex > 0,
+        canGoForward: historyIndex < history.length - 1,
+        currentFile: viewingFile
+      });
+    }
+  }, [historyIndex, history.length, viewingFile]);
+
   // When previewKey changes, wait for ref and update
   useEffect(() => {
-    if (previewKey === 0 || !iframeRef.current || isNodeJS) return;
+    if (!iframeRef.current || isNodeJS) return;
 
     const iframe = iframeRef.current;
 
     // 1. Prepare file map
     const allFiles = {
       'index.html': code.html || '',
-      'styles.css': code.css || '',
+      'style.css': code.css || '',
       'script.js': code.js || '',
       ...(code.additionalFiles || {})
     };
@@ -87,11 +143,16 @@ const PreviewFrame = forwardRef(({ code, isRestricted = false, onConsoleLog, isN
 
       if (name.endsWith('.css')) {
         // Replace <link rel="stylesheet" href="filename.css"> with <style>content</style>
-        const linkRegex = new RegExp(`<link[^>]+href=["']([^"']*/)?${escapedName}["'][^>]*>`, 'g');
+        // Support BOTH style.css and styles.css for the main CSS file
+        const basename = name.replace(/\.css$/, '');
+        const altName = basename === 'style' ? 'styles' : (basename === 'styles' ? 'style' : null);
+        const namePattern = altName ? `(${name}|${altName}\\.css)` : name;
+        const linkRegex = new RegExp(`<link[^>]+href=["']([^"']*/)?${namePattern}["'][^>]*>`, 'g');
         mainHtml = mainHtml.replace(linkRegex, '<style data-file="' + name + '">' + content + '</style>');
       } else if (name.endsWith('.js')) {
         // Replace <script src="filename.js"></script> with <script>content</script>
-        const scriptRegex = new RegExp(`<script[^>]+src=["']([^"']*/)?${escapedName}["'][^>]*>\\s*</script>`, 'g');
+        // Support more flexible whitespace and optional trailing slash
+        const scriptRegex = new RegExp(`<script[^>]+src=["']([^"']*/)?${escapedName}["'][^>]*>\\s*</script>`, 'gi');
         mainHtml = mainHtml.replace(scriptRegex, '<script data-file="' + name + '">' + content.replace(/<\/script>/g, '<\\/script>') + '</script>');
       }
     });
@@ -114,8 +175,29 @@ const PreviewFrame = forwardRef(({ code, isRestricted = false, onConsoleLog, isN
       '  };',
       '',
       '  window._internalFs = _vfs;',
+      '',
+      '  const _readline = {',
+      '    createInterface: function() {',
+      '      return {',
+      '        question: (q, cb) => { setTimeout(() => cb(window.prompt(q)), 50); },',
+      '        on: (ev, cb) => console.log("[Node] Listener: " + ev),',
+      '        close: () => console.log("[Node] Closed"),',
+      '        write: (d) => console.log(d)',
+      '      };',
+      '    }',
+      '  };',
+      '',
+      '  window.process = {',
+      '    stdin: { on: () => {}, resume: () => {}, pause: () => {} },',
+      '    stdout: { write: (d) => console.log(d) },',
+      '    stderr: { write: (d) => console.error(d) },',
+      '    env: { NODE_ENV: "sandbox" },',
+      '    version: "v20.0.0"',
+      '  };',
+      '',
       '  window.require = function(m) {',
       '    if (m === "fs") return window._internalFs;',
+      '    if (m === "readline") return _readline;',
       '    throw new Error("Module not found: " + m);',
       '  };',
       '',
@@ -142,12 +224,18 @@ const PreviewFrame = forwardRef(({ code, isRestricted = false, onConsoleLog, isN
       '',
       '  document.addEventListener("click", e => {',
       '    const a = e.target.closest("a");',
-      '    if (a && a.getAttribute("href")) {',
-      '       const href = a.getAttribute("href").replace(/^\\.\\//, "");',
-      '       if (window.__STUDENT_FILES__[href]) {',
-      '         e.preventDefault();',
-      '         window.parent.postMessage({ type: "NAVIGATE_TO", file: href }, "*");',
-      '       }',
+      '    if (a) {',
+      '      const href = a.getAttribute("href");',
+      '      if (!href || href === "#" || href.startsWith("javascript:")) {',
+      '        e.preventDefault();',
+      '        return;',
+      '      }',
+      '      ',
+      '      const cleanHref = href.replace(/^\\.\\//, "");',
+      '      if (window.__STUDENT_FILES__[cleanHref]) {',
+      '        e.preventDefault();',
+      '        window.parent.postMessage({ type: "NAVIGATE_TO", file: cleanHref }, "*");',
+      '      }',
       '    }',
       '  });',
       '  ',
@@ -157,14 +245,15 @@ const PreviewFrame = forwardRef(({ code, isRestricted = false, onConsoleLog, isN
 
     // Auto-inject missing core files if they weren't matched by name above
     const injectionTags = [];
-    const hasStylesCss = mainHtml.includes('data-file="styles.css"');
+    const hasStyleCss = mainHtml.includes('data-file="style.css"') || mainHtml.includes('data-file="styles.css"');
     const hasScriptJs = mainHtml.includes('data-file="script.js"');
 
-    if (!hasStylesCss && allFiles['styles.css']?.trim()) {
-      injectionTags.push('<style>' + allFiles['styles.css'] + '</style>');
+    // Inject if NOT already matched by name in HTML (fallback)
+    if (!hasStyleCss && allFiles['style.css']?.trim()) {
+      injectionTags.push('<style data-injected="true">' + allFiles['style.css'] + '</style>');
     }
     if (!hasScriptJs && allFiles['script.js']?.trim()) {
-      injectionTags.push('<script>' + allFiles['script.js'].replace(/<\/script>/g, '<\\/script>') + '</script>');
+      injectionTags.push('<script data-injected="true">' + allFiles['script.js'].replace(/<\/script>/g, '<\\/script>') + '</script>');
     }
 
     const fullHTML = [
@@ -184,16 +273,29 @@ const PreviewFrame = forwardRef(({ code, isRestricted = false, onConsoleLog, isN
     iframe.srcdoc = fullHTML;
   }, [previewKey]);
 
-  useImperativeHandle(ref, () => ({ updatePreview }));
+  useImperativeHandle(ref, () => ({
+    updatePreview,
+    goBack,
+    goForward,
+    historyState: {
+      canGoBack: historyIndex > 0,
+      canGoForward: historyIndex < history.length - 1,
+      currentFile: viewingFile
+    }
+  }));
 
   // Debounced auto-run (restored per user request for live preview)
   useEffect(() => {
     if (isNodeJS) return;
 
     // Immediate run on mount or if autoRun prop is true
-    if (autoRun || previewKey === 0) {
+    if (autoRun) {
       updatePreview(code);
-      if (autoRun) return; // Don't setup timer if it's a static autoRun (like Expected)
+      return; // Don't setup timer if it's a static autoRun (like Expected)
+    }
+
+    if (previewKey === 1) {
+      // Initial render handled by useEffect([previewKey]), but we can trigger a refresh if needed
     }
 
     const timer = setTimeout(() => {

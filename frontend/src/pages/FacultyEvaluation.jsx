@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import PreviewFrame from '../components/PreviewFrame';
@@ -13,7 +13,11 @@ const FacultyEvaluation = () => {
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('html');
     const [activeCustomFile, setActiveCustomFile] = useState(null);
-    const [isFullScreen, setIsFullScreen] = useState(false);
+    const [fullScreenView, setFullScreenView] = useState(null); // 'live' | 'expected' | null
+    const [previewHistory, setPreviewHistory] = useState({ canGoBack: false, canGoForward: false, currentFile: 'index.html' });
+    const [fullPreviewHistory, setFullPreviewHistory] = useState({ canGoBack: false, canGoForward: false, currentFile: 'index.html' });
+    const previewRef = useRef(null);
+    const fullPreviewRef = useRef(null);
 
     // Form State
     const [scores, setScores] = useState({
@@ -162,9 +166,9 @@ const FacultyEvaluation = () => {
                 </div>
             </header>
 
-            <div className={`flex-1 flex overflow-hidden ${isFullScreen ? 'fixed inset-0 z-50 bg-[#f8fafc]' : ''}`}>
+            <div className="flex-1 flex overflow-hidden">
                 {/* Left Panel: Telemetry (12%) */}
-                <div className={`${isFullScreen ? 'hidden' : 'w-[12%]'} bg-white border-r border-slate-200/50 overflow-y-auto p-5 scrollbar-hide`}>
+                <div className="w-[12%] bg-white border-r border-slate-200/50 overflow-y-auto p-5 scrollbar-hide">
                     <div className="mb-8">
                         <h3 className="text-[9px] font-bold uppercase tracking-[0.2em] text-slate-400 mb-6 flex items-center gap-2">
                             <Activity size={10} />
@@ -214,8 +218,8 @@ const FacultyEvaluation = () => {
                     </div>
                 </div>
 
-                {/* Main Workspace (70% or full) */}
-                <div className={`${isFullScreen ? 'w-full' : 'flex-1'} flex flex-col bg-[#f8fafc] relative overflow-hidden`}>
+                {/* Main Workspace (70%) */}
+                <div className="flex-1 flex flex-col bg-[#f8fafc] relative overflow-hidden">
                     {/* Workspace Header: Minimal Unified */}
                     <div className="flex bg-white border-b border-slate-200/50 items-center justify-between px-4 sticky top-0 z-20 h-12">
                         <div className="flex items-center overflow-x-auto scrollbar-hide h-full flex-1 gap-1">
@@ -286,8 +290,7 @@ const FacultyEvaluation = () => {
                             {/* Section: Output & Specs */}
                             {[
                                 { id: 'terminal', label: 'TERM', icon: Terminal, color: 'text-slate-500' },
-                                { id: 'input', label: 'INPUT', icon: FileInput, color: 'text-slate-400' },
-                                { id: 'instructions', label: 'BRIEF', icon: Info, color: 'text-slate-400' }
+                                { id: 'instructions', label: 'QUESTION', icon: Info, color: 'text-slate-400' }
                             ].map(tab => (
                                 <button
                                     key={tab.id}
@@ -313,18 +316,17 @@ const FacultyEvaluation = () => {
                                     {evaluatingCode ? "RUNNING" : "EXECUTE"}
                                 </button>
                             )}
-                            <button
-                                onClick={() => setIsFullScreen(!isFullScreen)}
-                                className="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-50 border border-slate-200 text-slate-400 hover:text-slate-900 transition-all shadow-sm"
-                            >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    {isFullScreen ? (
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
-                                    ) : (
+                            {(activeTab === 'student_live' || activeTab === 'expected_live') && (
+                                <button
+                                    onClick={() => setFullScreenView(activeTab === 'student_live' ? 'live' : 'expected')}
+                                    className="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-50 border border-slate-200 text-slate-400 hover:text-slate-900 transition-all shadow-sm"
+                                    title="Fullscreen"
+                                >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
-                                    )}
-                                </svg>
-                            </button>
+                                    </svg>
+                                </button>
+                            )}
                         </div>
                     </div>
 
@@ -468,11 +470,14 @@ const FacultyEvaluation = () => {
                                     Candidate Preview
                                 </div>
                                 <PreviewFrame
+                                    ref={previewRef}
                                     code={{
                                         html: submission.html_code,
                                         css: submission.css_code,
-                                        js: submission.js_code
+                                        js: submission.js_code,
+                                        additionalFiles: typeof submission.additional_files === 'string' ? JSON.parse(submission.additional_files || '{}') : (submission.additional_files || {})
                                     }}
+                                    onHistoryChange={setPreviewHistory}
                                 />
                             </div>
                         ) : activeTab === 'expected_live' ? (
@@ -518,7 +523,7 @@ const FacultyEvaluation = () => {
                 </div>
 
                 {/* Right Panel: Scoring (18%) */}
-                <div className={`${isFullScreen ? 'hidden' : 'w-[18%]'} bg-white border-l border-slate-200/50 overflow-y-auto p-5 scrollbar-hide`}>
+                <div className="w-[18%] bg-white border-l border-slate-200/50 overflow-y-auto p-5 scrollbar-hide">
                     <div className="mb-6">
                         <h3 className="text-[10px] font-bold uppercase tracking-widest text-slate-400">RUBRIX</h3>
                     </div>
@@ -571,6 +576,85 @@ const FacultyEvaluation = () => {
                     </div>
                 </div>
             </div>
+
+            {/* Fullscreen Modal: Mirroring LevelChallenge.jsx */}
+            {fullScreenView && (
+                <div className="fixed inset-0 z-[100] bg-slate-900 flex flex-col backdrop-blur-sm">
+                    {/* Header */}
+                    <div className="h-14 bg-slate-900/80 backdrop-blur-md border-b border-white/5 flex items-center justify-between px-6 shrink-0">
+                        <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-2">
+                                <span className={`w-2 h-2 rounded-full ${fullScreenView === 'live' ? 'bg-emerald-500' : 'bg-blue-500'} animate-pulse`} />
+                                <span className="text-[10px] font-black text-white/50 uppercase tracking-[0.2em]">
+                                    {fullScreenView === 'live' ? 'Candidate Review' : 'Reference Specs'}
+                                </span>
+                            </div>
+                            <div className="h-4 w-px bg-white/10" />
+                            <div className="flex items-center gap-2">
+                                <span className="text-xs font-bold text-white/90 tracking-tight">{submission.candidate_name}</span>
+                                <span className="text-[10px] text-white/40 font-medium">@{submission.course_title}</span>
+                            </div>
+                        </div>
+
+                        <button
+                            onClick={() => setFullScreenView(null)}
+                            className="w-8 h-8 rounded-lg bg-white/5 text-white/40 hover:text-white hover:bg-rose-500 flex items-center justify-center transition-all group active:scale-95"
+                        >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    {/* Navigation Controls Overlay - Top Left */}
+                    <div className="fixed top-1 left-4 z-[110] translate-y-20 flex items-center gap-1 bg-slate-800/80 p-1 rounded-xl border border-white/10 backdrop-blur-md shadow-lg scale-90 origin-top-left transition-all hover:scale-100">
+                        <button
+                            disabled={!fullPreviewHistory.canGoBack}
+                            onClick={() => fullPreviewRef.current?.goBack()}
+                            className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${fullPreviewHistory.canGoBack ? 'text-white hover:bg-white/10 active:scale-95' : 'text-white/20 cursor-not-allowed'}`}
+                        >
+                            <ChevronRight size={18} className="rotate-180" />
+                        </button>
+                        <button
+                            disabled={!fullPreviewHistory.canGoForward}
+                            onClick={() => fullPreviewRef.current?.goForward()}
+                            className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${fullPreviewHistory.canGoForward ? 'text-white hover:bg-white/10 active:scale-95' : 'text-white/20 cursor-not-allowed'}`}
+                        >
+                            <ChevronRight size={18} />
+                        </button>
+                        <div className="h-4 w-px bg-white/10 mx-1" />
+                        <div className="px-2 py-1 flex items-center gap-2">
+                            <span className="text-[8px] font-black text-white/30 uppercase tracking-tighter">PAGE</span>
+                            <span className="text-[10px] font-bold text-white/90 truncate max-w-[120px]">{fullPreviewHistory.currentFile}</span>
+                        </div>
+                    </div>
+
+                    {/* Preview Content */}
+                    <div className="flex-1 bg-white overflow-hidden relative">
+                        {fullScreenView === 'live' ? (
+                            <PreviewFrame
+                                ref={fullPreviewRef}
+                                code={{
+                                    html: submission.html_code,
+                                    css: submission.css_code,
+                                    js: submission.js_code,
+                                    additionalFiles: typeof submission.additional_files === 'string' ? JSON.parse(submission.additional_files || '{}') : (submission.additional_files || {})
+                                }}
+                                initialFile={previewHistory.currentFile}
+                                onHistoryChange={setFullPreviewHistory}
+                            />
+                        ) : (
+                            <PreviewFrame
+                                code={{
+                                    html: submission.expected_html,
+                                    css: submission.expected_css,
+                                    js: submission.expected_js
+                                }}
+                            />
+                        )}
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

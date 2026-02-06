@@ -213,6 +213,7 @@ router.get('/', async (req, res) => {
         estimatedTime: course.estimated_time || course.estimatedTime,
         isLocked: course.is_locked || course.isLocked,
         isHidden: course.is_hidden || course.isHidden,
+        isCompleted: userCompletedCourses.has(course.id),
         prerequisiteCourseId: prereqId || null,
         prerequisiteCourseName,
         isPrerequisiteMet,
@@ -714,24 +715,21 @@ router.put('/:courseId', async (req, res) => {
       console.log('Database update failed:', dbError.message);
     }
 
-    // 2. Update in JSON file (Legacy/Backup)
-    const courses = getCourses();
-    const courseIndex = courses.findIndex(c => c.id === courseId);
-
-    if (courseIndex === -1 && !dbUpdated) {
-      return res.status(404).json({ error: 'Course not found' });
+    if (!dbUpdated) {
+      // If DB failed, update via model's fallback mechanism explicitly if needed
+      // but findIndex check below handles identifying if course exists at all.
     }
 
-    if (courseIndex !== -1) {
-      // Update course while keeping the ID
-      courses[courseIndex] = { ...courses[courseIndex], ...updatedCourse, id: courseId };
-      // Save to file
-      fs.writeFileSync(coursesPath, JSON.stringify(courses, null, 2));
+    // 2. Global Backup (Optional: Rely on CourseModel.update's internal fallback)
+    // Removed redundant fs.writeFileSync to prevent corruption and race conditions.
+
+    if (!dbUpdated) {
+      return res.status(404).json({ error: 'Course not found or update failed.' });
     }
 
-    res.json({
+    return res.json({
       message: 'Course updated successfully',
-      course: dbUpdated || courses[courseIndex]
+      course: dbUpdated
     });
   } catch (error) {
     console.error('Course update error:', error);
@@ -1582,7 +1580,7 @@ router.put('/:courseId/restrictions', async (req, res) => {
       blockCopy: blockCopy !== undefined ? blockCopy : true,
       blockPaste: blockPaste !== undefined ? blockPaste : true,
       forceFullscreen: forceFullscreen !== undefined ? forceFullscreen : true,
-      maxViolations: maxViolations || 3,
+      maxViolations: maxViolations || 10,
       timeLimit: timeLimit !== undefined ? timeLimit : 0
     };
 
@@ -1662,7 +1660,7 @@ router.get('/:courseId/restrictions', async (req, res) => {
       blockCopy: (restrictions && restrictions.blockCopy !== undefined) ? restrictions.blockCopy : true,
       blockPaste: (restrictions && restrictions.blockPaste !== undefined) ? restrictions.blockPaste : true,
       forceFullscreen: (restrictions && restrictions.forceFullscreen !== undefined) ? restrictions.forceFullscreen : true,
-      maxViolations: (restrictions && restrictions.maxViolations) || 3,
+      maxViolations: (restrictions && restrictions.maxViolations) || 10,
       timeLimit: (restrictions && restrictions.timeLimit) || 0
     };
 

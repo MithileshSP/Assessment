@@ -23,6 +23,7 @@ const UserProfile = () => {
             return {
                 username: localStorage.getItem('username') || 'User',
                 fullName: localStorage.getItem('fullName') || 'Student',
+                rollNo: localStorage.getItem('rollNo'),
                 email: 'user@example.com',
                 role: 'student'
             };
@@ -49,6 +50,9 @@ const UserProfile = () => {
                             <span className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-lg text-xs font-bold uppercase tracking-widest">{userData.role}</span>
                         </div>
                         <p className="text-slate-500 font-medium">@{userData.username}</p>
+                        {userData.rollNo && (
+                            <p className="text-slate-500 font-bold uppercase tracking-wider text-sm mt-1">{userData.rollNo}</p>
+                        )}
                         <div className="flex flex-wrap items-center justify-center md:justify-start gap-6 mt-6">
                             <div className="flex items-center gap-2 text-slate-400 font-medium text-sm">
                                 <Mail size={16} />

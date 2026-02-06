@@ -180,6 +180,7 @@ router.post("/google", async (req, res) => {
         username: user.username,
         email: user.email,
         fullName: user.fullName || user.full_name || name,
+        rollNo: user.rollNo || user.roll_no,
         role: user.role,
         picture: user.picture || picture,
       },
@@ -271,6 +272,7 @@ router.post("/login", async (req, res) => {
         username: user.username,
         email: user.email,
         fullName: user.fullName || user.full_name,
+        rollNo: user.rollNo || user.roll_no,
         role: user.role,
       },
     });
@@ -560,10 +562,10 @@ router.post("/bulk-unblock", verifyAdmin, async (req, res) => {
           );
 
           if (existing) {
-            await query("UPDATE test_attendance SET session_id = ?, status = 'approved' WHERE id = ?", [sessionId, existing.id]);
+            await query("UPDATE test_attendance SET session_id = ?, status = 'approved', locked = 0, locked_at = NULL, locked_reason = 'Admin:unblock', violation_count = 0 WHERE id = ?", [sessionId, existing.id]);
           } else {
             await query(
-              "INSERT INTO test_attendance (user_id, test_identifier, session_id, status) VALUES (?, ?, ?, 'approved')",
+              "INSERT INTO test_attendance (user_id, test_identifier, session_id, status, locked, violation_count) VALUES (?, ?, ?, 'approved', 0, 0)",
               [user.id, testIdentifier, sessionId]
             );
           }
@@ -673,10 +675,10 @@ router.patch("/:userId/toggle-block", verifyAdmin, async (req, res) => {
           [user.id, testIdentifier]
         );
         if (existing) {
-          await query("UPDATE test_attendance SET session_id = ?, status = 'approved' WHERE id = ?", [sessionId, existing.id]);
+          await query("UPDATE test_attendance SET session_id = ?, status = 'approved', locked = 0, locked_at = NULL, locked_reason = 'Admin:unblock', violation_count = 0 WHERE id = ?", [sessionId, existing.id]);
         } else {
           await query(
-            "INSERT INTO test_attendance (user_id, test_identifier, session_id, status) VALUES (?, ?, ?, 'approved')",
+            "INSERT INTO test_attendance (user_id, test_identifier, session_id, status, locked, violation_count) VALUES (?, ?, ?, 'approved', 0, 0)",
             [user.id, testIdentifier, sessionId]
           );
         }

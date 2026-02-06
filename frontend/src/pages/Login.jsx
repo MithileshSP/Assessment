@@ -76,6 +76,7 @@ export default function Login({ isAdmin = false, onLogin }) {
       localStorage.setItem("username", user.username);
       localStorage.setItem("user", JSON.stringify(user));
       localStorage.setItem("fullName", user.fullName || user.full_name);
+      localStorage.setItem("rollNo", user.rollNo || user.roll_no);
       localStorage.setItem("userToken", token);
       notifySessionChange();
 
@@ -229,6 +230,7 @@ export default function Login({ isAdmin = false, onLogin }) {
                       localStorage.setItem("userRole", user.role);
                       localStorage.setItem("user", JSON.stringify(user));
                       localStorage.setItem("fullName", user.fullName || user.full_name);
+                      localStorage.setItem("rollNo", user.rollNo || user.roll_no);
 
 
                       const normalizedRole =

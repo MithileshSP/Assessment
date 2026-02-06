@@ -133,15 +133,20 @@ export default function CoursesHome() {
                               }`}>
                               {course.difficulty}
                             </span>
-                            {isLocked && (
+                            {course.isCompleted ? (
+                              <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-emerald-500 bg-emerald-50 px-2 py-1 rounded-lg">
+                                <ArrowRight size={10} className="rotate-0" /> Cleared
+                              </span>
+                            ) : isLocked && (
                               <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-rose-500">
                                 <Lock size={10} /> Locked
                               </span>
                             )}
                           </div>
 
-                          <h3 className="text-xl font-bold text-slate-900 mb-2 group-hover:text-primary-600 transition-colors">
+                          <h3 className="text-xl font-bold text-slate-900 mb-2 group-hover:text-primary-600 transition-colors flex items-center gap-2">
                             Level {index}: {course.title}
+                            {course.isCompleted && <div className="w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center"><ArrowRight size={12} className="text-white" /></div>}
                           </h3>
                           <p className="text-slate-500 text-sm leading-relaxed line-clamp-2 mb-6">
                             {course.description}
@@ -155,17 +160,20 @@ export default function CoursesHome() {
                             </div>
 
                             <button
-                              disabled={isLocked}
+                              disabled={isLocked || course.isCompleted}
                               className={`
                                 flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all
-                                ${isLocked
-                                  ? 'bg-slate-100 text-slate-400'
-                                  : 'bg-primary-50 text-primary-600 group-hover:bg-primary-600 group-hover:text-white'
+                                ${course.isCompleted
+                                  ? 'bg-emerald-50 text-emerald-600 cursor-default'
+                                  : isLocked
+                                    ? 'bg-slate-100 text-slate-400'
+                                    : 'bg-primary-50 text-primary-600 group-hover:bg-primary-600 group-hover:text-white'
                                 }
                               `}
                             >
-                              {isLocked ? 'Locked' : 'Start Level'}
-                              {!isLocked && <ArrowRight size={16} />}
+                              {course.isCompleted ? 'Level Cleared' : isLocked ? 'Locked' : 'Start Level'}
+                              {!isLocked && !course.isCompleted && <ArrowRight size={16} />}
+                              {course.isCompleted && <ArrowRight size={16} className="text-emerald-500" />}
                             </button>
                           </div>
                         </div>

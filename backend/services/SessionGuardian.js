@@ -75,13 +75,19 @@ class SessionGuardian {
                 );
 
                 if (attendance.length === 0) {
-                    // FALLBACK: If student is unblocked but has NO record, skip.
-                    // Previously this auto-blocked for security, but it's too aggressive 
-                    // and clobbers manual admin unblocks before the student can enter.
-                    console.log(`🛡️  SessionGuardian: Student ${student.username} is unblocked but has no attendance record. Waiting for entry.`);
-                    continue;
+                    // If unblocked but NO record, check if there are ANY live sessions.
+                    // If no live sessions exist, they have no reason to be unblocked.
+                    const GlobalSession = require("../models/GlobalSession");
+                    const activeSessions = await GlobalSession.getAllActive();
+                    if (activeSessions.length === 0) {
+                        isExpired = true;
+                        console.log(`🛡️  SessionGuardian: Student ${student.username} is unblocked with no record and no active sessions. Auto-blocking.`);
+                    } else {
+                        continue; // Wait for them to enter an active session
+                    }
                 } else {
                     record = attendance[0];
+
                     if (record.session_id === null || record.session_id === undefined) {
                         // If unblocked but no session ID, assume they belong to the current window
                         const GlobalSession = require("../models/GlobalSession");

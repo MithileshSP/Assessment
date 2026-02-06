@@ -14,19 +14,25 @@ class CourseModel {
   static async loadFromJSON() {
     try {
       const data = await fs.readFile(COURSES_FILE, 'utf8');
+      if (!data || data.trim() === '') return [];
       return JSON.parse(data);
     } catch (error) {
       console.error('Error reading courses.json:', error.message);
+      // If corrupted, try to return empty to prevent crash
       return [];
     }
   }
 
-  // Save courses to JSON file
+  // Save courses to JSON file (Atomic write to prevent corruption)
   static async saveToJSON(courses) {
+    const tempPath = `${COURSES_FILE}.tmp`;
     try {
-      await fs.writeFile(COURSES_FILE, JSON.stringify(courses, null, 2));
+      await fs.writeFile(tempPath, JSON.stringify(courses, null, 2));
+      await fs.rename(tempPath, COURSES_FILE);
     } catch (error) {
       console.error('Error writing courses.json:', error.message);
+      // Clean up temp file if it exists
+      try { await fs.unlink(tempPath); } catch (e) { }
       throw error;
     }
   }
@@ -52,7 +58,7 @@ class CourseModel {
         isLocked: Boolean(course.is_locked),
         isHidden: Boolean(course.is_hidden),
         prerequisiteCourseId: course.prerequisite_course_id || null,
-        totalLevels: 1, // Linear Skill Path: 1 Level per Course
+        totalLevels: course.total_levels || 1,
         estimatedTime: course.estimated_time
       }));
     } catch (error) {
@@ -82,7 +88,7 @@ class CourseModel {
         isLocked: Boolean(course.is_locked),
         isHidden: Boolean(course.is_hidden),
         prerequisiteCourseId: course.prerequisite_course_id || null,
-        totalLevels: 1, // Linear Skill Path
+        totalLevels: course.total_levels || 1,
         estimatedTime: course.estimated_time
       };
     } catch (error) {

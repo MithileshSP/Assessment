@@ -211,11 +211,10 @@ router.get('/results/export', verifyAdmin, async (req, res) => {
     const exportQuery = `
       SELECT 
         s.id,
-        s.user_id as student_uid,
+        u.roll_no,
         u.full_name as student_name,
         u.email as student_email,
         c.title as course_name,
-        s.level as level_name,
         s.status as status,
         COALESCE(me.total_score, s.final_score, 0) as score,
         me.code_quality_score,
@@ -241,7 +240,7 @@ router.get('/results/export', verifyAdmin, async (req, res) => {
     }
 
     // Build CSV content
-    const headers = ['Student UID', 'Student Name', 'Email', 'Course', 'Level', 'Status', 'Code Quality', 'Key Requirements', 'Output Score', 'Total Score', 'Faculty Feedback', 'Test Date'];
+    const headers = ['Roll No', 'Student Name', 'Email', 'Course', 'Status', 'Code Quality', 'Key Requirements', 'Output Score', 'Total Score', 'Faculty Feedback', 'Test Date'];
     const csvRows = [headers.join(',')];
 
     const submissionIds = [];
@@ -249,11 +248,10 @@ router.get('/results/export', verifyAdmin, async (req, res) => {
       submissionIds.push(row.id);
       const testDate = row.test_date ? new Date(row.test_date).toLocaleDateString('en-IN') : '';
       const csvRow = [
-        `"${(row.student_uid || '').replace(/"/g, '""')}"`,
+        `="${(row.roll_no || '').replace(/"/g, '""')}"`, // Use ="text" to preserve leading zeros in Excel
         `"${(row.student_name || 'Anonymous').replace(/"/g, '""')}"`,
         `"${(row.student_email || '').replace(/"/g, '""')}"`,
         `"${(row.course_name || 'N/A').replace(/"/g, '""')}"`,
-        `Level ${row.level_name || 1}`,
         row.status === 'passed' ? 'PASS' : 'FAIL',
         row.code_quality_score || 0,
         row.requirements_score || 0,

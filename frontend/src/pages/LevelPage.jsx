@@ -36,6 +36,11 @@ export default function LevelPage() {
       ]);
       setCourse(courseRes.data);
 
+      if (courseRes.data.isCompleted) {
+        navigate('/', { replace: true });
+        return;
+      }
+
       const loadedQuestions = questionsRes.data || [];
 
       // LSP Optimization: If only one question, skip overview and go straight to play

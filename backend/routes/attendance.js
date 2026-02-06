@@ -41,6 +41,16 @@ router.post('/request', verifyToken, async (req, res) => {
     console.log(`[Attendance Request] User: ${userId}, Identifier: ${testIdentifier}`);
 
     try {
+        // -1. Check if level is already cleared (passed)
+        const levelCleared = await queryOne(
+            "SELECT id FROM level_completions WHERE user_id = ? AND course_id = ? AND passed = TRUE LIMIT 1",
+            [userId, courseId]
+        );
+
+        if (levelCleared) {
+            return res.status(403).json({ error: 'Level already cleared. Re-attempts are not allowed for completed levels.' });
+        }
+
         // 0. Verify user exists to prevent FK violation
         const userExists = await queryOne("SELECT id FROM users WHERE id = ?", [userId]);
         if (!userExists) {
@@ -107,7 +117,13 @@ router.get('/status', verifyToken, async (req, res) => {
         const course = await queryOne("SELECT title FROM courses WHERE id = ?", [courseId]);
         const courseTitle = course ? course.title : 'Unknown Course';
 
-        // 4. Get individual attendance record including lock fields
+        // 4. Check if level is already cleared
+        const levelCleared = await queryOne(
+            "SELECT id FROM level_completions WHERE user_id = ? AND course_id = ? AND passed = TRUE LIMIT 1",
+            [userId, courseId]
+        );
+
+        // 5. Get individual attendance record including lock fields
         const result = await query(
             `SELECT status, approved_at, is_used, session_id, locked, locked_reason, violation_count, reference_image 
              FROM test_attendance WHERE user_id = ? AND test_identifier = ? ORDER BY requested_at DESC LIMIT 1`,
@@ -118,6 +134,7 @@ router.get('/status', verifyToken, async (req, res) => {
             status: 'none',
             approvedAt: null,
             isUsed: false,
+            isCleared: Boolean(levelCleared),
             isBlocked: isUserBlocked,
             locked: false,
             lockedReason: null,

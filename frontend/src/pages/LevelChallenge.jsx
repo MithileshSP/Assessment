@@ -41,7 +41,7 @@ export default function LevelChallenge() {
     blockCopy: false,
     blockPaste: false,
     forceFullscreen: false,
-    maxViolations: 3,
+    maxViolations: 10,
     timeLimit: 0,
   });
   const [violations, setViolations] = useState(0);
@@ -50,7 +50,9 @@ export default function LevelChallenge() {
   const [violationMessage, setViolationMessage] = useState("");
   const [lastViolationTime, setLastViolationTime] = useState(0);
 
-  const previewRef = useRef();
+  const previewRef = useRef(null);
+  const fullPreviewRef = useRef(null);
+  const monacoRef = useRef(null);
   const [fullScreenView, setFullScreenView] = useState(null); // 'live' | 'expected' | null
   const [isLocked, setIsLocked] = useState(false); // Test locked due to violations
   const lockedCodeRef = useRef(null); // Stores code state synchronously at lock time
@@ -74,6 +76,10 @@ export default function LevelChallenge() {
   // Resize State
   const [leftWidth, setLeftWidth] = useState(58); // Percentage
   const [isResizing, setIsResizing] = useState(false);
+
+  // Preview History State
+  const [previewHistory, setPreviewHistory] = useState({ canGoBack: false, canGoForward: false, currentFile: 'index.html' });
+  const [fullPreviewHistory, setFullPreviewHistory] = useState({ canGoBack: false, canGoForward: false, currentFile: 'index.html' });
 
   const startResizing = (e) => {
     setIsResizing(true);
@@ -157,7 +163,13 @@ export default function LevelChallenge() {
 
     try {
       const res = await api.get('/attendance/status', { params: { courseId, level } });
-      const { status, session, isUsed, locked, isBlocked } = res.data;
+      const { status, session, isUsed, locked, isBlocked, isCleared } = res.data;
+
+      if (isCleared) {
+        setAttendanceStatus('cleared');
+        setLoading(false);
+        return;
+      }
 
       if (isBlocked) {
         setAttendanceStatus('blocked');
@@ -454,7 +466,7 @@ export default function LevelChallenge() {
   }, [attendanceStatus, courseId, level]);
 
   useEffect(() => {
-    if (attendanceStatus !== 'started' || isLocked) return;
+    if (attendanceStatus !== 'started') return; // Continue even if isLocked (server side status)
     const interval = setInterval(() => {
       let remaining = 0;
       if (sessionEndTimeRef.current !== null) {
@@ -470,7 +482,7 @@ export default function LevelChallenge() {
       }
     }, 1000);
     return () => clearInterval(interval);
-  }, [attendanceStatus, isLocked, sessionEndTimeRef.current]);
+  }, [attendanceStatus, sessionEndTimeRef.current]);
 
   const formatTime = (seconds) => {
     if (seconds === null) return "";
@@ -481,22 +493,21 @@ export default function LevelChallenge() {
 
   const handleViolation = (type) => {
     const now = Date.now();
-    if (now - lastViolationTime < 2000 || isLocked) return;
+    if (now - lastViolationTime < 2000) return; // No longer checking isLocked in UI to allow continuous work
     setLastViolationTime(now);
     const newViolations = violations + 1;
     setViolations(newViolations);
     setViolationMessage(`${type}`);
     setShowViolationToast(true);
     setTimeout(() => setShowViolationToast(false), 3000);
-    if (newViolations >= restrictions.maxViolations && !isLocked) handleLockTest(newViolations);
+    if (newViolations >= restrictions.maxViolations) handleLockTest(newViolations); // Removed !isLocked check
   };
 
   const unlockPollRef = useRef(null);
 
   const handleLockTest = async (violationCount) => {
-    if (isLocked) return;
-    setIsLocked(true);
-    setViolationMessage("Test Locked. Waiting for admin decision.");
+    // No longer setting isLocked = true or showing 'Test Locked' banner
+    setViolationMessage("Security limit reached. Please maintain academic integrity.");
     setShowViolationToast(true);
     const capturedAnswers = { ...userAnswers };
     if (challenge) {
@@ -551,10 +562,10 @@ export default function LevelChallenge() {
   };
 
   useEffect(() => {
-    if (attendanceStatus !== 'started' || isLocked) return;
+    if (attendanceStatus !== 'started') return;
     const timer = setInterval(() => autoSaveBatch(), 30000);
     return () => clearInterval(timer);
-  }, [dirtyQuestions, userAnswers, code, attendanceStatus, isLocked]);
+  }, [dirtyQuestions, userAnswers, code, attendanceStatus]);
 
   const handleFinishLevel = async ({ reason = "manual", forceSubmissionId = null } = {}) => {
     if (finishingLevel && reason !== "timeout") return;
@@ -743,8 +754,32 @@ export default function LevelChallenge() {
                   </div>
                 </div>
               )}
-              {attendanceStatus === 'used' && <div className="text-center"><p>Attempt Completed</p><button onClick={() => navigate("/")}>Back</button></div>}
-              {attendanceStatus === 'pending_evaluation' && <div className="text-center"><p>Evaluation in Progress</p><button onClick={() => navigate("/")}>Back</button></div>}
+              {attendanceStatus === 'used' && (
+                <div className="text-center p-10 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200 w-full">
+                  <h3 className="text-xl font-bold text-slate-900 mb-2">Attempt Exhausted</h3>
+                  <p className="text-slate-500 mb-6 font-medium text-sm">You have already submitted your response for this level.</p>
+                  <button onClick={() => navigate("/")} className="px-6 py-2 bg-slate-900 text-white rounded-lg font-bold text-xs uppercase">Back to Path</button>
+                </div>
+              )}
+              {attendanceStatus === 'cleared' && (
+                <div className="text-center p-10 bg-emerald-50 rounded-2xl border-2 border-dashed border-emerald-200 w-full animate-fade-in">
+                  <div className="w-16 h-16 bg-emerald-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg shadow-emerald-200">
+                    <CheckCircle size={32} className="text-white" />
+                  </div>
+                  <h3 className="text-2xl font-bold text-emerald-900 mb-2 tracking-tight">Level Cleared!</h3>
+                  <p className="text-emerald-700/70 mb-8 font-medium text-sm max-w-sm mx-auto">This level has been officially evaluated and passed. Re-attempts are disabled for completed work.</p>
+                  <button onClick={() => navigate("/")} className="px-8 py-3 bg-emerald-600 text-white rounded-xl font-bold text-xs uppercase shadow-xl shadow-emerald-200 hover:bg-emerald-700 transition-all active:scale-95">
+                    Return to Dashboard
+                  </button>
+                </div>
+              )}
+              {attendanceStatus === 'pending_evaluation' && (
+                <div className="text-center p-10 bg-blue-50 rounded-2xl border-2 border-dashed border-blue-200 w-full">
+                  <h3 className="text-xl font-bold text-blue-900 mb-2">Evaluating Results</h3>
+                  <p className="text-blue-700/70 mb-6 font-medium text-sm">Your submission is currently being reviewed by an instructor. Please wait.</p>
+                  <button onClick={() => navigate("/")} className="px-6 py-2 bg-blue-600 text-white rounded-lg font-bold text-xs uppercase shadow-lg shadow-blue-200">Return to Grid</button>
+                </div>
+              )}
             </>
           )}
         </div>
@@ -764,11 +799,6 @@ export default function LevelChallenge() {
   return (
     <div className="min-h-screen bg-gray-50">
       {showViolationToast && <div className="fixed top-4 right-4 z-50 bg-red-500 text-white px-4 py-2 rounded-lg flex items-center gap-2"><AlertTriangle /> <span>{violationMessage}</span></div>}
-      {isLocked && <div className="fixed inset-0 z-[9999] bg-slate-900/80 backdrop-blur-sm flex items-center justify-center p-6"><div className="bg-white p-8 rounded-xl text-center max-w-lg w-full shadow-2xl border">
-        <h2 className="text-2xl font-bold text-red-600 mb-3">TEST LOCKED</h2>
-        <p className="text-slate-600 font-medium mb-4">Security violations detected. Code saved. Wait for admin.</p>
-      </div></div>}
-
       <header className="bg-white border-b sticky top-0 z-20 px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <button
@@ -783,7 +813,7 @@ export default function LevelChallenge() {
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-lg font-bold text-slate-900">{challenge.title}</h1>
-              <span className="px-1.5 py-0.5 bg-slate-100 text-slate-400 text-[9px] font-mono rounded border underline decoration-slate-300">BUILD: v2.6</span>
+              <span className="px-1.5 py-0.5 bg-slate-100 text-slate-400 text-[9px] font-mono rounded border underline decoration-slate-300">BUILD: v3.3.9</span>
             </div>
             <p className="text-xs text-slate-500 font-medium">Level {level} • Question {currentQuestionIndex + 1} / {assignedQuestions.length}</p>
           </div>
@@ -833,7 +863,7 @@ export default function LevelChallenge() {
             <div className={`flex-[0.6] bg-white rounded-md border border-slate-200 shadow-sm flex flex-col overflow-hidden min-h-[150px] transition-all`}>
               <div className="px-4 py-2 border-b flex items-center justify-between bg-slate-50/50 shrink-0">
                 <h2 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Task Details</h2>
-                <button 
+                <button
                   onClick={() => setShowInstructions(false)}
                   className="p-1 text-slate-400 hover:text-slate-600 rounded transition-colors"
                   title="Hide Instructions"
@@ -864,7 +894,7 @@ export default function LevelChallenge() {
           style={{ pointerEvents: 'auto' }}
         >
           <div className={`w-0.5 h-10 rounded-full transition-all ${isResizing ? 'bg-slate-900 h-20 w-[3px]' : 'bg-slate-300 group-hover:bg-slate-500'}`} />
-          
+
           {/* Invisible Overlay to capture mouse events when dragging (STOPS IFRAME FROM STEALING FOCUS) */}
           {isResizing && (
             <div className="fixed inset-0 z-[9999] cursor-col-resize pointer-events-auto" style={{ background: 'transparent' }} />
@@ -913,6 +943,7 @@ export default function LevelChallenge() {
                   code={code}
                   isNodeJS={challenge?.challengeType === 'nodejs'}
                   onConsoleLog={setConsoleOutput}
+                  onHistoryChange={setPreviewHistory}
                 />
               </div>
 
@@ -969,14 +1000,42 @@ export default function LevelChallenge() {
             <X size={20} />
           </button>
 
+          {/* Navigation Controls Overlay - Top Left */}
+          <div className="fixed top-4 left-4 z-[110] flex items-center gap-1 bg-slate-900/50 p-1 rounded-xl border border-white/10 backdrop-blur-md shadow-lg">
+            <button
+              disabled={!fullPreviewHistory.canGoBack}
+              onClick={() => fullPreviewRef.current?.goBack()}
+              className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${fullPreviewHistory.canGoBack ? 'text-white hover:bg-white/10 active:scale-95' : 'text-white/20 cursor-not-allowed'}`}
+              title="Back"
+            >
+              <ChevronLeft size={18} />
+            </button>
+            <button
+              disabled={!fullPreviewHistory.canGoForward}
+              onClick={() => fullPreviewRef.current?.goForward()}
+              className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${fullPreviewHistory.canGoForward ? 'text-white hover:bg-white/10 active:scale-95' : 'text-white/20 cursor-not-allowed'}`}
+              title="Forward"
+            >
+              <ChevronRight size={18} />
+            </button>
+            <div className="h-4 w-px bg-white/10 mx-1" />
+            <div className="px-2 py-1 flex items-center gap-2">
+              <span className="text-[9px] font-black text-white/30 uppercase tracking-tighter">{fullScreenView === 'live' ? 'View' : 'Ref'}</span>
+              <span className="text-[10px] font-bold text-white/90 truncate max-w-[100px]">{fullPreviewHistory.currentFile}</span>
+            </div>
+          </div>
+
           <div className="flex-1 bg-white overflow-hidden relative">
             {fullScreenView === 'live' ? (
               <PreviewFrame
+                ref={fullPreviewRef}
                 code={code}
+                initialFile={previewHistory.currentFile}
                 isNodeJS={challenge?.challengeType === 'nodejs'}
                 autoRun={true}
                 onConsoleLog={setConsoleOutput}
                 isRestricted={restrictions.blockCopy}
+                onHistoryChange={setFullPreviewHistory}
               />
             ) : (
               <div className="w-full h-full p-4 overflow-auto flex items-center justify-center bg-slate-100/30">
