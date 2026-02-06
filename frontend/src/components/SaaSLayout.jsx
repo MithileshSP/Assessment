@@ -25,7 +25,7 @@ import {
 } from 'lucide-react';
 import { clearAdminSession, getUserRole } from '../utils/session';
 
-const SaaSLayout = ({ children }) => {
+const SaaSLayout = ({ children, fullWidth = false }) => {
     const [isSidebarOpen, setSidebarOpen] = useState(false);
     const [isHovered, setHovered] = useState(false);
     const isSidebarOpenEffectively = isSidebarOpen || isHovered;
@@ -262,8 +262,8 @@ const SaaSLayout = ({ children }) => {
                 </header>
 
                 {/* Page Content */}
-                <main className="flex-1 overflow-y-auto p-8 md:p-12 lg:p-16 custom-scrollbar relative">
-                    <div className="w-full max-w-[1920px] mx-auto">
+                <main className={`flex-1 overflow-y-auto custom-scrollbar relative ${fullWidth ? 'p-0' : 'p-8 md:p-12 lg:p-16'}`}>
+                    <div className={`w-full mx-auto ${fullWidth ? 'max-w-none' : 'max-w-[1920px]'}`}>
                         {children}
                     </div>
                 </main>
