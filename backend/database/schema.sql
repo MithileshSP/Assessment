@@ -26,11 +26,8 @@ CREATE TABLE IF NOT EXISTS courses (
     title VARCHAR(255) NOT NULL,
     description TEXT,
     thumbnail VARCHAR(255),
-    icon VARCHAR(10),
-    color VARCHAR(20),
     total_levels INT DEFAULT 1,
     estimated_time VARCHAR(50),
-    difficulty ENUM('Beginner', 'Intermediate', 'Advanced') DEFAULT 'Beginner',
     tags JSON,
     restrictions JSON,
     level_settings JSON,
@@ -38,7 +35,6 @@ CREATE TABLE IF NOT EXISTS courses (
     is_hidden BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    INDEX idx_difficulty (difficulty),
     INDEX idx_is_locked (is_locked),
     INDEX idx_is_hidden (is_hidden)
 );
@@ -146,8 +142,9 @@ CREATE TABLE IF NOT EXISTS test_attendance (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id VARCHAR(100) NOT NULL,
     test_identifier VARCHAR(255) NOT NULL,
-    session_id INT NULL,
+    session_id VARCHAR(100) NULL,
     status ENUM('requested', 'approved', 'rejected') DEFAULT 'requested',
+    scheduled_status ENUM('none', 'scheduled', 'activated', 'expired') DEFAULT 'none',
     requested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     approved_at TIMESTAMP NULL,
     approved_by VARCHAR(100),
@@ -160,7 +157,8 @@ CREATE TABLE IF NOT EXISTS test_attendance (
     violation_count INT DEFAULT 0,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     INDEX idx_user_test (user_id, test_identifier),
-    INDEX idx_session (session_id)
+    INDEX idx_session (session_id),
+    INDEX idx_scheduled (scheduled_status)
 );
 
 -- Faculty Assignments

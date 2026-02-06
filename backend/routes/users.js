@@ -521,62 +521,86 @@ router.post(
   }
 );
 
-// Bulk unblock users by email (Admin only)
+// Bulk unblock users by email (Admin only) - v3.6.0: Pre-Authorization Support
 router.post("/bulk-unblock", verifyAdmin, async (req, res) => {
-  const { emails, sessionId } = req.body;
+  const { emails, sessionId, immediate } = req.body;
 
   if (!emails || !Array.isArray(emails) || emails.length === 0) {
     return res.status(400).json({ error: "Invalid emails provided" });
   }
 
   try {
-    // 1. Perform bulk update in database
-    await query(
-      "UPDATE users SET is_blocked = 0 WHERE email IN (?)",
-      [emails]
-    );
+    let isSessionLive = false;
+    let sessionData = null;
 
-    // 2. If sessionId provided, link these users to the session for the Guardian
     if (sessionId) {
-      let sessionData = null;
       if (sessionId.toString().startsWith('daily_')) {
         const dailyId = sessionId.split('_')[1];
         sessionData = await queryOne("SELECT * FROM daily_schedules WHERE id = ?", [dailyId]);
-        // Virtual session data doesn't have course_id/level usually, but we might need them
-        // If daily_schedules doesn't have course_id/level, we use 'global' or similar
+        if (sessionData) {
+          const now = new Date();
+          const today = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+          const startTime = new Date(`${today}T${sessionData.start_time}`);
+          const endTime = new Date(`${today}T${sessionData.end_time}`);
+          isSessionLive = (now >= startTime && now <= endTime);
+        }
       } else {
-        sessionData = await queryOne("SELECT course_id, level FROM global_test_sessions WHERE id = ?", [sessionId]);
+        sessionData = await queryOne("SELECT * FROM global_test_sessions WHERE id = ?", [sessionId]);
+        if (sessionData) {
+          const startTime = new Date(sessionData.start_time);
+          const endTime = new Date(startTime.getTime() + sessionData.duration_minutes * 60000);
+          const now = new Date();
+          isSessionLive = (now >= startTime && now <= endTime && sessionData.is_active);
+        }
+      }
+    }
+
+    const testIdentifier = (sessionData && sessionData.course_id && sessionData.level)
+      ? `${sessionData.course_id}_${sessionData.level}`
+      : 'global';
+
+    const usersToProcess = await query("SELECT id, username FROM users WHERE email IN (?)", [emails]);
+    const shouldActivateNow = isSessionLive || immediate || !sessionId;
+
+    for (const user of usersToProcess) {
+      if (shouldActivateNow) {
+        // Activate immediately
+        await UserModel.update(user.id, { is_blocked: false });
+        console.log(`[BulkUnblock] Activating user immediately: ${user.username}`);
+      } else {
+        // Keep blocked, but pre-authorize
+        await UserModel.update(user.id, { is_blocked: true });
+        console.log(`[BulkUnblock] User scheduled for future session: ${user.username}`);
       }
 
-      if (sessionData) {
-        const testIdentifier = sessionData.course_id && sessionData.level
-          ? `${sessionData.course_id}_${sessionData.level}`
-          : 'global'; // Fallback if session is not level-specific
-        const userRows = await query("SELECT id FROM users WHERE email IN (?)", [emails]);
+      if (sessionId) {
+        const existing = await queryOne(
+          "SELECT id FROM test_attendance WHERE user_id = ? AND test_identifier = ?",
+          [user.id, testIdentifier]
+        );
 
-        for (const user of userRows) {
-          // Check for existing record to avoid duplicates
-          const existing = await queryOne(
-            "SELECT id FROM test_attendance WHERE user_id = ? AND test_identifier = ? AND is_used = 0",
-            [user.id, testIdentifier]
+        const statusLabel = shouldActivateNow ? 'activated' : 'scheduled';
+
+        if (existing) {
+          await query(
+            "UPDATE test_attendance SET session_id = ?, status = 'approved', scheduled_status = ?, is_used = 0, locked = 0, locked_at = NULL, locked_reason = ? WHERE id = ?",
+            [sessionId, statusLabel, `Admin:${statusLabel}`, existing.id]
           );
-
-          if (existing) {
-            await query("UPDATE test_attendance SET session_id = ?, status = 'approved', locked = 0, locked_at = NULL, locked_reason = 'Admin:unblock', violation_count = 0 WHERE id = ?", [sessionId, existing.id]);
-          } else {
-            await query(
-              "INSERT INTO test_attendance (user_id, test_identifier, session_id, status, locked, violation_count) VALUES (?, ?, ?, 'approved', 0, 0)",
-              [user.id, testIdentifier, sessionId]
-            );
-          }
+        } else {
+          await query(
+            "INSERT INTO test_attendance (user_id, test_identifier, session_id, status, scheduled_status, locked, violation_count) VALUES (?, ?, ?, 'approved', ?, 0, 0)",
+            [user.id, testIdentifier, sessionId, statusLabel]
+          );
         }
       }
     }
 
     res.json({
       success: true,
-      message: `Successfully processed ${emails.length} emails`,
-      count: emails.length
+      message: shouldActivateNow
+        ? `Successfully activated ${usersToProcess.length} students`
+        : `Successfully scheduled ${usersToProcess.length} students for future session`,
+      count: usersToProcess.length
     });
   } catch (error) {
     console.error("Bulk unblock error:", error);
@@ -642,7 +666,7 @@ router.put("/:userId", verifyAdmin, async (req, res) => {
   }
 });
 
-// Toggle user block status (Admin only)
+// Toggle user block status (Admin only) - v3.6.0: Pre-Authorization Support
 router.patch("/:userId/toggle-block", verifyAdmin, async (req, res) => {
   try {
     const user = await UserModel.findById(req.params.userId);
@@ -651,45 +675,121 @@ router.patch("/:userId/toggle-block", verifyAdmin, async (req, res) => {
       return res.status(404).json({ error: "User not found" });
     }
 
-    const { sessionId } = req.body;
-    console.log(`[ToggleBlock] User: ${user.username}, NewStatus: ${!user.is_blocked}, SessionID: ${sessionId}`);
-    const newBlockedStatus = !user.is_blocked;
-    await UserModel.update(req.params.userId, { is_blocked: newBlockedStatus });
+    const { sessionId, immediate } = req.body;
+    const GlobalSession = require('../models/GlobalSession');
 
-    // Link to session if unblocking
-    if (!newBlockedStatus && sessionId) {
-      let sessionData = null;
-      if (sessionId.toString().startsWith('daily_')) {
-        const dailyId = sessionId.split('_')[1];
-        sessionData = await queryOne("SELECT * FROM daily_schedules WHERE id = ?", [dailyId]);
-      } else {
-        sessionData = await queryOne("SELECT course_id, level FROM global_test_sessions WHERE id = ?", [sessionId]);
-      }
+    // If blocking (currently unblocked -> blocked)
+    if (!user.is_blocked) {
+      console.log(`[ToggleBlock] Blocking user: ${user.username}`);
+      await UserModel.update(req.params.userId, { is_blocked: true });
+
+      // Mark any scheduled attendance as expired
+      await query(
+        "UPDATE test_attendance SET scheduled_status = 'expired' WHERE user_id = ? AND scheduled_status IN ('scheduled', 'activated')",
+        [user.id]
+      );
+
+      return res.json({
+        success: true,
+        isBlocked: true,
+        message: "User has been blocked"
+      });
+    }
+
+    // If unblocking (currently blocked -> checking session status)
+    console.log(`[ToggleBlock] Unblock request for: ${user.username}, SessionID: ${sessionId}, Immediate: ${immediate}`);
+
+    if (!sessionId) {
+      // No session specified - immediate unblock (emergency/bypass)
+      await UserModel.update(req.params.userId, { is_blocked: false });
+      return res.json({
+        success: true,
+        isBlocked: false,
+        message: "User has been unblocked (no session specified)"
+      });
+    }
+
+    // Check if session is currently LIVE
+    let isSessionLive = false;
+    let sessionData = null;
+
+    if (sessionId.toString().startsWith('daily_')) {
+      const dailyId = sessionId.split('_')[1];
+      sessionData = await queryOne("SELECT * FROM daily_schedules WHERE id = ?", [dailyId]);
 
       if (sessionData) {
-        const testIdentifier = sessionData.course_id && sessionData.level
-          ? `${sessionData.course_id}_${sessionData.level}`
-          : 'global';
-        const existing = await queryOne(
-          "SELECT id FROM test_attendance WHERE user_id = ? AND test_identifier = ? AND is_used = 0",
-          [user.id, testIdentifier]
-        );
-        if (existing) {
-          await query("UPDATE test_attendance SET session_id = ?, status = 'approved', locked = 0, locked_at = NULL, locked_reason = 'Admin:unblock', violation_count = 0 WHERE id = ?", [sessionId, existing.id]);
-        } else {
-          await query(
-            "INSERT INTO test_attendance (user_id, test_identifier, session_id, status, locked, violation_count) VALUES (?, ?, ?, 'approved', 0, 0)",
-            [user.id, testIdentifier, sessionId]
-          );
-        }
+        const now = new Date();
+        const today = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+        const startTime = new Date(`${today}T${sessionData.start_time}`);
+        const endTime = new Date(`${today}T${sessionData.end_time}`);
+        isSessionLive = (now >= startTime && now <= endTime);
+      }
+    } else {
+      sessionData = await queryOne("SELECT * FROM global_test_sessions WHERE id = ?", [sessionId]);
+
+      if (sessionData) {
+        const startTime = new Date(sessionData.start_time);
+        const endTime = new Date(startTime.getTime() + sessionData.duration_minutes * 60000);
+        const now = new Date();
+        isSessionLive = (now >= startTime && now <= endTime && sessionData.is_active);
       }
     }
 
-    res.json({
-      success: true,
-      isBlocked: newBlockedStatus,
-      message: newBlockedStatus ? "User has been blocked" : "User has been unblocked"
-    });
+    const testIdentifier = 'global'; // Universal session support
+
+    // Check for existing attendance record (by user_id + test_identifier, which is the unique key)
+    const existing = await queryOne(
+      "SELECT id, session_id FROM test_attendance WHERE user_id = ? AND test_identifier = ?",
+      [user.id, testIdentifier]
+    );
+
+    if (isSessionLive || immediate) {
+      // Session is LIVE or immediate flag set - activate now
+      console.log(`[ToggleBlock] Session is LIVE or immediate - activating ${user.username}`);
+      await UserModel.update(req.params.userId, { is_blocked: false });
+
+      if (existing) {
+        await query(
+          "UPDATE test_attendance SET session_id = ?, scheduled_status = 'activated', status = 'approved', locked = 0, locked_reason = 'Admin:unblock', is_used = 0 WHERE id = ?",
+          [sessionId, existing.id]
+        );
+      } else {
+        await query(
+          "INSERT INTO test_attendance (user_id, test_identifier, session_id, status, scheduled_status, locked, violation_count) VALUES (?, ?, ?, 'approved', 'activated', 0, 0)",
+          [user.id, testIdentifier, sessionId]
+        );
+      }
+
+      return res.json({
+        success: true,
+        isBlocked: false,
+        scheduled: false,
+        message: "User has been unblocked and activated"
+      });
+    } else {
+      // Session is NOT yet live - schedule for later
+      console.log(`[ToggleBlock] Session not live - scheduling ${user.username} for session ${sessionId}`);
+
+      // Keep user blocked, but create/update scheduled attendance record
+      if (existing) {
+        await query(
+          "UPDATE test_attendance SET session_id = ?, scheduled_status = 'scheduled', status = 'approved', locked = 0, locked_reason = 'Admin:scheduled', is_used = 0 WHERE id = ?",
+          [sessionId, existing.id]
+        );
+      } else {
+        await query(
+          "INSERT INTO test_attendance (user_id, test_identifier, session_id, status, scheduled_status, locked, violation_count) VALUES (?, ?, ?, 'approved', 'scheduled', 0, 0)",
+          [user.id, testIdentifier, sessionId]
+        );
+      }
+
+      return res.json({
+        success: true,
+        isBlocked: true, // Still blocked until session starts
+        scheduled: true,
+        message: "User has been scheduled for this session (will be unblocked when session starts)"
+      });
+    }
   } catch (error) {
     console.error("Error toggling user block status:", error);
     res.status(500).json({ error: "Failed to toggle block status" });

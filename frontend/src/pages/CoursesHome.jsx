@@ -10,7 +10,8 @@ import {
   EyeOff,
   Code,
   Layout,
-  Lock
+  Lock,
+  CheckCircle
 } from 'lucide-react';
 import {
   isAdminSessionActive,
@@ -44,14 +45,6 @@ export default function CoursesHome() {
     }
   };
 
-  const getDifficultyColor = (difficulty) => {
-    const colors = {
-      'Beginner': 'bg-emerald-100 text-emerald-800',
-      'Intermediate': 'bg-amber-100 text-amber-800',
-      'Advanced': 'bg-rose-100 text-rose-800'
-    };
-    return colors[difficulty] || 'bg-slate-100 text-slate-800';
-  };
 
   return (
     <SaaSLayout>
@@ -125,23 +118,31 @@ export default function CoursesHome() {
                       <div className="bg-white rounded-[2rem] p-2 border border-slate-100 shadow-xl overflow-hidden relative">
                         {/* Card Content */}
                         <div className="relative z-10 bg-white rounded-[1.5rem] p-6 border border-slate-50">
-                          {/* Top: Status Badges */}
-                          <div className="flex justify-between items-start mb-4">
-                            <span className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider ${course.difficulty === 'Beginner' ? 'bg-emerald-50 text-emerald-600' :
-                              course.difficulty === 'Intermediate' ? 'bg-amber-50 text-amber-600' :
-                                'bg-rose-50 text-rose-600'
-                              }`}>
-                              {course.difficulty}
-                            </span>
-                            {course.isCompleted ? (
-                              <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-emerald-500 bg-emerald-50 px-2 py-1 rounded-lg">
-                                <ArrowRight size={10} className="rotate-0" /> Cleared
-                              </span>
-                            ) : isLocked && (
-                              <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-rose-500">
-                                <Lock size={10} /> Locked
-                              </span>
+                          {/* Top: Thumbnail & Status */}
+                          <div className="relative h-40 -mx-6 -mt-6 mb-6 overflow-hidden bg-slate-100 rounded-t-[1.5rem]">
+                            {course.thumbnail ? (
+                              <img
+                                src={course.thumbnail}
+                                alt={course.title}
+                                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                              />
+                            ) : (
+                              <div className="w-full h-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+                                <BookOpen size={48} className="text-white/20" />
+                              </div>
                             )}
+
+                            <div className="absolute top-4 right-4">
+                              {course.isCompleted ? (
+                                <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-emerald-600 bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-full shadow-sm">
+                                  <CheckCircle size={10} /> Cleared
+                                </span>
+                              ) : isLocked && (
+                                <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-rose-600 bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-full shadow-sm">
+                                  <Lock size={10} /> Locked
+                                </span>
+                              )}
+                            </div>
                           </div>
 
                           <h3 className="text-xl font-bold text-slate-900 mb-2 group-hover:text-primary-600 transition-colors flex items-center gap-2">

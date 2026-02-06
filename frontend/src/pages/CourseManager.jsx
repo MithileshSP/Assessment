@@ -144,19 +144,28 @@ export default function CourseManager() {
                 <div className="flex flex-col lg:flex-row">
                   {/* Visual Side */}
                   <div
-                    className="lg:w-72 h-48 lg:h-auto flex items-center justify-center relative overflow-hidden text-white"
-                    style={{ backgroundColor: course.color || '#1e293b' }}
+                    className="lg:w-72 h-48 lg:h-auto flex items-center justify-center relative overflow-hidden bg-slate-100 border-r border-slate-100"
                   >
-                    <div className="absolute inset-0 bg-black/10" />
-                    <div className="relative z-10 flex flex-col items-center">
-                      <span className="text-6xl mb-4 group-hover:scale-110 transition-transform duration-500">{course.icon || '📚'}</span>
-                      <span className="text-[10px] font-bold uppercase tracking-widest opacity-60">ID: {course.id}</span>
-                    </div>
+                    {course.thumbnail ? (
+                      <img
+                        src={course.thumbnail}
+                        alt={course.title}
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center">
+                        <BookOpen size={64} className="text-slate-300 group-hover:scale-110 transition-transform duration-500" />
+                      </div>
+                    )}
+
                     {course.isHidden && (
-                      <div className="absolute top-4 left-4 bg-amber-400 text-amber-900 text-[10px] font-bold px-2 py-1 rounded-lg flex items-center gap-1 shadow-lg">
+                      <div className="absolute top-4 left-4 bg-amber-400 text-amber-900 text-[10px] font-bold px-3 py-1.5 rounded-xl flex items-center gap-1 shadow-lg z-20">
                         <EyeOff size={12} /> PRIVATE
                       </div>
                     )}
+                    <div className="absolute bottom-4 left-4 bg-white/80 backdrop-blur-sm text-slate-500 text-[8px] font-bold px-2 py-1 rounded-lg z-20 border border-slate-200 uppercase tracking-widest">
+                      ID: {course.id}
+                    </div>
                   </div>
 
                   {/* Content Side */}
@@ -164,14 +173,7 @@ export default function CourseManager() {
                     <div>
                       <div className="flex justify-between items-start mb-4">
                         <div>
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${course.difficulty === 'Advanced' ? 'bg-rose-50 text-rose-600' :
-                              course.difficulty === 'Intermediate' ? 'bg-amber-50 text-amber-600' :
-                                'bg-emerald-50 text-emerald-600'
-                              }`}>
-                              {course.difficulty}
-                            </span>
-                          </div>
+                          <div className="flex items-center gap-2 mb-1 h-4" />
                           <h2 className="text-2xl font-bold text-slate-900 group-hover:text-blue-600 transition-colors">{course.title}</h2>
                           <p className="text-slate-500 text-sm mt-2 max-w-2xl leading-relaxed">{course.description}</p>
                         </div>

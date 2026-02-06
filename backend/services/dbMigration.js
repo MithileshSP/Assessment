@@ -214,6 +214,7 @@ async function applyMigrations() {
         test_identifier VARCHAR(255) NOT NULL,
         session_id VARCHAR(255) NULL,
         status ENUM('requested', 'approved', 'rejected') DEFAULT 'requested',
+        scheduled_status ENUM('none', 'scheduled', 'activated', 'expired') DEFAULT 'none',
         reference_image VARCHAR(500) NULL,
         requested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         approved_at TIMESTAMP NULL,
@@ -228,12 +229,16 @@ async function applyMigrations() {
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
         UNIQUE KEY idx_user_test_unique (user_id, test_identifier),
         INDEX idx_status (status),
-        INDEX idx_session (session_id)
+        INDEX idx_session (session_id),
+        INDEX idx_scheduled (scheduled_status)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
 
     // test_attendance fixes (v3.2.3)
     await addColumn("ALTER TABLE test_attendance ADD COLUMN reference_image VARCHAR(500) NULL AFTER status");
+    // v3.6.0: Add scheduled_status column for pre-authorization feature
+    await addColumn("ALTER TABLE test_attendance ADD COLUMN scheduled_status ENUM('none', 'scheduled', 'activated', 'expired') DEFAULT 'none' AFTER status");
+    await addColumn("ALTER TABLE test_attendance ADD INDEX idx_scheduled (scheduled_status)");
     // Change INDEX to UNIQUE KEY safely
     try {
       await queryWithRetry("ALTER TABLE test_attendance DROP INDEX idx_user_test");

@@ -8,10 +8,7 @@ export default function CourseEditModal({ course, onClose, onSave }) {
     id: '',
     title: '',
     description: '',
-    icon: '📚',
-    color: '#6366f1',
     thumbnail: 'https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=800&q=80',
-    difficulty: 'Beginner',
     totalLevels: 6,
     estimatedTime: '10 hours',
     orderIndex: null,
@@ -93,11 +90,6 @@ export default function CourseEditModal({ course, onClose, onSave }) {
     onSave(formData);
   };
 
-  const difficultyColors = {
-    Beginner: 'bg-emerald-500',
-    Intermediate: 'bg-amber-500',
-    Advanced: 'bg-rose-500'
-  };
 
   const modalContent = (
     <div className="fixed inset-0 bg-gradient-to-br from-slate-900/80 to-indigo-900/80 backdrop-blur-md flex items-center justify-center p-6" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 99999 }}>
@@ -113,13 +105,19 @@ export default function CourseEditModal({ course, onClose, onSave }) {
           {/* Preview Card */}
           <div className="bg-white rounded-2xl overflow-hidden shadow-2xl flex-1 flex flex-col max-h-[400px]">
             <div
-              className="h-32 flex items-center justify-center relative"
-              style={{ backgroundColor: formData.color }}
+              className="h-32 flex items-center justify-center relative bg-slate-100 overflow-hidden"
             >
-              <span className="text-5xl filter drop-shadow-lg">{formData.icon || '📚'}</span>
-              <div className={`absolute top-3 left-3 px-2 py-0.5 ${difficultyColors[formData.difficulty]} text-white text-[10px] font-bold uppercase rounded`}>
-                {formData.difficulty}
-              </div>
+              {formData.thumbnail ? (
+                <img
+                  src={formData.thumbnail}
+                  alt="Course Thumbnail"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+                  <BookOpen size={40} className="text-white/50" />
+                </div>
+              )}
             </div>
             <div className="p-5 flex-1 flex flex-col">
               <h4 className="font-bold text-slate-900 text-sm mb-2 line-clamp-2">
@@ -221,52 +219,6 @@ export default function CourseEditModal({ course, onClose, onSave }) {
                 />
               </div>
 
-              {/* Visual Settings Row */}
-              <div className="col-span-2 grid grid-cols-3 gap-4 p-4 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-2xl">
-                <div>
-                  <label className="flex items-center gap-1 text-xs font-bold text-indigo-600 mb-2">
-                    <Palette size={12} /> Icon
-                  </label>
-                  <input
-                    type="text"
-                    name="icon"
-                    value={formData.icon}
-                    onChange={handleChange}
-                    maxLength="2"
-                    className="w-full h-14 bg-white border-2 border-indigo-100 rounded-xl text-3xl text-center focus:border-indigo-500 outline-none transition-all"
-                  />
-                </div>
-                <div>
-                  <label className="flex items-center gap-1 text-xs font-bold text-indigo-600 mb-2">
-                    <Palette size={12} /> Color
-                  </label>
-                  <div className="h-14 bg-white border-2 border-indigo-100 rounded-xl flex items-center px-3 gap-3">
-                    <input
-                      type="color"
-                      name="color"
-                      value={formData.color}
-                      onChange={handleChange}
-                      className="w-10 h-10 rounded-lg cursor-pointer border-none p-0"
-                    />
-                    <span className="text-xs font-mono text-slate-400">{formData.color}</span>
-                  </div>
-                </div>
-                <div>
-                  <label className="flex items-center gap-1 text-xs font-bold text-indigo-600 mb-2">
-                    <Zap size={12} /> Difficulty
-                  </label>
-                  <select
-                    name="difficulty"
-                    value={formData.difficulty}
-                    onChange={handleChange}
-                    className="w-full h-14 bg-white border-2 border-indigo-100 rounded-xl px-3 text-sm font-bold focus:border-indigo-500 outline-none transition-all cursor-pointer"
-                  >
-                    <option value="Beginner">🟢 Beginner</option>
-                    <option value="Intermediate">🟡 Intermediate</option>
-                    <option value="Advanced">🔴 Advanced</option>
-                  </select>
-                </div>
-              </div>
 
               {/* Thumbnail */}
               <div className="col-span-2">

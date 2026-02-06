@@ -77,13 +77,14 @@ const FacultyQuestions = () => {
                             <div key={course.id} className="bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-sm hover:border-emerald-300 transition-all group flex flex-col justify-between h-full">
                                 <div>
                                     <div className="flex items-start justify-between mb-6">
-                                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-2xl shadow-sm`} style={{ backgroundColor: `${course.color}15`, color: course.color }}>
-                                            {course.icon || '📚'}
+                                        <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl shadow-sm bg-slate-100 overflow-hidden border border-slate-100">
+                                            {course.thumbnail ? (
+                                                <img src={course.thumbnail} alt={course.title} className="w-full h-full object-cover" />
+                                            ) : (
+                                                <BookOpen className="text-slate-300" size={24} />
+                                            )}
                                         </div>
                                         <div className="flex flex-col items-end gap-2">
-                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
-                                                {course.difficulty || 'Standard'}
-                                            </span>
                                             {course.totalLevels && (
                                                 <span className="bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border border-emerald-100">
                                                     {course.totalLevels} Stages

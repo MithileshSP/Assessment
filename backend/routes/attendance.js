@@ -488,6 +488,81 @@ router.get('/active-sessions', verifyAdmin, async (req, res) => {
     }
 });
 
+/**
+ * POST /api/attendance/sessions/:id/end
+ * Manually end a global session and re-block linked students
+ */
+router.post('/sessions/:id/end', verifyAdmin, async (req, res) => {
+    const { id } = req.params;
+    const { reason } = req.body;
+
+    try {
+        // Only process numeric IDs (manual sessions), not daily_* IDs
+        if (id.toString().startsWith('daily_')) {
+            return res.status(400).json({ error: 'Cannot manually end recurring daily sessions. Update the schedule instead.' });
+        }
+
+        const session = await GlobalSession.end(id, reason || 'ADMIN_TERMINATED');
+        if (!session) {
+            return res.status(404).json({ error: 'Session not found' });
+        }
+
+        res.json({
+            success: true,
+            message: 'Session ended and linked students re-blocked',
+            session
+        });
+    } catch (error) {
+        console.error('[End Session] Error:', error);
+        res.status(500).json({ error: 'Failed to end session: ' + error.message });
+    }
+});
+
+/**
+ * GET /api/attendance/scheduled/:sessionId
+ * Get all students scheduled (pre-authorized) for a specific session
+ */
+router.get('/scheduled/:sessionId', verifyAdmin, async (req, res) => {
+    const { sessionId } = req.params;
+
+    try {
+        const scheduledStudents = await query(
+            `SELECT ta.id, ta.user_id, ta.scheduled_status, ta.requested_at,
+                    u.username, u.email, u.full_name, u.roll_no, u.is_blocked
+             FROM test_attendance ta
+             JOIN users u ON ta.user_id = u.id
+             WHERE ta.session_id = ? AND ta.scheduled_status IN ('scheduled', 'activated')
+             ORDER BY ta.requested_at DESC`,
+            [sessionId]
+        );
+
+        res.json(scheduledStudents);
+    } catch (error) {
+        console.error('[Scheduled Students] Error:', error);
+        res.status(500).json({ error: 'Failed to fetch scheduled students' });
+    }
+});
+
+/**
+ * DELETE /api/attendance/scheduled/:sessionId/:userId
+ * Remove a student from a session's scheduled list
+ */
+router.delete('/scheduled/:sessionId/:userId', verifyAdmin, async (req, res) => {
+    const { sessionId, userId } = req.params;
+
+    try {
+        await query(
+            "UPDATE test_attendance SET scheduled_status = 'none' WHERE session_id = ? AND user_id = ?",
+            [sessionId, userId]
+        );
+
+        res.json({ success: true, message: 'Student removed from scheduled list' });
+    } catch (error) {
+        console.error('[Remove Scheduled] Error:', error);
+        res.status(500).json({ error: 'Failed to remove student from scheduled list' });
+    }
+});
+
 // Upload reference image
 router.post('/upload-reference', verifyToken, upload.single('image'), async (req, res) => {
     const { courseId, level } = req.body;

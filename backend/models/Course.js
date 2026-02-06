@@ -109,11 +109,8 @@ class CourseModel {
         title: courseData.title,
         description: courseData.description,
         thumbnail: courseData.thumbnail || null,
-        icon: courseData.icon || '📚',
-        color: courseData.color || '#3B82F6',
         totalLevels: courseData.totalLevels || 1,
         estimatedTime: courseData.estimatedTime || '1 hour',
-        difficulty: courseData.difficulty || 'Beginner',
         tags: courseData.tags || [],
         isLocked: courseData.isLocked || false,
         isHidden: courseData.isHidden || false,
@@ -138,18 +135,15 @@ class CourseModel {
       }
 
       await query(
-        `INSERT INTO courses (id, title, description, thumbnail, icon, color, total_levels, estimated_time, difficulty, tags, is_locked, is_hidden, prerequisite_course_id, restrictions, level_settings, passing_threshold, order_index, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO courses (id, title, description, thumbnail, total_levels, estimated_time, tags, is_locked, is_hidden, prerequisite_course_id, restrictions, level_settings, passing_threshold, order_index, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         [
           id,
           courseData.title,
           courseData.description,
           courseData.thumbnail || null,
-          courseData.icon || '📚',
-          courseData.color || '#3B82F6',
           1, // total_levels always 1
           courseData.estimatedTime || '1 hour',
-          courseData.difficulty || 'Beginner',
           JSON.stringify(courseData.tags || []),
           courseData.isLocked || false,
           courseData.isHidden || false,
@@ -175,11 +169,8 @@ class CourseModel {
         title: courseData.title,
         description: courseData.description,
         thumbnail: courseData.thumbnail || null,
-        icon: courseData.icon || '📚',
-        color: courseData.color || '#3B82F6',
         totalLevels: courseData.totalLevels || 1,
         estimatedTime: courseData.estimatedTime || '1 hour',
-        difficulty: courseData.difficulty || 'Beginner',
         tags: courseData.tags || [],
         isLocked: courseData.isLocked || false,
         isHidden: courseData.isHidden || false,
@@ -226,11 +217,8 @@ class CourseModel {
       const title = courseData.title !== undefined ? courseData.title : existing.title;
       const description = courseData.description !== undefined ? courseData.description : existing.description;
       const thumbnail = courseData.thumbnail !== undefined ? courseData.thumbnail : existing.thumbnail;
-      const icon = courseData.icon !== undefined ? courseData.icon : existing.icon;
-      const color = courseData.color !== undefined ? courseData.color : existing.color;
       const totalLevels = courseData.totalLevels !== undefined ? courseData.totalLevels : existing.totalLevels;
       const estimatedTime = courseData.estimatedTime !== undefined ? courseData.estimatedTime : existing.estimatedTime;
-      const difficulty = courseData.difficulty !== undefined ? courseData.difficulty : existing.difficulty;
       const tags = courseData.tags !== undefined ? JSON.stringify(courseData.tags) : JSON.stringify(existing.tags);
       const isLocked = courseData.isLocked !== undefined ? courseData.isLocked : existing.isLocked;
       const isHidden = courseData.isHidden !== undefined ? courseData.isHidden : existing.isHidden;
@@ -249,11 +237,8 @@ class CourseModel {
          title = ?,
          description = ?,
          thumbnail = ?,
-         icon = ?,
-         color = ?,
          total_levels = 1,
          estimated_time = ?,
-         difficulty = ?,
          tags = ?,
          is_locked = ?,
          is_hidden = ?,
@@ -265,8 +250,8 @@ class CourseModel {
          updated_at = NOW()
          WHERE id = ?`,
         [
-          title, description, thumbnail, icon, color,
-          estimatedTime, difficulty, tags,
+          title, description, thumbnail,
+          estimatedTime, tags,
           isLocked, isHidden, prerequisiteCourseId, restrictions, levelSettings, passingThreshold, orderIndex, id
         ]
       );

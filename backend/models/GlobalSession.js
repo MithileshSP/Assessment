@@ -142,8 +142,35 @@ class GlobalSession {
             [reason, reason === 'FORCED', id]
         );
 
-        // Logic for Graceful Termination (FIX 4): Mark all associated attendance as used
-        // This will be handled in the attendance/session routes to avoid bulk DB locks during high-traffic
+        // Graceful Termination (FIX 4): Mark attendance as used and re-block students
+        try {
+            // 1. Get all students linked to this session via test_attendance
+            const linkedAttendance = await query(
+                "SELECT DISTINCT user_id FROM test_attendance WHERE session_id = ? AND is_used = FALSE",
+                [id]
+            );
+
+            if (linkedAttendance.length > 0) {
+                const userIds = linkedAttendance.map(a => a.user_id);
+
+                // 2. Mark all attendance records for this session as used
+                await query(
+                    "UPDATE test_attendance SET is_used = TRUE WHERE session_id = ?",
+                    [id]
+                );
+
+                // 3. Re-block all linked students
+                await query(
+                    `UPDATE users SET is_blocked = TRUE WHERE id IN (?) AND role = 'student'`,
+                    [userIds]
+                );
+
+                console.log(`[GlobalSession] Session ${id} ended (${reason}). Re-blocked ${userIds.length} students.`);
+            }
+        } catch (e) {
+            console.error('[GlobalSession] Graceful termination error:', e.message);
+        }
+
         return this.findById(id);
     }
 
