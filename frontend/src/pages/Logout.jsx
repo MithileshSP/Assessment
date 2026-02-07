@@ -1,23 +1,32 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { clearAdminSession } from '../utils/session';
 import { LogOut } from 'lucide-react';
+import { clearAdminSession } from '../utils/session';
+import api from '../services/api';
 
 const Logout = () => {
     const navigate = useNavigate();
 
     useEffect(() => {
-        // Simple logic to clear everything and redirect
-        const timer = setTimeout(() => {
-            clearAdminSession();
-            localStorage.removeItem('userToken');
-            localStorage.removeItem('userRole');
-            localStorage.removeItem('user');
-            localStorage.removeItem('userId');
-            window.dispatchEvent(new Event('portal-session-change'));
-            navigate('/login');
-        }, 1500);
+        const performLogout = async () => {
+            try {
+                // Call backend to clear the cookie and invalidate session in DB
+                await api.post('/auth/logout');
+            } catch (err) {
+                console.error('Logout error:', err);
+            } finally {
+                // Cleanup local storage (even if API fails)
+                clearAdminSession();
+                localStorage.removeItem('userToken');
+                localStorage.removeItem('userRole');
+                localStorage.removeItem('user');
+                localStorage.removeItem('userId');
+                window.dispatchEvent(new Event('portal-session-change'));
+                navigate('/login');
+            }
+        };
 
+        const timer = setTimeout(performLogout, 1500);
         return () => clearTimeout(timer);
     }, [navigate]);
 
