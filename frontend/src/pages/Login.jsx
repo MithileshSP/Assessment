@@ -28,10 +28,10 @@ export default function Login({ isAdmin = false, onLogin }) {
     try {
       // Use API client to hit the centralized auth endpoint
       const endpoint = "/auth/login";
-
-
-
       const response = await api.post(endpoint, credentials);
+
+      // Note: Backend now sets an HttpOnly cookie 'authToken'.
+      // API calls via 'api' service will automatically include this cookie.
 
       if (!response) {
         setError("Login failed. Please try again.");
@@ -215,6 +215,8 @@ export default function Login({ isAdmin = false, onLogin }) {
                       const res = await api.post("/auth/google", {
                         token: googleToken,
                       });
+
+                      // Note: Backend now sets an HttpOnly cookie 'authToken'.
 
                       const { user, token } = res.data;
 
