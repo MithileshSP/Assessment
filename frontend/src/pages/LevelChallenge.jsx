@@ -410,10 +410,14 @@ export default function LevelChallenge() {
         setResult(savedAnswer.result);
       } else {
         // Initialize from challenge data if no saved answer
+        // If empty, provide simple placeholder comments
+        const starterHtml = challengeData.html || `<!-- Enter your HTML code here -->`;
+        const starterCss = challengeData.css || `/* Enter your CSS styles here */`;
+        const starterJs = challengeData.js || `// Enter your JavaScript code here`;
         setCode({
-          html: challengeData.html || "",
-          css: challengeData.css || "",
-          js: challengeData.js || "",
+          html: starterHtml,
+          css: starterCss,
+          js: starterJs,
           additionalFiles: challengeData.additionalFiles || (typeof challengeData.assets === 'object' ? {} : JSON.parse(challengeData.additional_files || '{}'))
         });
       }
@@ -813,7 +817,7 @@ export default function LevelChallenge() {
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-lg font-bold text-slate-900">{challenge.title}</h1>
-              <span className="px-1.5 py-0.5 bg-slate-100 text-slate-400 text-[9px] font-mono rounded border underline decoration-slate-300">BUILD: v3.3.9</span>
+              <span className="px-1.5 py-0.5 bg-slate-100 text-slate-400 text-[9px] font-mono rounded border underline decoration-slate-300">BUILD: v3.4.9</span>
             </div>
             <p className="text-xs text-slate-500 font-medium">Level {level} • Question {currentQuestionIndex + 1} / {assignedQuestions.length}</p>
           </div>
@@ -879,6 +883,26 @@ export default function LevelChallenge() {
                     <div className="text-xs text-slate-500 italic space-y-2">{challenge.instructions}</div>
                   </div>
                 )}
+                {/* Asset Path Helper */}
+                {(() => {
+                  const assetList = Array.isArray(challenge.assets)
+                    ? challenge.assets
+                    : (challenge.assets?.images || []);
+
+                  if (assetList.length === 0) return null;
+
+                  return (
+                    <div className="mt-4 pt-4 border-t border-slate-100">
+                      <h3 className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-2">Asset Paths</h3>
+                      <div className="bg-slate-50 rounded-md p-3 border border-slate-200">
+                        <p className="text-[10px] text-slate-500 mb-2">To use images or assets in your code, use these paths:</p>
+                        {assetList.map((path, idx) => (
+                          <code key={idx} className="block font-mono text-xs bg-white px-2 py-1 rounded border text-indigo-600 mb-1 break-all select-all cursor-pointer hover:bg-slate-50" title="Click to copy" onClick={() => navigator.clipboard.writeText(path)}>{path}</code>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             </div>
           )}
