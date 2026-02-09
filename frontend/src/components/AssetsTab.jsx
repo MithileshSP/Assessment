@@ -1,6 +1,5 @@
-
 import React, { useState } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 
 export default function AssetsTab({ assets, onLoadAssets }) {
     const [selectedAssets, setSelectedAssets] = useState(new Set());
@@ -23,7 +22,8 @@ export default function AssetsTab({ assets, onLoadAssets }) {
         let deletedCount = 0;
         for (const filename of selectedAssets) {
             try {
-                await axios.delete(`/api/assets/${filename}`);
+                // Use api service and relative path (baseURL handles /api)
+                await api.delete(`/assets/${filename}`);
                 deletedCount++;
             } catch (error) {
                 console.error(`Failed to delete ${filename}:`, error);
@@ -47,7 +47,10 @@ export default function AssetsTab({ assets, onLoadAssets }) {
                 formData.append('asset', file);
                 formData.append('category', 'general');
 
-                await axios.post('/api/assets/upload', formData, {
+                // Use api service and relative path.
+                // Note: api instance usually handles Content-Type for FormData automatically,
+                // but keeping explicit header if strictly needed (Axios often detects FormData)
+                await api.post('/assets/upload', formData, {
                     headers: { 'Content-Type': 'multipart/form-data' }
                 });
             }
@@ -55,7 +58,7 @@ export default function AssetsTab({ assets, onLoadAssets }) {
             alert('Asset(s) uploaded successfully!');
             e.target.value = '';
         } catch (error) {
-            alert('Failed to upload asset: ' + error.message);
+            alert('Failed to upload asset: ' + (error.response?.data?.error || error.message));
         } finally {
             setUploadingAsset(false);
         }
@@ -64,7 +67,8 @@ export default function AssetsTab({ assets, onLoadAssets }) {
     const handleDeleteAsset = async (filename) => {
         if (!confirm('Delete this asset? This cannot be undone.')) return;
         try {
-            await axios.delete(`/api/assets/${filename}`);
+            // Use api service and relative path
+            await api.delete(`/assets/${filename}`);
             await onLoadAssets();
             // Also remove from selection if present
             if (selectedAssets.has(filename)) {

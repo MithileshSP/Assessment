@@ -10,7 +10,8 @@ SET FOREIGN_KEY_CHECKS = 0;
 CREATE TABLE IF NOT EXISTS users (
     id VARCHAR(100) PRIMARY KEY,
     username VARCHAR(100) NOT NULL UNIQUE,
-    password VARCHAR(255) NOT NULL,
+    password VARCHAR(255) NULL,
+    password_version VARCHAR(20) DEFAULT 'bcrypt',
     email VARCHAR(255) NOT NULL UNIQUE,
     full_name VARCHAR(255),
     roll_no VARCHAR(50) NULL,
@@ -115,6 +116,7 @@ CREATE TABLE IF NOT EXISTS test_attendance (
     test_identifier VARCHAR(255) NOT NULL,
     session_id VARCHAR(255) NULL,
     status ENUM('requested', 'approved', 'rejected') DEFAULT 'requested',
+    scheduled_status ENUM('none', 'scheduled', 'activated', 'expired') DEFAULT 'none',
     reference_image VARCHAR(500) NULL,
     requested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     approved_at TIMESTAMP NULL,
@@ -226,6 +228,19 @@ CREATE TABLE IF NOT EXISTS submission_assignments (
     UNIQUE KEY unique_submission_assignment (submission_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS student_feedback (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    submission_id VARCHAR(100) NOT NULL,
+    user_id VARCHAR(100) NOT NULL,
+    difficulty_rating INT DEFAULT 0,
+    clarity_rating INT DEFAULT 0,
+    comments TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (submission_id) REFERENCES submissions(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_student_feedback (submission_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- ==========================================
 -- 5. Progress & Tracking
 -- ==========================================
@@ -258,7 +273,28 @@ CREATE TABLE IF NOT EXISTS level_completions (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ==========================================
--- 6. Initial Data (Seeds)
+-- 6. Assets & Logging
+-- ==========================================
+CREATE TABLE IF NOT EXISTS assets (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    filename VARCHAR(255) NOT NULL UNIQUE,
+    original_name VARCHAR(255) NOT NULL,
+    path VARCHAR(500) NOT NULL,
+    url VARCHAR(500) NOT NULL,
+    type VARCHAR(100),
+    size INT,
+    category VARCHAR(50) DEFAULT 'general',
+    checksum_sha256 CHAR(64) NULL,
+    file_data LONGBLOB,
+    uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    last_modified TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_category (category),
+    INDEX idx_filename (filename),
+    UNIQUE KEY idx_assets_checksum_category (checksum_sha256, category)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ==========================================
+-- 7. Initial Data (Seeds)
 -- ==========================================
 INSERT IGNORE INTO users (id, username, password, email, full_name, role, is_blocked) VALUES
 ('user-admin-1', 'admin', '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9', 'admin@example.com', 'Administrator', 'admin', FALSE),

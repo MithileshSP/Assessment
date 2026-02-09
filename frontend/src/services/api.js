@@ -15,20 +15,33 @@ const API_BASE_URL = BASE_URL;
 // Create axios instance
 const api = axios.create({
   baseURL: API_BASE_URL,
+  withCredentials: true, // Crucial for HttpOnly cookies
   headers: {
     'Content-Type': 'application/json'
   },
   timeout: 120000 // 120 seconds for evaluation requests (Puppeteer in Docker needs time)
 });
 
-// Add auth token to requests if available
-api.interceptors.request.use(config => {
-  const token = localStorage.getItem('userToken') || localStorage.getItem('adminToken');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+// Auth interceptor to handle 401 Unauthorized (Session Expired/Invalid)
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response && error.response.status === 401) {
+      // Prevent redirect loops if already on login page
+      const currentPath = window.location.pathname;
+      if (!currentPath.includes('/login')) {
+        console.warn('[API] Session expired or invalid (401). Redirecting to login.');
+
+        // Determine correct login path based on context (fullstack or root)
+        const loginPath = currentPath.startsWith('/fullstack') ? '/fullstack/login' : '/login';
+
+        // Use window.location for hard redirect to ensure state is cleared
+        window.location.href = loginPath;
+      }
+    }
+    return Promise.reject(error);
   }
-  return config;
-});
+);
 
 // Challenges (Legacy - still used for old system)
 export const getChallenges = () => api.get('/challenges');

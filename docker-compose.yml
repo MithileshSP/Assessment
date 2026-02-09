@@ -1,6 +1,6 @@
 services:
   portal_mysql:
-    image: gokulv456/assessment-mysql:v3.4.1
+    image: gokulv456/assessment-mysql:v3.4.3
     build:
       context: ./mysql-init
       dockerfile: Dockerfile
@@ -19,7 +19,7 @@ services:
       - test-portal-network
 
   backend:
-    image: gokulv456/assessment-backend:v3.4.1
+    image: gokulv456/assessment-backend:v3.4.3
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -46,18 +46,18 @@ services:
       - ./backend/data:/app/data
       - ./backend/assets:/var/www/portal-assets
     deploy:
-      replicas: 1
+      replicas: 3
     networks:
       - test-portal-network
 
   frontend:
-    image: gokulv456/assessment-frontend:v3.4.1
+    image: gokulv456/assessment-frontend:v3.4.3
     build:
       context: ./frontend
       dockerfile: Dockerfile
       args:
         VITE_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
-        VITE_API_URL: "/api"
+        VITE_API_URL: "/fullstack/api"
     container_name: portal_frontend
     restart: unless-stopped
     ports:

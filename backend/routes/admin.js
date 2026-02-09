@@ -165,7 +165,7 @@ router.get('/results', verifyAdmin, async (req, res) => {
             SELECT 
                 s.id, u.full_name as candidate_name, s.submitted_at, s.status as final_status,
                 s.final_score as auto_score,
-                me.total_score as manual_score,
+                (me.code_quality_score + me.requirements_score + me.expected_output_score) as manual_score,
                 me.code_quality_score, me.requirements_score, me.expected_output_score,
                 ue.username as evaluator_name,
                 c.title as course_title,
@@ -216,7 +216,7 @@ router.get('/results/export', verifyAdmin, async (req, res) => {
         u.email as student_email,
         c.title as course_name,
         s.status as status,
-        COALESCE(me.total_score, s.final_score, 0) as score,
+        COALESCE((me.code_quality_score + me.requirements_score + me.expected_output_score), s.final_score, 0) as score,
         me.code_quality_score,
         me.requirements_score,
         me.expected_output_score,
@@ -488,7 +488,7 @@ router.post('/submissions/:id/override', verifyAdmin, async (req, res) => {
     res.json({ message: 'Override applied successfully', submission: updated });
   } catch (error) {
     console.error('Override error:', error);
-    res.status(500).json({ error: 'Failed to apply override' });
+    res.status(500).json({ error: error.message || 'Failed to apply override' });
   }
 });
 

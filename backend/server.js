@@ -14,6 +14,7 @@ const helmet = require("helmet");
 const compression = require("compression");
 const rateLimit = require("express-rate-limit");
 const morgan = require("morgan");
+const cookieParser = require("cookie-parser");
 
 // Import routes
 const challengesRouter = require("./routes/challenges");
@@ -166,13 +167,14 @@ const corsOptions = {
   },
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"],
+  allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
 };
 
 // Middleware
 app.use(cors(corsOptions));
-app.use(express.json({ limit: "50mb" })); // Increased to 50mb
+app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ extended: true, limit: "50mb" }));
+app.use(cookieParser());
 
 // Trust proxy (important for rate limiting behind reverse proxy)
 app.set("trust proxy", 1);
@@ -294,16 +296,24 @@ app.listen(PORT, async () => {
   console.log(`📊 Environment: ${process.env.NODE_ENV}`);
 
   try {
-    // Apply DB migrations
-    await applyMigrations();
-    console.log("✅ Migrations completed successfully");
+    const { waitForDB } = require("./database/connection");
+    console.log("⏳ Waiting for database readiness...");
+    const dbReady = await waitForDB();
 
-    // Fix stuck submissions from previous sessions
-    try {
-      const fixStuckSubmissions = require("./services/fixStuckSubmissions");
-      await fixStuckSubmissions();
-    } catch (err) {
-      console.warn("⚠️ Stuck submission cleanup failed:", err.message);
+    if (dbReady) {
+      // Apply DB migrations
+      await applyMigrations();
+      console.log("✅ Migrations completed successfully");
+
+      // Fix stuck submissions from previous sessions
+      try {
+        const fixStuckSubmissions = require("./services/fixStuckSubmissions");
+        await fixStuckSubmissions();
+      } catch (err) {
+        console.warn("⚠️ Stuck submission cleanup failed:", err.message);
+      }
+    } else {
+      console.warn("⚠️ Proceeding without database migration (DB not ready or using JSON)");
     }
   } catch (err) {
     console.error("❌ Migration failed:", err.message);

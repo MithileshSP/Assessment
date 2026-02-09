@@ -74,8 +74,9 @@ const AdminAssetManager = () => {
         }
 
         const formData = new FormData();
-        formData.append('asset', file);
+        // Append text fields FIRST for Multer to access them in 'destination'
         formData.append('category', selectedCategory || 'images');
+        formData.append('asset', file);
 
         try {
             setUploading(true);

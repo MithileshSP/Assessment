@@ -72,7 +72,9 @@ let isConnected = false;
 async function testConnection(retries = 10, delay = 5000) {
   for (let i = 0; i < retries; i++) {
     try {
+      // Use a ping to truly test connectivity
       const connection = await pool.getConnection();
+      await connection.ping();
       console.log("✅ MySQL Database connected successfully");
       isConnected = true;
       connection.release();
@@ -92,6 +94,18 @@ async function testConnection(retries = 10, delay = 5000) {
       await new Promise(resolve => setTimeout(resolve, delay));
     }
   }
+}
+
+// Helper to wait for DB readiness
+async function waitForDB(timeoutMs = 60000) {
+  if (isConnected) return true;
+  if (USE_JSON) return false;
+
+  const start = Date.now();
+  while (!isConnected && (Date.now() - start < timeoutMs)) {
+    await new Promise(resolve => setTimeout(resolve, 1000));
+  }
+  return isConnected;
 }
 
 testConnection();
@@ -149,5 +163,6 @@ module.exports = {
   queryOne,
   transaction,
   isConnected: () => isConnected,
+  waitForDB,
   USE_JSON,
 };

@@ -72,6 +72,7 @@ class EvaluationWorker {
      */
     async _runEvaluation(submission) {
         const submissionId = submission.id;
+        const startTime = Date.now();
         console.log(`\n🔄 [Queue] Starting evaluation for submission: ${submissionId}`);
 
         try {

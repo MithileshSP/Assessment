@@ -529,8 +529,8 @@ const FacultyEvaluation = () => {
                     </div>
                     <div className="space-y-4">
                         {[
-                            { id: 'codeQuality', label: 'Quality', max: 40 },
-                            { id: 'requirements', label: 'Specs', max: 25 },
+                            { id: 'codeQuality', label: 'Code Quality', max: 40 },
+                            { id: 'requirements', label: 'Key Requirements', max: 25 },
                             { id: 'expectedOutput', label: 'Output', max: 35 }
                         ].map(pod => (
                             <div key={pod.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-100">

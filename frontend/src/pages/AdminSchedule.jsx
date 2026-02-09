@@ -11,6 +11,8 @@ import {
     Zap
 } from 'lucide-react';
 import ToastContainer from '../components/Toast';
+import { formatIST } from '../utils/date';
+
 
 const AdminSchedule = () => {
     const [submitting, setSubmitting] = useState(false);
@@ -118,7 +120,10 @@ const AdminSchedule = () => {
                                     {schedules.map((session, idx) => (
                                         <div key={idx} className="group flex flex-col md:flex-row items-end gap-4 p-6 bg-slate-50 rounded-xl border border-slate-100 hover:border-indigo-200 transition-all">
                                             <div className="flex-1 space-y-2 w-full">
-                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Start Time</label>
+                                                <div className="flex justify-between items-center">
+                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Start Time</label>
+                                                    <span className="text-[10px] font-bold text-indigo-600 uppercase">{formatIST(session.start_time)}</span>
+                                                </div>
                                                 <input
                                                     type="time"
                                                     value={session.start_time}
@@ -127,7 +132,10 @@ const AdminSchedule = () => {
                                                 />
                                             </div>
                                             <div className="flex-1 space-y-2 w-full">
-                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">End Time</label>
+                                                <div className="flex justify-between items-center">
+                                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">End Time</label>
+                                                    <span className="text-[10px] font-bold text-indigo-600 uppercase">{formatIST(session.end_time)}</span>
+                                                </div>
                                                 <input
                                                     type="time"
                                                     value={session.end_time}

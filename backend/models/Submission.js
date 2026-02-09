@@ -25,7 +25,7 @@ class SubmissionModel {
     const submission = await queryOne(`
         SELECT s.*, 
                u.full_name as real_name,
-               me.total_score as manual_score,
+               (me.code_quality_score + me.requirements_score + me.expected_output_score) as manual_score,
                me.comments as manual_feedback,
                me.code_quality_score,
                me.requirements_score,
@@ -151,7 +151,8 @@ class SubmissionModel {
 
   // Update submission with admin override
   static async updateOverride(id, status, reason) {
-    await query(
+    console.log(`[SubmissionModel] updateOverride called for ${id} with status ${status}`);
+    const result = await query(
       `UPDATE submissions SET
        status = ?,
        admin_override_status = ?,
@@ -166,7 +167,10 @@ class SubmissionModel {
         id
       ]
     );
-    return await this.findById(id);
+    console.log(`[SubmissionModel] updateOverride SQL result:`, result);
+    const updated = await this.findById(id);
+    console.log(`[SubmissionModel] updateOverride findById result:`, updated ? 'Found' : 'Null');
+    return updated;
   }
 
   // Delete submission
@@ -240,9 +244,11 @@ class SubmissionModel {
       return path;
     };
 
-    const finalStatus = submission.manual_score !== null
-      ? (submission.admin_override_status !== 'none' ? submission.admin_override_status : submission.status)
-      : (['evaluating', 'error', 'queued'].includes(submission.status) ? submission.status : 'pending');
+    const finalStatus = (submission.admin_override_status && submission.admin_override_status !== 'none')
+      ? submission.admin_override_status
+      : (submission.manual_score !== null
+        ? submission.status
+        : (['evaluating', 'error', 'queued', 'passed', 'failed'].includes(submission.status) ? submission.status : 'pending'));
 
     const isPassed = (submission.manual_score !== null && submission.manual_score >= 50) ||
       (submission.admin_override_status === 'passed');

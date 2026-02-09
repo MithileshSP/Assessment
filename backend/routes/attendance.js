@@ -462,10 +462,10 @@ router.post('/schedule', verifyAdmin, async (req, res) => {
 router.get('/unblocked-list', verifyAdmin, async (req, res) => {
     try {
         const unblocked = await query(`
-            SELECT id, username, full_name, email, roll_no, updated_at 
+            SELECT id, username, full_name, email, roll_no, created_at 
             FROM users 
             WHERE is_blocked = 0 AND role = 'student'
-            ORDER BY updated_at DESC
+            ORDER BY created_at DESC
         `);
         res.json(unblocked);
     } catch (err) {
@@ -528,10 +528,10 @@ router.get('/scheduled/:sessionId', verifyAdmin, async (req, res) => {
     try {
         const scheduledStudents = await query(
             `SELECT ta.id, ta.user_id, ta.scheduled_status, ta.requested_at,
-                    u.username, u.email, u.full_name, u.roll_no, u.is_blocked
+            u.username, u.email, u.full_name, u.roll_no, u.is_blocked
              FROM test_attendance ta
              JOIN users u ON ta.user_id = u.id
-             WHERE ta.session_id = ? AND ta.scheduled_status IN ('scheduled', 'activated')
+             WHERE ta.session_id = ? AND ta.scheduled_status IN('scheduled', 'activated')
              ORDER BY ta.requested_at DESC`,
             [sessionId]
         );
@@ -574,14 +574,14 @@ router.post('/upload-reference', verifyToken, upload.single('image'), async (req
     }
 
     try {
-        const imageUrl = `/reference_images/${req.file.filename}`;
+        const imageUrl = `/ reference_images / ${req.file.filename} `;
 
         // Update the latest attendance record
         await query(
             `UPDATE test_attendance 
-             SET reference_image = ? 
-             WHERE user_id = ? AND test_identifier = ?
-             ORDER BY requested_at DESC LIMIT 1`,
+             SET reference_image = ?
+            WHERE user_id = ? AND test_identifier = ?
+                ORDER BY requested_at DESC LIMIT 1`,
             [imageUrl, userId, testIdentifier]
         );
 

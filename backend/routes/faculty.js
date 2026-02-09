@@ -120,9 +120,16 @@ router.get('/submission/:id', verifyFaculty, async (req, res) => {
             [submissionId]
         );
 
+        let evalData = evaluation[0] || null;
+        if (evalData) {
+            evalData.total_score = (evalData.code_quality_score || 0) +
+                (evalData.requirements_score || 0) +
+                (evalData.expected_output_score || 0);
+        }
+
         res.json({
             submission: submission[0],
-            evaluation: evaluation[0] || null,
+            evaluation: evalData,
             studentFeedback: studentFeedback[0] || null
         });
 
@@ -242,7 +249,7 @@ router.get('/history', verifyFaculty, async (req, res) => {
             SELECT 
                 s.id, s.user_id as candidate_name, s.submitted_at, s.challenge_id, 
                 s.level, c.title as challenge_title, co.title as course_title,
-                sa.status as assignment_status, me.total_score as manual_score
+                sa.status as assignment_status, (me.code_quality_score + me.requirements_score + me.expected_output_score) as manual_score
             FROM submission_assignments sa
             JOIN submissions s ON sa.submission_id = s.id
             LEFT JOIN users u ON s.user_id = u.id

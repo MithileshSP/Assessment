@@ -212,10 +212,23 @@ class PixelMatcher {
    * @returns {Object} - Comparison metrics
    */
   async compareImages(candidatePath, expectedPath, submissionId) {
+    const startTime = Date.now();
     try {
-      // Read images
-      let candidateImg = PNG.sync.read(fs.readFileSync(candidatePath));
-      let expectedImg = PNG.sync.read(fs.readFileSync(expectedPath));
+      // Read images asynchronously
+      const [candidateBuffer, expectedBuffer] = await Promise.all([
+        fs.promises.readFile(candidatePath),
+        fs.promises.readFile(expectedPath)
+      ]);
+
+      let candidateImg = await new Promise((resolve, reject) => {
+        const png = new PNG();
+        png.parse(candidateBuffer, (err, data) => err ? reject(err) : resolve(data));
+      });
+
+      let expectedImg = await new Promise((resolve, reject) => {
+        const png = new PNG();
+        png.parse(expectedBuffer, (err, data) => err ? reject(err) : resolve(data));
+      });
 
       // 1. Equalize dimensions (pad shorter image)
       const res = this.equalizeDimensions(candidateImg, expectedImg);
@@ -228,7 +241,7 @@ class PixelMatcher {
       // 2. Create diff image
       const diff = new PNG({ width, height });
 
-      // Perform pixel comparison
+      // Perform pixel comparison (pixelmatch is synchronous, but we are working on small buffers)
       const diffPixels = pixelmatch(
         candidateImg.data,
         expectedImg.data,
@@ -242,9 +255,12 @@ class PixelMatcher {
         }
       );
 
-      // Save diff image
+      // Save diff image asynchronously
       const diffPath = path.join(this.screenshotDir, `${submissionId}-diff.png`);
-      fs.writeFileSync(diffPath, PNG.sync.write(diff));
+      const diffBuffer = PNG.sync.write(diff); // Writing to buffer is fast, but we'll use fs.promises.writeFile
+      await fs.promises.writeFile(diffPath, diffBuffer);
+
+      // ... existing blank check and weighted calculation ...
 
       // 1. Detection of "Blank" or "Solid" page (Variance check)
       const isSolidColor = (data) => {
@@ -300,13 +316,17 @@ class PixelMatcher {
         similarityScore = Math.min(similarityScore, 5); // Allow tiny score for "trying" but floor it
       }
 
+      const duration = Date.now() - startTime;
+      console.log(`[PixelMatch] Comparison for ${submissionId} completed in ${duration}ms. Score: ${Math.round(similarityScore)}`);
+
       return {
         score: Math.round(similarityScore),
         diffPixels,
         totalPixels,
         diffPercentage: ((diffPixels / totalPixels) * 100).toFixed(2),
         matchPercentage: similarityScore.toFixed(2),
-        isCandidateBlank: candidateIsBlank
+        isCandidateBlank: candidateIsBlank,
+        processingDuration: duration
       };
 
     } catch (error) {

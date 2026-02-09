@@ -4,15 +4,23 @@
  */
 
 const { query, queryOne } = require('../database/connection');
+const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 
-function ensurePasswordValue(rawPassword, seed) {
-  if (rawPassword !== undefined && rawPassword !== null) {
-    return rawPassword;
-  }
+function saltPassword(password) {
+  if (!password) return null;
+  // If it's already a bcrypt hash (starts with $2), don't salt it again
+  if (password.startsWith('$2')) return password;
+  const salt = bcrypt.genSaltSync(10);
+  return bcrypt.hashSync(password, salt);
+}
 
-  const fallbackSeed = seed || `oauth-user-${Date.now()}`;
-  return crypto.createHash('sha256').update(String(fallbackSeed)).digest('hex');
+function verifyPassword(password, hash, version = 'bcrypt') {
+  if (version === 'sha256') {
+    const sha256Hash = crypto.createHash('sha256').update(password).digest('hex');
+    return sha256Hash === hash;
+  }
+  return bcrypt.compareSync(password, hash);
 }
 
 class UserModel {
@@ -43,13 +51,18 @@ class UserModel {
       ? userData.isBlocked
       : (userData.is_blocked !== undefined ? userData.is_blocked : (userData.role === 'student'));
 
+    // New users always use bcrypt
+    const password = userData.password ? saltPassword(userData.password) : null;
+    const passwordVersion = 'bcrypt';
+
     const result = await query(
-      `INSERT INTO users (id, username, password, email, full_name, roll_no, role, is_blocked, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO users (id, username, password, password_version, email, full_name, roll_no, role, is_blocked, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         userData.id,
         userData.username,
-        ensurePasswordValue(userData.password, userData.email || userData.username),
+        password,
+        passwordVersion,
         userData.email,
         userData.fullName || userData.full_name,
         userData.rollNo || userData.roll_no || null,
@@ -63,6 +76,13 @@ class UserModel {
 
   // Update user
   static async update(id, userData) {
+    // If password is being updated, hash it with bcrypt
+    const updates = { ...userData };
+    if (updates.password) {
+      updates.password = saltPassword(updates.password);
+      updates.password_version = 'bcrypt';
+    }
+
     await query(
       `UPDATE users SET
        username = COALESCE(?, username),
@@ -71,16 +91,18 @@ class UserModel {
        roll_no = COALESCE(?, roll_no),
        role = COALESCE(?, role),
        is_blocked = COALESCE(?, is_blocked),
-       password = COALESCE(?, password)
+       password = COALESCE(?, password),
+       password_version = COALESCE(?, password_version)
        WHERE id = ?`,
       [
-        userData.username ?? null,
-        userData.email ?? null,
-        (userData.fullName ?? userData.full_name) ?? null,
-        (userData.rollNo ?? userData.roll_no) ?? null,
-        userData.role ?? null,
-        (userData.isBlocked ?? userData.is_blocked) ?? null,
-        userData.password ?? null,
+        updates.username ?? null,
+        updates.email ?? null,
+        (updates.fullName ?? updates.full_name) ?? null,
+        (updates.rollNo ?? updates.roll_no) ?? null,
+        updates.role ?? null,
+        (updates.isBlocked ?? updates.is_blocked) ?? null,
+        updates.password ?? null,
+        updates.password_version ?? null,
         id
       ]
     );
@@ -106,5 +128,8 @@ class UserModel {
     return result.count;
   }
 }
+
+UserModel.saltPassword = saltPassword;
+UserModel.verifyPassword = verifyPassword;
 
 module.exports = UserModel;

@@ -24,6 +24,8 @@ import {
     ChevronUp
 } from 'lucide-react';
 import ToastContainer from '../components/Toast';
+import { formatIST, formatFullIST } from '../utils/date';
+
 
 const AdminAttendance = () => {
     const [unblockedUsers, setUnblockedUsers] = useState([]);
@@ -183,7 +185,10 @@ const AdminAttendance = () => {
             const emails = lines.slice(1).map(line => line.split(',')[emailIndex]).filter(e => e);
             try {
                 setSubmitting(true);
-                const res = await api.post('/users/bulk-unblock', { emails });
+                const res = await api.post('/users/bulk-unblock', {
+                    emails,
+                    sessionId: selectedSession?.id
+                });
                 addToast(`Bulk unblock complete: ${res.data.count} students.`, "success");
                 fetchData();
             } catch (err) {
@@ -331,7 +336,7 @@ const AdminAttendance = () => {
                                                     <div className="flex flex-col gap-0.5 font-medium text-slate-600">
                                                         <div className="flex items-center gap-2 text-sm">
                                                             <Clock size={14} className="text-slate-300" />
-                                                            {session.start_time} - {session.end_time}
+                                                            {formatIST(session.start_time)} - {formatIST(session.end_time)}
                                                         </div>
                                                         <span className="text-[9px] text-slate-400 uppercase tracking-wide">Duration: {session.duration_minutes} min</span>
                                                     </div>
@@ -604,7 +609,7 @@ const AdminAttendance = () => {
                                                             <div className="flex items-center gap-2 text-slate-400">
                                                                 <Monitor size={12} />
                                                                 <span className="text-[11px] font-medium">
-                                                                    {user.updated_at ? new Date(user.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : 'Online'}
+                                                                    {user.updated_at ? formatIST(user.updated_at) : 'Online'}
                                                                 </span>
                                                             </div>
                                                         </td>
@@ -664,7 +669,7 @@ const AdminAttendance = () => {
                                                         </td>
                                                         <td className="px-8 py-5">
                                                             <span className="text-[11px] text-slate-500 font-medium lowercase">
-                                                                {student.requested_at ? new Date(student.requested_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }) : 'Queued'}
+                                                                {student.requested_at ? formatFullIST(student.requested_at) : 'Queued'}
                                                             </span>
                                                         </td>
                                                         <td className="px-8 py-5 text-right">

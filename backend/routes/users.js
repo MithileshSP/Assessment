@@ -10,7 +10,7 @@ const UserModel = require("../models/User");
 const { query } = require("../database/connection");
 const { OAuth2Client } = require("google-auth-library");
 const jwt = require("jsonwebtoken");
-const { verifyAdmin } = require("../middleware/auth");
+const { verifyAdmin, verifyToken } = require("../middleware/auth");
 require("dotenv").config();
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
@@ -160,6 +160,11 @@ router.post("/google", async (req, res) => {
     // Generate unique session ID for single-session enforcement
     const sessionId = uuidv4();
     try {
+      // For admins, we want to allow multiple sessions, so we don't strictly enforce a single session ID 
+      // in the DB (or rather, we update it but auth middleware skips the check). 
+      // Actually, if we update it here, the auth middleware check (session === dbSession) would fail 
+      // for the OLD session if we didn't skip it in auth.js. 
+      // Since we skip it in auth.js, updating it here is fine, but let's be safe.
       await query('UPDATE users SET current_session_id = ? WHERE id = ?', [sessionId, user.id]);
     } catch (e) {
       console.warn('[Google Login] Failed to set session ID:', e.message);
@@ -174,7 +179,17 @@ router.post("/google", async (req, res) => {
 
     const appToken = jwt.sign(payloadForToken, jwtSecret, { expiresIn: '7d' });
 
+    // Set HttpOnly cookie
+    const isLocalhost = req.headers.host && req.headers.host.includes('localhost');
+    res.cookie('authToken', appToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production' && !isLocalhost,
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+    });
+
     res.json({
+      message: "Google login successful",
       user: {
         id: user.id,
         username: user.username,
@@ -184,6 +199,7 @@ router.post("/google", async (req, res) => {
         role: user.role,
         picture: user.picture || picture,
       },
+      // Keep token in response for backward compatibility during migration, but frontend should prioritize cookie
       token: appToken,
     });
   } catch (error) {
@@ -224,9 +240,23 @@ router.post("/login", async (req, res) => {
       return res.status(401).json({ error: "Invalid username or password" });
     }
 
-    const hashedPassword = hashPassword(password);
-    if (user.password !== hashedPassword) {
+    // Verify password using the improved model (handles sha256 vs bcrypt)
+    const isPasswordValid = UserModel.verifyPassword(password, user.password, user.password_version);
+
+    if (!isPasswordValid) {
       return res.status(401).json({ error: "Invalid username or password" });
+    }
+
+    // Lazy Migration: If password is sha256, upgrade it to bcrypt now
+    if (user.password_version === 'sha256') {
+      console.log(`[Auth] Upgrading password for user ${user.username} to bcrypt...`);
+      try {
+        await UserModel.update(user.id, {
+          password: password // UserModel.update will handle salting
+        });
+      } catch (upgradeError) {
+        console.warn(`[Auth] Failed to upgrade password for ${user.username}:`, upgradeError.message);
+      }
     }
 
     // Generate unique session ID for single-session enforcement
@@ -240,6 +270,15 @@ router.post("/login", async (req, res) => {
     };
 
     const token = jwt.sign(payloadForToken, jwtSecret, { expiresIn: '7d' });
+
+    // Set HttpOnly cookie
+    const isLocalhost = req.headers.host && req.headers.host.includes('localhost');
+    res.cookie('authToken', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production' && !isLocalhost,
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+    });
 
     // Update session ID in DB
     try {
@@ -266,7 +305,7 @@ router.post("/login", async (req, res) => {
     }
 
     res.json({
-      token,
+      token, // Backward compatibility
       user: {
         id: user.id,
         username: user.username,
@@ -280,6 +319,29 @@ router.post("/login", async (req, res) => {
     console.error("Login error:", error);
     console.error(error.stack);
     res.status(500).json({ error: "Login failed", details: error.message });
+  }
+});
+
+// User Logout
+router.post("/logout", verifyToken, async (req, res) => {
+  try {
+    // Clear the current_session_id in DB to invalidate the session globally
+    if (req.user && req.user.id) {
+      await query('UPDATE users SET current_session_id = NULL WHERE id = ?', [req.user.id]);
+    }
+
+    // Clear the authToken cookie
+    const isLocalhost = req.headers.host && req.headers.host.includes('localhost');
+    res.clearCookie('authToken', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production' && !isLocalhost,
+      sameSite: 'lax'
+    });
+
+    res.json({ message: "Logged out successfully" });
+  } catch (error) {
+    console.error("Logout error:", error);
+    res.status(500).json({ error: "Logout failed" });
   }
 });
 

@@ -3,15 +3,18 @@ const { query } = require('../database/connection');
 require('dotenv').config();
 
 const verifyToken = async (req, res, next) => {
+    // 1. Try to get token from legacy Authorization header
     const authHeader = req.headers['authorization'];
-    if (!authHeader) {
-        return res.status(401).json({ error: 'Access denied. No token provided.' });
-    }
+    let tokenFromHeader = authHeader && (authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : authHeader);
 
-    const token = authHeader.startsWith('Bearer ') ? authHeader.split(' ')[1] : authHeader;
+    // 2. Try to get token from HttpOnly cookie
+    const tokenFromCookie = req.cookies && req.cookies.authToken;
+
+    // Use cookie token if available, fallback to header (migration support)
+    const token = tokenFromCookie || tokenFromHeader;
 
     if (!token) {
-        return res.status(401).json({ error: 'Access denied. Invalid token format.' });
+        return res.status(401).json({ error: 'Access denied. No session token provided.' });
     }
 
     const jwtSecret = process.env.JWT_SECRET || 'fallback_secret';
@@ -27,7 +30,8 @@ const verifyToken = async (req, res, next) => {
         console.log(`[TraceAuth] User: ${decoded.username || decoded.id}, TokenSession: ${decoded.sessionId}, DBSession: ${dbSession}`);
 
         // Single Session Enforcement
-        if (decoded.sessionId && dbSession && dbSession !== decoded.sessionId) {
+        // SKIP for admins to allow multiple people to manage the portal simultaneously using the same account
+        if (decoded.role !== 'admin' && decoded.sessionId && dbSession && dbSession !== decoded.sessionId) {
             // CRITICAL FIX: Allow submission requests to pass even if session mismatch occurs
             // This prevents data loss when a student's session is auto-terminated/expired
             if (req.originalUrl.includes('/api/submissions') || req.path.includes('/submissions')) {

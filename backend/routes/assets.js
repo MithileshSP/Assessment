@@ -28,16 +28,25 @@ const sanitizeCategory = (raw) => {
 
 const requireAdmin = (req, res, next) => {
   try {
-    const token = req.headers.authorization?.replace('Bearer ', '');
-    if (!token) return res.status(401).json({ error: 'Missing token' });
+    // Check both 'authToken' (standard) and 'token' (legacy/dev)
+    const token = req.cookies?.authToken || req.cookies?.token || req.headers.authorization?.replace('Bearer ', '');
+
+    if (!token) {
+      console.warn('[Assets] Missing token in cookies/header');
+      return res.status(401).json({ error: 'Missing token' });
+    }
 
     const jwtSecret = process.env.JWT_SECRET || 'fallback_secret';
     const payload = jwt.verify(token, jwtSecret);
 
-    if (payload.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+    if (payload.role !== 'admin') {
+      console.warn(`[Assets] Unauthorized role: ${payload.role}`);
+      return res.status(403).json({ error: 'Admin only' });
+    }
     req.admin = payload;
     next();
   } catch (err) {
+    console.error('[Assets] Token verification failed:', err.message);
     return res.status(401).json({ error: 'Invalid token' });
   }
 };

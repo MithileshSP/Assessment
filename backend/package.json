@@ -1,6 +1,6 @@
 {
   "name": "frontend-test-portal-backend",
-  "version": "1.0.0",
+  "version": "3.4.8",
   "description": "Backend API for Frontend Test Portal with hybrid evaluation",
   "main": "server.js",
   "scripts": {
@@ -18,7 +18,9 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "bcryptjs": "^3.0.3",
     "compression": "^1.8.1",
+    "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "csv-parser": "^3.2.0",
     "depd": "^2.0.0",

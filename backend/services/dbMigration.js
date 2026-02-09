@@ -1,7 +1,7 @@
 const { query, transaction } = require('../database/connection');
 
 /**
- * Robust database migration script (v3.2.3 - Final fixes).
+ * Robust database migration script (v3.4.3 - Final fixes).
  * - Adds reference_image to test_attendance.
  * - Adds UNIQUE KEY to test_attendance (user_id, test_identifier).
  * - Safer order_index addition for courses.
@@ -25,7 +25,10 @@ async function applyMigrations() {
         e.errno === 1091;
 
       if (!isExpectedError) {
-        console.warn(`⚠️ Migration info: ${e.message}`);
+        console.error(`❌ Migration error [${e.code || e.errno}]: ${e.message}`);
+        throw e; // Crash on unexpected errors to prevent running in corrupt state
+      } else {
+        console.log(`ℹ️ Migration info: Constraint/Column already exists.`);
       }
     }
   };
@@ -54,12 +57,10 @@ async function applyMigrations() {
         title VARCHAR(255) NOT NULL,
         description TEXT,
         thumbnail VARCHAR(255),
-        icon VARCHAR(10),
-        color VARCHAR(20),
         total_levels INT DEFAULT 1,
         order_index INT NOT NULL DEFAULT 0,
         estimated_time VARCHAR(50),
-        difficulty ENUM('Beginner', 'Intermediate', 'Advanced') DEFAULT 'Beginner',
+
         tags JSON,
         passing_threshold JSON,
         is_locked BOOLEAN DEFAULT FALSE,
@@ -69,18 +70,27 @@ async function applyMigrations() {
         level_settings JSON,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        INDEX idx_difficulty (difficulty),
         INDEX idx_prerequisite (prerequisite_course_id),
         INDEX idx_order (order_index)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
 
-    // Safer Column Additions (v3.2.3)
+    // Safer Column Additions (v3.4.3)
     await addColumn("ALTER TABLE courses ADD COLUMN order_index INT NOT NULL DEFAULT 0");
+
+
+    await addColumn("ALTER TABLE courses ADD COLUMN estimated_time VARCHAR(50)");
+    await addColumn("ALTER TABLE courses ADD COLUMN total_levels INT DEFAULT 1");
+    await addColumn("ALTER TABLE courses ADD COLUMN tags JSON");
     await addColumn("ALTER TABLE courses ADD COLUMN prerequisite_course_id VARCHAR(100) NULL AFTER order_index");
     await addColumn("ALTER TABLE courses ADD COLUMN restrictions JSON");
     await addColumn("ALTER TABLE courses ADD COLUMN level_settings JSON");
     await addColumn("ALTER TABLE courses ADD COLUMN passing_threshold JSON");
+
+    // v3.4.3: Safely drop legacy columns (MySQL doesn't support DROP COLUMN IF EXISTS)
+    try { await queryWithRetry("ALTER TABLE courses DROP COLUMN difficulty"); } catch (e) { }
+    try { await queryWithRetry("ALTER TABLE courses DROP COLUMN icon"); } catch (e) { }
+    try { await queryWithRetry("ALTER TABLE courses DROP COLUMN color"); } catch (e) { }
 
     // Convert INDEX to UNIQUE INDEX safely
     await addColumn("ALTER TABLE courses DROP INDEX idx_order");
@@ -122,6 +132,12 @@ async function applyMigrations() {
         FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE SET NULL
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
+
+    // Individual column additions for challenges (safety for older DBs)
+    await addColumn("ALTER TABLE challenges ADD COLUMN expected_screenshot_data MEDIUMBLOB");
+    await addColumn("ALTER TABLE challenges ADD COLUMN challenge_type ENUM('web', 'nodejs') DEFAULT 'web'");
+    await addColumn("ALTER TABLE challenges ADD COLUMN expected_output TEXT");
+    await addColumn("ALTER TABLE challenges ADD COLUMN additional_files JSON");
 
     await queryWithRetry(`
       CREATE TABLE IF NOT EXISTS submissions (
@@ -234,15 +250,26 @@ async function applyMigrations() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
 
-    // test_attendance fixes (v3.2.3)
+    // test_attendance fixes (v3.4.3)
     await addColumn("ALTER TABLE test_attendance ADD COLUMN reference_image VARCHAR(500) NULL AFTER status");
     // v3.6.0: Add scheduled_status column for pre-authorization feature
     await addColumn("ALTER TABLE test_attendance ADD COLUMN scheduled_status ENUM('none', 'scheduled', 'activated', 'expired') DEFAULT 'none' AFTER status");
     await addColumn("ALTER TABLE test_attendance ADD INDEX idx_scheduled (scheduled_status)");
+    // v3.4.3: Cleanup duplicate test_attendance records before unique key
+    await queryWithRetry(`
+      DELETE t1 FROM test_attendance t1
+      INNER JOIN test_attendance t2 
+      WHERE t1.id < t2.id 
+      AND t1.user_id = t2.user_id 
+      AND t1.test_identifier = t2.test_identifier
+    `);
+
     // Change INDEX to UNIQUE KEY safely
     try {
       await queryWithRetry("ALTER TABLE test_attendance DROP INDEX idx_user_test");
     } catch (e) { }
+
+
     await addColumn("ALTER TABLE test_attendance ADD UNIQUE KEY idx_user_test_unique (user_id, test_identifier)");
 
     await queryWithRetry(`
@@ -325,6 +352,7 @@ async function applyMigrations() {
     await addColumn("ALTER TABLE users ADD COLUMN is_blocked BOOLEAN DEFAULT TRUE AFTER role");
     await addColumn("ALTER TABLE users ADD COLUMN picture VARCHAR(500) NULL AFTER is_blocked");
     await addColumn("ALTER TABLE users ADD COLUMN current_session_id VARCHAR(100) NULL AFTER picture");
+    await addColumn("ALTER TABLE users ADD COLUMN password_version ENUM('sha256', 'bcrypt') DEFAULT 'sha256' AFTER password");
     await addColumn("ALTER TABLE users ADD COLUMN last_login TIMESTAMP NULL AFTER created_at");
 
     // 6. Seeding
@@ -339,16 +367,78 @@ async function applyMigrations() {
     await addColumn("UPDATE users SET is_blocked = FALSE WHERE username IN ('admin', 'faculty')");
 
     await queryWithRetry(`
-      INSERT IGNORE INTO courses (id, title, description, icon, color, total_levels, estimated_time, difficulty, tags, order_index, created_at) VALUES
-      ('course-html-css', 'HTML & CSS Mastery', 'Master the fundamentals of web development', '🎨', '#e34c26', 1, '20 hours', 'Beginner', '["HTML", "CSS"]', 10, NOW()),
-      ('course-fullstack', 'Fullstack Development', 'Master both frontend and backend technologies.', '💻', '#3B82F6', 1, '40 hours', 'Advanced', '["Node.js", "React", "Database"]', 20, NOW())
+      INSERT INTO courses (id, title, description, total_levels, estimated_time, tags, order_index, created_at) VALUES
+      ('course-html-css', 'HTML & CSS Mastery', 'Master the fundamentals of web development', 1, '20 hours', '["HTML", "CSS"]', 10, NOW()),
+      ('course-fullstack', 'Fullstack Development', 'Master both frontend and backend technologies.', 1, '40 hours', '["Node.js", "React", "Database"]', 20, NOW())
+      ON DUPLICATE KEY UPDATE
+      title = VALUES(title),
+      description = VALUES(description),
+      tags = VALUES(tags),
+      estimated_time = VALUES(estimated_time);
     `);
 
     // Final Fix: Consistency for order_index
-    await addColumn("UPDATE courses SET order_index = 10 WHERE id = 'course-html-css' AND order_index = 0");
-    await addColumn("UPDATE courses SET order_index = 20 WHERE id = 'course-fullstack' AND order_index = 0");
+    await addColumn("UPDATE courses SET order_index = 10 WHERE id = 'course-html-css' AND (order_index = 0 OR order_index IS NULL)");
+    await addColumn("UPDATE courses SET order_index = 20 WHERE id = 'course-fullstack' AND (order_index = 0 OR order_index IS NULL)");
 
-    console.log('✅ Full migrations applied successfully (v3.2.3)');
+    // v3.4.4: Allow NULL passwords for Google sign-in users
+    try {
+      await queryWithRetry("ALTER TABLE users MODIFY COLUMN password VARCHAR(255) NULL");
+      console.log('✅ Modified password column to allow NULL');
+    } catch (e) {
+      console.log('ℹ️ Password column already allows NULL or modification skipped');
+    }
+
+    // v3.4.4: Add password_version column if not exists
+    await addColumn("ALTER TABLE users ADD COLUMN password_version VARCHAR(20) DEFAULT 'bcrypt' AFTER password");
+
+    // v3.4.5: Create faculty evaluation tables
+    await queryWithRetry(`
+      CREATE TABLE IF NOT EXISTS manual_evaluations (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        submission_id VARCHAR(100) NOT NULL,
+        faculty_id VARCHAR(100) NOT NULL,
+        code_quality_score INT DEFAULT 0,
+        requirements_score INT DEFAULT 0,
+        expected_output_score INT DEFAULT 0,
+        comments TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY unique_manual_evaluation (submission_id)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    await queryWithRetry(`
+      CREATE TABLE IF NOT EXISTS submission_assignments (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        submission_id VARCHAR(100) NOT NULL,
+        faculty_id VARCHAR(100) NOT NULL,
+        assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        status ENUM('pending', 'evaluated') DEFAULT 'pending',
+        UNIQUE KEY unique_submission_assignment (submission_id)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    await queryWithRetry(`
+      CREATE TABLE IF NOT EXISTS student_feedback (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        submission_id VARCHAR(100) NOT NULL,
+        user_id VARCHAR(100) NOT NULL,
+        feedback_text TEXT,
+        rating INT DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY unique_student_feedback (submission_id)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    // v3.4.7: Update student_feedback columns to match UI
+    await addColumn("ALTER TABLE student_feedback ADD COLUMN difficulty_rating INT DEFAULT 0 AFTER user_id");
+    await addColumn("ALTER TABLE student_feedback ADD COLUMN clarity_rating INT DEFAULT 0 AFTER difficulty_rating");
+    await addColumn("ALTER TABLE student_feedback ADD COLUMN comments TEXT AFTER clarity_rating");
+    // Drop old columns if they exist (optional cleanup)
+    try { await queryWithRetry("ALTER TABLE student_feedback DROP COLUMN rating"); } catch (e) { }
+    try { await queryWithRetry("ALTER TABLE student_feedback DROP COLUMN feedback_text"); } catch (e) { }
+
+    console.log('✅ Full migrations applied successfully (v3.4.7)');
   } catch (error) {
     console.error('❌ Migration failed:', error.message);
     throw error;

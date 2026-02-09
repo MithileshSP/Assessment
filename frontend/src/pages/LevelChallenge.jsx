@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { AlertTriangle, Clock, CheckCircle, ArrowLeft, ChevronLeft, ChevronRight, RefreshCw, Check, Layout, Star, ChevronUp, ChevronDown, Eye, Maximize2, X } from "lucide-react";
+import ToastContainer from "../components/Toast";
 import MultiFileEditor from "../components/MultiFileEditor";
 import TerminalPanel from "../components/TerminalPanel";
 import PreviewFrame from "../components/PreviewFrame";
@@ -46,9 +47,15 @@ export default function LevelChallenge() {
   });
   const [violations, setViolations] = useState(0);
   const [timeRemaining, setTimeRemaining] = useState(null);
-  const [showViolationToast, setShowViolationToast] = useState(false);
-  const [violationMessage, setViolationMessage] = useState("");
   const [lastViolationTime, setLastViolationTime] = useState(0);
+
+  // Toast State
+  const [toasts, setToasts] = useState([]);
+  const addToast = (message, type = 'info') => {
+    const id = Date.now();
+    setToasts(prev => [...prev, { id, message, type }]);
+  };
+  const removeToast = (id) => setToasts(prev => prev.filter(t => t.id !== id));
 
   const previewRef = useRef(null);
   const fullPreviewRef = useRef(null);
@@ -501,9 +508,7 @@ export default function LevelChallenge() {
     setLastViolationTime(now);
     const newViolations = violations + 1;
     setViolations(newViolations);
-    setViolationMessage(`${type}`);
-    setShowViolationToast(true);
-    setTimeout(() => setShowViolationToast(false), 3000);
+    addToast(`${type}`, 'error');
     if (newViolations >= restrictions.maxViolations) handleLockTest(newViolations); // Removed !isLocked check
   };
 
@@ -511,8 +516,7 @@ export default function LevelChallenge() {
 
   const handleLockTest = async (violationCount) => {
     // No longer setting isLocked = true or showing 'Test Locked' banner
-    setViolationMessage("Security limit reached. Please maintain academic integrity.");
-    setShowViolationToast(true);
+    addToast("Security limit reached. Please maintain academic integrity.", 'warning');
     const capturedAnswers = { ...userAnswers };
     if (challenge) {
       capturedAnswers[challenge.id] = { html: code.html, css: code.css, js: code.js, additionalFiles: code.additionalFiles };
@@ -538,7 +542,7 @@ export default function LevelChallenge() {
             setIsLocked(false);
             handleFinishTest({ reason: "admin_forced" });
           } else if (res.data.unlockAction === 'continue') {
-            setIsLocked(false); setViolations(0); setShowViolationToast(false);
+            setIsLocked(false); setViolations(0);
           }
         }
       } catch (e) { }
@@ -624,7 +628,7 @@ export default function LevelChallenge() {
   const handleSubmit = async () => {
     setSubmitting(true);
     if ((!code.html || !code.html.trim()) && (!code.js || !code.js.trim())) {
-      alert("Please write some code."); setSubmitting(false); return;
+      addToast("Please write some code.", "error"); setSubmitting(false); return;
     }
     setUserAnswers(prev => ({ ...prev, [challenge.id]: { ...prev[challenge.id], html: code.html, css: code.css, js: code.js, submitted: true, result: { status: 'saved' } } }));
     setSubmitting(false);
@@ -802,7 +806,7 @@ export default function LevelChallenge() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {showViolationToast && <div className="fixed top-4 right-4 z-50 bg-red-500 text-white px-4 py-2 rounded-lg flex items-center gap-2"><AlertTriangle /> <span>{violationMessage}</span></div>}
+      <ToastContainer toasts={toasts} removeToast={removeToast} />
       <header className="bg-white border-b sticky top-0 z-20 px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <button
@@ -896,9 +900,13 @@ export default function LevelChallenge() {
                       <h3 className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-2">Asset Paths</h3>
                       <div className="bg-slate-50 rounded-md p-3 border border-slate-200">
                         <p className="text-[10px] text-slate-500 mb-2">To use images or assets in your code, use these paths:</p>
-                        {assetList.map((path, idx) => (
-                          <code key={idx} className="block font-mono text-xs bg-white px-2 py-1 rounded border text-indigo-600 mb-1 break-all select-all cursor-pointer hover:bg-slate-50" title="Click to copy" onClick={() => navigator.clipboard.writeText(path)}>{path}</code>
-                        ))}
+                        {assetList.map((assetItem, idx) => {
+                          const pathStr = typeof assetItem === 'string' ? assetItem : (assetItem?.path || '');
+                          if (!pathStr) return null;
+                          return (
+                            <code key={idx} className="block font-mono text-xs bg-white px-2 py-1 rounded border text-indigo-600 mb-1 break-all select-all cursor-pointer hover:bg-slate-50" title="Click to copy" onClick={() => navigator.clipboard.writeText(pathStr)}>{pathStr}</code>
+                          );
+                        })}
                       </div>
                     </div>
                   );

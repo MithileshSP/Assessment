@@ -132,25 +132,7 @@ const AdminBulkCompletion = () => {
                                         ))}
                                     </select>
                                 </div>
-                                <div>
-                                    <label className="block text-xs font-black text-slate-500 uppercase tracking-widest mb-3 px-1">Unlock Milestone (Level)</label>
-                                    <div className="relative">
-                                        <input
-                                            type="number"
-                                            min="1"
-                                            value={level}
-                                            onChange={(e) => setLevel(e.target.value)}
-                                            className="w-full bg-white border-2 border-slate-100 rounded-2xl px-6 py-5 text-2xl font-black text-indigo-600 focus:ring-8 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all outline-none shadow-sm"
-                                        />
-                                        <div className="absolute right-6 top-1/2 -translate-y-1/2 text-slate-300 font-black text-sm uppercase tracking-widest pointer-events-none">
-                                            Milestone
-                                        </div>
-                                    </div>
-                                    <p className="text-sm text-slate-400 mt-3 font-bold italic px-1 flex items-center gap-2">
-                                        <AlertCircle size={14} />
-                                        All students in the list below will be marked as having completed this level.
-                                    </p>
-                                </div>
+
                             </div>
                         </section>
 
