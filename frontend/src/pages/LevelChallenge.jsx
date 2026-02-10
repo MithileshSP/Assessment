@@ -880,11 +880,11 @@ export default function LevelChallenge() {
                 </button>
               </div>
               <div className="flex-1 p-4 overflow-y-auto leading-relaxed scroll-smooth">
-                <div className="question-desc text-slate-700 text-sm font-medium mb-4 break-words">{challenge.description}</div>
+                <div className="question-desc text-slate-700 text-base font-medium mb-4 break-words whitespace-pre-wrap leading-relaxed">{challenge.description}</div>
                 {challenge.instructions && (
                   <div className="mt-4 pt-4 border-t border-slate-100">
                     <h3 className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-2">Technical Guidance</h3>
-                    <div className="text-xs text-slate-500 italic space-y-2">{challenge.instructions}</div>
+                    <div className="text-sm text-slate-500 italic space-y-2 whitespace-pre-wrap leading-relaxed">{challenge.instructions}</div>
                   </div>
                 )}
                 {/* Asset Path Helper */}

@@ -1,6 +1,6 @@
 services:
   portal_mysql:
-    image: gokulv456/assessment-mysql:v3.4.3
+    image: gokulv456/assessment-mysql:v3.4.10
     build:
       context: ./mysql-init
       dockerfile: Dockerfile
@@ -19,7 +19,7 @@ services:
       - test-portal-network
 
   backend:
-    image: gokulv456/assessment-backend:v3.4.3
+    image: gokulv456/assessment-backend:v3.4.10
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -51,7 +51,7 @@ services:
       - test-portal-network
 
   frontend:
-    image: gokulv456/assessment-frontend:v3.4.3
+    image: gokulv456/assessment-frontend:v3.4.10
     build:
       context: ./frontend
       dockerfile: Dockerfile
