@@ -4,7 +4,7 @@ import App from "./App.jsx";
 import "./styles/index.css";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 
-console.log('DEPLOYMENT VERSION:\n v3.4.10 - Bulk Unlock & CSV Features');
+console.log("%c DEPLOYMENT VERSION: v3.4.22 (Stable) ", "background: #1e293b; color: #3b82f6; font-weight: bold; border-left: 4px solid #3b82f6;");
 
 const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 

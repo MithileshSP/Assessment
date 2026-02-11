@@ -41,19 +41,68 @@ export default function UserManagement() {
     role: 'student'
   });
 
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 50,
+    total: 0,
+    totalPages: 1
+  });
+
   useEffect(() => {
     loadUsers();
-  }, []);
+  }, [pagination.page, roleFilter, search]); // Reload when page, role, or search changes
+
+  // Debounce search to avoid too many requests
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setPagination(prev => ({ ...prev, page: 1 })); // Reset to page 1 on search change
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  useEffect(() => {
+    setPagination(prev => ({ ...prev, page: 1 })); // Reset to page 1 on role change
+  }, [roleFilter]);
 
   const loadUsers = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/users');
-      setUsers(response.data);
+      const response = await api.get('/users', {
+        params: {
+          page: pagination.page,
+          limit: pagination.limit,
+          search: search,
+          role: roleFilter
+        }
+      });
+
+      // Handle both old array format (fallback) and new paginated format
+      if (Array.isArray(response.data)) {
+        setUsers(response.data);
+        // Manually paginate if backend returns full array (backward compatibility)
+        setPagination(prev => ({
+          ...prev,
+          total: response.data.length,
+          totalPages: 1
+        }));
+      } else {
+        setUsers(response.data.users);
+        setPagination(prev => ({
+          ...prev,
+          total: response.data.pagination.total,
+          totalPages: response.data.pagination.totalPages
+        }));
+      }
     } catch (error) {
       console.error('Failed to load users:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handlePageChange = (newPage) => {
+    if (newPage >= 1 && newPage <= pagination.totalPages) {
+      setPagination(prev => ({ ...prev, page: newPage }));
     }
   };
 
@@ -118,16 +167,9 @@ export default function UserManagement() {
     }
   };
 
-  const filteredUsers = users.filter(u => {
-    const matchesSearch = u.username?.toLowerCase().includes(search.toLowerCase()) ||
-      u.fullName?.toLowerCase().includes(search.toLowerCase()) ||
-      u.email?.toLowerCase().includes(search.toLowerCase()) ||
-      u.rollNo?.toLowerCase().includes(search.toLowerCase());
-
-    const matchesRole = roleFilter === 'all' || u.role === roleFilter;
-
-    return matchesSearch && matchesRole;
-  });
+  // Client-side filtering removed as backend now handles it
+  // const filteredUsers = ... (logic moved to backend)
+  const displayUsers = users; // Users are already filtered from backend
 
   const getRoleIcon = (role) => {
     switch (role) {
@@ -205,7 +247,7 @@ export default function UserManagement() {
             <div>
               <p className="text-[10px] font-black opacity-70 uppercase tracking-[0.2em] text-left">Active Base</p>
               <p className="text-3xl font-black text-left mt-1">
-                {roleFilter === 'all' ? users.length : filteredUsers.length}
+                {pagination.total}
                 <span className="text-xs ml-1 opacity-50 font-medium">Results</span>
               </p>
             </div>
@@ -232,10 +274,10 @@ export default function UserManagement() {
               <tbody className="divide-y divide-slate-50">
                 {loading ? (
                   <tr><td colSpan="6" className="p-20 text-center text-slate-400">Loading user records...</td></tr>
-                ) : filteredUsers.length === 0 ? (
+                ) : displayUsers.length === 0 ? (
                   <tr><td colSpan="6" className="p-20 text-center text-slate-400">No users match your criteria.</td></tr>
                 ) : (
-                  filteredUsers.map((user) => (
+                  displayUsers.map((user) => (
                     <tr key={user.id} className="hover:bg-slate-50/50 transition-colors group">
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
@@ -313,6 +355,29 @@ export default function UserManagement() {
                 )}
               </tbody>
             </table>
+          </div>
+
+          {/* Pagination Controls */}
+          <div className="flex items-center justify-between px-6 py-4 border-t border-slate-100 bg-slate-50/50">
+            <div className="text-xs text-slate-500 font-medium">
+              Showing page <span className="font-bold text-slate-700">{pagination.page}</span> of <span className="font-bold text-slate-700">{pagination.totalPages}</span>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => handlePageChange(pagination.page - 1)}
+                disabled={pagination.page === 1}
+                className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-600 disabled:opacity-50 hover:bg-slate-50 transition-colors shadow-sm"
+              >
+                Previous
+              </button>
+              <button
+                onClick={() => handlePageChange(pagination.page + 1)}
+                disabled={pagination.page === pagination.totalPages}
+                className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-600 disabled:opacity-50 hover:bg-slate-50 transition-colors shadow-sm"
+              >
+                Next
+              </button>
+            </div>
           </div>
         </div>
 

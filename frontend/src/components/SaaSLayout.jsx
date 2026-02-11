@@ -21,7 +21,8 @@ import {
     Shield,
     Activity,
     Image as ImageIcon,
-    Database
+    Database,
+    AlertTriangle
 } from 'lucide-react';
 import { clearAdminSession, getUserRole } from '../utils/session';
 
@@ -96,6 +97,7 @@ const SaaSLayout = ({ children, fullWidth = false }) => {
             { id: 'tracker', label: 'Evaluation Tracker', icon: <Activity size={20} />, path: '/admin/evaluation-tracker' },
             { id: 'assets', label: 'Assets', icon: <ImageIcon size={20} />, path: '/admin/assets' },
             { id: 'bulk-completion', label: 'Bulk Unlock', icon: <Database size={20} />, path: '/admin/bulk-completion' },
+            { id: 'violations', label: 'Violations', icon: <AlertTriangle size={20} />, path: '/admin/violations' },
         ],
         faculty: [
             { id: 'dashboard', label: 'Dashboard', icon: <Layout size={20} />, path: '/faculty/dashboard' },
@@ -209,7 +211,7 @@ const SaaSLayout = ({ children, fullWidth = false }) => {
 
                         <div className="hidden lg:flex flex-col">
                             <div className="flex items-center gap-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1.5">
-                                <span className="hover:text-primary-600 transition-colors cursor-default underline decoration-indigo-500/30 underline-offset-4">{role} system v3.4.3 - LATEST</span>
+                                <span className="hover:text-primary-600 transition-colors cursor-default underline decoration-indigo-500/30 underline-offset-4">{role} system v3.4.22 - LATEST</span>
                                 <ChevronRight size={10} className="text-slate-300" />
                                 <span className={`${theme.text} font-black`}>{location.pathname.split('/').filter(Boolean).pop()?.replace('-', ' ') || 'Home'}</span>
                             </div>

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { AlertTriangle, Clock, CheckCircle, ArrowLeft, ChevronLeft, ChevronRight, RefreshCw, Check, Layout, Star, ChevronUp, ChevronDown, Eye, Maximize2, X } from "lucide-react";
+import { AlertTriangle, Clock, CheckCircle, ArrowLeft, ChevronLeft, ChevronRight, RefreshCw, Check, Layout, Star, ChevronUp, ChevronDown, Eye, Maximize2, X, Shield } from "lucide-react";
 import ToastContainer from "../components/Toast";
 import MultiFileEditor from "../components/MultiFileEditor";
 import TerminalPanel from "../components/TerminalPanel";
@@ -87,6 +87,13 @@ export default function LevelChallenge() {
   // Preview History State
   const [previewHistory, setPreviewHistory] = useState({ canGoBack: false, canGoForward: false, currentFile: 'index.html' });
   const [fullPreviewHistory, setFullPreviewHistory] = useState({ canGoBack: false, canGoForward: false, currentFile: 'index.html' });
+  const [securityAck, setSecurityChecks] = useState({ 0: false, 1: false, 2: false, 3: false, 4: false });
+
+  const allChecksPassed = Object.values(securityAck).every(Boolean);
+
+  const toggleCheck = (index) => {
+    setSecurityChecks(prev => ({ ...prev, [index]: !prev[index] }));
+  };
 
   const startResizing = (e) => {
     setIsResizing(true);
@@ -192,6 +199,7 @@ export default function LevelChallenge() {
         return;
       }
 
+      /*
       if (isUsed) {
         try {
           const submissionsRes = await api.get('/submissions/user-level', {
@@ -213,6 +221,7 @@ export default function LevelChallenge() {
         setLoading(false);
         return;
       }
+      */
 
       setAttendanceStatus(status);
       if (res.data.studentDetails) {
@@ -509,14 +518,14 @@ export default function LevelChallenge() {
     const newViolations = violations + 1;
     setViolations(newViolations);
     addToast(`${type}`, 'error');
-    if (newViolations >= restrictions.maxViolations) handleLockTest(newViolations); // Removed !isLocked check
+    if (newViolations >= restrictions.maxViolations && !isLocked) handleLockTest(newViolations);
   };
 
   const unlockPollRef = useRef(null);
 
   const handleLockTest = async (violationCount) => {
-    // No longer setting isLocked = true or showing 'Test Locked' banner
-    addToast("Security limit reached. Please maintain academic integrity.", 'warning');
+    setIsLocked(true);
+    addToast("Maximum violations reached. Test locked.", 'error');
     const capturedAnswers = { ...userAnswers };
     if (challenge) {
       capturedAnswers[challenge.id] = { html: code.html, css: code.css, js: code.js, additionalFiles: code.additionalFiles };
@@ -710,86 +719,130 @@ export default function LevelChallenge() {
 
   if (attendanceStatus !== 'started') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6">
-        <div className="bg-white p-10 rounded-xl shadow-xl text-center max-w-4xl w-full border border-slate-200 relative overflow-hidden">
-          <div className="w-16 h-16 bg-slate-50 text-slate-900 rounded-lg flex items-center justify-center mx-auto mb-8 border border-slate-100 transition-all hover:bg-slate-100">
-            <Layout size={32} />
+      <div className="bg-[#f5f6f8] min-h-screen flex items-center justify-center p-4 font-display">
+        <div className="max-w-[960px] w-full bg-white border border-[#e5e7eb] rounded-[6px] p-10 shadow-sm">
+
+          {/* Header */}
+          <div className="flex flex-col items-center text-center mb-12">
+            <div className="w-12 h-12 flex items-center justify-center border border-[#e5e7eb] rounded-[6px] mb-6 bg-white">
+              <Shield className="text-slate-700" size={24} />
+            </div>
+            <h1 className="text-2xl font-bold text-slate-900 mb-2 tracking-tight">Assessment Security Checkpoint</h1>
+            <p className="text-slate-500 text-sm max-w-md mx-auto">Please confirm your identity and agree to the assessment guidelines before proceeding.</p>
           </div>
-          {attendanceStatus === 'blocked' ? (
-            <div className="text-center">
-              <h2 className="text-2xl font-bold text-slate-900 mb-2 tracking-tight">Access Restricted</h2>
-              <p className="text-slate-500 mb-8">Access is gated. Please wait for instructor authorization.</p>
-              <button onClick={() => navigate("/")} className="w-full py-3 bg-slate-900 text-white rounded-lg font-bold flex items-center justify-center gap-2">
-                <ArrowLeft size={16} /> Return to Dashboard
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+
+            {/* Left Column: Candidate Info */}
+            <div className="space-y-8">
+              <div>
+                <span className="text-[10px] font-bold tracking-[0.15em] text-slate-400 uppercase block mb-4">Candidate Information</span>
+                <div className="border border-[#e5e7eb] rounded-[6px] p-6 space-y-5 bg-white">
+                  <div className="space-y-1">
+                    <span className="text-[10px] font-semibold text-slate-400 uppercase">Fullname</span>
+                    <p className="text-lg font-bold text-slate-900 leading-none">
+                      {studentInfo?.fullName || localStorage.getItem('fullName') || 'Unknown Candidate'}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-[10px] font-semibold text-slate-400 uppercase">Roll Number</span>
+                    <p className="text-lg font-bold text-slate-900 leading-none tracking-tight">
+                      {studentInfo?.rollNo || 'N/A'}
+                    </p>
+                  </div>
+                  <div className="pt-2">
+                    <span className="text-[10px] font-semibold text-slate-400 uppercase block mb-2">Authorized Course</span>
+                    <span className="inline-block px-3 py-1.5 border border-[#e5e7eb] text-xs font-semibold text-slate-700 rounded-[6px] bg-slate-50">
+                      {studentInfo?.courseTitle || 'Technical Assessment'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <button onClick={() => navigate("/")} className="inline-flex items-center text-sm font-medium text-slate-500 hover:text-slate-900 transition-colors">
+                <ArrowLeft size={18} className="mr-2" />
+                Back to Dashboard
               </button>
             </div>
-          ) : (
-            <>
-              <h2 className="text-2xl font-bold text-slate-900 mb-1 tracking-tight">Security Checkpoint</h2>
-              <p className="text-slate-500 text-xs font-medium mb-10">Verification successful. Please review the security protocols below.</p>
-              {(attendanceStatus === 'approved' || attendanceStatus === 'none' || localStorage.getItem('userRole') === 'admin') && (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 text-left">
-                  <div className="space-y-6">
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Candidate Information</p>
-                    <div className="bg-slate-50 border border-slate-200 rounded-lg p-6 grid grid-cols-2 gap-y-8 backdrop-blur-sm">
-                      <div><p className="text-[9px] font-bold text-slate-400 uppercase">FullName</p><p className="text-base font-bold text-slate-900">{studentInfo?.fullName || localStorage.getItem('fullName') || 'Unknown'}</p></div>
-                      <div className="text-right"><p className="text-[9px] font-bold text-slate-400 uppercase">Roll Number</p><p className="text-base font-bold text-slate-900">{studentInfo?.rollNo || 'N/A'}</p></div>
-                      <div><p className="text-[9px] font-bold text-slate-400 uppercase">Authorized Course</p><p className="text-xs font-bold text-indigo-600 truncate">{studentInfo?.courseTitle || 'Technical Assessment'}</p></div>
-                    </div>
-                    <button onClick={() => navigate("/")} className="w-full py-3 bg-white border text-slate-500 rounded-lg font-bold text-xs flex items-center justify-center gap-2 hover:bg-slate-50 transition-colors">
-                      <ArrowLeft size={14} /> Back to Dashboard
+
+            {/* Right Column: Instructions & Actions */}
+            <div className="flex flex-col">
+              <div className="flex-grow">
+                <span className="text-[10px] font-bold tracking-[0.15em] text-slate-400 uppercase block mb-4">Assessment Instructions</span>
+
+                {/* Status Messages for non-actionable states */}
+                {attendanceStatus === 'blocked' && (
+                  <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-sm mb-4">
+                    <strong>Access Restricted:</strong> Please wait for instructor authorization.
+                  </div>
+                )}
+                {attendanceStatus === 'used' && (
+                  <div className="p-4 bg-slate-100 border border-slate-200 rounded-lg text-slate-600 text-sm mb-4">
+                    <strong>Attempt Exhausted:</strong> You have already submitted this assessment.
+                  </div>
+                )}
+                {attendanceStatus === 'cleared' && (
+                  <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-700 text-sm mb-4">
+                    <strong>Level Cleared:</strong> You have successfully passed this level!
+                  </div>
+                )}
+
+                {/* Checklist (Only show if approved/admin/started possibilities) */}
+                {(attendanceStatus === 'approved' || attendanceStatus === 'none' || localStorage.getItem('userRole') === 'admin') && (
+                  <div className="space-y-4 mb-8">
+                    {[
+                      "I will not open developer tools",
+                      "I will not switch tabs during the assessment",
+                      "I will not copy or paste content",
+                      "I understand the test auto-submits on violation",
+                      "I agree to follow all integrity rules"
+                    ].map((label, idx) => (
+                      <label key={idx} className="flex items-start gap-3 cursor-pointer group">
+                        <input
+                          type="checkbox"
+                          checked={securityAck[idx]}
+                          onChange={() => toggleCheck(idx)}
+                          className="mt-0.5 w-4 h-4 border-[#e5e7eb] rounded-[4px] text-slate-900 focus:ring-0 focus:ring-offset-0 transition-colors cursor-pointer"
+                        />
+                        <span className="text-sm text-slate-600 group-hover:text-slate-900 transition-colors select-none">
+                          {label}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Action Button */}
+              <div className="pt-6 border-t border-[#e5e7eb]">
+                {(attendanceStatus === 'approved' || attendanceStatus === 'none' || localStorage.getItem('userRole') === 'admin') ? (
+                  <>
+                    <button
+                      onClick={startTest}
+                      disabled={!allChecksPassed}
+                      className={`w-full py-3 px-8 rounded-[6px] flex items-center justify-center gap-2 transition-all font-semibold ${allChecksPassed
+                          ? "bg-slate-900 text-white hover:bg-slate-800 shadow-md transform active:scale-[0.98]"
+                          : "bg-[#d1d5db] text-white cursor-not-allowed"
+                        }`}
+                    >
+                      Start Assessment
+                      <ArrowLeft className="rotate-180" size={18} />
                     </button>
-                  </div>
-                  <div className="space-y-6 flex flex-col">
-                    <div className="bg-slate-900 rounded-lg p-8 text-white flex-1 shadow-lg">
-                      <p className="text-[10px] font-bold uppercase tracking-wider mb-6 text-slate-400">Security Protocols</p>
-                      <ul className="space-y-5">
-                        {[
-                          { label: "No tab switching", active: restrictions.forceFullscreen },
-                          { label: "No DevTools", active: true },
-                          { label: "No Copy/Paste", active: restrictions.blockCopy || restrictions.blockPaste },
-                          { label: "Auto-sync active", active: true }
-                        ].map((t, i) => (
-                          <li key={i} className={`flex items-start gap-4 text-[13px] font-medium ${t.active ? 'text-slate-300' : 'text-slate-600 line-through opacity-50'}`}>
-                            <span className={`w-1.5 h-1.5 rounded-full mt-2 ${t.active ? 'bg-blue-500 shadow-[0_0_10px_#3b82f6]' : 'bg-slate-700'}`} /> {t.label}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                    <button onClick={startTest} className="w-full py-4 bg-slate-900 text-white rounded-lg font-bold text-lg hover:bg-slate-800 shadow-md flex items-center justify-center gap-3 group transition-all">
-                      Initialize Assessment <ArrowLeft className="rotate-180 group-hover:translate-x-1 transition-transform" size={20} />
-                    </button>
-                  </div>
-                </div>
-              )}
-              {attendanceStatus === 'used' && (
-                <div className="text-center p-10 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-200 w-full">
-                  <h3 className="text-xl font-bold text-slate-900 mb-2">Attempt Exhausted</h3>
-                  <p className="text-slate-500 mb-6 font-medium text-sm">You have already submitted your response for this level.</p>
-                  <button onClick={() => navigate("/")} className="px-6 py-2 bg-slate-900 text-white rounded-lg font-bold text-xs uppercase">Back to Path</button>
-                </div>
-              )}
-              {attendanceStatus === 'cleared' && (
-                <div className="text-center p-10 bg-emerald-50 rounded-2xl border-2 border-dashed border-emerald-200 w-full animate-fade-in">
-                  <div className="w-16 h-16 bg-emerald-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg shadow-emerald-200">
-                    <CheckCircle size={32} className="text-white" />
-                  </div>
-                  <h3 className="text-2xl font-bold text-emerald-900 mb-2 tracking-tight">Level Cleared!</h3>
-                  <p className="text-emerald-700/70 mb-8 font-medium text-sm max-w-sm mx-auto">This level has been officially evaluated and passed. Re-attempts are disabled for completed work.</p>
-                  <button onClick={() => navigate("/")} className="px-8 py-3 bg-emerald-600 text-white rounded-xl font-bold text-xs uppercase shadow-xl shadow-emerald-200 hover:bg-emerald-700 transition-all active:scale-95">
+                    {!allChecksPassed && (
+                      <p className="text-[10px] text-center text-slate-400 mt-3 italic">Button enables after checking all instructions</p>
+                    )}
+                  </>
+                ) : (
+                  <button
+                    onClick={() => navigate("/")}
+                    className="w-full py-3 px-8 bg-white border border-slate-200 text-slate-700 rounded-[6px] font-semibold hover:bg-slate-50 transition-colors"
+                  >
                     Return to Dashboard
                   </button>
-                </div>
-              )}
-              {attendanceStatus === 'pending_evaluation' && (
-                <div className="text-center p-10 bg-blue-50 rounded-2xl border-2 border-dashed border-blue-200 w-full">
-                  <h3 className="text-xl font-bold text-blue-900 mb-2">Evaluating Results</h3>
-                  <p className="text-blue-700/70 mb-6 font-medium text-sm">Your submission is currently being reviewed by an instructor. Please wait.</p>
-                  <button onClick={() => navigate("/")} className="px-6 py-2 bg-blue-600 text-white rounded-lg font-bold text-xs uppercase shadow-lg shadow-blue-200">Return to Grid</button>
-                </div>
-              )}
-            </>
-          )}
+                )}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -821,7 +874,7 @@ export default function LevelChallenge() {
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-lg font-bold text-slate-900">{challenge.title}</h1>
-              <span className="px-1.5 py-0.5 bg-slate-100 text-slate-400 text-[9px] font-mono rounded border underline decoration-slate-300">BUILD: v3.4.9</span>
+              <span className="px-1.5 py-0.5 bg-slate-100 text-slate-400 text-[9px] font-mono rounded border underline decoration-slate-300">BUILD: v3.4.16-stable</span>
             </div>
             <p className="text-xs text-slate-500 font-medium">Level {level} • Question {currentQuestionIndex + 1} / {assignedQuestions.length}</p>
           </div>
@@ -976,6 +1029,7 @@ export default function LevelChallenge() {
                   isNodeJS={challenge?.challengeType === 'nodejs'}
                   onConsoleLog={setConsoleOutput}
                   onHistoryChange={setPreviewHistory}
+                  stdin={stdin}
                 />
               </div>
 
@@ -1019,6 +1073,61 @@ export default function LevelChallenge() {
           {result && localStorage.getItem('userRole') === 'admin' && <div className="h-48 overflow-auto border rounded-md p-4 bg-white shadow-inner"><ResultsPanel result={result} /></div>}
         </div>
       </main>
+
+      {/* Violation Locking Overlay */}
+      {isLocked && (
+        <div className="fixed inset-0 z-[100] bg-slate-900/95 backdrop-blur-xl flex items-center justify-center p-6 text-center">
+          <div className="max-w-md w-full bg-white rounded-[2.5rem] p-12 shadow-2xl border border-slate-100 animate-in fade-in zoom-in duration-300">
+            <div className="w-24 h-24 bg-rose-50 rounded-[2rem] flex items-center justify-center mx-auto mb-10 border border-rose-100">
+              <Shield size={48} className="text-rose-600 animate-pulse" />
+            </div>
+            <h2 className="text-3xl font-black text-slate-900 mb-4 tracking-tight">Security Lockdown</h2>
+            <p className="text-slate-500 font-bold mb-10 leading-relaxed text-lg">
+              Maximum security violations reached. Your session has been frozen for review.
+            </p>
+            <div className="bg-slate-50 rounded-2xl p-6 border border-slate-100 flex flex-col gap-4 text-left mb-10">
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] font-black uppercase text-slate-400">Status</span>
+                <span className="text-[10px] font-black uppercase text-rose-600 px-2 py-1 bg-rose-50 rounded-lg">Frozen</span>
+              </div>
+              <div className="h-px bg-slate-200/60" />
+              <p className="text-xs text-slate-500 font-medium">Please inform the instructor or supervisor to authorize a session resume or final submission.</p>
+            </div>
+            <div className="flex items-center justify-center gap-3">
+              <div className="w-2 h-2 rounded-full bg-slate-200 animate-bounce" />
+              <div className="w-2 h-2 rounded-full bg-slate-200 animate-bounce [animation-delay:0.2s]" />
+              <div className="w-2 h-2 rounded-full bg-slate-200 animate-bounce [animation-delay:0.4s]" />
+            </div>
+            <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] mt-8 italic">Monitoring authorization node...</p>
+          </div>
+        </div>
+      )}
+
+      {/* Fullscreen Required Overlay */}
+      {restrictions.forceFullscreen && !document.fullscreenElement && !isLocked && attendanceStatus === 'started' && (
+        <div className="fixed inset-0 z-[90] bg-slate-900/40 backdrop-blur-md flex items-center justify-center p-6">
+          <div className="max-w-md w-full bg-white rounded-[2rem] p-10 shadow-2xl border border-slate-100 text-center animate-in fade-in zoom-in duration-300">
+            <div className="w-20 h-20 bg-indigo-50 rounded-2xl flex items-center justify-center mx-auto mb-8">
+              <Maximize2 size={36} className="text-indigo-600" />
+            </div>
+            <h2 className="text-2xl font-black text-slate-900 mb-3 tracking-tight">Full-Screen Required</h2>
+            <p className="text-slate-500 font-bold mb-10 px-4">
+              To proceed with the assessment, you must enter full-screen mode and maintain focus.
+            </p>
+            <button
+              onClick={() => {
+                document.documentElement.requestFullscreen?.().catch((err) => {
+                  addToast("Browser blocked fullscreen request. Please click anywhere and try again.", "error");
+                });
+              }}
+              className="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl shadow-indigo-200 hover:bg-indigo-700 hover:-translate-y-1 active:translate-y-0 transition-all flex items-center justify-center gap-3"
+            >
+              Resume in Fullscreen <ArrowLeft className="rotate-180" size={18} />
+            </button>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mt-8">Exiting fullscreen will trigger a violation record.</p>
+          </div>
+        </div>
+      )}
 
       {/* Full Screen Preview Modal */}
       {fullScreenView && (
@@ -1068,6 +1177,7 @@ export default function LevelChallenge() {
                 onConsoleLog={setConsoleOutput}
                 isRestricted={restrictions.blockCopy}
                 onHistoryChange={setFullPreviewHistory}
+                stdin={stdin}
               />
             ) : (
               <div className="w-full h-full p-4 overflow-auto flex items-center justify-center bg-slate-100/30">

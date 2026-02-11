@@ -24,6 +24,7 @@ export default function AdminLevelReset() {
     const [selectedCourse, setSelectedCourse] = useState(null);
     const [selectedLevel, setSelectedLevel] = useState(1);
     const [loading, setLoading] = useState(true);
+    const [searching, setSearching] = useState(false);
     const [resetting, setResetting] = useState(false);
     const [message, setMessage] = useState(null);
 
@@ -35,10 +36,10 @@ export default function AdminLevelReset() {
         try {
             setLoading(true);
             const [usersRes, coursesRes] = await Promise.all([
-                api.default.get('/users'),
+                api.default.get('/users', { params: { limit: 100 } }),
                 api.getCourses()
             ]);
-            setUsers(usersRes.data || []);
+            setUsers(usersRes.data.users || []);
             setCourses(coursesRes.data || []);
         } catch (error) {
             console.error('Failed to load data:', error);
@@ -48,7 +49,28 @@ export default function AdminLevelReset() {
         }
     };
 
-    const filteredUsers = users.filter(u =>
+    // Server-side search for users
+    useEffect(() => {
+        if (!searchTerm) return;
+
+        const delayDebounceFn = setTimeout(async () => {
+            try {
+                setSearching(true);
+                const res = await api.default.get('/users', {
+                    params: { search: searchTerm, limit: 10 }
+                });
+                setUsers(res.data.users || []);
+            } catch (err) {
+                console.error('Search failed:', err);
+            } finally {
+                setSearching(false);
+            }
+        }, 300);
+
+        return () => clearTimeout(delayDebounceFn);
+    }, [searchTerm]);
+
+    const currentUsers = users.filter(u =>
         u.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         u.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         u.email?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -113,8 +135,8 @@ export default function AdminLevelReset() {
                 {/* Message Alert */}
                 {message && (
                     <div className={`p-4 rounded-2xl flex items-center gap-3 ${message.type === 'success'
-                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                            : 'bg-rose-50 text-rose-700 border border-rose-200'
+                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                        : 'bg-rose-50 text-rose-700 border border-rose-200'
                         }`}>
                         {message.type === 'success' ? <CheckCircle size={20} /> : <AlertTriangle size={20} />}
                         <span className="font-medium text-sm">{message.text}</span>
@@ -146,14 +168,19 @@ export default function AdminLevelReset() {
                             />
                         </div>
 
-                        <div className="max-h-48 overflow-y-auto space-y-2">
-                            {filteredUsers.slice(0, 10).map(user => (
+                        <div className="max-h-48 overflow-y-auto space-y-2 relative">
+                            {searching && (
+                                <div className="absolute inset-0 bg-white/50 backdrop-blur-[1px] flex items-center justify-center z-10">
+                                    <RefreshCw className="animate-spin text-indigo-600" size={20} />
+                                </div>
+                            )}
+                            {currentUsers.slice(0, 10).map(user => (
                                 <button
                                     key={user.id}
                                     onClick={() => setSelectedUser(user)}
                                     className={`w-full p-3 rounded-xl text-left transition-all ${selectedUser?.id === user.id
-                                            ? 'bg-indigo-600 text-white'
-                                            : 'bg-slate-50 hover:bg-slate-100 text-slate-700'
+                                        ? 'bg-indigo-600 text-white'
+                                        : 'bg-slate-50 hover:bg-slate-100 text-slate-700'
                                         }`}
                                 >
                                     <p className="font-bold text-sm truncate">{user.full_name || user.username}</p>
@@ -162,7 +189,7 @@ export default function AdminLevelReset() {
                                     </p>
                                 </button>
                             ))}
-                            {filteredUsers.length === 0 && (
+                            {currentUsers.length === 0 && !searching && (
                                 <p className="text-center text-slate-400 text-sm py-4">No users found</p>
                             )}
                         </div>
@@ -186,8 +213,8 @@ export default function AdminLevelReset() {
                                     key={course.id}
                                     onClick={() => setSelectedCourse(course)}
                                     className={`w-full p-3 rounded-xl text-left transition-all ${selectedCourse?.id === course.id
-                                            ? 'bg-violet-600 text-white'
-                                            : 'bg-slate-50 hover:bg-slate-100 text-slate-700'
+                                        ? 'bg-violet-600 text-white'
+                                        : 'bg-slate-50 hover:bg-slate-100 text-slate-700'
                                         }`}
                                 >
                                     <p className="font-bold text-sm truncate">{course.title}</p>
@@ -218,8 +245,8 @@ export default function AdminLevelReset() {
                                         key={lv}
                                         onClick={() => setSelectedLevel(lv)}
                                         className={`py-3 rounded-xl font-black text-sm transition-all ${selectedLevel === lv
-                                                ? 'bg-amber-500 text-white shadow-lg shadow-amber-200'
-                                                : 'bg-slate-50 hover:bg-slate-100 text-slate-600'
+                                            ? 'bg-amber-500 text-white shadow-lg shadow-amber-200'
+                                            : 'bg-slate-50 hover:bg-slate-100 text-slate-600'
                                             }`}
                                     >
                                         {lv}

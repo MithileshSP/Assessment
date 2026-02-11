@@ -5,7 +5,7 @@ import { Terminal, ChevronDown, ChevronUp, Trash2, Command, Loader2 } from "luci
  * PreviewFrame - Renders student code in a sandboxed iframe
  * Handles both Web (live preview) and Node.js (execution detection)
  */
-const PreviewFrame = forwardRef(({ code, isRestricted = false, onConsoleLog, isNodeJS = false, autoRun = false, onHistoryChange, initialFile }, ref) => {
+const PreviewFrame = forwardRef(({ code, isRestricted = false, onConsoleLog, isNodeJS = false, autoRun = false, onHistoryChange, initialFile, stdin = "" }, ref) => {
   const iframeRef = useRef(null);
   const [logs, setLogs] = useState([]);
   const [isConsoleOpen, setIsConsoleOpen] = useState(false);
@@ -88,10 +88,13 @@ const PreviewFrame = forwardRef(({ code, isRestricted = false, onConsoleLog, isN
     const helperScript = [
       '(function() {',
       '  window.__STUDENT_FILES__ = ' + JSON.stringify(allFiles).replace(/<\/script>/g, '<\\/script>') + ';',
+      '  window.__STDIN__ = ' + JSON.stringify(stdin).replace(/<\/script>/g, '<\\/script>') + ';',
       '  if (window._node_env_setup) return;',
       '  const _vfs = {',
       '    readFileSync: function(p) {',
-      '      const cp = p.startsWith("./") ? p.slice(2) : p;',
+      '      if (p === 0 || p === "0") return window.__STDIN__ || "";',
+      '      const sp = String(p);',
+      '      const cp = sp.startsWith("./") ? sp.slice(2) : sp;',
       '      const res = window.__STUDENT_FILES__[cp];',
       '      if (res === undefined) throw new Error("File not found: " + p);',
       '      return res;',

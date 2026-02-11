@@ -28,6 +28,7 @@ import {
 import { X } from 'lucide-react';
 import SaaSLayout from '../components/SaaSLayout';
 import * as api from '../services/api';
+import apiClient from '../services/api';
 import { getUserRole } from '../utils/session';
 
 const QuestionBank = () => {
@@ -85,6 +86,24 @@ const QuestionBank = () => {
             ...prev,
             [level]: !prev[level]
         }));
+    };
+
+    const handleExportCsv = async () => {
+        try {
+            const response = await apiClient.get(`/challenges/course/${courseId}/export/csv`, {
+                responseType: 'blob'
+            });
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `questions_export_${courseId}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+        } catch (error) {
+            console.error('Failed to export questions:', error);
+            alert('Failed to export questions');
+        }
     };
 
     const handleEdit = (question) => {
@@ -380,7 +399,10 @@ const QuestionBank = () => {
                             </div>
 
                             <div className="pt-4 border-t border-slate-100">
-                                <button className="w-full flex items-center justify-center gap-2 px-4 py-3 border border-slate-200 rounded-2xl text-sm font-bold text-slate-600 hover:bg-slate-50 transition-all">
+                                <button
+                                    onClick={handleExportCsv}
+                                    className="w-full flex items-center justify-center gap-2 px-4 py-3 border border-slate-200 rounded-2xl text-sm font-bold text-slate-600 hover:bg-slate-50 transition-all"
+                                >
                                     <Download size={16} />
                                     Export Full Bank
                                 </button>

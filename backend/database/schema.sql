@@ -229,7 +229,19 @@ CREATE TABLE IF NOT EXISTS level_access (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE,
-    UNIQUE KEY unique_user_level (user_id, course_id, level)
+    FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE
+);
+
+-- Challenge Assignments (Added for tracking active functionality)
+CREATE TABLE IF NOT EXISTS challenge_assignments (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id VARCHAR(100) NOT NULL,
+    course_id VARCHAR(100) NOT NULL,
+    level INT DEFAULT 1,
+    challenge_id VARCHAR(100) NOT NULL,
+    assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    status ENUM('active', 'completed', 'abandoned') DEFAULT 'active',
+    INDEX idx_user_course (user_id, course_id)
 );
 
 -- Activity Logs

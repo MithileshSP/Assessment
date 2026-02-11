@@ -133,6 +133,10 @@ export const resetLevel = (userId, courseId, level) =>
 export const completeLevel = (data) => api.post('/users/complete-level', data);
 export const bulkCompleteLevel = (data) => api.post('/users/bulk-complete', data);
 
+
+export const getViolations = () => api.get('/attendance/violations');
+export const unlockTest = (attendanceId, action) => api.post('/attendance/unlock', { attendanceId, action });
+
 // Code Execution (Node.js)
 api.executeCode = (code, files = {}, language = 'nodejs', stdin = "") =>
   api.post('/execute', { code, files, language, stdin });

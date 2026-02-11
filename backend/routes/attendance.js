@@ -202,6 +202,24 @@ router.get('/requests', verifyAdmin, async (req, res) => {
     }
 });
 
+// Admin: Get all active violations (locked tests)
+router.get('/violations', verifyAdmin, async (req, res) => {
+    try {
+        const rows = await query(`
+            SELECT ta.id, ta.user_id, u.username, u.full_name, u.email, u.roll_no,
+                   ta.test_identifier, ta.locked_at, ta.locked_reason, ta.violation_count
+            FROM test_attendance ta
+            JOIN users u ON ta.user_id = u.id
+            WHERE ta.locked = 1
+            ORDER BY ta.locked_at DESC
+        `);
+        res.json(rows);
+    } catch (err) {
+        console.error('[Violations GET] Error:', err);
+        res.status(500).json({ error: 'Failed to fetch violations' });
+    }
+});
+
 // Lock a student's test (called from frontend on max violations)
 router.post('/lock', verifyToken, async (req, res) => {
     const { courseId, level, reason, violationCount } = req.body;

@@ -10,7 +10,8 @@ import {
     ExternalLink,
     User,
     BookOpen,
-    Calendar
+    Calendar,
+    Trash2
 } from 'lucide-react';
 
 export default function AdminResults() {
@@ -75,6 +76,41 @@ export default function AdminResults() {
         }
     };
 
+    const handleBulkDelete = async () => {
+        if (!fromDate && !toDate) {
+            alert('Please select a date range (From/To) to use bulk delete.');
+            return;
+        }
+
+        const confirmMsg = `Are you sure you want to delete visible results for the selected date range?\n\nDate Range: ${fromDate || 'Beginning'} to ${toDate || 'Now'}\n\nTHIS ACTION CANNOT BE UNDONE.`;
+        if (!window.confirm(confirmMsg)) {
+            return;
+        }
+
+        // Double confirmation for safety
+        if (!window.confirm("Verify: This will permanently remove submissions, scores, and faculty assignments for the selected period. Confirm deletion?")) {
+            return;
+        }
+
+        try {
+            // Build query params
+            const params = new URLSearchParams();
+            if (fromDate) params.append('fromDate', fromDate);
+            if (toDate) params.append('toDate', toDate);
+
+            setLoading(true);
+            const response = await api.delete(`/admin/results/bulk?${params.toString()}`);
+
+            alert(response.data.message || 'Bulk delete completed.');
+            loadResults(); // Refresh table
+        } catch (error) {
+            console.error('Bulk delete failed:', error);
+            alert(error.response?.data?.error || 'Failed to perform bulk delete.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const filteredResults = results.filter(r =>
         r.candidate_name?.toLowerCase().includes(search.toLowerCase()) ||
         r.course_title?.toLowerCase().includes(search.toLowerCase())
@@ -95,6 +131,16 @@ export default function AdminResults() {
                             className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 hover:bg-slate-50 transition-colors shadow-sm"
                         >
                             <Download size={16} /> Export CSV
+                        </button>
+                        <button
+                            onClick={handleBulkDelete}
+                            disabled={!fromDate && !toDate}
+                            className={`flex items-center gap-2 px-4 py-2 border rounded-xl text-sm font-bold transition-colors shadow-sm ${(!fromDate && !toDate)
+                                ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed'
+                                : 'bg-white border-rose-200 text-rose-600 hover:bg-rose-50 hover:border-rose-300'}`}
+                            title={(!fromDate && !toDate) ? "Select a date range to enable" : "Bulk Delete"}
+                        >
+                            <Trash2 size={16} /> Delete
                         </button>
                     </div>
                 </div>

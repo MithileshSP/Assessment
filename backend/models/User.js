@@ -20,13 +20,76 @@ function verifyPassword(password, hash, version = 'bcrypt') {
     const sha256Hash = crypto.createHash('sha256').update(password).digest('hex');
     return sha256Hash === hash;
   }
-  return bcrypt.compareSync(password, hash);
+
+  // Try standard bcrypt (plaintext)
+  if (bcrypt.compareSync(password, hash)) return true;
+
+  // Try legacy double-hash (bcrypt(sha256(password)))
+  const sha256Hash = crypto.createHash('sha256').update(password).digest('hex');
+  if (bcrypt.compareSync(sha256Hash, hash)) return true;
+
+  return false;
 }
 
 class UserModel {
   // Get all users
-  static async findAll() {
-    return await query('SELECT * FROM users ORDER BY created_at DESC');
+  // Get all users with pagination, search, and ordering
+  static async findAll(options = {}) {
+    const { limit, offset, search, role } = options;
+
+    let queryStr = 'SELECT * FROM users';
+    const params = [];
+    const whereClauses = [];
+
+    if (search) {
+      whereClauses.push('(username LIKE ? OR email LIKE ? OR full_name LIKE ? OR roll_no LIKE ?)');
+      const searchParam = `%${search}%`;
+      params.push(searchParam, searchParam, searchParam, searchParam);
+    }
+
+    if (role && role !== 'all') {
+      whereClauses.push('role = ?');
+      params.push(role);
+    }
+
+    if (whereClauses.length > 0) {
+      queryStr += ' WHERE ' + whereClauses.join(' AND ');
+    }
+
+    queryStr += ' ORDER BY created_at DESC';
+
+    if (limit !== undefined && offset !== undefined) {
+      queryStr += ' LIMIT ? OFFSET ?';
+      params.push(parseInt(limit), parseInt(offset));
+    }
+
+    return await query(queryStr, params);
+  }
+
+  // Count users for pagination
+  static async count(options = {}) {
+    const { search, role } = options;
+    let queryStr = 'SELECT COUNT(*) as total FROM users';
+    const params = [];
+    const whereClauses = [];
+
+    if (search) {
+      whereClauses.push('(username LIKE ? OR email LIKE ? OR full_name LIKE ? OR roll_no LIKE ?)');
+      const searchParam = `%${search}%`;
+      params.push(searchParam, searchParam, searchParam, searchParam);
+    }
+
+    if (role && role !== 'all') {
+      whereClauses.push('role = ?');
+      params.push(role);
+    }
+
+    if (whereClauses.length > 0) {
+      queryStr += ' WHERE ' + whereClauses.join(' AND ');
+    }
+
+    const result = await queryOne(queryStr, params);
+    return result.total;
   }
 
   // Get user by ID

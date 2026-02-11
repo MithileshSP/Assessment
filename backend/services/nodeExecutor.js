@@ -80,11 +80,11 @@ class NodeExecutor {
                 stdio: ['pipe', 'pipe', 'pipe']
             });
 
-            // Pipe stdin if provided
-            if (stdin) {
-                child.stdin.write(stdin);
-                child.stdin.end();
+            // Pipe stdin if provided and always end the stream
+            if (stdin !== undefined && stdin !== null) {
+                child.stdin.write(String(stdin));
             }
+            child.stdin.end();
 
             // Set up timeout
             const timer = setTimeout(() => {

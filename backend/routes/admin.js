@@ -175,6 +175,7 @@ router.get('/results', verifyAdmin, async (req, res) => {
             LEFT JOIN manual_evaluations me ON s.id = me.submission_id
             LEFT JOIN users ue ON me.faculty_id = ue.id
             LEFT JOIN courses c ON s.course_id = c.id
+            WHERE s.status != 'saved'
             ORDER BY s.submitted_at DESC
         `;
 
@@ -282,6 +283,66 @@ router.get('/results/export', verifyAdmin, async (req, res) => {
 
   } catch (error) {
     console.error("Error exporting results:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * DELETE /api/admin/results/bulk
+ * Bulk delete submissions by date range
+ */
+router.delete('/results/bulk', verifyAdmin, async (req, res) => {
+  try {
+    const { fromDate, toDate } = req.query;
+
+    if (!fromDate && !toDate) {
+      return res.status(400).json({ error: 'At least one date filter (fromDate or toDate) is required for bulk delete.' });
+    }
+
+    // Build WHERE conditions
+    let whereConditions = [];
+    const queryParams = [];
+
+    if (fromDate) {
+      whereConditions.push('DATE(submitted_at) >= ?');
+      queryParams.push(fromDate);
+    }
+    if (toDate) {
+      whereConditions.push('DATE(submitted_at) <= ?');
+      queryParams.push(toDate);
+    }
+
+    const whereClause = whereConditions.join(' AND ');
+
+    // 1. Get IDs to be deleted
+    const selectQuery = `SELECT id FROM submissions WHERE ${whereClause}`;
+    const submissionsToDelete = await db.query(selectQuery, queryParams);
+
+    if (submissionsToDelete.length === 0) {
+      return res.json({ message: 'No submissions found for the selected date range.', count: 0 });
+    }
+
+    const submissionIds = submissionsToDelete.map(s => s.id);
+
+    // 2. Delete related records
+    // Manual Evaluations
+    await db.query(`DELETE FROM manual_evaluations WHERE submission_id IN (?)`, [submissionIds]);
+
+    // Submission Assignments
+    await db.query(`DELETE FROM submission_assignments WHERE submission_id IN (?)`, [submissionIds]);
+
+    // 3. Delete Submissions
+    await db.query(`DELETE FROM submissions WHERE id IN (?)`, [submissionIds]);
+
+    console.log(`[BulkDelete] Deleted ${submissionIds.length} submissions.`);
+
+    res.json({
+      message: `Successfully deleted ${submissionIds.length} submissions.`,
+      count: submissionIds.length
+    });
+
+  } catch (error) {
+    console.error("Error in bulk delete:", error);
     res.status(500).json({ error: error.message });
   }
 });

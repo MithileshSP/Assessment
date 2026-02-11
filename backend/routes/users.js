@@ -346,20 +346,46 @@ router.post("/logout", verifyToken, async (req, res) => {
 });
 
 // Get all users (Admin only)
+// Get all users (Admin only) - with Pagination
 router.get("/", verifyAdmin, async (req, res) => {
   try {
-    let users;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 50;
+    const search = req.query.search || '';
+    const role = req.query.role || 'all';
+    const offset = (page - 1) * limit;
+
+    let users = [];
+    let total = 0;
 
     // Try database first
     try {
-      users = await UserModel.findAll();
+      users = await UserModel.findAll({ limit, offset, search, role });
+      total = await UserModel.count({ search, role });
     } catch (dbError) {
       console.log(
         "Database error, using JSON file for users:",
         dbError.message
       );
-      // Fallback to JSON file
-      users = loadJSON(usersPath);
+      // Fallback to JSON file (simple client-side like filtering for fallback)
+      const allUsers = loadJSON(usersPath);
+      let filtered = allUsers;
+
+      if (search) {
+        const lowerSearch = search.toLowerCase();
+        filtered = filtered.filter(u =>
+          (u.username && u.username.toLowerCase().includes(lowerSearch)) ||
+          (u.email && u.email.toLowerCase().includes(lowerSearch)) ||
+          (u.full_name && u.full_name.toLowerCase().includes(lowerSearch))
+        );
+      }
+
+      if (role && role !== 'all') {
+        filtered = filtered.filter(u => u.role === role);
+      }
+
+      total = filtered.length;
+      users = filtered.slice(offset, offset + limit);
     }
 
     // Don't send passwords and convert snake_case to camelCase for frontend
@@ -372,7 +398,15 @@ router.get("/", verifyAdmin, async (req, res) => {
       lastLogin: user.lastLogin || user.last_login,
     }));
 
-    res.json(safeUsers);
+    res.json({
+      users: safeUsers,
+      pagination: {
+        total,
+        page,
+        totalPages: Math.ceil(total / limit),
+        limit
+      }
+    });
   } catch (error) {
     console.error("Error fetching users:", error);
     res.status(500).json({ error: "Failed to fetch users" });
@@ -533,7 +567,8 @@ router.post(
                 .toString(36)
                 .substr(2, 9)}`,
               username: derivedUsername,
-              password: row.password ? hashPassword(row.password) : null,
+              // Fix: Pass plaintext password, UserModel.create will handle hashing
+              password: row.password || null,
               email: row.email || null,
               full_name: row.fullName || "",
               roll_no: row.rollNo || null,
@@ -694,7 +729,8 @@ router.put("/:userId", verifyAdmin, async (req, res) => {
     }
 
     if (password) {
-      updates.password = hashPassword(password);
+      // Fix: Pass plaintext password, UserModel.update will handle hashing
+      updates.password = password;
     }
 
     if (email !== undefined) updates.email = email;
@@ -1031,7 +1067,8 @@ router.post("/", verifyAdmin, async (req, res) => {
     const newUser = {
       id: `user-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       username,
-      password: hashPassword(password),
+      // Fix: Pass plaintext password, UserModel.create will handle hashing
+      password: password,
       email: email || "",
       full_name: fullName || "",
       roll_no: rollNo || null,
@@ -1091,15 +1128,45 @@ router.post("/bulk-complete", verifyAdmin, async (req, res) => {
       const cleanIdentifier = identifier.trim();
 
       try {
-        let user;
+        let user = null;
+        // Try DB lookup (standard)
         if (type === 'rollNo') {
-          user = await queryOne("SELECT id, username, email FROM users WHERE roll_no = ?", [cleanIdentifier]);
+          user = await queryOne("SELECT id, username, email, full_name, roll_no, role FROM users WHERE roll_no = ?", [cleanIdentifier]);
         } else {
-          user = await queryOne("SELECT id, username, email FROM users WHERE email = ?", [cleanIdentifier]);
+          user = await queryOne("SELECT id, username, email, full_name, roll_no, role FROM users WHERE email = ?", [cleanIdentifier]);
+        }
+
+        // Fallback to JSON if DB misses
+        if (!user) {
+          const allUsers = loadJSON(usersPath);
+          const lowerId = cleanIdentifier.toLowerCase();
+          const jsonUser = allUsers.find(u =>
+            type === 'rollNo'
+              ? (u.roll_no === cleanIdentifier || u.rollNo === cleanIdentifier)
+              : (u.email && u.email.toLowerCase() === lowerId)
+          );
+
+          if (jsonUser) {
+            console.log(`[Bulk Sync] User ${cleanIdentifier} found in JSON. Syncing to DB...`);
+            // Sync to DB so foreign keys for progress/attendance work
+            try {
+              user = await UserModel.create({
+                ...jsonUser,
+                fullName: jsonUser.fullName || jsonUser.full_name,
+                rollNo: jsonUser.rollNo || jsonUser.roll_no,
+                isBlocked: false // Auto-unblock if being processed bulk
+              });
+            } catch (syncErr) {
+              console.error(`[Bulk Sync] Failed to sync ${cleanIdentifier}:`, syncErr);
+              // If creation fails (e.g. unique constraint on other field), we might have a conflict
+              results.failed.push({ identifier: cleanIdentifier, reason: `DB Sync failed: ${syncErr.message}` });
+              continue;
+            }
+          }
         }
 
         if (!user) {
-          results.failed.push({ identifier: cleanIdentifier, reason: "User not found" });
+          results.failed.push({ identifier: cleanIdentifier, reason: "User not found in system (DB or JSON)" });
           continue;
         }
 
@@ -1149,9 +1216,11 @@ router.post("/bulk-complete", verifyAdmin, async (req, res) => {
           [user.id, courseId, levelInt]
         );
 
-        // 3. Unlock Level Access if it was explicitly locked
+        // 3. Unlock Level Access (Insert if not exists, otherwise update)
         await query(
-          "UPDATE level_access SET is_locked = 0, unlocked_at = NOW() WHERE user_id = ? AND course_id = ? AND level = ?",
+          `INSERT INTO level_access (user_id, course_id, level, is_locked, unlocked_at) 
+           VALUES (?, ?, ?, 0, NOW()) 
+           ON DUPLICATE KEY UPDATE is_locked = 0, unlocked_at = NOW()`,
           [user.id, courseId, nextLevel]
         );
 

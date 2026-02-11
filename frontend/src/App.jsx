@@ -44,6 +44,7 @@ import AdminSchedule from "./pages/AdminSchedule";
 import QuestionEditor from "./pages/QuestionEditor";
 import AdminAnalytics from "./pages/AdminAnalytics";
 import AdminBulkCompletion from "./pages/AdminBulkCompletion";
+import AdminViolations from "./pages/AdminViolations";
 
 // Auth & Components
 import Login from "./pages/Login";
@@ -128,6 +129,7 @@ function App() {
           <Route path="/admin/assets" element={role === 'admin' ? <AdminAssetManager /> : <Navigate to="/admin/login" />} />
           <Route path="/admin/analytics" element={role === 'admin' ? <AdminAnalytics /> : <Navigate to="/admin/login" />} />
           <Route path="/admin/bulk-completion" element={role === 'admin' ? <AdminBulkCompletion /> : <Navigate to="/admin/login" />} />
+          <Route path="/admin/violations" element={role === 'admin' ? <AdminViolations /> : <Navigate to="/admin/login" />} />
 
           {/* Fallback */}
           <Route path="*" element={<Navigate to="/login" />} />
