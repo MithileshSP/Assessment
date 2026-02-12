@@ -320,7 +320,8 @@ const MultiFileEditor = ({
                         tabSize: 2,
                         readOnly: readOnly,
                         domReadOnly: readOnly,
-                        padding: { top: 12 }
+                        padding: { top: 12 },
+                        contextmenu: false // Anti-cheating: Disable editor context menu
                     }}
                 />
             </div>

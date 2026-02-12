@@ -25,7 +25,7 @@ function ToastItem({ toast, removeToast }) {
     useEffect(() => {
         const timer = setTimeout(() => {
             removeToast(toast.id);
-        }, 4000); // Auto dismiss after 4 seconds
+        }, 1500); // Auto dismiss after 1.5 seconds
 
         return () => clearTimeout(timer);
     }, [toast.id, removeToast]);

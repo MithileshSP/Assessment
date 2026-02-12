@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { AlertTriangle, Clock, CheckCircle, ArrowLeft, ChevronLeft, ChevronRight, RefreshCw, Check, Layout, Star, ChevronUp, ChevronDown, Eye, Maximize2, X, Shield } from "lucide-react";
 import ToastContainer from "../components/Toast";
@@ -38,6 +38,12 @@ export default function LevelChallenge() {
   const [metrics, setMetrics] = useState(null);
 
   // Restrictions and Timer State
+  const expectedResultCode = useMemo(() => ({
+    html: challenge?.expectedHtml || "",
+    css: challenge?.expectedCss || "",
+    js: challenge?.expectedJs || ""
+  }), [challenge?.expectedHtml, challenge?.expectedCss, challenge?.expectedJs]);
+
   const [restrictions, setRestrictions] = useState({
     blockCopy: false,
     blockPaste: false,
@@ -460,6 +466,25 @@ export default function LevelChallenge() {
     }
   };
 
+  // Real-time Status Polling: Auto-refresh when waiting for admin action
+  useEffect(() => {
+    let pollInterval;
+    // States where we want to poll for updates (e.g. waiting for approval, unlock)
+    const waitingStates = ['none', 'requested', 'rejected', 'blocked', 'cleared', 'loading', 'pending_evaluation'];
+
+    if (waitingStates.includes(attendanceStatus)) {
+      pollInterval = setInterval(() => {
+        // We call checkAttendance to refresh the status
+        // Note: checkAttendance handles all logic including session updates
+        checkAttendance();
+      }, 3000);
+    }
+
+    return () => {
+      if (pollInterval) clearInterval(pollInterval);
+    };
+  }, [attendanceStatus, courseId, level]); // Re-setup if status changes
+
   useEffect(() => {
     const syncWithServer = async () => {
       if (attendanceStatus === 'approved' || attendanceStatus === 'started') {
@@ -544,14 +569,32 @@ export default function LevelChallenge() {
     unlockPollRef.current = setInterval(async () => {
       try {
         const res = await api.get('/attendance/status', { params: { courseId, level } });
-        if (res.data && res.data.locked === false && res.data.unlockAction) {
+        // console.log('[Lock Poll] Status:', res.data); // DEBUG
+        if (res.data && res.data.locked === false) {
+          // console.log('[Lock Poll] Unlocked. Action:', res.data.unlockAction, 'isUsed:', res.data.isUsed); // DEBUG
           clearInterval(unlockPollRef.current);
           unlockPollRef.current = null;
+
+          // CRITICAL FIX: If action is explicitly 'continue', prioritize it over 'isUsed'
+          // This handles cases where isUsed might be true (e.g., from a previous finish) but admin wants to allow retry.
+          if (res.data.unlockAction === 'continue') {
+            // console.log('[Lock Poll] Continuing test (Override). Resetting violations.'); // DEBUG
+            setIsLocked(false);
+            setViolations(0);
+            setLastViolationTime(Date.now());
+            return;
+          }
+
           if (res.data.unlockAction === 'submit' || res.data.isUsed) {
+            // console.log('[Lock Poll] Finishing test.'); // DEBUG
             setIsLocked(false);
             handleFinishTest({ reason: "admin_forced" });
-          } else if (res.data.unlockAction === 'continue') {
-            setIsLocked(false); setViolations(0);
+          } else {
+            // console.log('[Lock Poll] Continuing test. Resetting violations.'); // DEBUG
+            // Default to continue if unlocked (manual/fallback unlocks)
+            setIsLocked(false);
+            setViolations(0);
+            setLastViolationTime(Date.now());
           }
         }
       } catch (e) { }
@@ -592,6 +635,7 @@ export default function LevelChallenge() {
   };
 
   const handleFinishTest = async ({ reason = "manual", forceSubmissionId = null } = {}) => {
+    // console.log('[handleFinishTest] Called with reason:', reason); // DEBUG
     setFinishingLevel(true);
     let lastSubmissionId = forceSubmissionId;
     if (reason === "timeout") setEvaluationStep("Time expired. Submitting your work...");
@@ -821,8 +865,8 @@ export default function LevelChallenge() {
                       onClick={startTest}
                       disabled={!allChecksPassed}
                       className={`w-full py-3 px-8 rounded-[6px] flex items-center justify-center gap-2 transition-all font-semibold ${allChecksPassed
-                          ? "bg-slate-900 text-white hover:bg-slate-800 shadow-md transform active:scale-[0.98]"
-                          : "bg-[#d1d5db] text-white cursor-not-allowed"
+                        ? "bg-slate-900 text-white hover:bg-slate-800 shadow-md transform active:scale-[0.98]"
+                        : "bg-[#d1d5db] text-white cursor-not-allowed"
                         }`}
                     >
                       Start Assessment
@@ -857,8 +901,18 @@ export default function LevelChallenge() {
     );
   }
 
+
+
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div
+      className="min-h-screen bg-gray-50 select-none"
+      onContextMenu={(e) => {
+        if (attendanceStatus === 'started' && !isLocked) {
+          e.preventDefault();
+        }
+      }}
+    >
       <ToastContainer toasts={toasts} removeToast={removeToast} />
       <header className="bg-white border-b sticky top-0 z-20 px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-4">
@@ -1045,11 +1099,7 @@ export default function LevelChallenge() {
                   ) : (challenge.expectedHtml || challenge.expectedCss || challenge.expectedJs) ? (
                     <PreviewFrame
                       autoRun={true}
-                      code={{
-                        html: challenge.expectedHtml || "",
-                        css: challenge.expectedCss || "",
-                        js: challenge.expectedJs || ""
-                      }}
+                      code={expectedResultCode}
                     />
                   ) : (
                     <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">No expected output</p>

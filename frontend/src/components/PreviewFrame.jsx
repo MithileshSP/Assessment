@@ -1,4 +1,4 @@
-import { useImperativeHandle, forwardRef, useRef, useEffect, useState } from "react";
+import { useImperativeHandle, forwardRef, useRef, useEffect, useState, memo } from "react";
 import { Terminal, ChevronDown, ChevronUp, Trash2, Command, Loader2 } from "lucide-react";
 
 /**
@@ -14,6 +14,9 @@ const PreviewFrame = forwardRef(({ code, isRestricted = false, onConsoleLog, isN
   const [history, setHistory] = useState([initialFile || 'index.html']);
   const [historyIndex, setHistoryIndex] = useState(0);
   const scrollRef = useRef(null);
+
+  // Fix: Use JSON.stringify to prevent updates when object ref changes but content is same
+  const codeHash = JSON.stringify(code);
 
   // Sync viewingFile if initialFile changes
   useEffect(() => {
@@ -47,7 +50,7 @@ const PreviewFrame = forwardRef(({ code, isRestricted = false, onConsoleLog, isN
 
     window.addEventListener('message', handleMessage);
     return () => window.removeEventListener('message', handleMessage);
-  }, [code]); // Re-bind if code changes, though effectively 'updatePreview' uses latest code via calls
+  }, [codeHash]); // Fix: Use codeHash instead of code object to prevent re-binding
 
   // Main rendering logic - generates HTML and sets srcdoc
   const renderPreview = (targetFile) => {
@@ -155,6 +158,16 @@ const PreviewFrame = forwardRef(({ code, isRestricted = false, onConsoleLog, isN
       '      }',
       '    }',
       '  });',
+      '  // Anti-Cheating: Block Context Menu and Inspection Keys',
+      '  document.addEventListener("contextmenu", e => e.preventDefault());',
+      '  document.addEventListener("keydown", e => {',
+      '    if (e.key === "F12" || (e.ctrlKey && e.shiftKey && ["I", "J", "C"].includes(e.key.toUpperCase())) || (e.ctrlKey && e.key === "u")) {',
+      '      e.preventDefault();',
+      '      e.stopPropagation();',
+      '    }',
+      '  });',
+      '  // Block Selection',
+      '  document.addEventListener("selectstart", e => e.preventDefault());',
       '  window._node_env_setup = true;',
       '})();'
     ].join('\n');
@@ -250,7 +263,7 @@ const PreviewFrame = forwardRef(({ code, isRestricted = false, onConsoleLog, isN
       if (!isNodeJS) updatePreview(code);
     }, 1000); // 1 second debounce
     return () => clearTimeout(timer);
-  }, [code, isNodeJS, autoRun]); // Dependencies: if code changes, debounce triggers
+  }, [codeHash, isNodeJS, autoRun]); // Dependencies: only strict content changes trigger update
 
   useEffect(() => {
     if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -272,4 +285,4 @@ const PreviewFrame = forwardRef(({ code, isRestricted = false, onConsoleLog, isN
 
 PreviewFrame.displayName = "PreviewFrame";
 
-export default PreviewFrame;
+export default memo(PreviewFrame);

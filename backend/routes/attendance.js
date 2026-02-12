@@ -279,7 +279,7 @@ router.post('/unlock', verifyAdmin, async (req, res) => {
             // Allow them to continue (reset lock, set reason to indicate action)
             await query(`
                 UPDATE test_attendance 
-                SET locked = 0, locked_at = NULL, locked_reason = 'Admin:continue', violation_count = 0
+                SET locked = 0, locked_at = NULL, locked_reason = 'Admin:continue', violation_count = 0, is_used = 0
                 WHERE id = ?
             `, [attendanceId]);
         }
