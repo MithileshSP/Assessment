@@ -83,7 +83,7 @@ const AdminAttendance = () => {
             ]);
 
             setUnblockedUsers(unblockedRes.data);
-            setUsers(usersRes.data);
+            setUsers(usersRes.data.users || []);
             fetchActiveSessions();
             if (selectedSession) {
                 fetchScheduledStudents(selectedSession.id);
@@ -399,12 +399,18 @@ const AdminAttendance = () => {
         );
     }
 
+
+    // ... (rest of the file content until we hit the modal part)
+
+    const safeUsers = Array.isArray(users) ? users : [];
+
     return (
         <SaaSLayout fullWidth={true}>
             <ToastContainer toasts={toasts} removeToast={removeToast} />
             <div className="min-h-screen bg-white">
                 {/* Professional Monitoring Header */}
                 <div className="bg-slate-900 px-12 py-8">
+                    {/* ... (header content remains same) ... */}
                     <div className="max-w-[1700px] mx-auto flex flex-col lg:flex-row lg:items-center justify-between gap-8">
                         <div className="flex items-center gap-8">
                             <button
@@ -419,14 +425,14 @@ const AdminAttendance = () => {
                                         Live Terminal
                                     </div>
                                     <span className="text-[10px] font-medium text-slate-500 uppercase tracking-widest">
-                                        Pool ID: {selectedSession.id}
+                                        Pool ID: {selectedSession?.id || 'GLOBAL'}
                                     </span>
                                 </div>
                                 <h1 className="text-3xl font-bold text-white tracking-tight leading-none">
-                                    {selectedSession.title || `Level ${selectedSession.level} Monitoring`}
+                                    {selectedSession?.title || `Level ${selectedSession?.level || '?'} Monitoring`}
                                 </h1>
                                 <p className="text-slate-400 font-medium text-sm mt-1">
-                                    {selectedSession.course_title || 'General Session'} • {selectedSession.mode} Policy
+                                    {selectedSession?.course_title || 'General Session'} • {selectedSession?.mode || 'Unknown'} Policy
                                 </p>
                             </div>
                         </div>
@@ -453,7 +459,7 @@ const AdminAttendance = () => {
                                 onClick={() => setShowManualModal(true)}
                                 className="px-8 py-3 bg-indigo-600 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all hover:bg-indigo-500 shadow-lg shadow-indigo-600/20 flex items-center gap-2 active:scale-95"
                             >
-                                <Plus size={16} /> Grant Access
+                                <Plus size={16} /> Manual Unblock
                             </button>
                         </div>
                     </div>
@@ -734,12 +740,12 @@ const AdminAttendance = () => {
                                 </div>
 
                                 <div className="overflow-y-auto space-y-2 pr-2 custom-scrollbar flex-1 min-h-[250px]">
-                                    {users
+                                    {safeUsers
                                         .filter(u =>
-                                            u.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                                            u.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                                            u.roll_no?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                                            u.username?.toLowerCase().includes(searchQuery.toLowerCase())
+                                            (u.full_name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                                            (u.email || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                                            (u.roll_no || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                                            (u.username || '').toLowerCase().includes(searchQuery.toLowerCase())
                                         )
                                         .slice(0, 15)
                                         .map(user => (
@@ -757,14 +763,14 @@ const AdminAttendance = () => {
                                                     onClick={() => handleToggleBlock(user.id, true)}
                                                     className="px-4 py-2 bg-slate-900 text-white hover:bg-indigo-600 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all"
                                                 >
-                                                    Grant
+                                                    Manual Unblock
                                                 </button>
                                             </div>
                                         ))}
-                                    {searchQuery && !users.some(u =>
-                                        u.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                                        u.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                                        u.roll_no?.toLowerCase().includes(searchQuery.toLowerCase())
+                                    {searchQuery && !safeUsers.some(u =>
+                                        (u.full_name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                                        (u.email || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                                        (u.roll_no || '').toLowerCase().includes(searchQuery.toLowerCase())
                                     ) && (
                                             <div className="py-20 text-center">
                                                 <Search size={32} className="mx-auto mb-4 text-slate-100" />

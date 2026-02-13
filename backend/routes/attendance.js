@@ -207,7 +207,9 @@ router.get('/violations', verifyAdmin, async (req, res) => {
     try {
         const rows = await query(`
             SELECT ta.id, ta.user_id, u.username, u.full_name, u.email, u.roll_no,
-                   ta.test_identifier, ta.locked_at, ta.locked_reason, ta.violation_count
+                   ta.test_identifier, ta.locked_at, ta.locked_reason, ta.violation_count, 
+                   ta.reference_image, ta.copy_count, ta.paste_count, 
+                   ta.fullscreen_exit_count, ta.tab_switch_count, ta.devtools_count
             FROM test_attendance ta
             JOIN users u ON ta.user_id = u.id
             WHERE ta.locked = 1
@@ -222,9 +224,17 @@ router.get('/violations', verifyAdmin, async (req, res) => {
 
 // Lock a student's test (called from frontend on max violations)
 router.post('/lock', verifyToken, async (req, res) => {
-    const { courseId, level, reason, violationCount } = req.body;
+    const { courseId, level, reason, violationCount, breakdown } = req.body;
     const userId = req.user.id;
     const testIdentifier = courseId;
+
+    const {
+        copy = 0,
+        paste = 0,
+        fullscreenExit = 0,
+        tabSwitch = 0,
+        devtools = 0
+    } = breakdown || {};
 
     console.log(`[Lock Request] User: ${userId}, Identifier: ${testIdentifier}, Reason: ${reason}`);
 
@@ -239,16 +249,28 @@ router.post('/lock', verifyToken, async (req, res) => {
             // Update existing
             await query(`
                 UPDATE test_attendance 
-                SET locked = 1, locked_at = CURRENT_TIMESTAMP, locked_reason = ?, violation_count = ?
+                SET locked = 1, locked_at = CURRENT_TIMESTAMP, locked_reason = ?, violation_count = ?,
+                    copy_count = ?, paste_count = ?, fullscreen_exit_count = ?, tab_switch_count = ?, devtools_count = ?
                 WHERE id = ?
-            `, [reason || 'Max violations reached', violationCount || 0, existing[0].id]);
+            `, [
+                reason || 'Max violations reached',
+                violationCount || 0,
+                copy, paste, fullscreenExit, tabSwitch, devtools,
+                existing[0].id
+            ]);
             console.log(`[Lock] Updated existing record ${existing[0].id}`);
         } else {
             // Create new locked record (likely an admin or bypass user)
             await query(`
-                INSERT INTO test_attendance (user_id, test_identifier, status, locked, locked_at, locked_reason, violation_count, approved_at)
-                VALUES (?, ?, 'approved', 1, CURRENT_TIMESTAMP, ?, ?, CURRENT_TIMESTAMP)
-            `, [userId, testIdentifier, reason || 'Max violations reached (Bypass)', violationCount || 0]);
+                INSERT INTO test_attendance (user_id, test_identifier, status, locked, locked_at, locked_reason, violation_count, approved_at,
+                    copy_count, paste_count, fullscreen_exit_count, tab_switch_count, devtools_count)
+                VALUES (?, ?, 'approved', 1, CURRENT_TIMESTAMP, ?, ?, CURRENT_TIMESTAMP, ?, ?, ?, ?, ?)
+            `, [
+                userId, testIdentifier,
+                reason || 'Max violations reached (Bypass)',
+                violationCount || 0,
+                copy, paste, fullscreenExit, tabSwitch, devtools
+            ]);
             console.log(`[Lock] Created new locked record for bypass user`);
         }
 

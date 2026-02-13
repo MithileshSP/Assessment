@@ -289,7 +289,7 @@ const FacultyEvaluation = () => {
 
                             {/* Section: Output & Specs */}
                             {[
-                                { id: 'terminal', label: 'TERM', icon: Terminal, color: 'text-slate-500' },
+                                { id: 'terminal', label: 'TERMINAL', icon: Terminal, color: 'text-slate-500' },
                                 { id: 'instructions', label: 'QUESTION', icon: Info, color: 'text-slate-400' }
                             ].map(tab => (
                                 <button
@@ -495,27 +495,54 @@ const FacultyEvaluation = () => {
                             </div>
                         ) : (
                             <div className="flex-1 flex flex-col overflow-hidden bg-white">
-                                <div className="flex items-center justify-between px-6 py-3 border-b border-slate-100 bg-slate-50/10">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center border border-slate-200">
-                                            {activeTab === 'html' ? <Code size={14} className="text-orange-500" /> : activeTab === 'css' ? <Palette size={14} className="text-blue-500" /> : <FileText size={14} className="text-amber-500" />}
+                                <div className="flex-1 grid grid-cols-2 divide-x divide-slate-100 overflow-hidden">
+                                    {/* Candidate Column */}
+                                    <div className="flex flex-col h-full overflow-hidden">
+                                        <div className="flex items-center justify-between px-6 py-3 border-b border-slate-100 bg-slate-50/10">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center border border-slate-200">
+                                                    {activeTab === 'html' ? <Code size={14} className="text-orange-500" /> : activeTab === 'css' ? <Palette size={14} className="text-blue-500" /> : <FileText size={14} className="text-amber-500" />}
+                                                </div>
+                                                <h4 className="text-[10px] font-bold uppercase tracking-widest text-slate-900 leading-none">
+                                                    CANDIDATE {activeTab.toUpperCase()}
+                                                </h4>
+                                            </div>
+                                            <div className="px-3 py-1 rounded-md bg-slate-100 text-slate-500 text-[8px] font-bold uppercase tracking-widest border border-slate-200">
+                                                SUBMITTED SOURCE
+                                            </div>
                                         </div>
-                                        <div>
-                                            <h4 className="text-[10px] font-bold uppercase tracking-widest text-slate-900 leading-none">
-                                                {activeTab.toUpperCase()} SOURCE
-                                            </h4>
+                                        <div className="flex-1 min-h-0">
+                                            <ReadOnlyCodeBlock
+                                                code={activeTab === 'html' ? submission.html_code : activeTab === 'css' ? submission.css_code : submission.js_code}
+                                                language={activeTab}
+                                                height="100%"
+                                            />
                                         </div>
                                     </div>
-                                    <div className="px-3 py-1 rounded-md bg-slate-900 text-white text-[8px] font-bold uppercase tracking-widest">
-                                        READ ONLY
+
+                                    {/* Reference Column */}
+                                    <div className="flex flex-col h-full overflow-hidden bg-slate-50/5">
+                                        <div className="flex items-center justify-between px-6 py-3 border-b border-slate-100 bg-slate-100/10">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center border border-slate-200 shadow-sm">
+                                                    <BookOpen size={14} className="text-primary-600" />
+                                                </div>
+                                                <h4 className="text-[10px] font-bold uppercase tracking-widest text-slate-900 leading-none">
+                                                    REFERENCE {activeTab.toUpperCase()}
+                                                </h4>
+                                            </div>
+                                            <div className="px-3 py-1 rounded-md bg-primary-600 text-white text-[8px] font-bold uppercase tracking-widest shadow-lg shadow-primary-600/20">
+                                                EXPECTED TARGET
+                                            </div>
+                                        </div>
+                                        <div className="flex-1 min-h-0">
+                                            <ReadOnlyCodeBlock
+                                                code={activeTab === 'html' ? submission.expected_html : activeTab === 'css' ? submission.expected_css : submission.expected_js}
+                                                language={activeTab}
+                                                height="100%"
+                                            />
+                                        </div>
                                     </div>
-                                </div>
-                                <div className="flex-1 min-h-0">
-                                    <ReadOnlyCodeBlock
-                                        code={activeTab === 'html' ? submission.html_code : activeTab === 'css' ? submission.css_code : submission.js_code}
-                                        language={activeTab}
-                                        height="100%"
-                                    />
                                 </div>
                             </div>
                         )}

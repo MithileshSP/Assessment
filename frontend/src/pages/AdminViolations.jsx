@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import SaaSLayout from '../components/SaaSLayout';
-import { getViolations, unlockTest } from '../services/api';
+import { getViolations, unlockTest, BASE_URL } from '../services/api';
 import {
     AlertTriangle,
     Play,
@@ -10,7 +10,9 @@ import {
     Hash,
     ShieldAlert,
     RefreshCw,
-    Search
+    Search,
+    X,
+    Monitor
 } from 'lucide-react';
 import ToastContainer from '../components/Toast';
 
@@ -19,6 +21,8 @@ const AdminViolations = () => {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [toasts, setToasts] = useState([]);
+    const [selectedViolation, setSelectedViolation] = useState(null);
+    const [imgError, setImgError] = useState(false);
 
     const addToast = (message, type = 'success') => {
         const id = Date.now();
@@ -27,6 +31,10 @@ const AdminViolations = () => {
             setToasts(prev => prev.filter(t => t.id !== id));
         }, 3000);
     };
+
+    useEffect(() => {
+        setImgError(false);
+    }, [selectedViolation]);
 
     const fetchViolations = useCallback(async () => {
         try {
@@ -52,6 +60,7 @@ const AdminViolations = () => {
         try {
             await unlockTest(attendanceId, action);
             addToast(`Student ${studentName} ${action === 'continue' ? 'allowed to continue' : 'test finished'}`);
+            setSelectedViolation(null);
             fetchViolations();
         } catch (error) {
             console.error(`Failed to ${action} test:`, error);
@@ -60,9 +69,9 @@ const AdminViolations = () => {
     };
 
     const filteredViolations = violations.filter(v =>
-        v.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        v.roll_no?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        v.username?.toLowerCase().includes(searchTerm.toLowerCase())
+        (v.full_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (v.roll_no || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (v.username || '').toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     return (
@@ -211,22 +220,12 @@ const AdminViolations = () => {
                                                 </div>
                                             </td>
                                             <td className="px-6 py-6 text-right">
-                                                <div className="flex items-center justify-end gap-3 opacity-0 group-hover:opacity-100 transition-opacity translate-x-4 group-hover:translate-x-0">
-                                                    <button
-                                                        onClick={() => handleAction(v.id, 'continue', v.full_name || v.username)}
-                                                        className="h-10 px-4 bg-emerald-50 text-emerald-600 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-emerald-600 hover:text-white transition-all active:scale-95"
-                                                    >
-                                                        <Play size={16} />
-                                                        Continue
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleAction(v.id, 'submit', v.full_name || v.username)}
-                                                        className="h-10 px-4 bg-slate-100 text-slate-600 rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-slate-900 hover:text-white transition-all active:scale-95"
-                                                    >
-                                                        <CheckCircle size={16} />
-                                                        Finish Test
-                                                    </button>
-                                                </div>
+                                                <button
+                                                    onClick={() => setSelectedViolation(v)}
+                                                    className="h-10 px-6 bg-slate-900 text-white rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-slate-800 transition-all active:scale-95 shadow-lg shadow-slate-900/20"
+                                                >
+                                                    Review
+                                                </button>
                                             </td>
                                         </tr>
                                     ))
@@ -237,8 +236,135 @@ const AdminViolations = () => {
                 </div>
             </div>
 
-            {/* Custom Toast Container implementation within the page for now or using existing one if available */}
-            <div className="fixed bottom-8 right-8 z-[100] flex flex-col gap-3">
+            {/* Violation Review Modal */}
+            {selectedViolation && (
+                <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-md animate-fade-in">
+                    <div className="bg-white w-full max-w-xl rounded-2xl shadow-2xl overflow-hidden animate-scale-in border border-slate-100">
+                        <div className="h-1.5 bg-rose-500 w-full" />
+
+                        <div className="p-8">
+                            <div className="flex items-start justify-between mb-6">
+                                <div>
+                                    <div className="flex items-center gap-2 mb-1.5">
+                                        <div className="px-2 py-0.5 bg-rose-50 border border-rose-100 rounded text-[9px] font-black uppercase tracking-[0.1em] text-rose-600">
+                                            Security Incident
+                                        </div>
+                                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest px-2 border-l border-slate-200">
+                                            Case #{selectedViolation.id}
+                                        </span>
+                                    </div>
+                                    <h2 className="text-2xl font-display font-bold text-slate-900 tracking-tight">Violation Review</h2>
+                                </div>
+                                <button
+                                    onClick={() => setSelectedViolation(null)}
+                                    className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 hover:text-slate-900 transition-colors border border-slate-100 hover:bg-white"
+                                >
+                                    <X size={20} />
+                                </button>
+                            </div>
+
+                            {/* Student Profile - More Compact */}
+                            <div className="flex items-center gap-4 mb-6 p-4 bg-slate-50 rounded-xl border border-slate-100">
+                                <div className="w-12 h-12 rounded-lg bg-slate-900 flex items-center justify-center text-white font-display font-bold text-xl shadow-md border-2 border-white">
+                                    {(selectedViolation.full_name || selectedViolation.username || 'U').charAt(0).toUpperCase()}
+                                </div>
+                                <div>
+                                    <p className="text-base font-bold text-slate-900 leading-tight">
+                                        {selectedViolation.full_name || selectedViolation.username}
+                                    </p>
+                                    <div className="flex items-center gap-2 mt-0.5">
+                                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{selectedViolation.roll_no || 'N/A'}</span>
+                                        <span className="w-1 h-1 bg-slate-300 rounded-full" />
+                                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider truncate max-w-[150px]">{selectedViolation.email || 'No Email'}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-12 gap-6 mb-8">
+                                {/* Compact Summary - 4/12 */}
+                                <div className="col-span-4 space-y-4">
+                                    <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
+                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-3">Integrity Summary</p>
+                                        <div className="space-y-3">
+                                            <div>
+                                                <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Reason</p>
+                                                <p className="text-xs font-bold text-rose-600 leading-tight bg-rose-50 p-2 rounded-lg border border-rose-100">
+                                                    {selectedViolation.locked_reason}
+                                                </p>
+                                            </div>
+                                            <div>
+                                                <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Total Hits</p>
+                                                <p className="text-2xl font-display font-black text-rose-700 leading-none">
+                                                    {selectedViolation.violation_count}
+                                                </p>
+                                            </div>
+                                            <div>
+                                                <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">Time</p>
+                                                <p className="text-xs font-bold text-slate-600">
+                                                    {new Date(selectedViolation.locked_at).toLocaleTimeString()}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Detailed Breakdown List - 8/12 */}
+                                <div className="col-span-8">
+                                    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+                                        <div className="bg-slate-50 px-4 py-2.5 border-b border-slate-200 flex justify-between items-center">
+                                            <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Detail Violation Log</span>
+                                            <ShieldAlert size={14} className="text-rose-500" />
+                                        </div>
+                                        <div className="divide-y divide-slate-100">
+                                            {[
+                                                { label: 'Copy Protected Content', count: selectedViolation.copy_count, icon: <Hash size={12} /> },
+                                                { label: 'Paste/Inject Attempts', count: selectedViolation.paste_count, icon: <Hash size={12} /> },
+                                                { label: 'Tab/Window Switches', count: selectedViolation.tab_switch_count, icon: <Hash size={12} /> },
+                                                { label: 'Fullscreen Exit Attempts', count: selectedViolation.fullscreen_exit_count, icon: <Hash size={12} /> },
+                                                { label: 'Keyboard / DevTools (F12)', count: selectedViolation.devtools_count, icon: <ShieldAlert size={12} /> }
+                                            ].map((v, i) => (
+                                                <div key={i} className="px-4 py-3 flex items-center justify-between hover:bg-slate-50 transition-colors">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className={`p-1.5 rounded-lg ${v.count > 0 ? 'bg-rose-50 text-rose-600' : 'bg-slate-100 text-slate-400'}`}>
+                                                            {v.icon}
+                                                        </div>
+                                                        <span className={`text-xs font-bold ${v.count > 0 ? 'text-slate-900' : 'text-slate-400'}`}>
+                                                            {v.label}
+                                                        </span>
+                                                    </div>
+                                                    <span className={`text-sm font-black ${v.count > 0 ? 'text-rose-600' : 'text-slate-300'}`}>
+                                                        {v.count || 0}
+                                                    </span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="flex gap-3 mt-2">
+                                <button
+                                    onClick={() => handleAction(selectedViolation.id, 'continue', selectedViolation.full_name || selectedViolation.username)}
+                                    className="flex-1 h-12 bg-emerald-600 text-white rounded-xl text-[11px] font-black uppercase tracking-[0.15em] shadow-lg shadow-emerald-600/20 hover:bg-emerald-500 transition-all active:scale-95 flex items-center justify-center gap-2"
+                                >
+                                    <Play size={16} />
+                                    Allow Continue
+                                </button>
+                                <button
+                                    onClick={() => handleAction(selectedViolation.id, 'submit', selectedViolation.full_name || selectedViolation.username)}
+                                    className="flex-1 h-12 bg-slate-900 text-white rounded-xl text-[11px] font-black uppercase tracking-[0.15em] shadow-lg shadow-slate-900/20 hover:bg-slate-800 transition-all active:scale-95 flex items-center justify-center gap-2"
+                                >
+                                    <CheckCircle size={16} />
+                                    Finalize Submission
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Custom Toast Container */}
+            <div className="fixed bottom-8 right-8 z-[150] flex flex-col gap-3">
                 {toasts.map(toast => (
                     <div
                         key={toast.id}
@@ -252,6 +378,17 @@ const AdminViolations = () => {
                     </div>
                 ))}
             </div>
+
+            <style dangerouslySetInnerHTML={{
+                __html: `
+                @keyframes scale-in {
+                    from { transform: scale(0.95); opacity: 0; }
+                    to { transform: scale(1); opacity: 1; }
+                }
+                .animate-scale-in {
+                    animation: scale-in 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+                }
+            `}} />
         </SaaSLayout>
     );
 };

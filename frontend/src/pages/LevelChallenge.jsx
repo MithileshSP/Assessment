@@ -52,6 +52,13 @@ export default function LevelChallenge() {
     timeLimit: 0,
   });
   const [violations, setViolations] = useState(0);
+  const [violationBreakdown, setViolationBreakdown] = useState({
+    copy: 0,
+    paste: 0,
+    fullscreenExit: 0,
+    tabSwitch: 0,
+    devtools: 0
+  });
   const [timeRemaining, setTimeRemaining] = useState(null);
   const [lastViolationTime, setLastViolationTime] = useState(0);
 
@@ -538,10 +545,24 @@ export default function LevelChallenge() {
 
   const handleViolation = (type) => {
     const now = Date.now();
-    if (now - lastViolationTime < 2000) return; // No longer checking isLocked in UI to allow continuous work
+    if (now - lastViolationTime < 2000) return;
     setLastViolationTime(now);
+
+    // Update total count
     const newViolations = violations + 1;
     setViolations(newViolations);
+
+    // Update breakdown
+    setViolationBreakdown(prev => {
+      const next = { ...prev };
+      if (type.toLowerCase().includes('copy')) next.copy++;
+      else if (type.toLowerCase().includes('paste')) next.paste++;
+      else if (type.toLowerCase().includes('fullscreen')) next.fullscreenExit++;
+      else if (type.toLowerCase().includes('switch')) next.tabSwitch++;
+      else if (type.toLowerCase().includes('devtools')) next.devtools++;
+      return next;
+    });
+
     addToast(`${type}`, 'error');
     if (newViolations >= restrictions.maxViolations && !isLocked) handleLockTest(newViolations);
   };
@@ -563,7 +584,13 @@ export default function LevelChallenge() {
     await new Promise(resolve => setTimeout(resolve, 100));
     await autoSaveBatch();
     try {
-      await api.post('/attendance/lock', { courseId, level: parseInt(level), reason: 'Max violations reached', violationCount });
+      await api.post('/attendance/lock', {
+        courseId,
+        level: parseInt(level),
+        reason: 'Max violations reached',
+        violationCount,
+        breakdown: violationBreakdown
+      });
     } catch (err) { }
     if (unlockPollRef.current) clearInterval(unlockPollRef.current);
     unlockPollRef.current = setInterval(async () => {
