@@ -4,20 +4,30 @@ class GlobalSession {
     /**
      * Start a new global test session
      */
+    /**
+     * Start a new global test session
+     */
     static async start(course_id, level, duration_minutes, created_by) {
-        // 1. Deactivate any existing active session for same course/level
-        await query(
-            "UPDATE global_test_sessions SET is_active = FALSE, ended_reason = 'FORCED', forced_end = TRUE WHERE course_id = ? AND level = ? AND is_active = TRUE",
-            [course_id, level]
-        );
+        // Use a transaction to ensure atomicity
+        return transaction(async (connection) => {
+            // 1. Deactivate any existing active session for same course/level
+            await connection.query(
+                "UPDATE global_test_sessions SET is_active = FALSE, ended_reason = 'FORCED', forced_end = TRUE WHERE course_id = ? AND level = ? AND is_active = TRUE",
+                [course_id, level]
+            );
 
-        // 2. Create new session
-        const result = await query(
-            "INSERT INTO global_test_sessions (course_id, level, duration_minutes, created_by, is_active) VALUES (?, ?, ?, ?, TRUE)",
-            [course_id, level, duration_minutes, created_by]
-        );
+            // 2. Create new session
+            const [result] = await connection.query(
+                "INSERT INTO global_test_sessions (course_id, level, duration_minutes, created_by, is_active) VALUES (?, ?, ?, ?, TRUE)",
+                [course_id, level, duration_minutes, created_by]
+            );
 
-        return this.findById(result.insertId);
+            // We can't use this.findById inside transaction easily without passing connection, 
+            // so we return the ID and let the caller fetch if needed, 
+            // OR we just fetch it here using the connection.
+            const [rows] = await connection.query("SELECT * FROM global_test_sessions WHERE id = ?", [result.insertId]);
+            return rows[0] ? GlobalSession._formatSession(rows[0]) : null;
+        });
     }
 
     /**
@@ -35,7 +45,10 @@ class GlobalSession {
         const now = new Date();
         const allSessions = [];
 
-        // 1. Daily schedules
+        // 1. Daily schedules - Optimization: Filter in SQL if possible, but for now we follow the pattern
+        // Ideally: SELECT * FROM daily_schedules WHERE is_active = TRUE AND CURTIME() BETWEEN start_time AND end_time
+        // But timezones make SQL-only comparison tricky without correct DB timezone. 
+        // Sticking to JS filter for safe timezone handling but fetching only active.
         const dailySchedules = await query("SELECT * FROM daily_schedules WHERE is_active = TRUE");
 
         // Enforce IST (Asia/Kolkata) for date comparison
@@ -77,7 +90,6 @@ class GlobalSession {
             });
         }
 
-        // Sort by start time
         return allSessions.sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
     }
 
@@ -99,35 +111,37 @@ class GlobalSession {
             }
         }
 
-        // 2. Check DAILY RECURRING SCHEDULES
-        const dailySchedules = await query("SELECT id, start_time, end_time FROM daily_schedules WHERE is_active = TRUE");
+        // 2. Check DAILY RECURRING SCHEDULES (Optimized with SQL filtering)
+        // Since DB is set to +05:30, CURTIME() returns current IST time.
+        const dailySchedules = await query(
+            "SELECT id, start_time, end_time FROM daily_schedules WHERE is_active = TRUE AND CURTIME() BETWEEN start_time AND end_time"
+        );
 
         if (dailySchedules && dailySchedules.length > 0) {
             const now = new Date();
             const today = now.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
 
-            for (const daily of dailySchedules) {
-                // Create full date-time objects for today's window
-                const startTime = new Date(`${today}T${daily.start_time}`);
-                const endTime = new Date(`${today}T${daily.end_time}`);
+            // We matched by time, but we still need to construct the full object
+            // Just take the first matching schedule (overlapping schedules shouldn't happen ideally)
+            const daily = dailySchedules[0];
 
-                if (now >= startTime && now <= endTime) {
-                    // Return a "Virtual Session" that behaves like a global session for the student UI
-                    return {
-                        id: 'daily_' + daily.id,
-                        course_id: course_id,
-                        level: level,
-                        start_time: startTime.toISOString(),
-                        end_time: endTime.toISOString(),
-                        server_time: now.toISOString(),
-                        server_time_ms: now.getTime(),
-                        duration_minutes: (endTime - startTime) / 60000,
-                        is_active: true,
-                        is_recurring: true,
-                        is_expired: false
-                    };
-                }
-            }
+            // Create full date-time objects for today's window
+            const startTime = new Date(`${today}T${daily.start_time}`);
+            const endTime = new Date(`${today}T${daily.end_time}`);
+
+            return {
+                id: 'daily_' + daily.id,
+                course_id: course_id,
+                level: level,
+                start_time: startTime.toISOString(),
+                end_time: endTime.toISOString(),
+                server_time: now.toISOString(),
+                server_time_ms: now.getTime(),
+                duration_minutes: (endTime - startTime) / 60000,
+                is_active: true,
+                is_recurring: true,
+                is_expired: false
+            };
         }
 
         return null;

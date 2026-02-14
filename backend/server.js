@@ -94,20 +94,25 @@ if (process.env.NODE_ENV === "production") {
 // Rate limiting to prevent abuse
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 1000, // Increased limit for admin bulk operations
-  message: "Too many requests from this IP, please try again later.",
+  max: 5000, // Increased for college environments with shared/proxy IPs
+  message: "Too many requests, please try again later.",
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: (req) => {
+    // If authenticated, limit by user instead of IP
+    return req.user ? req.user.id : (req.headers['x-forwarded-for'] || req.ip);
+  }
 });
 
 // Apply rate limiter to all API routes
 app.use("/api/", limiter);
 
-// Stricter rate limit for authentication endpoints
+// Stricter rate limit for authentication endpoints (always IP based)
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 1000, // Effectively removed limit as requested
+  max: 2000, // High enough to allow many students from one college IP
   message: "Too many login attempts, please try again later.",
+  standardHeaders: true,
 });
 
 app.use("/api/auth/google", authLimiter);

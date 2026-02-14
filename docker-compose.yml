@@ -1,9 +1,6 @@
 services:
   portal_mysql:
-    image: gokulv456/assessment-mysql:v3.4.22
-    build:
-      context: ./mysql-init
-      dockerfile: Dockerfile
+    image: gokulv456/assessment-mysql:v3.4.25
     container_name: portal_mysql
     restart: unless-stopped
     command: --bind-address=0.0.0.0
@@ -17,15 +14,19 @@ services:
       - "3307:3306"
     networks:
       - test-portal-network
+    healthcheck:
+      test: [ "CMD-SHELL", "mysqladmin ping -h 127.0.0.1 --silent" ]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
 
   backend:
-    image: gokulv456/assessment-backend:v3.4.22
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+    image: gokulv456/assessment-backend:v3.4.25
     restart: unless-stopped
     depends_on:
-      - portal_mysql
+      portal_mysql:
+        condition: service_healthy
     environment:
       NODE_ENV: production
       PORT: 7000
@@ -34,7 +35,7 @@ services:
       DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}
       DB_NAME: ${DB_NAME}
-      USE_JSON: "false"
+      USE_JSON: ${USE_JSON}
       ASSETS_ROOT: /var/www/portal-assets
       JWT_SECRET: ${JWT_SECRET}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
@@ -45,19 +46,14 @@ services:
       - ./backend/screenshots:/app/screenshots
       - ./backend/data:/app/data
       - ./backend/assets:/var/www/portal-assets
+      - ./backend/public/reference_images:/app/public/reference_images
     deploy:
-      replicas: 3
+      replicas: 1
     networks:
       - test-portal-network
 
   frontend:
-    image: gokulv456/assessment-frontend:v3.4.22
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-      args:
-        VITE_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
-        VITE_API_URL: "/fullstack/api"
+    image: gokulv456/assessment-frontend:v3.4.25
     container_name: portal_frontend
     restart: unless-stopped
     ports:

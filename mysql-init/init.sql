@@ -1,5 +1,5 @@
 -- Assessment Portal Database Schema
--- Version: 3.2.3
+-- Version: 3.5.0 (Optimized)
 
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
@@ -22,7 +22,8 @@ CREATE TABLE IF NOT EXISTS users (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     last_login TIMESTAMP NULL,
     INDEX idx_role (role),
-    INDEX idx_session (current_session_id)
+    INDEX idx_session (current_session_id),
+    INDEX idx_roll_no (roll_no)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ==========================================
@@ -81,6 +82,7 @@ CREATE TABLE IF NOT EXISTS challenges (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_course_level (course_id, level),
+    INDEX idx_type (challenge_type),
     FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -107,7 +109,8 @@ CREATE TABLE IF NOT EXISTS global_test_sessions (
     forced_end BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_active (is_active),
-    INDEX idx_course_level (course_id, level)
+    INDEX idx_course_level (course_id, level),
+    INDEX idx_created_at (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS test_attendance (
@@ -128,10 +131,16 @@ CREATE TABLE IF NOT EXISTS test_attendance (
     locked_at TIMESTAMP NULL,
     locked_reason VARCHAR(255) NULL,
     violation_count INT DEFAULT 0,
+    copy_count INT DEFAULT 0,
+    paste_count INT DEFAULT 0,
+    fullscreen_exit_count INT DEFAULT 0,
+    tab_switch_count INT DEFAULT 0,
+    devtools_count INT DEFAULT 0,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     UNIQUE KEY idx_user_test_unique (user_id, test_identifier),
-    INDEX idx_status (status),
-    INDEX idx_session (session_id)
+    INDEX idx_status_requested (status, requested_at),
+    INDEX idx_session (session_id),
+    INDEX idx_user_status (user_id, status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS test_sessions (
@@ -148,6 +157,7 @@ CREATE TABLE IF NOT EXISTS test_sessions (
     completed_at TIMESTAMP NULL,
     INDEX idx_user (user_id),
     INDEX idx_course_level (course_id, level),
+    INDEX idx_status (overall_status),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -187,8 +197,10 @@ CREATE TABLE IF NOT EXISTS submissions (
     admin_override_reason TEXT,
     is_exported TINYINT(1) DEFAULT 0,
     exported_at TIMESTAMP NULL,
-    INDEX idx_user_challenge (user_id, challenge_id),
-    INDEX idx_status (status),
+    INDEX idx_user_submitted (user_id, submitted_at),
+    INDEX idx_challenge_status (challenge_id, status),
+    INDEX idx_status_queued (status, submitted_at),
+    INDEX idx_course_level_status (course_id, level, status),
     FOREIGN KEY (challenge_id) REFERENCES challenges(id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -204,7 +216,8 @@ CREATE TABLE IF NOT EXISTS manual_evaluations (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (submission_id) REFERENCES submissions(id) ON DELETE CASCADE,
     FOREIGN KEY (faculty_id) REFERENCES users(id) ON DELETE CASCADE,
-    UNIQUE KEY unique_manual_evaluation (submission_id)
+    UNIQUE KEY unique_manual_evaluation (submission_id),
+    INDEX idx_faculty (faculty_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS faculty_course_assignments (
@@ -225,7 +238,8 @@ CREATE TABLE IF NOT EXISTS submission_assignments (
     status ENUM('pending', 'evaluated') DEFAULT 'pending',
     FOREIGN KEY (submission_id) REFERENCES submissions(id) ON DELETE CASCADE,
     FOREIGN KEY (faculty_id) REFERENCES users(id) ON DELETE CASCADE,
-    UNIQUE KEY unique_submission_assignment (submission_id)
+    UNIQUE KEY unique_submission_assignment (submission_id),
+    INDEX idx_faculty_status (faculty_id, status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS student_feedback (
@@ -253,6 +267,7 @@ CREATE TABLE IF NOT EXISTS user_progress (
     total_points INT DEFAULT 0,
     last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     UNIQUE KEY unique_user_course (user_id, course_id),
+    INDEX idx_user_points (user_id, total_points),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -267,7 +282,7 @@ CREATE TABLE IF NOT EXISTS level_completions (
     feedback TEXT,
     question_results JSON,
     completed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_user_course (user_id, course_id),
+    INDEX idx_user_course_level (user_id, course_id, level),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

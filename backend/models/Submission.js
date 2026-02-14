@@ -14,9 +14,13 @@ class SubmissionModel {
     ERROR: 'error'
   };
 
-  // Get all submissions
+  // Get all submissions - Selective columns for large list
   static async findAll() {
-    const submissions = await query('SELECT * FROM submissions ORDER BY submitted_at DESC');
+    const submissions = await query(`
+      SELECT id, challenge_id, user_id, course_id, level, candidate_name, status, submitted_at, final_score, passed, admin_override_status 
+      FROM submissions 
+      ORDER BY submitted_at DESC
+    `);
     return submissions.map(s => this._formatSubmission(s));
   }
 
@@ -45,10 +49,13 @@ class SubmissionModel {
     return submission ? this._formatSubmission(submission) : null;
   }
 
-  // Get submissions by user
+  // Get submissions by user - Selective columns
   static async findByUser(userId) {
-    const submissions = await query(
-      'SELECT * FROM submissions WHERE user_id = ? ORDER BY submitted_at DESC',
+    const submissions = await query(`
+      SELECT id, challenge_id, user_id, course_id, level, candidate_name, status, submitted_at, final_score, passed, admin_override_status 
+      FROM submissions 
+      WHERE user_id = ? 
+      ORDER BY submitted_at DESC`,
       [userId]
     );
     return submissions.map(s => this._formatSubmission(s));
@@ -188,8 +195,15 @@ class SubmissionModel {
   static async findNextQueued() {
     return await transaction(async (connection) => {
       // 1. Fetch the next queued submission and lock the row
-      const [rows] = await connection.execute(
-        'SELECT * FROM submissions WHERE status = ? ORDER BY submitted_at ASC LIMIT 1 FOR UPDATE',
+      // Optimizing: only select what's needed for evaluation
+      const [rows] = await connection.execute(`
+        SELECT id, challenge_id, user_id, course_id, 
+               level, html_code, css_code, js_code, additional_files 
+        FROM submissions 
+        WHERE status = ? 
+        ORDER BY submitted_at ASC 
+        LIMIT 1 
+        FOR UPDATE SKIP LOCKED`,
         [this.STATUS.QUEUED]
       );
 

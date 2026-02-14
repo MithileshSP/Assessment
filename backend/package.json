@@ -1,6 +1,6 @@
 {
   "name": "frontend-test-portal-backend",
-  "version": "3.4.10",
+  "version": "3.4.23",
   "description": "Backend API for Frontend Test Portal with hybrid evaluation",
   "main": "server.js",
   "scripts": {

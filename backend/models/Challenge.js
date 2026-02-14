@@ -10,10 +10,9 @@ class ChallengeModel {
   static async findAll() {
     try {
       const challenges = await query(`
-        SELECT c.*, u.full_name as creator_name 
-        FROM challenges c 
-        LEFT JOIN users u ON c.created_by = u.id 
-        ORDER BY c.created_at DESC
+        SELECT id, title, difficulty, description, tags, points, course_id, level, challenge_type, created_at, created_by 
+        FROM challenges 
+        ORDER BY created_at DESC
       `);
       return challenges.map(c => ChallengeModel._formatChallenge(c));
     } catch (error) {

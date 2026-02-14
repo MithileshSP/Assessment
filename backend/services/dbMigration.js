@@ -255,6 +255,14 @@ async function applyMigrations() {
     // v3.6.0: Add scheduled_status column for pre-authorization feature
     await addColumn("ALTER TABLE test_attendance ADD COLUMN scheduled_status ENUM('none', 'scheduled', 'activated', 'expired') DEFAULT 'none' AFTER status");
     await addColumn("ALTER TABLE test_attendance ADD INDEX idx_scheduled (scheduled_status)");
+
+    // v3.6.1: Add detailed violation tracking columns (Fix for 500 Error)
+    await addColumn("ALTER TABLE test_attendance ADD COLUMN violation_count INT DEFAULT 0");
+    await addColumn("ALTER TABLE test_attendance ADD COLUMN copy_count INT DEFAULT 0");
+    await addColumn("ALTER TABLE test_attendance ADD COLUMN paste_count INT DEFAULT 0");
+    await addColumn("ALTER TABLE test_attendance ADD COLUMN fullscreen_exit_count INT DEFAULT 0");
+    await addColumn("ALTER TABLE test_attendance ADD COLUMN tab_switch_count INT DEFAULT 0");
+    await addColumn("ALTER TABLE test_attendance ADD COLUMN devtools_count INT DEFAULT 0");
     // v3.4.3: Cleanup duplicate test_attendance records before unique key
     await queryWithRetry(`
       DELETE t1 FROM test_attendance t1

@@ -113,183 +113,257 @@ export default function AdminLevelReset() {
 
     return (
         <SaaSLayout>
-            <div className="max-w-4xl mx-auto space-y-8">
-                {/* Header */}
-                <div className="flex items-center gap-4">
-                    <button
-                        onClick={() => navigate('/admin/dashboard')}
-                        className="p-2.5 bg-white rounded-2xl border border-slate-200 text-slate-500 hover:bg-slate-50 transition-all shadow-sm"
-                    >
-                        <ArrowLeft size={20} />
-                    </button>
-                    <div className="text-left">
-                        <div className="flex items-center gap-2 text-[10px] font-black text-rose-500 uppercase tracking-[0.2em] mb-1">
-                            <RefreshCw size={10} />
-                            <span>Student Management</span>
+            <div className="min-h-screen bg-slate-50/30 -m-8 p-12 font-sans antialiased text-slate-900 overflow-x-hidden">
+                {/* Header Section */}
+                <div className="mx-auto mb-12 flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-slate-200 pb-12">
+                    <div className="flex-1">
+                        <div className="flex items-center gap-4 mb-6">
+                            <button
+                                onClick={() => navigate('/admin/dashboard')}
+                                className="group p-3 bg-white rounded-2xl border border-slate-200 text-slate-400 hover:text-indigo-600 hover:border-indigo-100 hover:bg-indigo-50/30 transition-all duration-300 shadow-sm"
+                            >
+                                <ArrowLeft size={20} className="group-hover:-translate-x-1 transition-transform" />
+                            </button>
+                            <div className="flex items-center gap-2 px-4 py-1.5 bg-rose-50 rounded-full border border-rose-100 text-[10px] font-black text-rose-600 uppercase tracking-[0.2em]">
+                                <RefreshCw size={12} className="animate-spin-slow" />
+                                <span>System Maintenance</span>
+                            </div>
                         </div>
-                        <h1 className="text-3xl font-black text-slate-900 tracking-tight">Reset Student Level</h1>
-                        <p className="text-slate-500 text-sm mt-1">Allow a student to retake an assessment with fresh questions</p>
+                        <h1 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tight leading-none">
+                            Assessment Level Reset
+                        </h1>
+                        <p className="text-slate-500 font-bold text-lg mt-4 max-w-3xl">
+                            Initialize a complete reset for specific student milestones. This action will purge previous attempts and allow for a fresh randomized assessment sequence.
+                        </p>
                     </div>
+
+                    {message && (
+                        <div className={`flex-shrink-0 p-6 rounded-3xl flex items-center gap-4 animate-in slide-in-from-top-4 duration-500 shadow-xl ${message.type === 'success'
+                            ? 'bg-emerald-600 text-white shadow-emerald-200'
+                            : 'bg-rose-600 text-white shadow-rose-200'
+                            }`}>
+                            <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center">
+                                {message.type === 'success' ? <CheckCircle size={24} /> : <AlertTriangle size={24} />}
+                            </div>
+                            <div>
+                                <p className="font-black text-xs uppercase tracking-widest opacity-80">{message.type === 'success' ? 'Operation Success' : 'Critical Alert'}</p>
+                                <p className="font-bold text-sm mt-0.5">{message.text}</p>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
-                {/* Message Alert */}
-                {message && (
-                    <div className={`p-4 rounded-2xl flex items-center gap-3 ${message.type === 'success'
-                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                        : 'bg-rose-50 text-rose-700 border border-rose-200'
-                        }`}>
-                        {message.type === 'success' ? <CheckCircle size={20} /> : <AlertTriangle size={20} />}
-                        <span className="font-medium text-sm">{message.text}</span>
-                    </div>
-                )}
+                {/* Main Execution Grid */}
+                <div className="mx-auto grid grid-cols-1 lg:grid-cols-12 gap-10">
 
-                {/* Selection Cards */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {/* User Selection */}
-                    <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
-                        <div className="flex items-center gap-3 text-left">
-                            <div className="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center">
-                                <User className="text-indigo-500" size={20} />
-                            </div>
-                            <div>
-                                <h3 className="font-black text-slate-900">1. Select Student</h3>
-                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Search by name or email</p>
-                            </div>
-                        </div>
-
-                        <div className="relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300" size={16} />
-                            <input
-                                type="text"
-                                placeholder="Search students..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500/10 focus:bg-white outline-none transition-all"
-                            />
-                        </div>
-
-                        <div className="max-h-48 overflow-y-auto space-y-2 relative">
-                            {searching && (
-                                <div className="absolute inset-0 bg-white/50 backdrop-blur-[1px] flex items-center justify-center z-10">
-                                    <RefreshCw className="animate-spin text-indigo-600" size={20} />
+                    {/* Step 1: User Discovery */}
+                    <div className="lg:col-span-4 space-y-6">
+                        <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-sm hover:shadow-xl transition-all duration-500 group overflow-hidden flex flex-col h-full min-h-[650px]">
+                            <div className="p-8 border-b border-slate-100 bg-slate-50/50">
+                                <div className="flex items-center justify-between mb-8">
+                                    <div className="w-14 h-14 bg-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-indigo-200 group-hover:scale-110 transition-transform duration-500">
+                                        <User size={28} />
+                                    </div>
+                                    <span className="text-[10px] font-black text-indigo-200 uppercase tracking-widest bg-indigo-900 px-4 py-2 rounded-full">Step 01</span>
                                 </div>
-                            )}
-                            {currentUsers.slice(0, 10).map(user => (
-                                <button
-                                    key={user.id}
-                                    onClick={() => setSelectedUser(user)}
-                                    className={`w-full p-3 rounded-xl text-left transition-all ${selectedUser?.id === user.id
-                                        ? 'bg-indigo-600 text-white'
-                                        : 'bg-slate-50 hover:bg-slate-100 text-slate-700'
-                                        }`}
-                                >
-                                    <p className="font-bold text-sm truncate">{user.full_name || user.username}</p>
-                                    <p className={`text-[10px] truncate ${selectedUser?.id === user.id ? 'text-indigo-100' : 'text-slate-400'}`}>
-                                        {user.email || user.username}
-                                    </p>
-                                </button>
-                            ))}
-                            {currentUsers.length === 0 && !searching && (
-                                <p className="text-center text-slate-400 text-sm py-4">No users found</p>
-                            )}
+                                <h3 className="text-2xl font-black text-slate-900 tracking-tight">Identify Student</h3>
+                                <p className="text-slate-400 font-bold text-xs mt-2 uppercase tracking-widest">Select target for operation</p>
+                            </div>
+
+                            <div className="p-8 space-y-6 flex-1 flex flex-col overflow-hidden">
+                                <div className="relative">
+                                    <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" size={20} />
+                                    <input
+                                        type="text"
+                                        placeholder="Search by signature or identity..."
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                        className="w-full pl-16 pr-6 py-5 bg-slate-50 border-2 border-slate-100 rounded-2xl text-lg font-bold placeholder:text-slate-300 focus:ring-8 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all outline-none"
+                                    />
+                                </div>
+
+                                <div className="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar">
+                                    {searching && (
+                                        <div className="flex flex-col items-center justify-center py-12 gap-4">
+                                            <RefreshCw className="animate-spin text-indigo-600" size={32} />
+                                            <p className="text-xs font-black text-slate-300 uppercase tracking-widest">Scanning Records</p>
+                                        </div>
+                                    )}
+                                    {currentUsers.slice(0, 15).map(user => (
+                                        <button
+                                            key={user.id}
+                                            onClick={() => setSelectedUser(user)}
+                                            className={`w-full p-5 rounded-2xl text-left border-2 transition-all duration-300 group/item relative overflow-hidden ${selectedUser?.id === user.id
+                                                ? 'bg-indigo-600 border-indigo-600 text-white shadow-xl shadow-indigo-200 scale-[1.02]'
+                                                : 'bg-white border-slate-100 hover:border-indigo-100 hover:bg-indigo-50/50 text-slate-700'
+                                                }`}
+                                        >
+                                            <div className="flex items-center gap-4 relative z-10">
+                                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm ${selectedUser?.id === user.id ? 'bg-white/20 text-white' : 'bg-indigo-50 text-indigo-600'}`}>
+                                                    {user.full_name?.charAt(0) || user.username?.charAt(0).toUpperCase()}
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <p className="font-black text-base truncate leading-tight">{user.full_name || user.username}</p>
+                                                    <p className={`text-[10px] font-bold uppercase tracking-widest mt-1 truncate ${selectedUser?.id === user.id ? 'text-indigo-100' : 'text-slate-400'}`}>
+                                                        {user.email || 'ID: ' + user.id}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            {selectedUser?.id === user.id && (
+                                                <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                                                    <CheckCircle size={20} className="text-white/50" />
+                                                </div>
+                                            )}
+                                        </button>
+                                    ))}
+                                    {currentUsers.length === 0 && !searching && (
+                                        <div className="text-center py-20 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
+                                            <p className="text-slate-400 font-black text-xs uppercase tracking-widest">No matching identity found</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    {/* Course Selection */}
-                    <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
-                        <div className="flex items-center gap-3 text-left">
-                            <div className="w-10 h-10 bg-violet-50 rounded-xl flex items-center justify-center">
-                                <BookOpen className="text-violet-500" size={20} />
+                    {/* Step 2: Course Vector */}
+                    <div className="lg:col-span-4 space-y-6">
+                        <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-sm hover:shadow-xl transition-all duration-500 group overflow-hidden flex flex-col h-full min-h-[650px]">
+                            <div className="p-8 border-b border-slate-100 bg-slate-50/50">
+                                <div className="flex items-center justify-between mb-8">
+                                    <div className="w-14 h-14 bg-violet-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-violet-200 group-hover:scale-110 transition-transform duration-500">
+                                        <BookOpen size={28} />
+                                    </div>
+                                    <span className="text-[10px] font-black text-violet-200 uppercase tracking-widest bg-violet-900 px-4 py-2 rounded-full">Step 02</span>
+                                </div>
+                                <h3 className="text-2xl font-black text-slate-900 tracking-tight">Select Course</h3>
+                                <p className="text-slate-400 font-bold text-xs mt-2 uppercase tracking-widest">Define operational context</p>
                             </div>
-                            <div>
-                                <h3 className="font-black text-slate-900">2. Select Course</h3>
-                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Choose the course</p>
-                            </div>
-                        </div>
 
-                        <div className="max-h-64 overflow-y-auto space-y-2">
-                            {courses.map(course => (
-                                <button
-                                    key={course.id}
-                                    onClick={() => setSelectedCourse(course)}
-                                    className={`w-full p-3 rounded-xl text-left transition-all ${selectedCourse?.id === course.id
-                                        ? 'bg-violet-600 text-white'
-                                        : 'bg-slate-50 hover:bg-slate-100 text-slate-700'
-                                        }`}
-                                >
-                                    <p className="font-bold text-sm truncate">{course.title}</p>
-                                    <p className={`text-[10px] ${selectedCourse?.id === course.id ? 'text-violet-100' : 'text-slate-400'}`}>
-                                        {course.totalLevels || course.total_levels || 1} Levels
-                                    </p>
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Level Selection */}
-                    <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-4">
-                        <div className="flex items-center gap-3 text-left">
-                            <div className="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center">
-                                <Layers className="text-amber-500" size={20} />
-                            </div>
-                            <div>
-                                <h3 className="font-black text-slate-900">3. Select Level</h3>
-                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Level to reset</p>
-                            </div>
-                        </div>
-
-                        {selectedCourse ? (
-                            <div className="grid grid-cols-4 gap-2">
-                                {Array.from({ length: selectedCourse.totalLevels || selectedCourse.total_levels || 12 }, (_, i) => i + 1).map(lv => (
+                            <div className="p-8 space-y-4 flex-1 overflow-y-auto pr-2 custom-scrollbar">
+                                {courses.map(course => (
                                     <button
-                                        key={lv}
-                                        onClick={() => setSelectedLevel(lv)}
-                                        className={`py-3 rounded-xl font-black text-sm transition-all ${selectedLevel === lv
-                                            ? 'bg-amber-500 text-white shadow-lg shadow-amber-200'
-                                            : 'bg-slate-50 hover:bg-slate-100 text-slate-600'
+                                        key={course.id}
+                                        onClick={() => setSelectedCourse(course)}
+                                        className={`w-full p-6 rounded-3xl text-left border-2 transition-all duration-300 relative group/card ${selectedCourse?.id === course.id
+                                            ? 'bg-violet-600 border-violet-600 text-white shadow-xl shadow-violet-200 scale-[1.02]'
+                                            : 'bg-white border-slate-100 hover:border-violet-100 hover:bg-violet-50/50 text-slate-700'
                                             }`}
                                     >
-                                        {lv}
+                                        <div className="flex flex-col relative z-10">
+                                            <div className="flex items-start justify-between mb-2">
+                                                <p className="font-black text-lg leading-tight pr-8">{course.title}</p>
+                                                {selectedCourse?.id === course.id && <CheckCircle size={20} className="text-white/50 shrink-0" />}
+                                            </div>
+                                            <div className="flex items-center gap-4 mt-2">
+                                                <div className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${selectedCourse?.id === course.id ? 'bg-white/20 text-white' : 'bg-violet-50 text-violet-600'}`}>
+                                                    {course.totalLevels || course.total_levels || 1} Milestones
+                                                </div>
+                                                <div className={`text-[9px] font-black uppercase tracking-widest ${selectedCourse?.id === course.id ? 'text-violet-200' : 'text-slate-300'}`}>
+                                                    ID: {course.id.slice(0, 8)}
+                                                </div>
+                                            </div>
+                                        </div>
                                     </button>
                                 ))}
                             </div>
-                        ) : (
-                            <p className="text-center text-slate-400 text-sm py-8">Select a course first</p>
-                        )}
+                        </div>
+                    </div>
+
+                    {/* Step 3: Level Precision */}
+                    <div className="lg:col-span-4 space-y-6">
+                        <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-sm hover:shadow-xl transition-all duration-500 group overflow-hidden flex flex-col h-full min-h-[650px]">
+                            <div className="p-8 border-b border-slate-100 bg-slate-50/50">
+                                <div className="flex items-center justify-between mb-8">
+                                    <div className="w-14 h-14 bg-amber-500 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-amber-200 group-hover:scale-110 transition-transform duration-500">
+                                        <Layers size={28} />
+                                    </div>
+                                    <span className="text-[10px] font-black text-amber-100 uppercase tracking-widest bg-amber-900 px-4 py-2 rounded-full">Step 03</span>
+                                </div>
+                                <h3 className="text-2xl font-black text-slate-900 tracking-tight">Milestone Rank</h3>
+                                <p className="text-slate-400 font-bold text-xs mt-2 uppercase tracking-widest">Select level to purge</p>
+                            </div>
+
+                            <div className="p-8 flex-1">
+                                {selectedCourse ? (
+                                    <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-3 gap-4">
+                                        {Array.from({ length: selectedCourse.totalLevels || selectedCourse.total_levels || 12 }, (_, i) => i + 1).map(lv => (
+                                            <button
+                                                key={lv}
+                                                onClick={() => setSelectedLevel(lv)}
+                                                className={`aspect-square flex flex-col items-center justify-center rounded-3xl font-black transition-all duration-300 border-2 ${selectedLevel === lv
+                                                    ? 'bg-amber-500 border-amber-500 text-white shadow-xl shadow-amber-200 scale-110'
+                                                    : 'bg-white border-slate-100 hover:border-amber-100 hover:bg-amber-50 text-slate-600'
+                                                    }`}
+                                            >
+                                                <span className="text-[10px] uppercase opacity-50 mb-1">LVL</span>
+                                                <span className="text-2xl leading-none">{lv}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="h-full flex flex-col items-center justify-center text-center p-10 bg-slate-50/50 rounded-[2rem] border-2 border-dashed border-slate-100">
+                                        <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center shadow-inner mb-6">
+                                            <AlertTriangle className="text-slate-200" size={40} />
+                                        </div>
+                                        <h4 className="text-slate-400 font-black text-sm uppercase tracking-widest">Context Required</h4>
+                                        <p className="text-slate-300 font-bold text-xs mt-4">Select a course vector in Step 02 to initialize level parameters.</p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                {/* Summary & Action */}
-                <div className="bg-gradient-to-br from-rose-500 to-pink-600 p-8 rounded-3xl text-white shadow-2xl shadow-rose-200">
-                    <div className="flex flex-col lg:flex-row items-center justify-between gap-6">
-                        <div className="text-left">
-                            <h3 className="font-black text-xl flex items-center gap-3">
-                                <AlertTriangle size={24} />
-                                Reset Confirmation
+                {/* Execution Bar */}
+                <div className="mx-auto mt-12 bg-slate-900 rounded-[3rem] p-10 text-white shadow-2xl shadow-slate-900/40 relative overflow-hidden border border-white/5">
+                    <div className="absolute top-0 right-0 w-96 h-96 bg-rose-500/10 rounded-full blur-[100px] pointer-events-none" />
+                    <div className="absolute bottom-0 left-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-[80px] pointer-events-none" />
+
+                    <div className="flex flex-col lg:flex-row items-center justify-between gap-10 relative z-10">
+                        <div className="flex-1">
+                            <h3 className="text-2xl font-black flex items-center gap-4">
+                                <div className="p-3 bg-rose-500/20 rounded-2xl text-rose-400 border border-rose-500/30">
+                                    <AlertTriangle size={28} />
+                                </div>
+                                Operational Execution Manifest
                             </h3>
-                            {selectedUser && selectedCourse ? (
-                                <p className="mt-2 text-rose-100">
-                                    Reset <strong>Level {selectedLevel}</strong> for <strong>{selectedUser.full_name || selectedUser.username}</strong> in <strong>{selectedCourse.title}</strong>
-                                </p>
-                            ) : (
-                                <p className="mt-2 text-rose-100">Select a student, course, and level above to continue</p>
-                            )}
+                            <div className="mt-8 flex flex-wrap gap-8">
+                                <div className="space-y-1">
+                                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Subject</p>
+                                    <p className="font-black text-lg text-white">{selectedUser ? (selectedUser.full_name || selectedUser.username) : '---'}</p>
+                                </div>
+                                <div className="w-px h-12 bg-white/10 hidden md:block" />
+                                <div className="space-y-1">
+                                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Objective</p>
+                                    <p className="font-black text-lg text-white">{selectedCourse ? selectedCourse.title : '---'}</p>
+                                </div>
+                                <div className="w-px h-12 bg-white/10 hidden md:block" />
+                                <div className="space-y-1">
+                                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Milestone</p>
+                                    <p className="font-black text-lg text-amber-400">LEVEL {selectedLevel}</p>
+                                </div>
+                            </div>
                         </div>
 
                         <button
                             onClick={handleReset}
                             disabled={!selectedUser || !selectedCourse || resetting}
-                            className="px-8 py-4 bg-white text-rose-600 rounded-2xl font-black text-sm uppercase tracking-widest shadow-xl hover:bg-rose-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-3"
+                            className={`group relative px-12 py-7 rounded-[2rem] font-black text-sm uppercase tracking-[0.3em] transition-all duration-500 flex items-center gap-4 overflow-hidden shadow-2xl ${!selectedUser || !selectedCourse
+                                    ? 'bg-slate-800 text-white/20 cursor-not-allowed opacity-50'
+                                    : 'bg-rose-600 hover:bg-rose-700 text-white shadow-rose-600/30 hover:-translate-y-1'
+                                }`}
                         >
+                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
                             {resetting ? (
                                 <>
-                                    <RefreshCw size={18} className="animate-spin" />
-                                    Resetting...
+                                    <RefreshCw size={24} className="animate-spin" />
+                                    Purging Data...
                                 </>
                             ) : (
                                 <>
-                                    <Trash2 size={18} />
-                                    Reset Level
+                                    <Trash2 size={24} className="group-hover:rotate-12 transition-transform" />
+                                    Execute Purge
                                 </>
                             )}
                         </button>

@@ -158,7 +158,7 @@ class NodeExecutor {
      * @param {string} expected - Expected output
      * @returns {Object} { passed, score, details }
      */
-    compareOutput(actual, expected) {
+    compareOutput(actual, expected, threshold = 70) {
         // Normalize outputs (trim, normalize line endings)
         const normalizeOutput = (str) => {
             return str
@@ -206,7 +206,7 @@ class NodeExecutor {
         const score = Math.round((matchedLines / maxLines) * 100);
 
         return {
-            passed: score >= 70,
+            passed: score >= threshold,
             score,
             details: differences.length > 0
                 ? `${differences.length} line(s) differ`

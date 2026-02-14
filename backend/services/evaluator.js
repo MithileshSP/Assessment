@@ -92,7 +92,8 @@ class Evaluator {
     // 2. Compare output
     const comparison = nodeExecutor.compareOutput(
       execResult.output,
-      challenge.expectedOutput || ''
+      challenge.expectedOutput || '',
+      thresholds.overall || 70
     );
 
     // 3. Content validation (Check for required modules or patterns)
@@ -101,7 +102,8 @@ class Evaluator {
       '', // No CSS
       '', // No expected HTML
       '', // No expected CSS
-      challenge.id
+      challenge.id,
+      thresholds.overall || 70
     );
 
     const result = {
@@ -170,7 +172,8 @@ class Evaluator {
       candidateCode.css || '',
       expectedCode.html,
       expectedCode.css || '',
-      challengeId
+      challengeId,
+      thresholds.overall || 70
     );
 
     result.contentScore = contentResult.score;
@@ -227,7 +230,13 @@ class Evaluator {
       contentValidation: contentResult.feedback
     };
 
-    result.passed = result.contentScore >= 70 && result.visualScore >= 70 && result.finalScore >= 70;
+    const minOverall = thresholds.overall || 70;
+    const minStructure = thresholds.structure || 70;
+    const minVisual = thresholds.visual || 70;
+
+    result.passed = result.contentScore >= minOverall &&
+      result.visualScore >= minVisual &&
+      result.finalScore >= minOverall;
 
     return result;
   }

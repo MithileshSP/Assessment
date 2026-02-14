@@ -205,6 +205,7 @@ router.get('/requests', verifyAdmin, async (req, res) => {
 // Admin: Get all active violations (locked tests)
 router.get('/violations', verifyAdmin, async (req, res) => {
     try {
+        console.log('[Violations GET] Checking for active violations...');
         const rows = await query(`
             SELECT ta.id, ta.user_id, u.username, u.full_name, u.email, u.roll_no,
                    ta.test_identifier, ta.locked_at, ta.locked_reason, ta.violation_count, 
@@ -215,10 +216,19 @@ router.get('/violations', verifyAdmin, async (req, res) => {
             WHERE ta.locked = 1
             ORDER BY ta.locked_at DESC
         `);
+        console.log(`[Violations GET] Found ${rows.length} violations.`);
         res.json(rows);
     } catch (err) {
-        console.error('[Violations GET] Error:', err);
-        res.status(500).json({ error: 'Failed to fetch violations' });
+        console.error('[Violations GET] CRITICAL ERROR:', {
+            message: err.message,
+            code: err.code,
+            sql: err.sql,
+            stack: err.stack
+        });
+        res.status(500).json({
+            error: 'Failed to fetch violations',
+            details: err.message // TEMPORARY DEBUG: Show full error in production
+        });
     }
 });
 

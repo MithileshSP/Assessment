@@ -56,13 +56,13 @@ router.get('/faculty-load', verifyAdmin, async (req, res) => {
   try {
     // Get all faculty users
     const facultyUsers = await db.query(
-      "SELECT id, username, full_name, email FROM users WHERE role = 'faculty'"
+      "SELECT id, username, full_name, email, last_login FROM users WHERE role = 'faculty'"
     );
 
     // Get submission counts for each faculty
     const facultyStart = {};
     facultyUsers.forEach(f => {
-      facultyStart[f.id] = { ...f, pending: 0, completed: 0, total: 0 };
+      facultyStart[f.id] = { ...f, pending: 0, completed: 0, total: 0, courses: [] };
     });
 
     const assignments = await db.query(
@@ -76,6 +76,19 @@ router.get('/faculty-load', verifyAdmin, async (req, res) => {
         if (row.status === 'pending') facultyStart[row.faculty_id].pending += row.count;
         if (row.status === 'evaluated') facultyStart[row.faculty_id].completed += row.count;
         facultyStart[row.faculty_id].total += row.count;
+      }
+    });
+
+    // Get assigned courses
+    const courseAssignments = await db.query(
+      `SELECT fca.faculty_id, c.title 
+             FROM faculty_course_assignments fca
+             JOIN courses c ON fca.course_id = c.id`
+    );
+
+    courseAssignments.forEach(row => {
+      if (facultyStart[row.faculty_id]) {
+        facultyStart[row.faculty_id].courses.push(row.title);
       }
     });
 

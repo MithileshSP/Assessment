@@ -67,6 +67,9 @@ export default function LevelChallenge() {
   const addToast = (message, type = 'info') => {
     const id = Date.now();
     setToasts(prev => [...prev, { id, message, type }]);
+    setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== id));
+    }, 3000);
   };
   const removeToast = (id) => setToasts(prev => prev.filter(t => t.id !== id));
 
@@ -553,23 +556,24 @@ export default function LevelChallenge() {
     setViolations(newViolations);
 
     // Update breakdown
-    setViolationBreakdown(prev => {
-      const next = { ...prev };
-      if (type.toLowerCase().includes('copy')) next.copy++;
-      else if (type.toLowerCase().includes('paste')) next.paste++;
-      else if (type.toLowerCase().includes('fullscreen')) next.fullscreenExit++;
-      else if (type.toLowerCase().includes('switch')) next.tabSwitch++;
-      else if (type.toLowerCase().includes('devtools')) next.devtools++;
-      return next;
-    });
+    let nextBreakdown = { ...violationBreakdown };
+    if (type.toLowerCase().includes('copy')) nextBreakdown.copy++;
+    else if (type.toLowerCase().includes('paste')) nextBreakdown.paste++;
+    else if (type.toLowerCase().includes('fullscreen')) nextBreakdown.fullscreenExit++;
+    else if (type.toLowerCase().includes('switch')) nextBreakdown.tabSwitch++;
+    else if (type.toLowerCase().includes('devtools')) nextBreakdown.devtools++;
+
+    setViolationBreakdown(nextBreakdown);
 
     addToast(`${type}`, 'error');
-    if (newViolations >= restrictions.maxViolations && !isLocked) handleLockTest(newViolations);
+    if (newViolations >= restrictions.maxViolations && !isLocked) {
+      handleLockTest(newViolations, nextBreakdown);
+    }
   };
 
   const unlockPollRef = useRef(null);
 
-  const handleLockTest = async (violationCount) => {
+  const handleLockTest = async (violationCount, forcedBreakdown = null) => {
     setIsLocked(true);
     addToast("Maximum violations reached. Test locked.", 'error');
     const capturedAnswers = { ...userAnswers };
@@ -589,7 +593,7 @@ export default function LevelChallenge() {
         level: parseInt(level),
         reason: 'Max violations reached',
         violationCount,
-        breakdown: violationBreakdown
+        breakdown: forcedBreakdown || violationBreakdown
       });
     } catch (err) { }
     if (unlockPollRef.current) clearInterval(unlockPollRef.current);
@@ -715,7 +719,25 @@ export default function LevelChallenge() {
   };
 
   useEffect(() => {
-    if (!restrictions.blockCopy && !restrictions.blockPaste && !restrictions.forceFullscreen) return;
+    // FIX: Always block context menu globally if any restriction is active or if we are in a test session
+    const handleGlobalContextMenu = (e) => {
+      e.preventDefault();
+      // Optional: Trigger violation if strict mode
+      // handleViolation("Right-click blocked");
+    };
+
+    if (attendanceStatus === 'started' || restrictions.blockCopy || restrictions.blockPaste) {
+      document.addEventListener("contextmenu", handleGlobalContextMenu);
+    }
+
+    if (!restrictions.blockCopy && !restrictions.blockPaste && !restrictions.forceFullscreen) {
+      // If no strict restrictions, we still might want to block context menu if the test is started? 
+      // For now, let's stick to the existing logic but add contextmenu to it.
+      // matching the existing check logic for return:
+      // return; 
+    }
+
+    // Re-implementing the listeners with contextmenu added
     const hc = (e) => { if (restrictions.blockCopy) { e.preventDefault(); handleViolation("Copy blocked"); } };
     const hp = (e) => { if (restrictions.blockPaste) { e.preventDefault(); handleViolation("Paste blocked"); } };
     const hk = (e) => {
@@ -723,21 +745,25 @@ export default function LevelChallenge() {
     };
     const hv = () => { if (document.hidden && restrictions.forceFullscreen) handleViolation("Window Switch Detected"); };
     const hf = () => { if (restrictions.forceFullscreen && !document.fullscreenElement && violations < restrictions.maxViolations) handleViolation("Fullscreen Exit Attempted"); };
+
     document.addEventListener("copy", hc, { capture: true });
     document.addEventListener("paste", hp, { capture: true });
     document.addEventListener("keydown", hk, { capture: true });
+
     if (restrictions.forceFullscreen) {
       document.addEventListener("visibilitychange", hv);
       document.addEventListener("fullscreenchange", hf);
     }
+
     return () => {
+      document.removeEventListener("contextmenu", handleGlobalContextMenu);
       document.removeEventListener("copy", hc, { capture: true });
       document.removeEventListener("paste", hp, { capture: true });
       document.removeEventListener("keydown", hk, { capture: true });
       document.removeEventListener("visibilitychange", hv);
       document.removeEventListener("fullscreenchange", hf);
     };
-  }, [restrictions, violations, lastViolationTime, isLocked]);
+  }, [restrictions, violations, lastViolationTime, isLocked, attendanceStatus]);
 
   useEffect(() => {
     if (attendanceStatus !== 'started') return;
@@ -933,7 +959,7 @@ export default function LevelChallenge() {
 
   return (
     <div
-      className="min-h-screen bg-gray-50 select-none"
+      className="h-screen flex flex-col bg-gray-50 select-none overflow-hidden"
       onContextMenu={(e) => {
         if (attendanceStatus === 'started' && !isLocked) {
           e.preventDefault();
@@ -941,7 +967,7 @@ export default function LevelChallenge() {
       }}
     >
       <ToastContainer toasts={toasts} removeToast={removeToast} />
-      <header className="bg-white border-b sticky top-0 z-20 px-4 py-3 flex items-center justify-between">
+      <header className="bg-white border-b z-20 px-4 py-3 flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-4">
           <button
             onClick={() => setShowInstructions(!showInstructions)}
@@ -998,7 +1024,7 @@ export default function LevelChallenge() {
         </div>
       </header>
 
-      <main className="flex gap-0 p-3 overflow-hidden bg-slate-50" style={{ height: "calc(100vh - 61px)" }}>
+      <main className="flex-1 flex gap-0 p-3 overflow-hidden bg-slate-50">
         {/* Left Column: Instructions & Editor */}
         <div style={{ width: `${leftWidth}%` }} className="flex flex-col gap-3 min-w-0 pr-1 select-none">
           {showInstructions && (
@@ -1111,25 +1137,39 @@ export default function LevelChallenge() {
                   onConsoleLog={setConsoleOutput}
                   onHistoryChange={setPreviewHistory}
                   stdin={stdin}
+                  isRestricted={true}
                 />
               </div>
 
               {previewTab === 'expected' && (
-                <div className="w-full h-full p-4 overflow-auto flex items-center justify-center bg-slate-50">
+                <div className="w-full h-full bg-slate-50 overflow-auto">
                   {challenge.assets?.reference ? (
-                    <img
-                      src={challenge.assets.reference}
-                      alt="Expected Reference"
-                      className="max-w-full shadow-lg rounded border"
-                      onError={(e) => { e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><text x="10" y="50" fill="gray">No Reference</text></svg>' }}
-                    />
+                    <div className="min-w-full min-h-full p-4 flex items-center justify-center">
+                      <div className="relative inline-block max-w-full shadow-lg rounded border bg-white">
+                        <div
+                          className="absolute inset-0 z-50 bg-transparent"
+                          onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                        />
+                        <img
+                          src={challenge.assets.reference}
+                          alt="Expected Reference"
+                          className="block max-w-full"
+                          onError={(e) => { e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><text x="10" y="50" fill="gray">No Reference</text></svg>' }}
+                        />
+                      </div>
+                    </div>
                   ) : (challenge.expectedHtml || challenge.expectedCss || challenge.expectedJs) ? (
-                    <PreviewFrame
-                      autoRun={true}
-                      code={expectedResultCode}
-                    />
+                    <div className="w-full h-full overflow-hidden">
+                      <PreviewFrame
+                        autoRun={true}
+                        code={expectedResultCode}
+                        isRestricted={true}
+                      />
+                    </div>
                   ) : (
-                    <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">No expected output</p>
+                    <div className="w-full h-full flex items-center justify-center">
+                      <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">No expected output</p>
+                    </div>
                   )}
                 </div>
               )}

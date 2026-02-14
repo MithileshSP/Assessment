@@ -1,0 +1,1036 @@
+﻿backend-2  | ValidationError: Custom keyGenerator appears to use request IP without calling the ipKeyGenerator helper function for IPv6 addresses. This could allow IPv6 users to bypass limits. See https://express-rate-limit.github.io/ERR_ERL_KEY_GEN_IPV6/ for more information.
+backend-2  |     at Object.keyGeneratorIpFallback (/app/node_modules/express-rate-limit/dist/index.cjs:637:13)
+backend-2  |     at wrappedValidations.<computed> [as keyGeneratorIpFallback] (/app/node_modules/express-rate-limit/dist/index.cjs:680:22)
+backend-2  |     at parseOptions (/app/node_modules/express-rate-limit/dist/index.cjs:750:16)
+backend-2  |     at rateLimit (/app/node_modules/express-rate-limit/dist/index.cjs:831:18)
+backend-2  |     at Object.<anonymous> (/app/server.js:95:17)
+backend-2  |     at Module._compile (node:internal/modules/cjs/loader:1521:14)
+backend-2  |     at Module._extensions..js (node:internal/modules/cjs/loader:1623:10)
+backend-2  |     at Module.load (node:internal/modules/cjs/loader:1266:32)
+backend-2  |     at Module._load (node:internal/modules/cjs/loader:1091:12)
+backend-2  |     at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:164:12) {
+backend-2  |   code: 'ERR_ERL_KEY_GEN_IPV6',
+backend-2  |   help: 'https://express-rate-limit.github.io/ERR_ERL_KEY_GEN_IPV6/'
+backend-2  | }
+backend-2  | ≡ƒôé Checking for frontend files...
+backend-2  |    - checking /app/public: FOUND
+backend-2  |    - checking /app/frontend/dist: MISSING
+backend-2  |    - checking /frontend/dist: MISSING
+backend-2  | ≡ƒôé frontendDistPath value: /app/public
+backend-2  | ≡ƒôé frontendDistPath exists?: true
+backend-2  | Γ£à Serving frontend from: /app/public
+backend-2  | ≡ƒÜÇ Server running on port 7000
+backend-2  | ≡ƒôè Environment: production
+backend-2  | ΓÅ│ Waiting for database readiness...
+backend-2  | Γ£à MySQL Database connected successfully
+backend-2  | [ChallengeAssignment] Table verified.
+backend-2  | ≡ƒöä Checking for database migrations...
+backend-2  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-2  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-2  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-2  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-2  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-2  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-2  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-2  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-2  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-2  | Database query error: Error: Deadlock found when trying to get lock; try restarting transaction
+backend-2  |     at PromisePool.query (/app/node_modules/mysql2/lib/promise/pool.js:36:22)
+backend-2  |     at query (/app/database/connection.js:119:31)
+backend-2  |     at queryWithRetry (/app/services/dbMigration.js:39:22)
+backend-3  | ValidationError: Custom keyGenerator appears to use request IP without calling the ipKeyGenerator helper function for IPv6 addresses. This could allow IPv6 users to bypass limits. See https://express-rate-limit.github.io/ERR_ERL_KEY_GEN_IPV6/ for more information.
+backend-2  |     at addColumn (/app/services/dbMigration.js:14:13)
+backend-2  |     at applyMigrations (/app/services/dbMigration.js:137:11)
+backend-2  |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+backend-2  |     at async Server.<anonymous> (/app/server.js:310:7) {
+backend-2  |   code: 'ER_LOCK_DEADLOCK',
+backend-2  |   errno: 1213,
+backend-2  |   sql: 'ALTER TABLE challenges ADD COLUMN expected_screenshot_data MEDIUMBLOB',
+backend-2  |   sqlState: '40001',
+backend-2  |   sqlMessage: 'Deadlock found when trying to get lock; try restarting transaction'
+backend-2  | }
+backend-2  | ΓÅ│ Deadlock detected, retrying in 1386ms... (Attempt 1/3)
+backend-3  |     at Object.keyGeneratorIpFallback (/app/node_modules/express-rate-limit/dist/index.cjs:637:13)
+backend-3  |     at wrappedValidations.<computed> [as keyGeneratorIpFallback] (/app/node_modules/express-rate-limit/dist/index.cjs:680:22)
+backend-3  |     at parseOptions (/app/node_modules/express-rate-limit/dist/index.cjs:750:16)
+backend-3  |     at rateLimit (/app/node_modules/express-rate-limit/dist/index.cjs:831:18)
+backend-3  |     at Object.<anonymous> (/app/server.js:95:17)
+backend-3  |     at Module._compile (node:internal/modules/cjs/loader:1521:14)
+backend-3  |     at Module._extensions..js (node:internal/modules/cjs/loader:1623:10)
+backend-3  |     at Module.load (node:internal/modules/cjs/loader:1266:32)
+backend-3  |     at Module._load (node:internal/modules/cjs/loader:1091:12)
+backend-3  |     at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:164:12) {
+backend-3  |   code: 'ERR_ERL_KEY_GEN_IPV6',
+backend-3  |   help: 'https://express-rate-limit.github.io/ERR_ERL_KEY_GEN_IPV6/'
+backend-3  | }
+backend-3  | ≡ƒôé Checking for frontend files...
+backend-3  |    - checking /app/public: FOUND
+backend-3  |    - checking /app/frontend/dist: MISSING
+backend-3  |    - checking /frontend/dist: MISSING
+backend-3  | ≡ƒôé frontendDistPath value: /app/public
+backend-3  | ≡ƒôé frontendDistPath exists?: true
+backend-3  | Γ£à Serving frontend from: /app/public
+backend-3  | ≡ƒÜÇ Server running on port 7000
+backend-3  | ≡ƒôè Environment: production
+backend-3  | ΓÅ│ Waiting for database readiness...
+backend-3  | Γ£à MySQL Database connected successfully
+backend-3  | [ChallengeAssignment] Table verified.
+backend-3  | ≡ƒöä Checking for database migrations...
+backend-3  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | Database query error: Error: Deadlock found when trying to get lock; try restarting transaction
+backend-3  |     at PromisePool.query (/app/node_modules/mysql2/lib/promise/pool.js:36:22)
+backend-3  |     at query (/app/database/connection.js:119:31)
+backend-3  |     at queryWithRetry (/app/services/dbMigration.js:39:22)
+backend-3  |     at addColumn (/app/services/dbMigration.js:14:13)
+backend-3  |     at applyMigrations (/app/services/dbMigration.js:137:11)
+backend-3  |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+backend-3  |     at async Server.<anonymous> (/app/server.js:310:7) {
+backend-3  |   code: 'ER_LOCK_DEADLOCK',
+backend-3  |   errno: 1213,
+backend-3  |   sql: 'ALTER TABLE challenges ADD COLUMN expected_screenshot_data MEDIUMBLOB',
+backend-3  |   sqlState: '40001',
+backend-3  |   sqlMessage: 'Deadlock found when trying to get lock; try restarting transaction'
+backend-3  | }
+backend-3  | ΓÅ│ Deadlock detected, retrying in 1203ms... (Attempt 1/3)
+backend-3  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-1  | ValidationError: Custom keyGenerator appears to use request IP without calling the ipKeyGenerator helper function for IPv6 addresses. This could allow IPv6 users to bypass limits. See https://express-rate-limit.github.io/ERR_ERL_KEY_GEN_IPV6/ for more information.
+backend-1  |     at Object.keyGeneratorIpFallback (/app/node_modules/express-rate-limit/dist/index.cjs:637:13)
+backend-3  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | ≡ƒî▒ Seeding initial data (idempotent)...
+backend-3  | Γ£à Modified password column to allow NULL
+backend-3  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | Γ£à Full migrations applied successfully (v3.4.7)
+backend-3  | Γ£à Migrations completed successfully
+backend-3  | ≡ƒöä Starting migration: Fix Stuck Submissions
+backend-2  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-2  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-2  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-2  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | Γ£à Migration complete. 0 submissions moved to queue.
+backend-2  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-2  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | ≡ƒæ╖ Evaluation Worker: Started
+backend-3  | ≡ƒ¢í∩╕Å  SessionGuardian started (Interval: 60000ms)
+backend-3  | 
+backend-3  | ≡ƒôü API Endpoints:
+backend-2  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-2  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  |    GET  /api/challenges
+backend-3  |    POST /api/submissions
+backend-3  |    POST /api/evaluate
+backend-3  |    POST /api/auth/login
+backend-3  | ::ffff:172.20.0.7 - - [13/Feb/2026:17:41:19 +0000] "HEAD /health HTTP/1.1" 200 166 "-" "curl/8.17.0"
+backend-3  | [TraceAuth] User: admin, TokenSession: 25f454b4-8fd1-4bfe-87fc-f8802f064c18, DBSession: 3d4c97ad-e2e7-44ea-9c23-1328c15acef8
+backend-2  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | 172.20.0.1 - - [13/Feb/2026:17:42:33 +0000] "GET /api/users?page=1&limit=50&search=&role=all HTTP/1.1" 304 - "http://localhost:100/admin/users" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-3  | [TraceAuth] User: admin, TokenSession: 25f454b4-8fd1-4bfe-87fc-f8802f064c18, DBSession: 3d4c97ad-e2e7-44ea-9c23-1328c15acef8
+backend-3  | 172.20.0.1 - - [13/Feb/2026:17:42:37 +0000] "GET /api/attendance/active-sessions HTTP/1.1" 200 564 "http://localhost:100/admin/attendance" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-1  |     at wrappedValidations.<computed> [as keyGeneratorIpFallback] (/app/node_modules/express-rate-limit/dist/index.cjs:680:22)
+backend-2  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-2  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-2  | Database query error: Error: Deadlock found when trying to get lock; try restarting transaction
+backend-2  |     at PromisePool.query (/app/node_modules/mysql2/lib/promise/pool.js:36:22)
+backend-2  |     at query (/app/database/connection.js:119:31)
+backend-2  |     at queryWithRetry (/app/services/dbMigration.js:39:22)
+backend-2  |     at addColumn (/app/services/dbMigration.js:14:13)
+backend-2  |     at applyMigrations (/app/services/dbMigration.js:192:11)
+backend-2  |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+backend-2  |     at async Server.<anonymous> (/app/server.js:310:7) {
+backend-2  |   code: 'ER_LOCK_DEADLOCK',
+backend-2  |   errno: 1213,
+backend-2  |   sql: 'ALTER TABLE submissions ADD COLUMN user_screenshot_data MEDIUMBLOB',
+backend-2  |   sqlState: '40001',
+backend-2  |   sqlMessage: 'Deadlock found when trying to get lock; try restarting transaction'
+backend-2  | }
+backend-3  | [TraceAuth] User: admin, TokenSession: 25f454b4-8fd1-4bfe-87fc-f8802f064c18, DBSession: 3d4c97ad-e2e7-44ea-9c23-1328c15acef8
+backend-2  | ΓÅ│ Deadlock detected, retrying in 935ms... (Attempt 1/3)
+backend-2  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-2  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-2  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-2  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-2  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | 172.20.0.1 - - [13/Feb/2026:17:42:38 +0000] "GET /api/attendance/schedule HTTP/1.1" 304 - "http://localhost:100/admin/schedule" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-3  | 172.20.0.1 - - [13/Feb/2026:17:42:42 +0000] "GET /api/courses/course-fullstack/restrictions HTTP/1.1" 304 - "http://localhost:100/admin/restrictions" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-3  | [TraceAuth] User: admin, TokenSession: 25f454b4-8fd1-4bfe-87fc-f8802f064c18, DBSession: 3d4c97ad-e2e7-44ea-9c23-1328c15acef8
+backend-3  | 172.20.0.1 - - [13/Feb/2026:17:42:45 +0000] "GET /api/evaluate/queue-status HTTP/1.1" 304 - "http://localhost:100/admin/evaluation-tracker" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-3  | [Course Prereq Check] Course: JavaScript, Prereq: Fullstack Development (course-fullstack), User: undefined, IsMet: false, CompletedCourses: 
+backend-3  | [Course Prereq Check] Course: React, Prereq: JavaScript (level-javascript), User: undefined, IsMet: false, CompletedCourses: 
+backend-3  | 172.20.0.1 - - [13/Feb/2026:17:42:47 +0000] "GET /api/courses HTTP/1.1" 304 - "http://localhost:100/admin/bulk-completion" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-2  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-2  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | [TraceAuth] User: admin, TokenSession: 25f454b4-8fd1-4bfe-87fc-f8802f064c18, DBSession: 3d4c97ad-e2e7-44ea-9c23-1328c15acef8
+backend-2  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-2  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-2  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-2  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-2  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | 172.20.0.1 - - [13/Feb/2026:17:43:49 +0000] "GET /api/attendance/violations HTTP/1.1" 304 - "http://localhost:100/admin/violations" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-2  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | [TraceAuth] User: admin, TokenSession: 25f454b4-8fd1-4bfe-87fc-f8802f064c18, DBSession: 3d4c97ad-e2e7-44ea-9c23-1328c15acef8
+backend-3  | 172.20.0.1 - - [13/Feb/2026:17:45:20 +0000] "GET /api/attendance/violations HTTP/1.1" 304 - "http://localhost:100/admin/violations" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-3  | [TraceAuth] User: admin, TokenSession: 25f454b4-8fd1-4bfe-87fc-f8802f064c18, DBSession: 3d4c97ad-e2e7-44ea-9c23-1328c15acef8
+backend-3  | 172.20.0.1 - - [13/Feb/2026:17:46:56 +0000] "GET /api/attendance/violations HTTP/1.1" 304 - "http://localhost:100/admin/violations" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-3  | [TraceAuth] User: admin, TokenSession: 25f454b4-8fd1-4bfe-87fc-f8802f064c18, DBSession: 3d4c97ad-e2e7-44ea-9c23-1328c15acef8
+backend-3  | 172.20.0.1 - - [13/Feb/2026:17:49:29 +0000] "GET /api/attendance/violations HTTP/1.1" 304 - "http://localhost:100/admin/violations" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-3  | ValidationError: Custom keyGenerator appears to use request IP without calling the ipKeyGenerator helper function for IPv6 addresses. This could allow IPv6 users to bypass limits. See https://express-rate-limit.github.io/ERR_ERL_KEY_GEN_IPV6/ for more information.
+backend-2  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  |     at Object.keyGeneratorIpFallback (/app/node_modules/express-rate-limit/dist/index.cjs:637:13)
+backend-2  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-2  | ≡ƒî▒ Seeding initial data (idempotent)...
+backend-2  | Γ£à Modified password column to allow NULL
+backend-2  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-2  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-2  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-2  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-2  | Γ£à Full migrations applied successfully (v3.4.7)
+backend-2  | Γ£à Migrations completed successfully
+backend-2  | ≡ƒöä Starting migration: Fix Stuck Submissions
+backend-2  | Γ£à Migration complete. 0 submissions moved to queue.
+backend-3  |     at wrappedValidations.<computed> [as keyGeneratorIpFallback] (/app/node_modules/express-rate-limit/dist/index.cjs:680:22)
+backend-3  |     at parseOptions (/app/node_modules/express-rate-limit/dist/index.cjs:750:16)
+backend-3  |     at rateLimit (/app/node_modules/express-rate-limit/dist/index.cjs:831:18)
+backend-3  |     at Object.<anonymous> (/app/server.js:95:17)
+backend-3  |     at Module._compile (node:internal/modules/cjs/loader:1521:14)
+backend-3  |     at Module._extensions..js (node:internal/modules/cjs/loader:1623:10)
+backend-2  | ≡ƒæ╖ Evaluation Worker: Started
+backend-3  |     at Module.load (node:internal/modules/cjs/loader:1266:32)
+backend-2  | ≡ƒ¢í∩╕Å  SessionGuardian started (Interval: 60000ms)
+backend-3  |     at Module._load (node:internal/modules/cjs/loader:1091:12)
+backend-2  | 
+backend-2  | ≡ƒôü API Endpoints:
+backend-3  |     at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:164:12) {
+backend-3  |   code: 'ERR_ERL_KEY_GEN_IPV6',
+backend-2  |    GET  /api/challenges
+backend-3  |   help: 'https://express-rate-limit.github.io/ERR_ERL_KEY_GEN_IPV6/'
+backend-2  |    POST /api/submissions
+backend-3  | }
+backend-3  | ≡ƒôé Checking for frontend files...
+backend-2  |    POST /api/evaluate
+backend-3  |    - checking /app/public: FOUND
+backend-2  |    POST /api/auth/login
+backend-3  |    - checking /app/frontend/dist: MISSING
+backend-2  | [TraceAuth] User: admin, TokenSession: 25f454b4-8fd1-4bfe-87fc-f8802f064c18, DBSession: 3d4c97ad-e2e7-44ea-9c23-1328c15acef8
+backend-3  |    - checking /frontend/dist: MISSING
+backend-3  | ≡ƒôé frontendDistPath value: /app/public
+backend-3  | ≡ƒôé frontendDistPath exists?: true
+backend-3  | Γ£à Serving frontend from: /app/public
+backend-3  | ≡ƒÜÇ Server running on port 7000
+backend-2  | 172.20.0.1 - - [13/Feb/2026:17:42:32 +0000] "GET /api/admin/stats HTTP/1.1" 304 - "http://localhost:100/admin/dashboard" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-3  | ≡ƒôè Environment: production
+backend-3  | ΓÅ│ Waiting for database readiness...
+backend-3  | Γ¥î MySQL connection attempt 1 failed: connect ETIMEDOUT
+backend-3  | ΓÅ│ Retrying in 5s...
+backend-3  | Database query error: Error: connect ETIMEDOUT
+backend-2  | [TraceAuth] User: admin, TokenSession: 25f454b4-8fd1-4bfe-87fc-f8802f064c18, DBSession: 3d4c97ad-e2e7-44ea-9c23-1328c15acef8
+backend-2  | 172.20.0.1 - - [13/Feb/2026:17:42:37 +0000] "GET /api/attendance/unblocked-list HTTP/1.1" 304 - "http://localhost:100/admin/attendance" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-2  | [TraceAuth] User: admin, TokenSession: 25f454b4-8fd1-4bfe-87fc-f8802f064c18, DBSession: 3d4c97ad-e2e7-44ea-9c23-1328c15acef8
+backend-2  | 172.20.0.1 - - [13/Feb/2026:17:42:37 +0000] "GET /api/users?role=student HTTP/1.1" 304 - "http://localhost:100/admin/attendance" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-2  | [Course Prereq Check] Course: JavaScript, Prereq: Fullstack Development (course-fullstack), User: undefined, IsMet: false, CompletedCourses: 
+backend-2  | [Course Prereq Check] Course: React, Prereq: JavaScript (level-javascript), User: undefined, IsMet: false, CompletedCourses: 
+backend-3  |     at PromisePool.query (/app/node_modules/mysql2/lib/promise/pool.js:36:22)
+backend-3  |     at query (/app/database/connection.js:119:31)
+backend-2  | 172.20.0.1 - - [13/Feb/2026:17:42:42 +0000] "GET /api/courses HTTP/1.1" 304 - "http://localhost:100/admin/restrictions" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-3  |     at ChallengeAssignment.createTable (/app/models/ChallengeAssignment.js:20:19)
+backend-3  |     at Object.<anonymous> (/app/models/ChallengeAssignment.js:69:21)
+backend-3  |     at Module._compile (node:internal/modules/cjs/loader:1521:14)
+backend-2  | [TraceAuth] User: admin, TokenSession: 25f454b4-8fd1-4bfe-87fc-f8802f064c18, DBSession: 3d4c97ad-e2e7-44ea-9c23-1328c15acef8
+backend-2  | 172.20.0.1 - - [13/Feb/2026:17:42:43 +0000] "GET /api/users?limit=100 HTTP/1.1" 304 - "http://localhost:100/admin/reset-level" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-3  |     at Module._extensions..js (node:internal/modules/cjs/loader:1623:10)
+backend-2  | 172.20.0.1 - - [13/Feb/2026:17:42:46 +0000] "GET /api/assets/categories HTTP/1.1" 304 - "http://localhost:100/admin/assets" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-2  | [TraceAuth] User: admin, TokenSession: 25f454b4-8fd1-4bfe-87fc-f8802f064c18, DBSession: 3d4c97ad-e2e7-44ea-9c23-1328c15acef8
+backend-2  | 172.20.0.1 - - [13/Feb/2026:17:43:19 +0000] "GET /api/attendance/violations HTTP/1.1" 304 - "http://localhost:100/admin/violations" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-2  | [TraceAuth] User: admin, TokenSession: 25f454b4-8fd1-4bfe-87fc-f8802f064c18, DBSession: 3d4c97ad-e2e7-44ea-9c23-1328c15acef8
+backend-3  |     at Module.load (node:internal/modules/cjs/loader:1266:32)
+backend-2  | 172.20.0.1 - - [13/Feb/2026:17:44:50 +0000] "GET /api/attendance/violations HTTP/1.1" 304 - "http://localhost:100/admin/violations" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-3  |     at Module._load (node:internal/modules/cjs/loader:1091:12)
+backend-3  |     at Module.require (node:internal/modules/cjs/loader:1289:19)
+backend-3  |     at require (node:internal/modules/helpers:182:18) {
+backend-2  | [TraceAuth] User: admin, TokenSession: 25f454b4-8fd1-4bfe-87fc-f8802f064c18, DBSession: 3d4c97ad-e2e7-44ea-9c23-1328c15acef8
+backend-2  | 172.20.0.1 - - [13/Feb/2026:17:46:21 +0000] "GET /api/attendance/violations HTTP/1.1" 304 - "http://localhost:100/admin/violations" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-3  |   code: 'ETIMEDOUT',
+backend-2  | [TraceAuth] User: admin, TokenSession: 25f454b4-8fd1-4bfe-87fc-f8802f064c18, DBSession: 3d4c97ad-e2e7-44ea-9c23-1328c15acef8
+backend-3  |   errno: undefined,
+backend-2  | 172.20.0.1 - - [13/Feb/2026:17:48:54 +0000] "GET /api/attendance/violations HTTP/1.1" 304 - "http://localhost:100/admin/violations" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-3  |   sql: undefined,
+backend-3  |   sqlState: undefined,
+backend-2  | ValidationError: Custom keyGenerator appears to use request IP without calling the ipKeyGenerator helper function for IPv6 addresses. This could allow IPv6 users to bypass limits. See https://express-rate-limit.github.io/ERR_ERL_KEY_GEN_IPV6/ for more information.
+backend-3  |   sqlMessage: undefined
+backend-3  | }
+backend-3  | [ChallengeAssignment] Table creation failed: Error: connect ETIMEDOUT
+backend-2  |     at Object.keyGeneratorIpFallback (/app/node_modules/express-rate-limit/dist/index.cjs:637:13)
+backend-3  |     at PromisePool.query (/app/node_modules/mysql2/lib/promise/pool.js:36:22)
+backend-3  |     at query (/app/database/connection.js:119:31)
+backend-2  |     at wrappedValidations.<computed> [as keyGeneratorIpFallback] (/app/node_modules/express-rate-limit/dist/index.cjs:680:22)
+backend-2  |     at parseOptions (/app/node_modules/express-rate-limit/dist/index.cjs:750:16)
+backend-2  |     at rateLimit (/app/node_modules/express-rate-limit/dist/index.cjs:831:18)
+backend-2  |     at Object.<anonymous> (/app/server.js:95:17)
+backend-2  |     at Module._compile (node:internal/modules/cjs/loader:1521:14)
+backend-2  |     at Module._extensions..js (node:internal/modules/cjs/loader:1623:10)
+backend-3  |     at ChallengeAssignment.createTable (/app/models/ChallengeAssignment.js:20:19)
+backend-3  |     at Object.<anonymous> (/app/models/ChallengeAssignment.js:69:21)
+backend-3  |     at Module._compile (node:internal/modules/cjs/loader:1521:14)
+backend-3  |     at Module._extensions..js (node:internal/modules/cjs/loader:1623:10)
+backend-3  |     at Module.load (node:internal/modules/cjs/loader:1266:32)
+backend-2  |     at Module.load (node:internal/modules/cjs/loader:1266:32)
+backend-2  |     at Module._load (node:internal/modules/cjs/loader:1091:12)
+backend-2  |     at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:164:12) {
+backend-2  |   code: 'ERR_ERL_KEY_GEN_IPV6',
+backend-3  |     at Module._load (node:internal/modules/cjs/loader:1091:12)
+backend-2  |   help: 'https://express-rate-limit.github.io/ERR_ERL_KEY_GEN_IPV6/'
+backend-3  |     at Module.require (node:internal/modules/cjs/loader:1289:19)
+backend-2  | }
+backend-3  |     at require (node:internal/modules/helpers:182:18) {
+backend-3  |   code: 'ETIMEDOUT',
+backend-3  |   errno: undefined,
+backend-3  |   sql: undefined,
+backend-3  |   sqlState: undefined,
+backend-3  |   sqlMessage: undefined
+backend-3  | }
+backend-2  | ≡ƒôé Checking for frontend files...
+backend-2  |    - checking /app/public: FOUND
+backend-2  |    - checking /app/frontend/dist: MISSING
+backend-2  |    - checking /frontend/dist: MISSING
+backend-2  | ≡ƒôé frontendDistPath value: /app/public
+backend-2  | ≡ƒôé frontendDistPath exists?: true
+backend-2  | Γ£à Serving frontend from: /app/public
+backend-2  | ≡ƒÜÇ Server running on port 7000
+backend-3  | Γ£à MySQL Database connected successfully
+backend-3  | ≡ƒöä Checking for database migrations...
+backend-2  | ≡ƒôè Environment: production
+backend-3  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-2  | ΓÅ│ Waiting for database readiness...
+backend-2  | Γ¥î MySQL connection attempt 1 failed: connect ETIMEDOUT
+backend-2  | ΓÅ│ Retrying in 5s...
+backend-2  | Database query error: Error: connect ETIMEDOUT
+backend-2  |     at PromisePool.query (/app/node_modules/mysql2/lib/promise/pool.js:36:22)
+backend-2  |     at query (/app/database/connection.js:119:31)
+backend-2  |     at ChallengeAssignment.createTable (/app/models/ChallengeAssignment.js:20:19)
+backend-2  |     at Object.<anonymous> (/app/models/ChallengeAssignment.js:69:21)
+backend-2  |     at Module._compile (node:internal/modules/cjs/loader:1521:14)
+backend-3  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | Database query error: Error: Deadlock found when trying to get lock; try restarting transaction
+backend-3  |     at PromisePool.query (/app/node_modules/mysql2/lib/promise/pool.js:36:22)
+backend-3  |     at query (/app/database/connection.js:119:31)
+backend-3  |     at queryWithRetry (/app/services/dbMigration.js:39:22)
+backend-3  |     at addColumn (/app/services/dbMigration.js:14:13)
+backend-3  |     at applyMigrations (/app/services/dbMigration.js:88:11)
+backend-3  |     at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+backend-2  |     at Module._extensions..js (node:internal/modules/cjs/loader:1623:10)
+backend-3  |     at async Server.<anonymous> (/app/server.js:310:7) {
+backend-2  |     at Module.load (node:internal/modules/cjs/loader:1266:32)
+backend-1  |     at parseOptions (/app/node_modules/express-rate-limit/dist/index.cjs:750:16)
+backend-2  |     at Module._load (node:internal/modules/cjs/loader:1091:12)
+backend-1  |     at rateLimit (/app/node_modules/express-rate-limit/dist/index.cjs:831:18)
+backend-3  |   code: 'ER_LOCK_DEADLOCK',
+backend-1  |     at Object.<anonymous> (/app/server.js:95:17)
+backend-1  |     at Module._compile (node:internal/modules/cjs/loader:1521:14)
+backend-3  |   errno: 1213,
+backend-3  |   sql: 'ALTER TABLE courses ADD COLUMN passing_threshold JSON',
+backend-3  |   sqlState: '40001',
+backend-2  |     at Module.require (node:internal/modules/cjs/loader:1289:19)
+backend-3  |   sqlMessage: 'Deadlock found when trying to get lock; try restarting transaction'
+backend-1  |     at Module._extensions..js (node:internal/modules/cjs/loader:1623:10)
+backend-3  | }
+backend-3  | ΓÅ│ Deadlock detected, retrying in 1379ms... (Attempt 1/3)
+backend-1  |     at Module.load (node:internal/modules/cjs/loader:1266:32)
+backend-3  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-1  |     at Module._load (node:internal/modules/cjs/loader:1091:12)
+backend-3  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-1  |     at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:164:12) {
+backend-1  |   code: 'ERR_ERL_KEY_GEN_IPV6',
+backend-1  |   help: 'https://express-rate-limit.github.io/ERR_ERL_KEY_GEN_IPV6/'
+backend-1  | }
+backend-1  | ≡ƒôé Checking for frontend files...
+backend-1  |    - checking /app/public: FOUND
+backend-2  |     at require (node:internal/modules/helpers:182:18) {
+backend-1  |    - checking /app/frontend/dist: MISSING
+backend-3  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-1  |    - checking /frontend/dist: MISSING
+backend-1  | ≡ƒôé frontendDistPath value: /app/public
+backend-3  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-2  |   code: 'ETIMEDOUT',
+backend-3  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-2  |   errno: undefined,
+backend-1  | ≡ƒôé frontendDistPath exists?: true
+backend-2  |   sql: undefined,
+backend-3  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-2  |   sqlState: undefined,
+backend-3  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-2  |   sqlMessage: undefined
+backend-3  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-2  | }
+backend-3  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-1  | Γ£à Serving frontend from: /app/public
+backend-3  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-1  | ≡ƒÜÇ Server running on port 7000
+backend-2  | [ChallengeAssignment] Table creation failed: Error: connect ETIMEDOUT
+backend-1  | ≡ƒôè Environment: production
+backend-2  |     at PromisePool.query (/app/node_modules/mysql2/lib/promise/pool.js:36:22)
+backend-2  |     at query (/app/database/connection.js:119:31)
+backend-2  |     at ChallengeAssignment.createTable (/app/models/ChallengeAssignment.js:20:19)
+backend-1  | ΓÅ│ Waiting for database readiness...
+backend-2  |     at Object.<anonymous> (/app/models/ChallengeAssignment.js:69:21)
+backend-2  |     at Module._compile (node:internal/modules/cjs/loader:1521:14)
+backend-3  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-1  | Γ£à MySQL Database connected successfully
+backend-3  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-1  | [ChallengeAssignment] Table verified.
+backend-3  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-1  | ≡ƒöä Checking for database migrations...
+backend-3  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-1  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-1  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-1  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-2  |     at Module._extensions..js (node:internal/modules/cjs/loader:1623:10)
+backend-1  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-1  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-1  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-1  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-2  |     at Module.load (node:internal/modules/cjs/loader:1266:32)
+backend-3  | ≡ƒî▒ Seeding initial data (idempotent)...
+backend-2  |     at Module._load (node:internal/modules/cjs/loader:1091:12)
+backend-2  |     at Module.require (node:internal/modules/cjs/loader:1289:19)
+backend-2  |     at require (node:internal/modules/helpers:182:18) {
+backend-2  |   code: 'ETIMEDOUT',
+backend-2  |   errno: undefined,
+backend-2  |   sql: undefined,
+backend-2  |   sqlState: undefined,
+backend-2  |   sqlMessage: undefined
+backend-2  | }
+backend-2  | Γ£à MySQL Database connected successfully
+backend-2  | ≡ƒöä Checking for database migrations...
+backend-1  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-2  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-2  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-2  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-1  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-2  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-1  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-2  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-1  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | Γ£à Modified password column to allow NULL
+backend-1  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-1  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-1  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-1  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-2  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-1  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-1  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-2  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-1  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | Γ£à Full migrations applied successfully (v3.4.7)
+backend-1  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-2  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-2  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-1  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | Γ£à Migrations completed successfully
+backend-1  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-1  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-1  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-2  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-1  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-1  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-2  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | ≡ƒöä Starting migration: Fix Stuck Submissions
+backend-1  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-1  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-1  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | Γ£à Migration complete. 0 submissions moved to queue.
+backend-1  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | ≡ƒæ╖ Evaluation Worker: Started
+backend-1  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-2  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-1  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-2  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | ≡ƒ¢í∩╕Å  SessionGuardian started (Interval: 60000ms)
+backend-3  | 
+backend-3  | ≡ƒôü API Endpoints:
+backend-3  |    GET  /api/challenges
+backend-3  |    POST /api/submissions
+backend-3  |    POST /api/evaluate
+backend-3  |    POST /api/auth/login
+backend-2  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | 172.20.0.1 - - [14/Feb/2026:03:34:23 +0000] "POST /api/auth/login HTTP/1.1" 200 412 "http://localhost:100/login" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-2  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-1  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-2  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | [TraceAuth] User: admin, TokenSession: 88a97ef4-74bd-44eb-a5a9-0d56e2498828, DBSession: 88a97ef4-74bd-44eb-a5a9-0d56e2498828
+backend-2  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-1  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-2  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-1  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-2  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-1  | ≡ƒî▒ Seeding initial data (idempotent)...
+backend-3  | 172.20.0.1 - - [14/Feb/2026:03:34:23 +0000] "GET /api/admin/submissions HTTP/1.1" 304 - "http://localhost:100/admin/dashboard" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-1  | Γ£à Modified password column to allow NULL
+backend-1  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-1  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | [TraceAuth] User: admin, TokenSession: 88a97ef4-74bd-44eb-a5a9-0d56e2498828, DBSession: 88a97ef4-74bd-44eb-a5a9-0d56e2498828
+backend-2  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | 172.20.0.1 - - [14/Feb/2026:03:34:27 +0000] "GET /api/attendance/unblocked-list HTTP/1.1" 304 - "http://localhost:100/admin/attendance" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-2  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-1  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-2  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-2  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-1  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | [TraceAuth] User: admin, TokenSession: 88a97ef4-74bd-44eb-a5a9-0d56e2498828, DBSession: 88a97ef4-74bd-44eb-a5a9-0d56e2498828
+backend-2  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | 172.20.0.1 - - [14/Feb/2026:03:34:28 +0000] "GET /api/attendance/schedule HTTP/1.1" 304 - "http://localhost:100/admin/schedule" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-2  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-2  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-2  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | [Course Prereq Check] Course: JavaScript, Prereq: Fullstack Development (course-fullstack), User: undefined, IsMet: false, CompletedCourses: 
+backend-3  | [Course Prereq Check] Course: React, Prereq: JavaScript (level-javascript), User: undefined, IsMet: false, CompletedCourses: 
+backend-2  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | 172.20.0.1 - - [14/Feb/2026:03:35:38 +0000] "GET /api/courses HTTP/1.1" 304 - "http://localhost:100/admin/reset-level" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-2  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-1  | Γ£à Full migrations applied successfully (v3.4.7)
+backend-2  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | [TraceAuth] User: admin, TokenSession: 88a97ef4-74bd-44eb-a5a9-0d56e2498828, DBSession: 88a97ef4-74bd-44eb-a5a9-0d56e2498828
+backend-2  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | 172.20.0.1 - - [14/Feb/2026:03:35:38 +0000] "GET /api/users?limit=100 HTTP/1.1" 200 - "http://localhost:100/admin/reset-level" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-2  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | [Course Prereq Check] Course: JavaScript, Prereq: Fullstack Development (course-fullstack), User: undefined, IsMet: false, CompletedCourses: 
+backend-2  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | [Course Prereq Check] Course: React, Prereq: JavaScript (level-javascript), User: undefined, IsMet: false, CompletedCourses: 
+backend-1  | Γ£à Migrations completed successfully
+backend-3  | 172.20.0.1 - - [14/Feb/2026:03:35:41 +0000] "GET /api/courses HTTP/1.1" 304 - "http://localhost:100/admin/bulk-completion" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-1  | ≡ƒöä Starting migration: Fix Stuck Submissions
+backend-1  | Γ£à Migration complete. 0 submissions moved to queue.
+backend-1  | ≡ƒæ╖ Evaluation Worker: Started
+backend-2  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-1  | ≡ƒ¢í∩╕Å  SessionGuardian started (Interval: 60000ms)
+backend-2  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | [TraceAuth] User: admin, TokenSession: 88a97ef4-74bd-44eb-a5a9-0d56e2498828, DBSession: 88a97ef4-74bd-44eb-a5a9-0d56e2498828
+backend-2  | ≡ƒî▒ Seeding initial data (idempotent)...
+backend-3  | 172.20.0.1 - - [14/Feb/2026:03:35:46 +0000] "GET /api/users?page=1&limit=50&search=&role=all HTTP/1.1" 200 - "http://localhost:100/admin/users" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-2  | Γ£à Modified password column to allow NULL
+backend-1  | 
+backend-3  | [TraceAuth] User: admin, TokenSession: 88a97ef4-74bd-44eb-a5a9-0d56e2498828, DBSession: 88a97ef4-74bd-44eb-a5a9-0d56e2498828
+backend-2  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-3  | 172.20.0.1 - - [14/Feb/2026:03:35:55 +0000] "GET /api/users?page=1&limit=50&search=&role=all HTTP/1.1" 304 - "http://localhost:100/admin/users" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-2  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-1  | ≡ƒôü API Endpoints:
+backend-2  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-1  |    GET  /api/challenges
+backend-2  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-1  |    POST /api/submissions
+backend-2  | Γ£à Full migrations applied successfully (v3.4.7)
+backend-1  |    POST /api/evaluate
+backend-3  | [TraceAuth] User: gokul, TokenSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211, DBSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211
+backend-3  | [Attendance Status] User: user-1770006845569-e9dmpvt8c, Identifier: course-fullstack, Final Status: approved, isUsed: true, locked: false
+backend-3  | 172.20.0.1 - - [14/Feb/2026:03:36:02 +0000] "GET /api/attendance/status?courseId=course-fullstack&level=1 HTTP/1.1" 200 620 "http://localhost:100/level/course-fullstack" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-2  | Γ£à Migrations completed successfully
+backend-3  | [TestSession] Creating session with data: {
+backend-2  | ≡ƒöä Starting migration: Fix Stuck Submissions
+backend-3  |   user_id: 'user-1770006845569-e9dmpvt8c',
+backend-2  | Γ£à Migration complete. 0 submissions moved to queue.
+backend-3  |   course_id: 'course-fullstack',
+backend-2  | ≡ƒæ╖ Evaluation Worker: Started
+backend-3  |   level: 1
+backend-2  | ≡ƒ¢í∩╕Å  SessionGuardian started (Interval: 60000ms)
+backend-3  | }
+backend-2  | 
+backend-3  | [TraceAuth] User: gokul, TokenSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211, DBSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211
+backend-3  | [Attendance Status] User: user-1770006845569-e9dmpvt8c, Identifier: course-fullstack, Final Status: approved, isUsed: true, locked: false
+backend-1  |    POST /api/auth/login
+backend-3  | 172.20.0.1 - - [14/Feb/2026:03:36:08 +0000] "GET /api/attendance/status?courseId=course-fullstack&level=1 HTTP/1.1" 200 621 "http://localhost:100/level/course-fullstack" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-1  | [TraceAuth] User: admin, TokenSession: 25f454b4-8fd1-4bfe-87fc-f8802f064c18, DBSession: 3d4c97ad-e2e7-44ea-9c23-1328c15acef8
+backend-3  | 172.20.0.1 - - [14/Feb/2026:03:36:08 +0000] "POST /api/test-sessions HTTP/1.1" 201 292 "http://localhost:100/level/course-fullstack" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-3  | 172.20.0.1 - - [14/Feb/2026:03:36:15 +0000] "GET /api/courses/course-fullstack/restrictions HTTP/1.1" 304 - "http://localhost:100/admin/restrictions" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-2  | ≡ƒôü API Endpoints:
+backend-1  | 172.20.0.1 - - [13/Feb/2026:17:42:29 +0000] "GET /api/admin/results HTTP/1.1" 304 - "http://localhost:100/admin/results" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-2  |    GET  /api/challenges
+backend-1  | [TraceAuth] User: admin, TokenSession: 25f454b4-8fd1-4bfe-87fc-f8802f064c18, DBSession: 3d4c97ad-e2e7-44ea-9c23-1328c15acef8
+backend-2  |    POST /api/submissions
+backend-1  | 172.20.0.1 - - [13/Feb/2026:17:42:32 +0000] "GET /api/admin/submissions HTTP/1.1" 304 - "http://localhost:100/admin/dashboard" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-2  |    POST /api/evaluate
+backend-1  | [Course Prereq Check] Course: JavaScript, Prereq: Fullstack Development (course-fullstack), User: undefined, IsMet: false, CompletedCourses: 
+backend-2  |    POST /api/auth/login
+backend-3  | 172.20.0.1 - - [14/Feb/2026:03:36:19 +0000] "GET /api/challenges/q-course-fullstack-1-1770191773027-7 HTTP/1.1" 200 - "http://localhost:100/level/course-fullstack" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-3  | ≡ƒ¢í∩╕Å  SessionGuardian: Checking 1 unblocked students...
+backend-1  | [Course Prereq Check] Course: React, Prereq: JavaScript (level-javascript), User: undefined, IsMet: false, CompletedCourses: 
+backend-3  | 172.20.0.1 - - [14/Feb/2026:03:37:12 +0000] "POST /api/submissions/batch HTTP/1.1" 200 45 "http://localhost:100/level/course-fullstack" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-1  | 172.20.0.1 - - [13/Feb/2026:17:42:35 +0000] "GET /api/courses HTTP/1.1" 200 - "http://localhost:100/admin/courses" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-3  | [TraceAuth] User: gokul, TokenSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211, DBSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211
+backend-2  | [TraceAuth] User: admin, TokenSession: 88a97ef4-74bd-44eb-a5a9-0d56e2498828, DBSession: 88a97ef4-74bd-44eb-a5a9-0d56e2498828
+backend-2  | 172.20.0.1 - - [14/Feb/2026:03:34:23 +0000] "GET /api/admin/stats HTTP/1.1" 304 - "http://localhost:100/admin/dashboard" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-1  | [TraceAuth] User: admin, TokenSession: 25f454b4-8fd1-4bfe-87fc-f8802f064c18, DBSession: 3d4c97ad-e2e7-44ea-9c23-1328c15acef8
+backend-2  | [TraceAuth] User: admin, TokenSession: 88a97ef4-74bd-44eb-a5a9-0d56e2498828, DBSession: 88a97ef4-74bd-44eb-a5a9-0d56e2498828
+backend-1  | 172.20.0.1 - - [13/Feb/2026:17:42:39 +0000] "GET /api/admin/faculty-load HTTP/1.1" 304 - "http://localhost:100/admin/assignment" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-2  | 172.20.0.1 - - [14/Feb/2026:03:34:27 +0000] "GET /api/users?role=student HTTP/1.1" 304 - "http://localhost:100/admin/attendance" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-3  | [Lock Request] User: user-1770006845569-e9dmpvt8c, Identifier: course-fullstack, Reason: Max violations reached
+backend-2  | [TraceAuth] User: admin, TokenSession: 88a97ef4-74bd-44eb-a5a9-0d56e2498828, DBSession: 88a97ef4-74bd-44eb-a5a9-0d56e2498828
+backend-3  | [Lock] Updated existing record 19
+backend-3  | 172.20.0.1 - - [14/Feb/2026:03:37:21 +0000] "POST /api/attendance/lock HTTP/1.1" 200 69 "http://localhost:100/level/course-fullstack" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-2  | 172.20.0.1 - - [14/Feb/2026:03:34:29 +0000] "GET /api/admin/faculty-load HTTP/1.1" 304 - "http://localhost:100/admin/assignment" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-3  | [TraceAuth] User: gokul, TokenSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211, DBSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211
+backend-2  | [Course Prereq Check] Course: JavaScript, Prereq: Fullstack Development (course-fullstack), User: undefined, IsMet: false, CompletedCourses: 
+backend-1  | [TraceAuth] User: admin, TokenSession: 25f454b4-8fd1-4bfe-87fc-f8802f064c18, DBSession: 3d4c97ad-e2e7-44ea-9c23-1328c15acef8
+backend-2  | [Course Prereq Check] Course: React, Prereq: JavaScript (level-javascript), User: undefined, IsMet: false, CompletedCourses: 
+backend-2  | 172.20.0.1 - - [14/Feb/2026:03:34:31 +0000] "GET /api/courses HTTP/1.1" 304 - "http://localhost:100/admin/restrictions" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-1  | 172.20.0.1 - - [13/Feb/2026:17:42:41 +0000] "GET /api/admin/results HTTP/1.1" 304 - "http://localhost:100/admin/results" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-1  | [Course Prereq Check] Course: JavaScript, Prereq: Fullstack Development (course-fullstack), User: undefined, IsMet: false, CompletedCourses: 
+backend-3  | [Attendance Status] User: user-1770006845569-e9dmpvt8c, Identifier: course-fullstack, Final Status: approved, isUsed: true, locked: true
+backend-1  | [Course Prereq Check] Course: React, Prereq: JavaScript (level-javascript), User: undefined, IsMet: false, CompletedCourses: 
+backend-3  | 172.20.0.1 - - [14/Feb/2026:03:37:29 +0000] "GET /api/attendance/status?courseId=course-fullstack&level=1 HTTP/1.1" 200 626 "http://localhost:100/level/course-fullstack" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-3  | [TraceAuth] User: gokul, TokenSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211, DBSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211
+backend-3  | [Attendance Status] User: user-1770006845569-e9dmpvt8c, Identifier: course-fullstack, Final Status: approved, isUsed: true, locked: true
+backend-3  | 172.20.0.1 - - [14/Feb/2026:03:37:41 +0000] "GET /api/attendance/status?courseId=course-fullstack&level=1 HTTP/1.1" 200 626 "http://localhost:100/level/course-fullstack" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-3  | [TraceAuth] User: gokul, TokenSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211, DBSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211
+backend-3  | [Attendance Status] User: user-1770006845569-e9dmpvt8c, Identifier: course-fullstack, Final Status: approved, isUsed: true, locked: true
+backend-3  | 172.20.0.1 - - [14/Feb/2026:03:37:49 +0000] "GET /api/attendance/status?courseId=course-fullstack&level=1 HTTP/1.1" 200 626 "http://localhost:100/level/course-fullstack" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-3  | ≡ƒ¢í∩╕Å  SessionGuardian: Checking 1 unblocked students...
+backend-3  | [TraceAuth] User: gokul, TokenSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211, DBSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211
+backend-3  | [Attendance Status] User: user-1770006845569-e9dmpvt8c, Identifier: course-fullstack, Final Status: approved, isUsed: true, locked: true
+backend-3  | 172.20.0.1 - - [14/Feb/2026:03:37:54 +0000] "GET /api/attendance/status?courseId=course-fullstack&level=1 HTTP/1.1" 200 626 "http://localhost:100/level/course-fullstack" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-3  | [TraceAuth] User: gokul, TokenSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211, DBSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211
+backend-3  | [Attendance Status] User: user-1770006845569-e9dmpvt8c, Identifier: course-fullstack, Final Status: approved, isUsed: true, locked: true
+backend-3  | 172.20.0.1 - - [14/Feb/2026:03:38:02 +0000] "GET /api/attendance/status?courseId=course-fullstack&level=1 HTTP/1.1" 200 626 "http://localhost:100/level/course-fullstack" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-3  | [TraceAuth] User: gokul, TokenSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211, DBSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211
+backend-3  | [Attendance Status] User: user-1770006845569-e9dmpvt8c, Identifier: course-fullstack, Final Status: approved, isUsed: true, locked: true
+backend-3  | 172.20.0.1 - - [14/Feb/2026:03:38:13 +0000] "GET /api/attendance/status?courseId=course-fullstack&level=1 HTTP/1.1" 200 626 "http://localhost:100/level/course-fullstack" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-3  | [TraceAuth] User: gokul, TokenSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211, DBSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211
+backend-3  | [Attendance Status] User: user-1770006845569-e9dmpvt8c, Identifier: course-fullstack, Final Status: approved, isUsed: true, locked: true
+backend-3  | 172.20.0.1 - - [14/Feb/2026:03:38:20 +0000] "GET /api/attendance/status?courseId=course-fullstack&level=1 HTTP/1.1" 200 626 "http://localhost:100/level/course-fullstack" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-3  | [TraceAuth] User: admin, TokenSession: 88a97ef4-74bd-44eb-a5a9-0d56e2498828, DBSession: 88a97ef4-74bd-44eb-a5a9-0d56e2498828
+backend-3  | 172.20.0.1 - - [14/Feb/2026:03:38:27 +0000] "GET /api/attendance/violations HTTP/1.1" 200 413 "http://localhost:100/admin/violations" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-3  | [TraceAuth] User: admin, TokenSession: 88a97ef4-74bd-44eb-a5a9-0d56e2498828, DBSession: 88a97ef4-74bd-44eb-a5a9-0d56e2498828
+backend-3  | 172.20.0.1 - - [14/Feb/2026:03:38:33 +0000] "POST /api/attendance/unlock HTTP/1.1" 200 36 "http://localhost:100/admin/violations" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-1  | 172.20.0.1 - - [13/Feb/2026:17:42:43 +0000] "GET /api/courses HTTP/1.1" 304 - "http://localhost:100/admin/reset-level" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-3  | [TraceAuth] User: gokul, TokenSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211, DBSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211
+backend-1  | 172.20.0.1 - - [13/Feb/2026:17:42:46 +0000] "GET /api/assets HTTP/1.1" 304 - "http://localhost:100/admin/assets" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-3  | [Attendance Status] User: user-1770006845569-e9dmpvt8c, Identifier: course-fullstack, Final Status: approved, isUsed: false, locked: false
+backend-3  | 172.20.0.1 - - [14/Feb/2026:03:38:51 +0000] "GET /api/attendance/status?courseId=course-fullstack&level=1 HTTP/1.1" 200 626 "http://localhost:100/level/course-fullstack" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-1  | [TraceAuth] User: admin, TokenSession: 25f454b4-8fd1-4bfe-87fc-f8802f064c18, DBSession: 3d4c97ad-e2e7-44ea-9c23-1328c15acef8
+backend-3  | ≡ƒ¢í∩╕Å  SessionGuardian: Checking 1 unblocked students...
+backend-3  | 172.20.0.1 - - [14/Feb/2026:03:39:26 +0000] "POST /api/submissions/batch HTTP/1.1" 200 45 "http://localhost:100/level/course-fullstack" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-3  | [TraceAuth] User: gokul, TokenSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211, DBSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211
+backend-2  | [TraceAuth] User: admin, TokenSession: 88a97ef4-74bd-44eb-a5a9-0d56e2498828, DBSession: 88a97ef4-74bd-44eb-a5a9-0d56e2498828
+backend-3  | [Attendance Status] User: user-1770006845569-e9dmpvt8c, Identifier: course-fullstack, Final Status: approved, isUsed: false, locked: true
+backend-1  | 172.20.0.1 - - [13/Feb/2026:17:42:48 +0000] "GET /api/attendance/violations HTTP/1.1" 304 - "http://localhost:100/admin/violations" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-1  | [TraceAuth] User: admin, TokenSession: 25f454b4-8fd1-4bfe-87fc-f8802f064c18, DBSession: 3d4c97ad-e2e7-44ea-9c23-1328c15acef8
+backend-2  | 172.20.0.1 - - [14/Feb/2026:03:35:39 +0000] "GET /api/evaluate/queue-status HTTP/1.1" 304 - "http://localhost:100/admin/evaluation-tracker" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-1  | 172.20.0.1 - - [13/Feb/2026:17:44:19 +0000] "GET /api/attendance/violations HTTP/1.1" 304 - "http://localhost:100/admin/violations" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-3  | 172.20.0.1 - - [14/Feb/2026:03:39:31 +0000] "GET /api/attendance/status?courseId=course-fullstack&level=1 HTTP/1.1" 200 627 "http://localhost:100/level/course-fullstack" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-1  | [TraceAuth] User: admin, TokenSession: 25f454b4-8fd1-4bfe-87fc-f8802f064c18, DBSession: 3d4c97ad-e2e7-44ea-9c23-1328c15acef8
+backend-3  | [TraceAuth] User: gokul, TokenSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211, DBSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211
+backend-1  | 172.20.0.1 - - [13/Feb/2026:17:45:50 +0000] "GET /api/attendance/violations HTTP/1.1" 304 - "http://localhost:100/admin/violations" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-2  | 172.20.0.1 - - [14/Feb/2026:03:35:40 +0000] "GET /api/assets/categories HTTP/1.1" 304 - "http://localhost:100/admin/assets" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-2  | [TraceAuth] User: admin, TokenSession: 88a97ef4-74bd-44eb-a5a9-0d56e2498828, DBSession: 88a97ef4-74bd-44eb-a5a9-0d56e2498828
+backend-2  | 172.20.0.1 - - [14/Feb/2026:03:35:42 +0000] "GET /api/attendance/violations HTTP/1.1" 304 - "http://localhost:100/admin/violations" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-2  | [Course Prereq Check] Course: JavaScript, Prereq: Fullstack Development (course-fullstack), User: undefined, IsMet: false, CompletedCourses: 
+backend-2  | [Course Prereq Check] Course: React, Prereq: JavaScript (level-javascript), User: undefined, IsMet: false, CompletedCourses: 
+backend-2  | 172.20.0.1 - - [14/Feb/2026:03:35:47 +0000] "GET /api/courses HTTP/1.1" 304 - "http://localhost:100/admin/courses" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-2  | [TraceAuth] User: gokul, TokenSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211, DBSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211
+backend-2  | [Attendance Status] User: user-1770006845569-e9dmpvt8c, Identifier: course-fullstack, Final Status: approved, isUsed: true, locked: false
+backend-2  | 172.20.0.1 - - [14/Feb/2026:03:36:06 +0000] "GET /api/attendance/status?courseId=course-fullstack&level=1 HTTP/1.1" 200 620 "http://localhost:100/level/course-fullstack" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-2  | [TraceAuth] User: admin, TokenSession: 88a97ef4-74bd-44eb-a5a9-0d56e2498828, DBSession: 88a97ef4-74bd-44eb-a5a9-0d56e2498828
+backend-2  | [ToggleBlock] Unblock request for: gokul, SessionID: undefined, Immediate: undefined
+backend-2  | 172.20.0.1 - - [14/Feb/2026:03:36:07 +0000] "PATCH /api/users/user-1770006845569-e9dmpvt8c/toggle-block HTTP/1.1" 200 93 "http://localhost:100/admin/users" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-2  | [TraceAuth] User: gokul, TokenSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211, DBSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211
+backend-2  | 172.20.0.1 - - [14/Feb/2026:03:36:19 +0000] "GET /api/courses/course-fullstack/restrictions HTTP/1.1" 304 - "http://localhost:100/level/course-fullstack" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-2  | [LevelQuestions] fetching for courseId: course-fullstack, found: 50
+backend-2  | [LevelQuestions] Checking previous attempts for user user-1770006845569-e9dmpvt8c on question q-course-fullstack-1-1770191773027-7
+backend-2  | [LevelQuestions] No previous submission found.
+backend-2  | [LevelQuestions] Final Assigned Questions Count: 1
+backend-2  | 172.20.0.1 - - [14/Feb/2026:03:36:19 +0000] "GET /api/challenges/level-questions?userId=user-1770006845569-e9dmpvt8c&courseId=course-fullstack&level=1 HTTP/1.1" 200 284 "http://localhost:100/level/course-fullstack" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-2  | 172.20.0.1 - - [14/Feb/2026:03:36:19 +0000] "GET /api/courses/course-fullstack/restrictions HTTP/1.1" 304 - "http://localhost:100/level/course-fullstack" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-2  | ≡ƒ¢í∩╕Å  SessionGuardian: Checking 1 unblocked students...
+backend-3  | [Attendance Status] User: user-1770006845569-e9dmpvt8c, Identifier: course-fullstack, Final Status: approved, isUsed: false, locked: true
+backend-3  | 172.20.0.1 - - [14/Feb/2026:03:39:39 +0000] "GET /api/attendance/status?courseId=course-fullstack&level=1 HTTP/1.1" 200 627 "http://localhost:100/level/course-fullstack" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-1  | [TraceAuth] User: admin, TokenSession: 25f454b4-8fd1-4bfe-87fc-f8802f064c18, DBSession: 3d4c97ad-e2e7-44ea-9c23-1328c15acef8
+backend-2  | [TraceAuth] User: gokul, TokenSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211, DBSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211
+backend-1  | 172.20.0.1 - - [13/Feb/2026:17:47:56 +0000] "GET /api/attendance/violations HTTP/1.1" 304 - "http://localhost:100/admin/violations" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-3  | [TraceAuth] User: gokul, TokenSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211, DBSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211
+backend-2  | [Attendance Status] User: user-1770006845569-e9dmpvt8c, Identifier: course-fullstack, Final Status: approved, isUsed: true, locked: false
+backend-2  | 172.20.0.1 - - [14/Feb/2026:03:37:20 +0000] "GET /api/attendance/status?courseId=course-fullstack&level=1 HTTP/1.1" 200 621 "http://localhost:100/level/course-fullstack" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-1  | ValidationError: Custom keyGenerator appears to use request IP without calling the ipKeyGenerator helper function for IPv6 addresses. This could allow IPv6 users to bypass limits. See https://express-rate-limit.github.io/ERR_ERL_KEY_GEN_IPV6/ for more information.
+backend-1  |     at Object.keyGeneratorIpFallback (/app/node_modules/express-rate-limit/dist/index.cjs:637:13)
+backend-3  | [Attendance Status] User: user-1770006845569-e9dmpvt8c, Identifier: course-fullstack, Final Status: approved, isUsed: false, locked: true
+backend-1  |     at wrappedValidations.<computed> [as keyGeneratorIpFallback] (/app/node_modules/express-rate-limit/dist/index.cjs:680:22)
+backend-3  | 172.20.0.1 - - [14/Feb/2026:03:39:50 +0000] "GET /api/attendance/status?courseId=course-fullstack&level=1 HTTP/1.1" 200 627 "http://localhost:100/level/course-fullstack" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-1  |     at parseOptions (/app/node_modules/express-rate-limit/dist/index.cjs:750:16)
+backend-3  | [TraceAuth] User: gokul, TokenSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211, DBSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211
+backend-2  | [TraceAuth] User: gokul, TokenSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211, DBSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211
+backend-1  |     at rateLimit (/app/node_modules/express-rate-limit/dist/index.cjs:831:18)
+backend-2  | [Attendance Status] User: user-1770006845569-e9dmpvt8c, Identifier: course-fullstack, Final Status: approved, isUsed: true, locked: true
+backend-1  |     at Object.<anonymous> (/app/server.js:95:17)
+backend-2  | 172.20.0.1 - - [14/Feb/2026:03:37:23 +0000] "GET /api/attendance/status?courseId=course-fullstack&level=1 HTTP/1.1" 200 626 "http://localhost:100/level/course-fullstack" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-1  |     at Module._compile (node:internal/modules/cjs/loader:1521:14)
+backend-2  | [TraceAuth] User: gokul, TokenSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211, DBSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211
+backend-1  |     at Module._extensions..js (node:internal/modules/cjs/loader:1623:10)
+backend-2  | [Attendance Status] User: user-1770006845569-e9dmpvt8c, Identifier: course-fullstack, Final Status: approved, isUsed: true, locked: true
+backend-1  |     at Module.load (node:internal/modules/cjs/loader:1266:32)
+backend-3  | [Attendance Status] User: user-1770006845569-e9dmpvt8c, Identifier: course-fullstack, Final Status: approved, isUsed: false, locked: true
+backend-1  |     at Module._load (node:internal/modules/cjs/loader:1091:12)
+backend-3  | 172.20.0.1 - - [14/Feb/2026:03:39:56 +0000] "GET /api/attendance/status?courseId=course-fullstack&level=1 HTTP/1.1" 200 627 "http://localhost:100/level/course-fullstack" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-1  |     at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:164:12) {
+backend-1  |   code: 'ERR_ERL_KEY_GEN_IPV6',
+backend-2  | 172.20.0.1 - - [14/Feb/2026:03:37:35 +0000] "GET /api/attendance/status?courseId=course-fullstack&level=1 HTTP/1.1" 200 626 "http://localhost:100/level/course-fullstack" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-1  |   help: 'https://express-rate-limit.github.io/ERR_ERL_KEY_GEN_IPV6/'
+backend-1  | }
+backend-2  | [TraceAuth] User: gokul, TokenSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211, DBSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211
+backend-3  | [TraceAuth] User: gokul, TokenSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211, DBSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211
+backend-2  | [Attendance Status] User: user-1770006845569-e9dmpvt8c, Identifier: course-fullstack, Final Status: approved, isUsed: true, locked: true
+backend-3  | [Attendance Status] User: user-1770006845569-e9dmpvt8c, Identifier: course-fullstack, Final Status: approved, isUsed: false, locked: true
+backend-1  | ≡ƒôé Checking for frontend files...
+backend-1  |    - checking /app/public: FOUND
+backend-2  | 172.20.0.1 - - [14/Feb/2026:03:37:43 +0000] "GET /api/attendance/status?courseId=course-fullstack&level=1 HTTP/1.1" 200 626 "http://localhost:100/level/course-fullstack" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-1  |    - checking /app/frontend/dist: MISSING
+backend-2  | ≡ƒ¢í∩╕Å  SessionGuardian: Checking 1 unblocked students...
+backend-2  | [TraceAuth] User: gokul, TokenSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211, DBSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211
+backend-2  | [Attendance Status] User: user-1770006845569-e9dmpvt8c, Identifier: course-fullstack, Final Status: approved, isUsed: true, locked: true
+backend-2  | 172.20.0.1 - - [14/Feb/2026:03:37:51 +0000] "GET /api/attendance/status?courseId=course-fullstack&level=1 HTTP/1.1" 200 626 "http://localhost:100/level/course-fullstack" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-1  |    - checking /frontend/dist: MISSING
+backend-2  | [TraceAuth] User: gokul, TokenSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211, DBSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211
+backend-1  | ≡ƒôé frontendDistPath value: /app/public
+backend-1  | ≡ƒôé frontendDistPath exists?: true
+backend-3  | 172.20.0.1 - - [14/Feb/2026:03:39:59 +0000] "GET /api/attendance/status?courseId=course-fullstack&level=1 HTTP/1.1" 200 627 "http://localhost:100/level/course-fullstack" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-1  | Γ£à Serving frontend from: /app/public
+backend-3  | ≡ƒ¢í∩╕Å  SessionGuardian: Checking 1 unblocked students...
+backend-1  | ≡ƒÜÇ Server running on port 7000
+backend-3  | [TraceAuth] User: gokul, TokenSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211, DBSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211
+backend-1  | ≡ƒôè Environment: production
+backend-2  | [Attendance Status] User: user-1770006845569-e9dmpvt8c, Identifier: course-fullstack, Final Status: approved, isUsed: true, locked: true
+backend-1  | ΓÅ│ Waiting for database readiness...
+backend-3  | [Attendance Status] User: user-1770006845569-e9dmpvt8c, Identifier: course-fullstack, Final Status: approved, isUsed: false, locked: true
+backend-1  | Γ¥î MySQL connection attempt 1 failed: connect ETIMEDOUT
+backend-3  | 172.20.0.1 - - [14/Feb/2026:03:40:08 +0000] "GET /api/attendance/status?courseId=course-fullstack&level=1 HTTP/1.1" 200 627 "http://localhost:100/level/course-fullstack" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-1  | ΓÅ│ Retrying in 5s...
+backend-2  | 172.20.0.1 - - [14/Feb/2026:03:37:57 +0000] "GET /api/attendance/status?courseId=course-fullstack&level=1 HTTP/1.1" 200 626 "http://localhost:100/level/course-fullstack" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-2  | [TraceAuth] User: gokul, TokenSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211, DBSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211
+backend-1  | Database query error: Error: connect ETIMEDOUT
+backend-2  | [Attendance Status] User: user-1770006845569-e9dmpvt8c, Identifier: course-fullstack, Final Status: approved, isUsed: true, locked: true
+backend-2  | 172.20.0.1 - - [14/Feb/2026:03:38:08 +0000] "GET /api/attendance/status?courseId=course-fullstack&level=1 HTTP/1.1" 200 626 "http://localhost:100/level/course-fullstack" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-2  | [TraceAuth] User: gokul, TokenSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211, DBSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211
+backend-2  | [Attendance Status] User: user-1770006845569-e9dmpvt8c, Identifier: course-fullstack, Final Status: approved, isUsed: true, locked: true
+backend-3  | [TraceAuth] User: gokul, TokenSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211, DBSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211
+backend-2  | 172.20.0.1 - - [14/Feb/2026:03:38:16 +0000] "GET /api/attendance/status?courseId=course-fullstack&level=1 HTTP/1.1" 200 626 "http://localhost:100/level/course-fullstack" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-2  | [TraceAuth] User: gokul, TokenSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211, DBSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211
+backend-2  | [Attendance Status] User: user-1770006845569-e9dmpvt8c, Identifier: course-fullstack, Final Status: approved, isUsed: true, locked: true
+backend-2  | 172.20.0.1 - - [14/Feb/2026:03:38:21 +0000] "GET /api/attendance/status?courseId=course-fullstack&level=1 HTTP/1.1" 200 626 "http://localhost:100/level/course-fullstack" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-2  | [TraceAuth] User: gokul, TokenSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211, DBSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211
+backend-2  | [Attendance Status] User: user-1770006845569-e9dmpvt8c, Identifier: course-fullstack, Final Status: approved, isUsed: true, locked: true
+backend-2  | 172.20.0.1 - - [14/Feb/2026:03:38:28 +0000] "GET /api/attendance/status?courseId=course-fullstack&level=1 HTTP/1.1" 200 626 "http://localhost:100/level/course-fullstack" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-2  | [TraceAuth] User: admin, TokenSession: 88a97ef4-74bd-44eb-a5a9-0d56e2498828, DBSession: 88a97ef4-74bd-44eb-a5a9-0d56e2498828
+backend-2  | 172.20.0.1 - - [14/Feb/2026:03:38:33 +0000] "GET /api/attendance/violations HTTP/1.1" 200 2 "http://localhost:100/admin/violations" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-2  | ≡ƒ¢í∩╕Å  SessionGuardian: Checking 1 unblocked students...
+backend-2  | [TraceAuth] User: admin, TokenSession: 88a97ef4-74bd-44eb-a5a9-0d56e2498828, DBSession: 88a97ef4-74bd-44eb-a5a9-0d56e2498828
+backend-2  | 172.20.0.1 - - [14/Feb/2026:03:38:58 +0000] "GET /api/attendance/violations HTTP/1.1" 304 - "http://localhost:100/admin/violations" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-2  | [TraceAuth] User: gokul, TokenSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211, DBSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211
+backend-2  | [Lock Request] User: user-1770006845569-e9dmpvt8c, Identifier: course-fullstack, Reason: Max violations reached
+backend-2  | [Lock] Updated existing record 19
+backend-2  | 172.20.0.1 - - [14/Feb/2026:03:39:28 +0000] "POST /api/attendance/lock HTTP/1.1" 200 69 "http://localhost:100/level/course-fullstack" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-2  | [TraceAuth] User: gokul, TokenSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211, DBSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211
+backend-2  | [Attendance Status] User: user-1770006845569-e9dmpvt8c, Identifier: course-fullstack, Final Status: approved, isUsed: false, locked: true
+backend-2  | 172.20.0.1 - - [14/Feb/2026:03:39:33 +0000] "GET /api/attendance/status?courseId=course-fullstack&level=1 HTTP/1.1" 200 627 "http://localhost:100/level/course-fullstack" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-2  | [TraceAuth] User: gokul, TokenSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211, DBSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211
+backend-2  | [Attendance Status] User: user-1770006845569-e9dmpvt8c, Identifier: course-fullstack, Final Status: approved, isUsed: false, locked: true
+backend-2  | 172.20.0.1 - - [14/Feb/2026:03:39:42 +0000] "GET /api/attendance/status?courseId=course-fullstack&level=1 HTTP/1.1" 200 627 "http://localhost:100/level/course-fullstack" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-2  | [TraceAuth] User: gokul, TokenSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211, DBSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211
+backend-3  | [Attendance Status] User: user-1770006845569-e9dmpvt8c, Identifier: course-fullstack, Final Status: approved, isUsed: false, locked: true
+backend-1  |     at PromisePool.query (/app/node_modules/mysql2/lib/promise/pool.js:36:22)
+backend-1  |     at query (/app/database/connection.js:119:31)
+backend-3  | 172.20.0.1 - - [14/Feb/2026:03:40:16 +0000] "GET /api/attendance/status?courseId=course-fullstack&level=1 HTTP/1.1" 200 627 "http://localhost:100/level/course-fullstack" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-1  |     at ChallengeAssignment.createTable (/app/models/ChallengeAssignment.js:20:19)
+backend-3  | [TraceAuth] User: gokul, TokenSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211, DBSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211
+backend-1  |     at Object.<anonymous> (/app/models/ChallengeAssignment.js:69:21)
+backend-3  | [Attendance Status] User: user-1770006845569-e9dmpvt8c, Identifier: course-fullstack, Final Status: approved, isUsed: false, locked: true
+backend-1  |     at Module._compile (node:internal/modules/cjs/loader:1521:14)
+backend-3  | 172.20.0.1 - - [14/Feb/2026:03:40:24 +0000] "GET /api/attendance/status?courseId=course-fullstack&level=1 HTTP/1.1" 200 627 "http://localhost:100/level/course-fullstack" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-1  |     at Module._extensions..js (node:internal/modules/cjs/loader:1623:10)
+backend-3  | [TraceAuth] User: gokul, TokenSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211, DBSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211
+backend-1  |     at Module.load (node:internal/modules/cjs/loader:1266:32)
+backend-3  | [Attendance Status] User: user-1770006845569-e9dmpvt8c, Identifier: course-fullstack, Final Status: approved, isUsed: false, locked: true
+backend-3  | 172.20.0.1 - - [14/Feb/2026:03:40:29 +0000] "GET /api/attendance/status?courseId=course-fullstack&level=1 HTTP/1.1" 200 627 "http://localhost:100/level/course-fullstack" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-1  |     at Module._load (node:internal/modules/cjs/loader:1091:12)
+backend-3  | [TraceAuth] User: gokul, TokenSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211, DBSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211
+backend-1  |     at Module.require (node:internal/modules/cjs/loader:1289:19)
+backend-2  | [Attendance Status] User: user-1770006845569-e9dmpvt8c, Identifier: course-fullstack, Final Status: approved, isUsed: false, locked: true
+backend-1  |     at require (node:internal/modules/helpers:182:18) {
+backend-2  | 172.20.0.1 - - [14/Feb/2026:03:39:51 +0000] "GET /api/attendance/status?courseId=course-fullstack&level=1 HTTP/1.1" 200 627 "http://localhost:100/level/course-fullstack" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-1  |   code: 'ETIMEDOUT',
+backend-2  | ≡ƒ¢í∩╕Å  SessionGuardian: Checking 1 unblocked students...
+backend-1  |   errno: undefined,
+backend-2  | [TraceAuth] User: admin, TokenSession: 88a97ef4-74bd-44eb-a5a9-0d56e2498828, DBSession: 88a97ef4-74bd-44eb-a5a9-0d56e2498828
+backend-1  |   sql: undefined,
+backend-2  | 172.20.0.1 - - [14/Feb/2026:03:39:58 +0000] "GET /api/attendance/violations HTTP/1.1" 304 - "http://localhost:100/admin/violations" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-1  |   sqlState: undefined,
+backend-1  |   sqlMessage: undefined
+backend-2  | [TraceAuth] User: gokul, TokenSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211, DBSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211
+backend-1  | }
+backend-3  | [Attendance Status] User: user-1770006845569-e9dmpvt8c, Identifier: course-fullstack, Final Status: approved, isUsed: true, locked: false
+backend-2  | [Attendance Status] User: user-1770006845569-e9dmpvt8c, Identifier: course-fullstack, Final Status: approved, isUsed: false, locked: true
+backend-1  | [ChallengeAssignment] Table creation failed: Error: connect ETIMEDOUT
+backend-2  | 172.20.0.1 - - [14/Feb/2026:03:40:05 +0000] "GET /api/attendance/status?courseId=course-fullstack&level=1 HTTP/1.1" 200 627 "http://localhost:100/level/course-fullstack" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-1  |     at PromisePool.query (/app/node_modules/mysql2/lib/promise/pool.js:36:22)
+backend-2  | [TraceAuth] User: gokul, TokenSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211, DBSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211
+backend-1  |     at query (/app/database/connection.js:119:31)
+backend-3  | 172.20.0.1 - - [14/Feb/2026:03:40:31 +0000] "GET /api/attendance/status?courseId=course-fullstack&level=1 HTTP/1.1" 200 621 "http://localhost:100/level/course-fullstack" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-2  | [Attendance Status] User: user-1770006845569-e9dmpvt8c, Identifier: course-fullstack, Final Status: approved, isUsed: false, locked: true
+backend-3  | [TestSession] User user-1770006845569-e9dmpvt8c re-blocked after completion.
+backend-2  | 172.20.0.1 - - [14/Feb/2026:03:40:10 +0000] "GET /api/attendance/status?courseId=course-fullstack&level=1 HTTP/1.1" 200 627 "http://localhost:100/level/course-fullstack" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-2  | [TraceAuth] User: gokul, TokenSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211, DBSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211
+backend-2  | [Attendance Status] User: user-1770006845569-e9dmpvt8c, Identifier: course-fullstack, Final Status: approved, isUsed: false, locked: true
+backend-2  | 172.20.0.1 - - [14/Feb/2026:03:40:21 +0000] "GET /api/attendance/status?courseId=course-fullstack&level=1 HTTP/1.1" 200 627 "http://localhost:100/level/course-fullstack" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-3  | 172.20.0.1 - - [14/Feb/2026:03:40:32 +0000] "PUT /api/test-sessions/efa96ef3-33d8-4494-b3df-6ecb7a24f4c8/complete HTTP/1.1" 200 355 "http://localhost:100/level/course-fullstack" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-3  | [TraceAuth] User: admin, TokenSession: 88a97ef4-74bd-44eb-a5a9-0d56e2498828, DBSession: 88a97ef4-74bd-44eb-a5a9-0d56e2498828
+backend-2  | [TraceAuth] User: gokul, TokenSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211, DBSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211
+backend-2  | [Attendance Status] User: user-1770006845569-e9dmpvt8c, Identifier: course-fullstack, Final Status: approved, isUsed: false, locked: true
+backend-3  | 172.20.0.1 - - [14/Feb/2026:03:40:37 +0000] "GET /api/admin/results HTTP/1.1" 200 326 "http://localhost:100/admin/results" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-2  | 172.20.0.1 - - [14/Feb/2026:03:40:27 +0000] "GET /api/attendance/status?courseId=course-fullstack&level=1 HTTP/1.1" 200 627 "http://localhost:100/level/course-fullstack" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-2  | [TraceAuth] User: admin, TokenSession: 88a97ef4-74bd-44eb-a5a9-0d56e2498828, DBSession: 88a97ef4-74bd-44eb-a5a9-0d56e2498828
+backend-1  |     at ChallengeAssignment.createTable (/app/models/ChallengeAssignment.js:20:19)
+backend-2  | 172.20.0.1 - - [14/Feb/2026:03:40:30 +0000] "POST /api/attendance/unlock HTTP/1.1" 200 34 "http://localhost:100/admin/violations" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-2  | [SubmissionsAPI] Incoming Final Submission: {
+backend-2  |   challengeId: 'q-course-fullstack-1-1770191773027-7',
+backend-1  |     at Object.<anonymous> (/app/models/ChallengeAssignment.js:69:21)
+backend-2  |   userId: 'user-1770006845569-e9dmpvt8c',
+backend-2  |   codeKeys: [ 'html', 'css', 'js', 'additionalFiles' ],
+backend-2  |   hasHTML: true,
+backend-1  |     at Module._compile (node:internal/modules/cjs/loader:1521:14)
+backend-1  |     at Module._extensions..js (node:internal/modules/cjs/loader:1623:10)
+backend-2  |   sessionId: undefined
+backend-1  |     at Module.load (node:internal/modules/cjs/loader:1266:32)
+backend-2  | }
+backend-1  |     at Module._load (node:internal/modules/cjs/loader:1091:12)
+backend-2  | [Submissions] Failed to link to session: queryOne is not defined
+backend-1  |     at Module.require (node:internal/modules/cjs/loader:1289:19)
+backend-2  | 172.20.0.1 - - [14/Feb/2026:03:40:31 +0000] "POST /api/submissions HTTP/1.1" 201 87 "http://localhost:100/level/course-fullstack" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-1  |     at require (node:internal/modules/helpers:182:18) {
+backend-2  | [TraceAuth] User: gokul, TokenSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211, DBSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211
+backend-1  |   code: 'ETIMEDOUT',
+backend-2  | 172.20.0.1 - - [14/Feb/2026:03:40:34 +0000] "POST /api/feedback HTTP/1.1" 200 16 "http://localhost:100/student/feedback/527dcf02-6f64-409a-867a-e6eb27b4a8a7" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-1  |   errno: undefined,
+backend-1  |   sql: undefined,
+backend-1  |   sqlState: undefined,
+backend-2  | [TraceAuth] User: admin, TokenSession: 88a97ef4-74bd-44eb-a5a9-0d56e2498828, DBSession: 88a97ef4-74bd-44eb-a5a9-0d56e2498828
+backend-2  | 172.20.0.1 - - [14/Feb/2026:03:40:40 +0000] "GET /api/faculty/submission/527dcf02-6f64-409a-867a-e6eb27b4a8a7 HTTP/1.1" 200 - "http://localhost:100/admin/submission/527dcf02-6f64-409a-867a-e6eb27b4a8a7" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-1  |   sqlMessage: undefined
+backend-1  | }
+backend-1  | Γ£à MySQL Database connected successfully
+backend-1  | ≡ƒöä Checking for database migrations...
+backend-1  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-1  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-1  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-1  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-1  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-1  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-1  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-1  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-1  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-1  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-1  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-1  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-1  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-1  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-1  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-1  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-1  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-1  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-1  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-1  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-1  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-1  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-1  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-1  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-1  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-1  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-1  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-1  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-1  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-1  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-1  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-1  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-1  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-1  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-1  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-1  | ≡ƒî▒ Seeding initial data (idempotent)...
+backend-1  | Γ£à Modified password column to allow NULL
+backend-1  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-1  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-1  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-1  | Γä╣∩╕Å Migration info: Constraint/Column already exists.
+backend-1  | Γ£à Full migrations applied successfully (v3.4.7)
+backend-1  | Γ£à Migrations completed successfully
+backend-1  | ≡ƒöä Starting migration: Fix Stuck Submissions
+backend-1  | Γ£à Migration complete. 0 submissions moved to queue.
+backend-1  | ≡ƒæ╖ Evaluation Worker: Started
+backend-1  | ≡ƒ¢í∩╕Å  SessionGuardian started (Interval: 60000ms)
+backend-1  | 
+backend-1  | ≡ƒôü API Endpoints:
+backend-1  |    GET  /api/challenges
+backend-1  |    POST /api/submissions
+backend-1  |    POST /api/evaluate
+backend-1  |    POST /api/auth/login
+backend-1  | [Course Prereq Check] Course: JavaScript, Prereq: Fullstack Development (course-fullstack), User: user-admin-1, IsMet: false, CompletedCourses: 
+backend-1  | [Course Prereq Check] Course: React, Prereq: JavaScript (level-javascript), User: user-admin-1, IsMet: false, CompletedCourses: 
+backend-1  | 172.20.0.1 - - [14/Feb/2026:03:34:07 +0000] "GET /api/courses?userId=user-admin-1 HTTP/1.1" 200 - "http://localhost:100/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-1  | 172.20.0.1 - - [14/Feb/2026:03:34:10 +0000] "GET /api/attendance/violations HTTP/1.1" 401 53 "http://localhost:100/admin/violations" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-1  | [Course Prereq Check] Course: JavaScript, Prereq: Fullstack Development (course-fullstack), User: undefined, IsMet: false, CompletedCourses: 
+backend-1  | [Course Prereq Check] Course: React, Prereq: JavaScript (level-javascript), User: undefined, IsMet: false, CompletedCourses: 
+backend-1  | 172.20.0.1 - - [14/Feb/2026:03:34:27 +0000] "GET /api/courses HTTP/1.1" 200 - "http://localhost:100/admin/courses" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-1  | [TraceAuth] User: admin, TokenSession: 88a97ef4-74bd-44eb-a5a9-0d56e2498828, DBSession: 88a97ef4-74bd-44eb-a5a9-0d56e2498828
+backend-1  | 172.20.0.1 - - [14/Feb/2026:03:34:27 +0000] "GET /api/attendance/active-sessions HTTP/1.1" 200 565 "http://localhost:100/admin/attendance" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-1  | [TraceAuth] User: admin, TokenSession: 88a97ef4-74bd-44eb-a5a9-0d56e2498828, DBSession: 88a97ef4-74bd-44eb-a5a9-0d56e2498828
+backend-1  | 172.20.0.1 - - [14/Feb/2026:03:34:30 +0000] "GET /api/admin/results HTTP/1.1" 304 - "http://localhost:100/admin/results" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-1  | 172.20.0.1 - - [14/Feb/2026:03:34:31 +0000] "GET /api/courses/course-fullstack/restrictions HTTP/1.1" 304 - "http://localhost:100/admin/restrictions" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-1  | 172.20.0.1 - - [14/Feb/2026:03:35:40 +0000] "GET /api/assets HTTP/1.1" 304 - "http://localhost:100/admin/assets" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-1  | [TraceAuth] User: admin, TokenSession: 88a97ef4-74bd-44eb-a5a9-0d56e2498828, DBSession: 88a97ef4-74bd-44eb-a5a9-0d56e2498828
+backend-1  | 172.20.0.1 - - [14/Feb/2026:03:35:45 +0000] "GET /api/admin/stats HTTP/1.1" 304 - "http://localhost:100/admin/dashboard" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-1  | [TraceAuth] User: admin, TokenSession: 88a97ef4-74bd-44eb-a5a9-0d56e2498828, DBSession: 88a97ef4-74bd-44eb-a5a9-0d56e2498828
+backend-1  | 172.20.0.1 - - [14/Feb/2026:03:35:45 +0000] "GET /api/admin/submissions HTTP/1.1" 304 - "http://localhost:100/admin/dashboard" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-1  | [Course Prereq Check] Course: JavaScript, Prereq: Fullstack Development (course-fullstack), User: user-1770006845569-e9dmpvt8c, IsMet: false, CompletedCourses: 
+backend-1  | [Course Prereq Check] Course: React, Prereq: JavaScript (level-javascript), User: user-1770006845569-e9dmpvt8c, IsMet: false, CompletedCourses: 
+backend-1  | 172.20.0.1 - - [14/Feb/2026:03:36:01 +0000] "GET /api/courses?userId=user-1770006845569-e9dmpvt8c HTTP/1.1" 200 - "http://localhost:100/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-1  | 172.20.0.1 - - [14/Feb/2026:03:36:02 +0000] "GET /api/courses/course-fullstack/restrictions HTTP/1.1" 200 91 "http://localhost:100/level/course-fullstack" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-1  | [TraceAuth] User: gokul, TokenSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211, DBSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211
+backend-1  | [Attendance Status] User: user-1770006845569-e9dmpvt8c, Identifier: course-fullstack, Final Status: approved, isUsed: true, locked: false
+backend-1  | 172.20.0.1 - - [14/Feb/2026:03:36:08 +0000] "GET /api/attendance/status?courseId=course-fullstack&level=1 HTTP/1.1" 200 621 "http://localhost:100/level/course-fullstack" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-1  | [Course Prereq Check] Course: JavaScript, Prereq: Fullstack Development (course-fullstack), User: undefined, IsMet: false, CompletedCourses: 
+backend-1  | [Course Prereq Check] Course: React, Prereq: JavaScript (level-javascript), User: undefined, IsMet: false, CompletedCourses: 
+backend-1  | 172.20.0.1 - - [14/Feb/2026:03:36:15 +0000] "GET /api/courses HTTP/1.1" 304 - "http://localhost:100/admin/restrictions" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-1  | [TraceAuth] User: gokul, TokenSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211, DBSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211
+backend-1  | [Attendance Status] User: user-1770006845569-e9dmpvt8c, Identifier: course-fullstack, Final Status: approved, isUsed: true, locked: false
+backend-1  | 172.20.0.1 - - [14/Feb/2026:03:36:19 +0000] "GET /api/attendance/status?courseId=course-fullstack&level=1 HTTP/1.1" 200 621 "http://localhost:100/level/course-fullstack" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-1  | [TestSession] Creating session with data: {
+backend-1  |   user_id: 'user-1770006845569-e9dmpvt8c',
+backend-1  |   course_id: 'course-fullstack',
+backend-1  |   level: 1
+backend-1  | }
+backend-1  | 172.20.0.1 - - [14/Feb/2026:03:36:19 +0000] "POST /api/test-sessions HTTP/1.1" 201 292 "http://localhost:100/level/course-fullstack" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-1  | ≡ƒ¢í∩╕Å  SessionGuardian: Checking 1 unblocked students...
+backend-1  | [TraceAuth] User: gokul, TokenSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211, DBSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211
+backend-1  | [Attendance Status] User: user-1770006845569-e9dmpvt8c, Identifier: course-fullstack, Final Status: approved, isUsed: true, locked: false
+backend-1  | 172.20.0.1 - - [14/Feb/2026:03:36:49 +0000] "GET /api/attendance/status?courseId=course-fullstack&level=1 HTTP/1.1" 200 621 "http://localhost:100/level/course-fullstack" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-1  | 172.20.0.1 - - [14/Feb/2026:03:37:21 +0000] "POST /api/submissions/batch HTTP/1.1" 200 45 "http://localhost:100/level/course-fullstack" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-1  | [TraceAuth] User: gokul, TokenSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211, DBSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211
+backend-1  | [Attendance Status] User: user-1770006845569-e9dmpvt8c, Identifier: course-fullstack, Final Status: approved, isUsed: true, locked: true
+backend-1  | 172.20.0.1 - - [14/Feb/2026:03:37:27 +0000] "GET /api/attendance/status?courseId=course-fullstack&level=1 HTTP/1.1" 200 626 "http://localhost:100/level/course-fullstack" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-1  | [TraceAuth] User: gokul, TokenSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211, DBSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211
+backend-1  | [Attendance Status] User: user-1770006845569-e9dmpvt8c, Identifier: course-fullstack, Final Status: approved, isUsed: true, locked: true
+backend-1  | 172.20.0.1 - - [14/Feb/2026:03:37:38 +0000] "GET /api/attendance/status?courseId=course-fullstack&level=1 HTTP/1.1" 200 626 "http://localhost:100/level/course-fullstack" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-1  | ≡ƒ¢í∩╕Å  SessionGuardian: Checking 1 unblocked students...
+backend-1  | [TraceAuth] User: gokul, TokenSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211, DBSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211
+backend-1  | [Attendance Status] User: user-1770006845569-e9dmpvt8c, Identifier: course-fullstack, Final Status: approved, isUsed: true, locked: true
+backend-1  | 172.20.0.1 - - [14/Feb/2026:03:37:46 +0000] "GET /api/attendance/status?courseId=course-fullstack&level=1 HTTP/1.1" 200 626 "http://localhost:100/level/course-fullstack" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-1  | [TraceAuth] User: gokul, TokenSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211, DBSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211
+backend-1  | [Attendance Status] User: user-1770006845569-e9dmpvt8c, Identifier: course-fullstack, Final Status: approved, isUsed: true, locked: true
+backend-1  | 172.20.0.1 - - [14/Feb/2026:03:37:51 +0000] "GET /api/attendance/status?courseId=course-fullstack&level=1 HTTP/1.1" 200 626 "http://localhost:100/level/course-fullstack" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-1  | [TraceAuth] User: gokul, TokenSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211, DBSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211
+backend-1  | [Attendance Status] User: user-1770006845569-e9dmpvt8c, Identifier: course-fullstack, Final Status: approved, isUsed: true, locked: true
+backend-1  | 172.20.0.1 - - [14/Feb/2026:03:37:59 +0000] "GET /api/attendance/status?courseId=course-fullstack&level=1 HTTP/1.1" 200 626 "http://localhost:100/level/course-fullstack" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-1  | [TraceAuth] User: gokul, TokenSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211, DBSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211
+backend-1  | [Attendance Status] User: user-1770006845569-e9dmpvt8c, Identifier: course-fullstack, Final Status: approved, isUsed: true, locked: true
+backend-1  | 172.20.0.1 - - [14/Feb/2026:03:38:11 +0000] "GET /api/attendance/status?courseId=course-fullstack&level=1 HTTP/1.1" 200 626 "http://localhost:100/level/course-fullstack" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-1  | [TraceAuth] User: gokul, TokenSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211, DBSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211
+backend-1  | [Attendance Status] User: user-1770006845569-e9dmpvt8c, Identifier: course-fullstack, Final Status: approved, isUsed: true, locked: true
+backend-1  | 172.20.0.1 - - [14/Feb/2026:03:38:19 +0000] "GET /api/attendance/status?courseId=course-fullstack&level=1 HTTP/1.1" 200 626 "http://localhost:100/level/course-fullstack" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-1  | [TraceAuth] User: gokul, TokenSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211, DBSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211
+backend-1  | [Attendance Status] User: user-1770006845569-e9dmpvt8c, Identifier: course-fullstack, Final Status: approved, isUsed: true, locked: true
+backend-1  | 172.20.0.1 - - [14/Feb/2026:03:38:24 +0000] "GET /api/attendance/status?courseId=course-fullstack&level=1 HTTP/1.1" 200 626 "http://localhost:100/level/course-fullstack" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-1  | [TraceAuth] User: gokul, TokenSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211, DBSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211
+backend-1  | [Attendance Status] User: user-1770006845569-e9dmpvt8c, Identifier: course-fullstack, Final Status: approved, isUsed: true, locked: true
+backend-1  | 172.20.0.1 - - [14/Feb/2026:03:38:32 +0000] "GET /api/attendance/status?courseId=course-fullstack&level=1 HTTP/1.1" 200 626 "http://localhost:100/level/course-fullstack" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-1  | [TraceAuth] User: gokul, TokenSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211, DBSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211
+backend-1  | [Attendance Status] User: user-1770006845569-e9dmpvt8c, Identifier: course-fullstack, Final Status: approved, isUsed: false, locked: false
+backend-1  | 172.20.0.1 - - [14/Feb/2026:03:38:34 +0000] "GET /api/attendance/status?courseId=course-fullstack&level=1 HTTP/1.1" 200 626 "http://localhost:100/level/course-fullstack" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-1  | ≡ƒ¢í∩╕Å  SessionGuardian: Checking 1 unblocked students...
+backend-1  | [TraceAuth] User: gokul, TokenSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211, DBSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211
+backend-1  | [Attendance Status] User: user-1770006845569-e9dmpvt8c, Identifier: course-fullstack, Final Status: approved, isUsed: false, locked: false
+backend-1  | 172.20.0.1 - - [14/Feb/2026:03:39:21 +0000] "GET /api/attendance/status?courseId=course-fullstack&level=1 HTTP/1.1" 200 626 "http://localhost:100/level/course-fullstack" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-1  | [TraceAuth] User: admin, TokenSession: 88a97ef4-74bd-44eb-a5a9-0d56e2498828, DBSession: 88a97ef4-74bd-44eb-a5a9-0d56e2498828
+backend-1  | 172.20.0.1 - - [14/Feb/2026:03:39:29 +0000] "GET /api/attendance/violations HTTP/1.1" 200 413 "http://localhost:100/admin/violations" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-1  | [TraceAuth] User: gokul, TokenSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211, DBSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211
+backend-1  | [Attendance Status] User: user-1770006845569-e9dmpvt8c, Identifier: course-fullstack, Final Status: approved, isUsed: false, locked: true
+backend-1  | 172.20.0.1 - - [14/Feb/2026:03:39:36 +0000] "GET /api/attendance/status?courseId=course-fullstack&level=1 HTTP/1.1" 200 627 "http://localhost:100/level/course-fullstack" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-1  | [TraceAuth] User: gokul, TokenSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211, DBSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211
+backend-1  | [Attendance Status] User: user-1770006845569-e9dmpvt8c, Identifier: course-fullstack, Final Status: approved, isUsed: false, locked: true
+backend-1  | 172.20.0.1 - - [14/Feb/2026:03:39:48 +0000] "GET /api/attendance/status?courseId=course-fullstack&level=1 HTTP/1.1" 200 627 "http://localhost:100/level/course-fullstack" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-1  | [TraceAuth] User: gokul, TokenSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211, DBSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211
+backend-1  | [Attendance Status] User: user-1770006845569-e9dmpvt8c, Identifier: course-fullstack, Final Status: approved, isUsed: false, locked: true
+backend-1  | 172.20.0.1 - - [14/Feb/2026:03:39:53 +0000] "GET /api/attendance/status?courseId=course-fullstack&level=1 HTTP/1.1" 200 627 "http://localhost:100/level/course-fullstack" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-1  | ≡ƒ¢í∩╕Å  SessionGuardian: Checking 1 unblocked students...
+backend-1  | 172.20.0.1 - - [14/Feb/2026:03:39:59 +0000] "POST /api/submissions/batch HTTP/1.1" 200 45 "http://localhost:100/level/course-fullstack" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-1  | [TraceAuth] User: gokul, TokenSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211, DBSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211
+backend-1  | [Attendance Status] User: user-1770006845569-e9dmpvt8c, Identifier: course-fullstack, Final Status: approved, isUsed: false, locked: true
+backend-1  | 172.20.0.1 - - [14/Feb/2026:03:40:05 +0000] "GET /api/attendance/status?courseId=course-fullstack&level=1 HTTP/1.1" 200 627 "http://localhost:100/level/course-fullstack" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-1  | [TraceAuth] User: gokul, TokenSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211, DBSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211
+backend-1  | [Attendance Status] User: user-1770006845569-e9dmpvt8c, Identifier: course-fullstack, Final Status: approved, isUsed: false, locked: true
+backend-1  | 172.20.0.1 - - [14/Feb/2026:03:40:12 +0000] "GET /api/attendance/status?courseId=course-fullstack&level=1 HTTP/1.1" 200 627 "http://localhost:100/level/course-fullstack" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-1  | [TraceAuth] User: gokul, TokenSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211, DBSession: ec97f7f8-aea1-411a-8190-6ee6d16b0211
+backend-1  | [Attendance Status] User: user-1770006845569-e9dmpvt8c, Identifier: course-fullstack, Final Status: approved, isUsed: false, locked: true
+backend-1  | 172.20.0.1 - - [14/Feb/2026:03:40:23 +0000] "GET /api/attendance/status?courseId=course-fullstack&level=1 HTTP/1.1" 200 627 "http://localhost:100/level/course-fullstack" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-1  | [TraceAuth] User: admin, TokenSession: 88a97ef4-74bd-44eb-a5a9-0d56e2498828, DBSession: 88a97ef4-74bd-44eb-a5a9-0d56e2498828
+backend-1  | 172.20.0.1 - - [14/Feb/2026:03:40:29 +0000] "GET /api/attendance/violations HTTP/1.1" 304 - "http://localhost:100/admin/violations" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-1  | [TraceAuth] User: admin, TokenSession: 88a97ef4-74bd-44eb-a5a9-0d56e2498828, DBSession: 88a97ef4-74bd-44eb-a5a9-0d56e2498828
+backend-1  | 172.20.0.1 - - [14/Feb/2026:03:40:30 +0000] "GET /api/attendance/violations HTTP/1.1" 200 2 "http://localhost:100/admin/violations" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-1  | [TestSession] Adding submission 527dcf02-6f64-409a-867a-e6eb27b4a8a7 to session efa96ef3-33d8-4494-b3df-6ecb7a24f4c8
+backend-1  | [TestSession] Found submission info for 527dcf02-6f64-409a-867a-e6eb27b4a8a7, challenge: q-course-fullstack-1-1770191773027-7
+backend-1  | 172.20.0.1 - - [14/Feb/2026:03:40:31 +0000] "POST /api/test-sessions/efa96ef3-33d8-4494-b3df-6ecb7a24f4c8/submissions HTTP/1.1" 200 330 "http://localhost:100/level/course-fullstack" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-1  | 
+backend-1  | ≡ƒöä [Queue] Starting evaluation for submission: 527dcf02-6f64-409a-867a-e6eb27b4a8a7
+backend-1  | Γ¥î [Queue] Evaluation failed for 527dcf02-6f64-409a-867a-e6eb27b4a8a7: Challenge undefined not found
+backend-1  | [Course Prereq Check] Course: JavaScript, Prereq: Fullstack Development (course-fullstack), User: user-1770006845569-e9dmpvt8c, IsMet: false, CompletedCourses: 
+backend-1  | [Course Prereq Check] Course: React, Prereq: JavaScript (level-javascript), User: user-1770006845569-e9dmpvt8c, IsMet: false, CompletedCourses: 
+backend-1  | 172.20.0.1 - - [14/Feb/2026:03:40:34 +0000] "GET /api/courses?userId=user-1770006845569-e9dmpvt8c HTTP/1.1" 304 - "http://localhost:100/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"
+backend-1  | [TraceAuth] User: admin, TokenSession: 88a97ef4-74bd-44eb-a5a9-0d56e2498828, DBSession: 88a97ef4-74bd-44eb-a5a9-0d56e2498828
+backend-1  | 172.20.0.1 - - [14/Feb/2026:03:41:04 +0000] "GET /api/admin/results HTTP/1.1" 304 - "http://localhost:100/admin/results" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36"

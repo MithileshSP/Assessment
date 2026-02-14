@@ -137,12 +137,21 @@ CREATE TABLE IF NOT EXISTS global_test_sessions (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Daily Schedules Table
+CREATE TABLE IF NOT EXISTS daily_schedules (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    start_time TIME NOT NULL DEFAULT '09:00:00',
+    end_time TIME NOT NULL DEFAULT '17:00:00',
+    is_active BOOLEAN DEFAULT TRUE,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
 -- Test Attendance Table
 CREATE TABLE IF NOT EXISTS test_attendance (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id VARCHAR(100) NOT NULL,
     test_identifier VARCHAR(255) NOT NULL,
-    session_id VARCHAR(100) NULL,
+    session_id VARCHAR(255) NULL,
     status ENUM('requested', 'approved', 'rejected') DEFAULT 'requested',
     scheduled_status ENUM('none', 'scheduled', 'activated', 'expired') DEFAULT 'none',
     requested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -155,10 +164,18 @@ CREATE TABLE IF NOT EXISTS test_attendance (
     locked_at TIMESTAMP NULL,
     locked_reason VARCHAR(255) NULL,
     violation_count INT DEFAULT 0,
+    copy_count INT DEFAULT 0,
+    paste_count INT DEFAULT 0,
+    fullscreen_exit_count INT DEFAULT 0,
+    tab_switch_count INT DEFAULT 0,
+    devtools_count INT DEFAULT 0,
+    reference_image VARCHAR(500) NULL,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    INDEX idx_user_test (user_id, test_identifier),
+    UNIQUE KEY idx_user_test_unique (user_id, test_identifier),
     INDEX idx_session (session_id),
-    INDEX idx_scheduled (scheduled_status)
+    INDEX idx_scheduled (scheduled_status),
+    INDEX idx_locked (locked),
+    INDEX idx_status (status)
 );
 
 -- Faculty Assignments
@@ -198,6 +215,18 @@ CREATE TABLE IF NOT EXISTS manual_evaluations (
     FOREIGN KEY (submission_id) REFERENCES submissions(id) ON DELETE CASCADE,
     FOREIGN KEY (faculty_id) REFERENCES users(id) ON DELETE CASCADE,
     UNIQUE KEY unique_manual_evaluation (submission_id)
+);
+
+-- Student Feedback
+CREATE TABLE IF NOT EXISTS student_feedback (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    submission_id VARCHAR(100) NOT NULL,
+    user_id VARCHAR(100) NOT NULL,
+    difficulty_rating INT DEFAULT 0,
+    clarity_rating INT DEFAULT 0,
+    comments TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_student_feedback (submission_id)
 );
 
 -- Assets Table

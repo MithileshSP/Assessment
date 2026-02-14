@@ -1129,36 +1129,59 @@ router.post("/bulk-complete", verifyAdmin, async (req, res) => {
 
       try {
         let user = null;
-        // Try DB lookup (standard)
+        const lowerId = cleanIdentifier.toLowerCase();
+
+        // 1. Primary DB lookup with high flexibility
         if (type === 'rollNo') {
-          user = await queryOne("SELECT id, username, email, full_name, roll_no, role FROM users WHERE roll_no = ?", [cleanIdentifier]);
+          user = await queryOne(
+            "SELECT id, username, email, full_name, roll_no, role FROM users WHERE roll_no = ? OR username = ? OR email = ?",
+            [cleanIdentifier, cleanIdentifier, cleanIdentifier]
+          );
         } else {
-          user = await queryOne("SELECT id, username, email, full_name, roll_no, role FROM users WHERE email = ?", [cleanIdentifier]);
+          user = await queryOne(
+            "SELECT id, username, email, full_name, roll_no, role FROM users WHERE email = ? OR username = ? OR roll_no = ?",
+            [cleanIdentifier, cleanIdentifier, cleanIdentifier]
+          );
+
+          // Deep search if direct match fails (case-insensitive fallback)
+          if (!user) {
+            user = await queryOne(
+              "SELECT id, username, email, full_name, roll_no, role FROM users WHERE LOWER(email) = ? OR LOWER(username) = ?",
+              [lowerId, lowerId]
+            );
+          }
         }
 
-        // Fallback to JSON if DB misses
+        // 2. Fallback to JSON with sync
         if (!user) {
           const allUsers = loadJSON(usersPath);
-          const lowerId = cleanIdentifier.toLowerCase();
           const jsonUser = allUsers.find(u =>
-            type === 'rollNo'
-              ? (u.roll_no === cleanIdentifier || u.rollNo === cleanIdentifier)
-              : (u.email && u.email.toLowerCase() === lowerId)
+            (u.email && u.email.toLowerCase() === lowerId) ||
+            (u.username && u.username.toLowerCase() === lowerId) ||
+            (u.roll_no === cleanIdentifier || u.rollNo === cleanIdentifier)
           );
 
           if (jsonUser) {
             console.log(`[Bulk Sync] User ${cleanIdentifier} found in JSON. Syncing to DB...`);
-            // Sync to DB so foreign keys for progress/attendance work
             try {
-              user = await UserModel.create({
-                ...jsonUser,
-                fullName: jsonUser.fullName || jsonUser.full_name,
-                rollNo: jsonUser.rollNo || jsonUser.roll_no,
-                isBlocked: false // Auto-unblock if being processed bulk
-              });
+              // Ensure we don't have a partial conflict in DB
+              const existingByAny = await queryOne(
+                "SELECT id FROM users WHERE username = ? OR email = ?",
+                [jsonUser.username, jsonUser.email]
+              );
+
+              if (existingByAny) {
+                user = await UserModel.findById(existingByAny.id);
+              } else {
+                user = await UserModel.create({
+                  ...jsonUser,
+                  fullName: jsonUser.fullName || jsonUser.full_name,
+                  rollNo: jsonUser.rollNo || jsonUser.roll_no,
+                  isBlocked: false
+                });
+              }
             } catch (syncErr) {
-              console.error(`[Bulk Sync] Failed to sync ${cleanIdentifier}:`, syncErr);
-              // If creation fails (e.g. unique constraint on other field), we might have a conflict
+              console.error(`[Bulk Sync] Failed to sync ${cleanIdentifier}:`, syncErr.message);
               results.failed.push({ identifier: cleanIdentifier, reason: `DB Sync failed: ${syncErr.message}` });
               continue;
             }
@@ -1166,7 +1189,7 @@ router.post("/bulk-complete", verifyAdmin, async (req, res) => {
         }
 
         if (!user) {
-          results.failed.push({ identifier: cleanIdentifier, reason: "User not found in system (DB or JSON)" });
+          results.failed.push({ identifier: cleanIdentifier, reason: "User signature not found in system (DB/JSON check failed)" });
           continue;
         }
 
@@ -1216,13 +1239,17 @@ router.post("/bulk-complete", verifyAdmin, async (req, res) => {
           [user.id, courseId, levelInt]
         );
 
-        // 3. Unlock Level Access (Insert if not exists, otherwise update)
-        await query(
-          `INSERT INTO level_access (user_id, course_id, level, is_locked, unlocked_at) 
-           VALUES (?, ?, ?, 0, NOW()) 
-           ON DUPLICATE KEY UPDATE is_locked = 0, unlocked_at = NOW()`,
-          [user.id, courseId, nextLevel]
-        );
+        // 3. Unlock Level Access - non-blocking for success manifest 
+        try {
+          await query(
+            `INSERT INTO level_access (user_id, course_id, level, is_locked, unlocked_at) 
+             VALUES (?, ?, ?, 0, NOW()) 
+             ON DUPLICATE KEY UPDATE is_locked = 0, unlocked_at = NOW()`,
+            [user.id, courseId, nextLevel]
+          );
+        } catch (accessErr) {
+          console.warn(`[Bulk Access] Warning: Could not update level_access for ${user.username}:`, accessErr.message);
+        }
 
         // 4. Update Legacy JSON backup
         const progressPath = path.join(__dirname, "../data/user-progress.json");
