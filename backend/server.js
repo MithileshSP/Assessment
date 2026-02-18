@@ -214,8 +214,8 @@ app.get("/health", async (req, res) => {
 });
 
 // Serve static assets (screenshots, reference images)
-app.use('/screenshots', express.static(path.join(__dirname, 'public/screenshots')));
-app.use('/reference_images', express.static(path.join(__dirname, 'public/reference_images')));
+// app.use('/screenshots', express.static(path.join(__dirname, 'public/screenshots'))); // REDUNDANT
+// app.use('/reference_images', express.static(path.join(__dirname, 'public/reference_images'))); // REDUNDANT
 
 // API Routes
 app.use("/api/courses", coursesRouter);

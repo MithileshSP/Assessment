@@ -1,6 +1,9 @@
 services:
   portal_mysql:
     image: gokulv456/assessment-mysql:v3.4.25
+    build:
+      context: ./mysql-init
+      dockerfile: Dockerfile
     container_name: portal_mysql
     restart: unless-stopped
     command: --bind-address=0.0.0.0
@@ -23,6 +26,9 @@ services:
 
   backend:
     image: gokulv456/assessment-backend:v3.4.25
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
     restart: unless-stopped
     depends_on:
       portal_mysql:
@@ -53,6 +59,12 @@ services:
       - test-portal-network
 
   frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+        VITE_API_URL: /fullstack/api
     image: gokulv456/assessment-frontend:v3.4.25
     container_name: portal_frontend
     restart: unless-stopped

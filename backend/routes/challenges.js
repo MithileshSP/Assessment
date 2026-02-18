@@ -195,8 +195,9 @@ router.get('/level-questions', verifyToken, checkPrerequisites, async (req, res)
 
     const isGlobalUnblocked = user && user.is_blocked === 0;
     const isAttendanceApproved = attendance.length > 0 && attendance[0].status === 'approved';
+    const isAdmin = req.user.role === 'admin';
 
-    if (!isGlobalUnblocked && !isAttendanceApproved) {
+    if (!isAdmin && !isGlobalUnblocked && !isAttendanceApproved) {
       return res.status(403).json({
         error: 'Access Denied',
         message: 'You have not been authorized to attend this test. Please wait for an administrator to unblock you.',
@@ -277,7 +278,7 @@ router.get('/level-questions', verifyToken, checkPrerequisites, async (req, res)
             // 'saved' status (drafts) will still be preserved (not stale).
             const isNonPassing = !latestSubmission.passed || latestSubmission.passed === 0;
             const isStaleStatus = ['evaluated', 'failed', 'queued', 'evaluating', 'pending'].includes(latestSubmission.status);
-            
+
             if (isStaleStatus && isNonPassing) {
               console.log(`User ${userId} has a non-passing submission (Status: ${latestSubmission.status}) for question ${qId}. re-assigning new random question.`);
               isStale = true;
@@ -296,7 +297,7 @@ router.get('/level-questions', verifyToken, checkPrerequisites, async (req, res)
     if (forceNew === 'true' || !userAssignment || isStale) {
       // Filter out completed questions AND failed question
       let candidateQuestions = uniqueLevelQuestions.filter(q => !completedSet.has(q.id));
-      
+
       if (failedQuestionId) {
         console.log(`[LevelQuestions] Excluding failed question ${failedQuestionId} from selection pool.`);
         candidateQuestions = candidateQuestions.filter(q => q.id !== failedQuestionId);
@@ -309,16 +310,16 @@ router.get('/level-questions', verifyToken, checkPrerequisites, async (req, res)
       // If we filtered out the ONLY failed question and everything else is completed...
       if (candidateQuestions.length === 0) {
         if (completedSet.size > 0 && uniqueLevelQuestions.every(q => completedSet.has(q.id))) {
-             // All questions completed!
-             return res.json({
-                assignedQuestions: [],
-                totalAssigned: 0,
-                completedQuestions: completedQuestions,
-                isLevelComplete: true,
-                message: "All questions completed!"
-             });
+          // All questions completed!
+          return res.json({
+            assignedQuestions: [],
+            totalAssigned: 0,
+            completedQuestions: completedQuestions,
+            isLevelComplete: true,
+            message: "All questions completed!"
+          });
         }
-        
+
         // If we just ran out because of failedQuestionId exclusion (and others are complete), fall back to retry failed question.
         // This ensures if there's only one question and it was failed, it's still offered.
         console.log(`[LevelQuestions] No fresh candidates available. Falling back to retry failed question.`);
@@ -329,7 +330,7 @@ router.get('/level-questions', verifyToken, checkPrerequisites, async (req, res)
       // Select 1 random question (or all if less than 1)
       const shuffled = [...candidateQuestions].sort(() => 0.5 - Math.random());
       const selectedQuestions = shuffled.slice(0, 1);
-      
+
       console.log(`[LevelQuestions] Selected new question: ${selectedQuestions[0]?.id}`);
 
       // Create new assignment in DB

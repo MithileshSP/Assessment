@@ -190,12 +190,27 @@ class PixelMatcher {
       // Wait a bit more for any layout shifts or fonts
       await new Promise(r => setTimeout(r, 1000));
 
+      // Log path
+      console.log(`[PixelMatch] Saving screenshot to: ${screenshotPath}`);
+
       // Capture screenshot
-      const screenshotPath = path.join(this.screenshotDir, `${filename}.png`);
-      await page.screenshot({
-        path: screenshotPath,
-        fullPage: true // CRITICAL: capture the entire page
-      });
+      try {
+        await page.screenshot({
+          path: screenshotPath,
+          fullPage: true
+        });
+
+        // Verify files
+        if (fs.existsSync(screenshotPath)) {
+          const stats = fs.statSync(screenshotPath);
+          console.log(`[PixelMatch] ✅ File saved successfully: ${screenshotPath} (${stats.size} bytes)`);
+        } else {
+          console.error(`[PixelMatch] ❌ File MISSING after save: ${screenshotPath}`);
+        }
+      } catch (err) {
+        console.error(`[PixelMatch] ❌ Screenshot capture failed for ${filename}:`, err.message);
+        throw err;
+      }
 
       return screenshotPath;
 
