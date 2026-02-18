@@ -160,6 +160,7 @@ class PixelMatcher {
    */
   async captureScreenshot(browser, htmlContent, filename) {
     const page = await browser.newPage();
+    const screenshotPath = path.join(this.screenshotDir, `${filename}.png`);
 
     try {
       // Set consistent viewport

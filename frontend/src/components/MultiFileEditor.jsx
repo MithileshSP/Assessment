@@ -12,7 +12,8 @@ import { Plus, X, Edit3, File, FileText, Code, Palette } from 'lucide-react';
 const MultiFileEditor = ({
     code = { html: '', css: '', js: '' },
     onChange,
-    readOnly = false
+    readOnly = false,
+    restrictions
 }) => {
     // Map legacy code format to files format
     const codeToFiles = (codeObj) => ({
@@ -47,7 +48,6 @@ const MultiFileEditor = ({
     // Default files that cannot be renamed/deleted
     const defaultFiles = ['index.html', 'style.css', 'script.js'];
 
-    // Sync only default files when code prop changes (don't overwrite additional files)
     useEffect(() => {
         setFiles(prev => ({
             ...prev,
@@ -57,6 +57,11 @@ const MultiFileEditor = ({
             ...(code.additionalFiles || {})
         }));
     }, [code.html, code.css, code.js, code.additionalFiles]);
+
+    const restrictionsRef = useRef(restrictions);
+    useEffect(() => {
+        restrictionsRef.current = restrictions;
+    }, [restrictions]);
 
     // Close menu when clicking outside
     useEffect(() => {
@@ -317,11 +322,71 @@ const MultiFileEditor = ({
                         lineNumbers: 'on',
                         scrollBeyondLastLine: false,
                         automaticLayout: true,
-                        tabSize: 2,
+                        tabSize: 2, 
                         readOnly: readOnly,
                         domReadOnly: readOnly,
                         padding: { top: 12 },
-                        contextmenu: false // Anti-cheating: Disable editor context menu
+                        autoClosingTags: true, // Enable HTML tag auto-closing
+                        autoClosingBrackets: 'always', // Enable bracket auto-closing
+                        autoClosingQuotes: 'always', // Enable quote auto-closing
+                        autoSurround: 'languageDefined',
+                        formatOnPaste: true,
+                        contextmenu: false, // Anti-cheating: Disable editor context menu
+                        suggestOnTriggerCharacters: true,
+                        acceptSuggestionOnEnter: 'on',
+                        tabCompletion: 'on',
+                        wordBasedSuggestions: true,
+                    }}
+                    onMount={(editor, monaco) => {
+                        // Ensure HTML language service is configured
+                        monaco.languages.html.htmlDefaults.setOptions({
+                            format: {
+                                tabSize: 2,
+                                insertSpaces: true,
+                                wrapLineLength: 120
+                            },
+                            suggest: {
+                                html5: true
+                            }
+                        });
+                        // Method 1: DOM Event Interception (Container)
+                        const container = editor.getContainerDomNode();
+                        container.addEventListener('paste', (e) => {
+                            if (restrictionsRef.current?.blockPaste) {
+                                e.preventDefault();
+                                e.stopPropagation();
+                            }
+                        }, true);
+                        container.addEventListener('copy', (e) => {
+                            if (restrictionsRef.current?.blockCopy) {
+                                e.preventDefault();
+                                e.stopPropagation();
+                            }
+                        }, true);
+
+                        // Method 2: KeyDown Interceptor (The most robust for shortcuts)
+                        // Monaco's own keybinding system might sometimes fire before DOM, so we intercept here too.
+                        editor.onKeyDown((e) => {
+                            // Check for Ctrl/Cmd + V
+                            if ((e.ctrlKey || e.metaKey) && e.code === 'KeyV') {
+                                if (restrictionsRef.current?.blockPaste) {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                }
+                            }
+                            // Check for Ctrl/Cmd + C or X
+                            if ((e.ctrlKey || e.metaKey) && (e.code === 'KeyC' || e.code === 'KeyX')) {
+                                if (restrictionsRef.current?.blockCopy) {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                }
+                            }
+                        });
+
+
+                        // Method 4: Editor-level Validations (Fallback)
+                        // If content changes drastically in one go, it might be a paste.
+                        // But we can't easily distinguish fast typing from pasting without the event.
                     }}
                 />
             </div>

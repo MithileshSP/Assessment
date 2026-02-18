@@ -1075,7 +1075,7 @@ export default function LevelChallenge() {
             </div>
           )}
           <div className="flex-1 bg-white rounded-md border border-slate-200 shadow-sm overflow-hidden flex flex-col min-h-0">
-            <MultiFileEditor code={code} onChange={setCode} readOnly={isLocked} />
+            <MultiFileEditor code={code} onChange={setCode} readOnly={isLocked} restrictions={restrictions} />
           </div>
         </div>
 
