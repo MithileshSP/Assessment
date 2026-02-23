@@ -41,13 +41,13 @@ const UserProfile = () => {
             <div className="max-w-4xl mx-auto space-y-8 text-left">
                 {/* Profile Header */}
                 <div className="flex flex-col md:flex-row items-center gap-8 bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
-                    <div className="w-32 h-32 rounded-[2.5rem] bg-indigo-600 flex items-center justify-center text-white text-4xl font-black shadow-2xl shadow-indigo-600/30">
+                    <div className="w-32 h-32 rounded-[2.5rem] bg-blue-600 flex items-center justify-center text-white text-4xl font-black shadow-2xl shadow-blue-600/30">
                         {(userData.fullName || userData.username || 'U')[0].toUpperCase()}
                     </div>
                     <div className="flex-1 text-center md:text-left">
                         <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 mb-2">
                             <h1 className="text-3xl font-black text-slate-900">{userData.fullName || userData.username || 'System User'}</h1>
-                            <span className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-lg text-xs font-bold uppercase tracking-widest">{userData.role}</span>
+                            <span className="px-3 py-1 bg-blue-50 text-blue-600 rounded-lg text-xs font-bold uppercase tracking-widest">{userData.role}</span>
                         </div>
                         <p className="text-slate-500 font-medium">@{userData.username}</p>
                         {userData.rollNo && (

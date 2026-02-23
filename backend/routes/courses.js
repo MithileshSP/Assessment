@@ -700,10 +700,28 @@ router.put('/:courseId', async (req, res) => {
     const { courseId } = req.params;
     const updatedCourse = req.body;
 
+    // Merge levelTimeLimits into levelSettings if provided
+    if (updatedCourse.levelTimeLimits && typeof updatedCourse.levelTimeLimits === 'object') {
+      // Fetch existing settings to merge
+      let existingSettings = {};
+      try {
+        const existing = await CourseModel.findById(courseId);
+        if (existing) existingSettings = existing.levelSettings || {};
+      } catch (e) { /* ignore, start fresh */ }
+
+      for (const [lvl, minutes] of Object.entries(updatedCourse.levelTimeLimits)) {
+        if (!existingSettings[lvl]) existingSettings[lvl] = {};
+        existingSettings[lvl].timeLimit = parseInt(minutes) || 0;
+      }
+      updatedCourse.levelSettings = existingSettings;
+      delete updatedCourse.levelTimeLimits; // Clean up non-model field
+    }
+
     // 1. Update in Database
     let dbUpdated = null;
     try {
       dbUpdated = await CourseModel.update(courseId, updatedCourse);
+
     } catch (dbError) {
       console.log('Database update failed:', dbError.message);
     }
@@ -1563,11 +1581,12 @@ router.post('/:courseId/levels/:level/questions/bulk', verifyFaculty, async (req
 /**
  * PUT /api/courses/:courseId/restrictions
  * Update exam restrictions for a course
+ * Also accepts levelTimeLimits: { "1": 30, "2": 45, ... } for per-level overrides
  */
 router.put('/:courseId/restrictions', async (req, res) => {
   try {
     const { courseId } = req.params;
-    const { blockCopy, blockPaste, forceFullscreen, maxViolations, timeLimit } = req.body;
+    const { blockCopy, blockPaste, forceFullscreen, maxViolations, timeLimit, levelTimeLimits } = req.body;
 
     const newRestrictions = {
       blockCopy: blockCopy !== undefined ? blockCopy : true,
@@ -1581,10 +1600,26 @@ router.put('/:courseId/restrictions', async (req, res) => {
     try {
       const course = await CourseModel.findById(courseId);
       if (course) {
+        // Update restrictions
         await query(
           "UPDATE courses SET restrictions = ? WHERE id = ?",
           [JSON.stringify(newRestrictions), courseId]
         );
+
+        // Also update level_settings if levelTimeLimits provided
+        if (levelTimeLimits && typeof levelTimeLimits === 'object') {
+          const existingSettings = course.levelSettings || {};
+          // Merge per-level time limits into existing level_settings
+          for (const [lvl, minutes] of Object.entries(levelTimeLimits)) {
+            if (!existingSettings[lvl]) existingSettings[lvl] = {};
+            existingSettings[lvl].timeLimit = parseInt(minutes) || 0;
+          }
+          await query(
+            "UPDATE courses SET level_settings = ? WHERE id = ?",
+            [JSON.stringify(existingSettings), courseId]
+          );
+        }
+
         return res.json({
           message: 'Restrictions updated successfully (DB)',
           restrictions: newRestrictions
@@ -1603,6 +1638,17 @@ router.put('/:courseId/restrictions', async (req, res) => {
     }
 
     courses[courseIndex].restrictions = newRestrictions;
+
+    // Also update level_settings in JSON fallback
+    if (levelTimeLimits && typeof levelTimeLimits === 'object') {
+      const existingSettings = courses[courseIndex].levelSettings || {};
+      for (const [lvl, minutes] of Object.entries(levelTimeLimits)) {
+        if (!existingSettings[lvl]) existingSettings[lvl] = {};
+        existingSettings[lvl].timeLimit = parseInt(minutes) || 0;
+      }
+      courses[courseIndex].levelSettings = existingSettings;
+    }
+
     fs.writeFileSync(coursesPath, JSON.stringify(courses, null, 2));
 
     res.json({
@@ -1615,20 +1661,23 @@ router.put('/:courseId/restrictions', async (req, res) => {
   }
 });
 
+
 /**
  * GET /api/courses/:courseId/restrictions
- * Get exam restrictions for a course
+ * Get exam restrictions for a course (includes per-level time limits)
  */
 router.get('/:courseId/restrictions', async (req, res) => {
   try {
     const { courseId } = req.params;
     let restrictions = null;
+    let levelSettings = null;
 
     // 1. Try Database
     try {
       const course = await CourseModel.findById(courseId);
       if (course) {
         restrictions = course.restrictions;
+        levelSettings = course.levelSettings;
       }
     } catch (dbError) {
       console.warn('Database restrictions fetch failed, falling back to JSON:', dbError.message);
@@ -1640,12 +1689,22 @@ router.get('/:courseId/restrictions', async (req, res) => {
       const course = courses.find(c => c.id === courseId);
       if (course) {
         restrictions = course.restrictions;
+        levelSettings = course.levelSettings;
       }
     }
 
     if (!restrictions && courseId !== 'course-javascript') {
       // If still not found, return 404
-      // Note: We might want a default even if course is not found, but 404 is safer for routing
+    }
+
+    // Extract per-level time limits from levelSettings
+    const levelTimeLimits = {};
+    if (levelSettings && typeof levelSettings === 'object') {
+      for (const [lvl, settings] of Object.entries(levelSettings)) {
+        if (settings && settings.timeLimit !== undefined) {
+          levelTimeLimits[lvl] = settings.timeLimit;
+        }
+      }
     }
 
     // Return restrictions with secure defaults enforced
@@ -1654,7 +1713,8 @@ router.get('/:courseId/restrictions', async (req, res) => {
       blockPaste: (restrictions && restrictions.blockPaste !== undefined) ? restrictions.blockPaste : true,
       forceFullscreen: (restrictions && restrictions.forceFullscreen !== undefined) ? restrictions.forceFullscreen : true,
       maxViolations: (restrictions && restrictions.maxViolations) || 10,
-      timeLimit: (restrictions && restrictions.timeLimit) || 0
+      timeLimit: (restrictions && restrictions.timeLimit) || 0,
+      levelTimeLimits
     };
 
     res.json(secureRestrictions);
@@ -1663,6 +1723,7 @@ router.get('/:courseId/restrictions', async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch restrictions' });
   }
 });
+
 
 /**
  * GET /api/courses/:courseId/level-settings

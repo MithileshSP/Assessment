@@ -22,6 +22,20 @@ export default function CourseEditModal({ course, onClose, onSave }) {
       timeLimit: 0
     }
   });
+
+  // Per-level time limits (extracted from restrictions.levelTimeLimits or levelSettings)
+  const [levelTimeLimits, setLevelTimeLimits] = useState(() => {
+    if (course?.restrictions?.levelTimeLimits) return { ...course.restrictions.levelTimeLimits };
+    // Extract from levelSettings if available
+    if (course?.levelSettings) {
+      const limits = {};
+      for (const [lvl, settings] of Object.entries(course.levelSettings)) {
+        if (settings?.timeLimit !== undefined) limits[lvl] = settings.timeLimit;
+      }
+      return limits;
+    }
+    return {};
+  });
   const [tagInput, setTagInput] = useState('');
   const [availableCourses, setAvailableCourses] = useState([]);
 
@@ -87,19 +101,20 @@ export default function CourseEditModal({ course, onClose, onSave }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSave(formData);
+    // Include levelTimeLimits in the save payload
+    onSave({ ...formData, levelTimeLimits });
   };
 
 
   const modalContent = (
-    <div className="fixed inset-0 bg-gradient-to-br from-slate-900/80 to-indigo-900/80 backdrop-blur-md flex items-center justify-center p-6" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 99999 }}>
+    <div className="fixed inset-0 bg-gradient-to-br from-slate-900/80 to-blue-900/80 backdrop-blur-md flex items-center justify-center p-6" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 99999 }}>
       <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-5xl max-h-[90vh] flex overflow-hidden">
 
         {/* Left Panel - Live Preview */}
-        <div className="w-80 bg-gradient-to-br from-slate-900 to-indigo-950 p-8 flex flex-col hidden lg:flex">
+        <div className="w-80 bg-gradient-to-br from-slate-900 to-blue-950 p-8 flex flex-col hidden lg:flex">
           <div className="mb-8">
             <h3 className="text-white text-lg font-bold mb-1">Live Preview</h3>
-            <p className="text-indigo-300 text-xs">See how students will view this course</p>
+            <p className="text-blue-300 text-xs">See how students will view this course</p>
           </div>
 
           {/* Preview Card */}
@@ -114,7 +129,7 @@ export default function CourseEditModal({ course, onClose, onSave }) {
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <div className="w-full h-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+                <div className="w-full h-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
                   <BookOpen size={40} className="text-white/50" />
                 </div>
               )}
@@ -134,7 +149,7 @@ export default function CourseEditModal({ course, onClose, onSave }) {
           </div>
 
           <div className="mt-8 p-4 bg-white/10 rounded-xl">
-            <p className="text-indigo-200 text-xs leading-relaxed">
+            <p className="text-blue-200 text-xs leading-relaxed">
               💡 <strong>Tip:</strong> Use clear, action-oriented titles and concise descriptions for better student engagement.
             </p>
           </div>
@@ -145,8 +160,8 @@ export default function CourseEditModal({ course, onClose, onSave }) {
           {/* Header */}
           <div className="px-8 py-6 border-b border-slate-100 flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-indigo-100 flex items-center justify-center">
-                <BookOpen className="text-indigo-600" size={24} />
+              <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center">
+                <BookOpen className="text-blue-600" size={24} />
               </div>
               <div>
                 <h2 className="text-xl font-black text-slate-900">
@@ -181,7 +196,7 @@ export default function CourseEditModal({ course, onClose, onSave }) {
                   disabled={!!course}
                   required
                   placeholder="level-0"
-                  className="w-full px-4 py-3 bg-slate-50 border-2 border-transparent rounded-xl text-sm font-medium focus:border-indigo-500 focus:bg-white outline-none transition-all disabled:opacity-50"
+                  className="w-full px-4 py-3 bg-slate-50 border-2 border-transparent rounded-xl text-sm font-black focus:border-blue-600 focus:bg-white outline-none transition-all disabled:opacity-50"
                 />
               </div>
 
@@ -198,7 +213,7 @@ export default function CourseEditModal({ course, onClose, onSave }) {
                   onChange={handleChange}
                   required
                   placeholder="React Fundamentals"
-                  className="w-full px-4 py-3 bg-slate-50 border-2 border-transparent rounded-xl text-sm font-medium focus:border-indigo-500 focus:bg-white outline-none transition-all"
+                  className="w-full px-4 py-3 bg-slate-50 border-2 border-transparent rounded-xl text-sm font-black focus:border-blue-600 focus:bg-white outline-none transition-all"
                 />
               </div>
 
@@ -215,7 +230,7 @@ export default function CourseEditModal({ course, onClose, onSave }) {
                   required
                   rows="3"
                   placeholder="A comprehensive course covering..."
-                  className="w-full px-4 py-3 bg-slate-50 border-2 border-transparent rounded-xl text-sm font-medium focus:border-indigo-500 focus:bg-white outline-none transition-all resize-none"
+                  className="w-full px-4 py-3 bg-slate-50 border-2 border-transparent rounded-xl text-sm font-black focus:border-blue-600 focus:bg-white outline-none transition-all resize-none"
                 />
               </div>
 
@@ -231,7 +246,7 @@ export default function CourseEditModal({ course, onClose, onSave }) {
                   value={formData.thumbnail}
                   onChange={handleChange}
                   placeholder="https://images.unsplash.com/..."
-                  className="w-full px-4 py-3 bg-slate-50 border-2 border-transparent rounded-xl text-sm font-medium focus:border-indigo-500 focus:bg-white outline-none transition-all"
+                  className="w-full px-4 py-3 bg-slate-50 border-2 border-transparent rounded-xl text-sm font-black focus:border-blue-600 focus:bg-white outline-none transition-all"
                 />
               </div>
 
@@ -248,7 +263,7 @@ export default function CourseEditModal({ course, onClose, onSave }) {
                   min="0"
                   max="9999"
                   placeholder="Auto-assign"
-                  className="w-full px-4 py-3 bg-slate-50 border-2 border-transparent rounded-xl text-sm font-medium focus:border-indigo-500 focus:bg-white outline-none transition-all"
+                  className="w-full px-4 py-3 bg-slate-50 border-2 border-transparent rounded-xl text-sm font-black focus:border-blue-600 focus:bg-white outline-none transition-all"
                 />
               </div>
               <div>
@@ -261,7 +276,7 @@ export default function CourseEditModal({ course, onClose, onSave }) {
                   value={formData.estimatedTime}
                   onChange={handleChange}
                   placeholder="10 hours"
-                  className="w-full px-4 py-3 bg-slate-50 border-2 border-transparent rounded-xl text-sm font-medium focus:border-indigo-500 focus:bg-white outline-none transition-all"
+                  className="w-full px-4 py-3 bg-slate-50 border-2 border-transparent rounded-xl text-sm font-black focus:border-blue-600 focus:bg-white outline-none transition-all"
                 />
               </div>
 
@@ -274,7 +289,7 @@ export default function CourseEditModal({ course, onClose, onSave }) {
                   name="prerequisiteCourseId"
                   value={formData.prerequisiteCourseId || ''}
                   onChange={(e) => setFormData(prev => ({ ...prev, prerequisiteCourseId: e.target.value || null }))}
-                  className="w-full px-4 py-3 bg-slate-50 border-2 border-transparent rounded-xl text-sm font-medium focus:border-indigo-500 focus:bg-white outline-none transition-all cursor-pointer"
+                  className="w-full px-4 py-3 bg-slate-50 border-2 border-transparent rounded-xl text-sm font-black focus:border-blue-600 focus:bg-white outline-none transition-all cursor-pointer"
                 >
                   <option value="">No prerequisite (course visible to all)</option>
                   {availableCourses.map(c => (
@@ -298,12 +313,12 @@ export default function CourseEditModal({ course, onClose, onSave }) {
                     onChange={(e) => setTagInput(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddTag())}
                     placeholder="Type and press Enter"
-                    className="flex-1 px-4 py-3 bg-slate-50 border-2 border-transparent rounded-xl text-sm font-medium focus:border-indigo-500 focus:bg-white outline-none transition-all"
+                    className="flex-1 px-4 py-3 bg-slate-50 border-2 border-transparent rounded-xl text-sm font-black focus:border-blue-600 focus:bg-white outline-none transition-all"
                   />
                   <button
                     type="button"
                     onClick={handleAddTag}
-                    className="px-5 bg-indigo-100 text-indigo-600 rounded-xl font-bold text-sm hover:bg-indigo-200 transition-all flex items-center gap-2"
+                    className="bg-slate-800/50 rounded-2xl p-6 border border-slate-700/50 hover:border-blue-500/30 transition-all flex items-center gap-2"
                   >
                     <Plus size={16} />
                   </button>
@@ -315,13 +330,13 @@ export default function CourseEditModal({ course, onClose, onSave }) {
                   {formData.tags.map((tag, idx) => (
                     <span
                       key={idx}
-                      className="px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-lg text-xs font-bold flex items-center gap-2 group"
+                      className="px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-xs font-black flex items-center gap-2 group"
                     >
                       {tag}
                       <button
                         type="button"
                         onClick={() => handleRemoveTag(tag)}
-                        className="text-indigo-300 hover:text-rose-500 transition-colors"
+                        className="text-blue-300 hover:text-rose-500 transition-colors"
                       >
                         <X size={12} />
                       </button>
@@ -349,7 +364,7 @@ export default function CourseEditModal({ course, onClose, onSave }) {
                         checked={formData.restrictions?.blockCopy || false}
                         onChange={handleChange}
                       />
-                      <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                      <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                     </label>
                   </div>
 
@@ -366,7 +381,7 @@ export default function CourseEditModal({ course, onClose, onSave }) {
                         checked={formData.restrictions?.forceFullscreen || false}
                         onChange={handleChange}
                       />
-                      <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                      <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                     </label>
                   </div>
 
@@ -381,14 +396,14 @@ export default function CourseEditModal({ course, onClose, onSave }) {
                       value={formData.restrictions?.maxViolations || 3}
                       onChange={handleChange}
                       min="1"
-                      className="w-16 px-2 py-1 bg-slate-50 border rounded-lg text-sm text-center font-bold outline-none focus:border-indigo-500"
+                      className="w-16 px-2 py-1 bg-slate-50 border rounded-lg text-sm text-center font-bold outline-none focus:border-blue-500"
                     />
                   </div>
 
                   <div className="flex items-center justify-between p-4 bg-white rounded-2xl shadow-sm border border-slate-100">
                     <div>
-                      <p className="font-bold text-slate-900 text-sm">Time Limit (Mins)</p>
-                      <p className="text-[10px] text-slate-400">0 = Infinite</p>
+                      <p className="font-bold text-slate-900 text-sm">Global Time Limit (Mins)</p>
+                      <p className="text-[10px] text-slate-400">Fallback if no per-level limit &middot; 0 = Infinite</p>
                     </div>
                     <input
                       type="number"
@@ -396,16 +411,48 @@ export default function CourseEditModal({ course, onClose, onSave }) {
                       value={formData.restrictions?.timeLimit || 0}
                       onChange={handleChange}
                       min="0"
-                      className="w-16 px-2 py-1 bg-slate-50 border rounded-lg text-sm text-center font-bold outline-none focus:border-indigo-500"
+                      className="w-16 px-2 py-1 bg-slate-50 border rounded-lg text-sm text-center font-bold outline-none focus:border-blue-500"
                     />
+                  </div>
+
+                  {/* Per-Level Time Limits */}
+                  <div className="col-span-2 p-4 bg-white rounded-2xl shadow-sm border border-slate-100">
+                    <div className="mb-3">
+                      <p className="font-bold text-slate-900 text-sm flex items-center gap-2">
+                        <Clock size={14} className="text-amber-500" />
+                        Per-Level Time Limits (Mins)
+                      </p>
+                      <p className="text-[10px] text-slate-400">Override the global time limit for individual levels &middot; 0 = use global fallback</p>
+                    </div>
+                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
+                      {Array.from({ length: formData.totalLevels || 6 }, (_, i) => i + 1).map(lvl => (
+                        <div key={lvl} className="flex flex-col items-center gap-1">
+                          <span className="text-[10px] font-black text-slate-400 uppercase">L{lvl}</span>
+                          <input
+                            type="number"
+                            value={levelTimeLimits[String(lvl)] || 0}
+                            onChange={(e) => setLevelTimeLimits(prev => ({
+                              ...prev,
+                              [String(lvl)]: parseInt(e.target.value) || 0
+                            }))}
+                            min="0"
+                            placeholder="0"
+                            className={`w-full px-2 py-1.5 border rounded-lg text-sm text-center font-bold outline-none transition-all ${(levelTimeLimits[String(lvl)] || 0) > 0
+                              ? 'bg-amber-50 border-amber-300 text-amber-700 focus:border-amber-500'
+                              : 'bg-slate-50 border-slate-200 text-slate-400 focus:border-blue-500'
+                              }`}
+                          />
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>
 
               {/* Evaluation Engine Section */}
               <div className="col-span-2 border-t pt-8 mt-4">
-                <h3 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-                  <Shield size={20} className="text-indigo-600" /> Global Evaluation Thresholds
+                <h3 className="text-lg font-black text-slate-900 mb-4 flex items-center gap-2">
+                  <Shield size={20} className="text-blue-600" /> Global Evaluation Thresholds
                 </h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 p-6 rounded-[2rem] border border-slate-100">
                   <div className="flex flex-col items-center p-4 bg-white rounded-2xl shadow-sm border border-slate-100 gap-2">
@@ -421,7 +468,7 @@ export default function CourseEditModal({ course, onClose, onSave }) {
                         })}
                         min="0"
                         max="100"
-                        className="flex-1 px-2 py-2 bg-slate-50 border rounded-lg text-sm text-center font-black outline-none focus:border-indigo-500"
+                        className="flex-1 px-2 py-2 bg-slate-50 border rounded-lg text-sm text-center font-black outline-none focus:border-blue-500"
                       />
                       <span className="text-xs font-bold text-slate-400">%</span>
                     </div>
@@ -440,7 +487,7 @@ export default function CourseEditModal({ course, onClose, onSave }) {
                         })}
                         min="0"
                         max="100"
-                        className="flex-1 px-2 py-2 bg-slate-50 border rounded-lg text-sm text-center font-black outline-none focus:border-indigo-500"
+                        className="flex-1 px-2 py-2 bg-slate-50 border rounded-lg text-sm text-center font-black outline-none focus:border-blue-500"
                       />
                       <span className="text-xs font-bold text-slate-400">%</span>
                     </div>
@@ -459,7 +506,7 @@ export default function CourseEditModal({ course, onClose, onSave }) {
                         })}
                         min="0"
                         max="100"
-                        className="flex-1 px-2 py-2 bg-slate-50 border rounded-lg text-sm text-center font-black outline-none focus:border-indigo-500"
+                        className="flex-1 px-2 py-2 bg-slate-50 border rounded-lg text-sm text-center font-black outline-none focus:border-blue-500"
                       />
                       <span className="text-xs font-bold text-slate-400">%</span>
                     </div>
@@ -482,7 +529,7 @@ export default function CourseEditModal({ course, onClose, onSave }) {
               </button>
               <button
                 onClick={handleSubmit}
-                className="px-8 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-bold flex items-center gap-2 hover:from-indigo-700 hover:to-purple-700 transition-all shadow-lg shadow-indigo-500/25"
+                className="px-8 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-xl font-black flex items-center gap-2 hover:from-blue-700 hover:to-blue-800 transition-all shadow-lg shadow-blue-500/25"
               >
                 <Save size={18} />
                 {course ? 'Save Changes' : 'Create Course'}

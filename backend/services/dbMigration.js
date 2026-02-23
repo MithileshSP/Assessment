@@ -446,7 +446,34 @@ async function applyMigrations() {
     try { await queryWithRetry("ALTER TABLE student_feedback DROP COLUMN rating"); } catch (e) { }
     try { await queryWithRetry("ALTER TABLE student_feedback DROP COLUMN feedback_text"); } catch (e) { }
 
-    console.log('✅ Full migrations applied successfully (v3.4.7)');
+    // v3.5.0: Faculty Workload Management & Smart Assignment Engine
+    await addColumn("ALTER TABLE users ADD COLUMN is_available BOOLEAN DEFAULT TRUE");
+    await addColumn("ALTER TABLE users ADD COLUMN max_capacity INT DEFAULT 10");
+
+    // Assignment audit log
+    await queryWithRetry(`
+      CREATE TABLE IF NOT EXISTS assignment_logs (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        submission_id VARCHAR(100) NOT NULL,
+        action_type VARCHAR(50) NOT NULL,
+        from_faculty_id VARCHAR(100),
+        to_faculty_id VARCHAR(100),
+        admin_id VARCHAR(100),
+        notes TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_submission (submission_id),
+        INDEX idx_action (action_type),
+        INDEX idx_created (created_at)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    // Performance index for faculty load queries
+    await addColumn("ALTER TABLE submission_assignments ADD INDEX idx_faculty_load (faculty_id, status)");
+
+    // Fix for action_type truncation (v3.5.1)
+    await addColumn("ALTER TABLE assignment_logs MODIFY COLUMN action_type VARCHAR(50) NOT NULL");
+
+    console.log('✅ Full migrations applied successfully (v3.5.0)');
   } catch (error) {
     console.error('❌ Migration failed:', error.message);
     throw error;

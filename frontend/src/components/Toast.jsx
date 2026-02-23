@@ -33,7 +33,7 @@ function ToastItem({ toast, removeToast }) {
     const bgColors = {
         success: 'bg-emerald-600',
         error: 'bg-rose-600',
-        info: 'bg-indigo-600',
+        info: 'bg-blue-600 shadow-lg shadow-blue-600/20',
         warning: 'bg-amber-500'
     };
 

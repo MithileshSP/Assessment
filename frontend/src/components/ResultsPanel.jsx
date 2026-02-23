@@ -69,7 +69,7 @@ export default function ResultsPanel({ result }) {
       <div className="grid grid-cols-2 gap-4">
         <div className="bg-white p-4 rounded-lg border border-gray-200">
           <div className="text-sm text-gray-600 mb-1">Content</div>
-          <div className="text-2xl font-bold text-purple-600">
+          <div className="text-2xl font-black text-blue-600">
             {result.contentScore}%
           </div>
           <div className="text-xs text-gray-500 mt-1 flex items-center gap-1">
@@ -224,8 +224,8 @@ export default function ResultsPanel({ result }) {
 
       {/* Improvement Suggestions */}
       {result.feedback?.improvements && result.feedback.improvements.length > 0 && (
-        <div className="bg-indigo-50 p-4 rounded-lg border border-indigo-200">
-          <h4 className="font-semibold text-indigo-900 mb-3 flex items-center gap-2"><List size={18} /> Action Items</h4>
+        <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+          <h4 className="font-black text-blue-900 mb-3 flex items-center gap-2 uppercase tracking-widest text-[10px]"><List size={18} /> Action Items</h4>
           <ul className="space-y-2">
             {result.feedback.improvements.map((improvement, index) => {
               const isObject = improvement && typeof improvement === 'object';
@@ -236,7 +236,7 @@ export default function ResultsPanel({ result }) {
               return (
                 <li
                   key={index}
-                  className="text-indigo-800 bg-white/40 rounded border border-indigo-100 p-3"
+                  className="text-blue-800 bg-white/40 rounded border border-blue-100 p-3 font-medium"
                 >
                   <div className="flex items-start gap-2">
                     <span className="mt-1">•</span>

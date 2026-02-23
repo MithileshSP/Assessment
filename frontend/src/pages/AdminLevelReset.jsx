@@ -120,7 +120,7 @@ export default function AdminLevelReset() {
                         <div className="flex items-center gap-4 mb-6">
                             <button
                                 onClick={() => navigate('/admin/dashboard')}
-                                className="group p-3 bg-white rounded-2xl border border-slate-200 text-slate-400 hover:text-indigo-600 hover:border-indigo-100 hover:bg-indigo-50/30 transition-all duration-300 shadow-sm"
+                                className="p-3 bg-white border border-slate-200 text-slate-400 hover:text-blue-600 rounded-xl transition-all hover:bg-slate-50 shadow-sm"
                             >
                                 <ArrowLeft size={20} className="group-hover:-translate-x-1 transition-transform" />
                             </button>
@@ -161,10 +161,10 @@ export default function AdminLevelReset() {
                         <div className="bg-white rounded-[2.5rem] border border-slate-200 shadow-sm hover:shadow-xl transition-all duration-500 group overflow-hidden flex flex-col h-full min-h-[650px]">
                             <div className="p-8 border-b border-slate-100 bg-slate-50/50">
                                 <div className="flex items-center justify-between mb-8">
-                                    <div className="w-14 h-14 bg-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-indigo-200 group-hover:scale-110 transition-transform duration-500">
+                                    <div className="w-14 h-14 bg-blue-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-blue-200 group-hover:scale-110 transition-transform duration-500">
                                         <User size={28} />
                                     </div>
-                                    <span className="text-[10px] font-black text-indigo-200 uppercase tracking-widest bg-indigo-900 px-4 py-2 rounded-full">Step 01</span>
+                                    <span className="text-[10px] font-black text-blue-200 uppercase tracking-widest bg-blue-900 px-4 py-2 rounded-full">Step 01</span>
                                 </div>
                                 <h3 className="text-2xl font-black text-slate-900 tracking-tight">Identify Student</h3>
                                 <p className="text-slate-400 font-bold text-xs mt-2 uppercase tracking-widest">Select target for operation</p>
@@ -172,20 +172,20 @@ export default function AdminLevelReset() {
 
                             <div className="p-8 space-y-6 flex-1 flex flex-col overflow-hidden">
                                 <div className="relative">
-                                    <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" size={20} />
+                                    <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={20} />
                                     <input
                                         type="text"
                                         placeholder="Search by signature or identity..."
                                         value={searchTerm}
                                         onChange={(e) => setSearchTerm(e.target.value)}
-                                        className="w-full pl-16 pr-6 py-5 bg-slate-50 border-2 border-slate-100 rounded-2xl text-lg font-bold placeholder:text-slate-300 focus:ring-8 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all outline-none"
+                                        className="w-full pl-16 pr-6 py-5 bg-slate-50 border-2 border-slate-100 rounded-2xl text-lg font-bold placeholder:text-slate-300 focus:ring-8 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none"
                                     />
                                 </div>
 
                                 <div className="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar">
                                     {searching && (
                                         <div className="flex flex-col items-center justify-center py-12 gap-4">
-                                            <RefreshCw className="animate-spin text-indigo-600" size={32} />
+                                            <RefreshCw className="animate-spin text-blue-600" size={32} />
                                             <p className="text-xs font-black text-slate-300 uppercase tracking-widest">Scanning Records</p>
                                         </div>
                                     )}
@@ -194,17 +194,17 @@ export default function AdminLevelReset() {
                                             key={user.id}
                                             onClick={() => setSelectedUser(user)}
                                             className={`w-full p-5 rounded-2xl text-left border-2 transition-all duration-300 group/item relative overflow-hidden ${selectedUser?.id === user.id
-                                                ? 'bg-indigo-600 border-indigo-600 text-white shadow-xl shadow-indigo-200 scale-[1.02]'
-                                                : 'bg-white border-slate-100 hover:border-indigo-100 hover:bg-indigo-50/50 text-slate-700'
+                                                ? 'bg-blue-600 border-blue-600 text-white shadow-xl shadow-blue-200 scale-[1.02]'
+                                                : 'bg-white border-slate-100 hover:border-blue-100 hover:bg-blue-50/50 text-slate-700'
                                                 }`}
                                         >
-                                            <div className="flex items-center gap-4 relative z-10">
-                                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm ${selectedUser?.id === user.id ? 'bg-white/20 text-white' : 'bg-indigo-50 text-indigo-600'}`}>
+                                            <div className="flex items-center gap-4">
+                                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm ${selectedUser?.id === user.id ? 'bg-white/20 text-white' : 'bg-blue-50 text-blue-600'}`}>
                                                     {user.full_name?.charAt(0) || user.username?.charAt(0).toUpperCase()}
                                                 </div>
                                                 <div className="min-w-0">
                                                     <p className="font-black text-base truncate leading-tight">{user.full_name || user.username}</p>
-                                                    <p className={`text-[10px] font-bold uppercase tracking-widest mt-1 truncate ${selectedUser?.id === user.id ? 'text-indigo-100' : 'text-slate-400'}`}>
+                                                    <p className={`text-[10px] font-bold uppercase tracking-widest mt-1 truncate ${selectedUser?.id === user.id ? 'text-blue-100' : 'text-slate-400'}`}>
                                                         {user.email || 'ID: ' + user.id}
                                                     </p>
                                                 </div>
@@ -318,7 +318,7 @@ export default function AdminLevelReset() {
                 {/* Execution Bar */}
                 <div className="mx-auto mt-12 bg-slate-900 rounded-[3rem] p-10 text-white shadow-2xl shadow-slate-900/40 relative overflow-hidden border border-white/5">
                     <div className="absolute top-0 right-0 w-96 h-96 bg-rose-500/10 rounded-full blur-[100px] pointer-events-none" />
-                    <div className="absolute bottom-0 left-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-[80px] pointer-events-none" />
+                    <div className="absolute bottom-0 left-0 w-64 h-64 bg-blue-500/10 rounded-full blur-[80px] pointer-events-none" />
 
                     <div className="flex flex-col lg:flex-row items-center justify-between gap-10 relative z-10">
                         <div className="flex-1">
@@ -350,8 +350,8 @@ export default function AdminLevelReset() {
                             onClick={handleReset}
                             disabled={!selectedUser || !selectedCourse || resetting}
                             className={`group relative px-12 py-7 rounded-[2rem] font-black text-sm uppercase tracking-[0.3em] transition-all duration-500 flex items-center gap-4 overflow-hidden shadow-2xl ${!selectedUser || !selectedCourse
-                                    ? 'bg-slate-800 text-white/20 cursor-not-allowed opacity-50'
-                                    : 'bg-rose-600 hover:bg-rose-700 text-white shadow-rose-600/30 hover:-translate-y-1'
+                                ? 'bg-slate-800 text-white/20 cursor-not-allowed opacity-50'
+                                : 'bg-rose-600 hover:bg-rose-700 text-white shadow-rose-600/30 hover:-translate-y-1'
                                 }`}
                         >
                             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />

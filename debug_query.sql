@@ -1,0 +1,1 @@
+DESCRIBE assignment_logs;

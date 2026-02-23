@@ -189,7 +189,7 @@ export default function QuestionEditor() {
     if (loading) return (
         <SaaSLayout>
             <div className="flex items-center justify-center min-h-[60vh]">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-600"></div>
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600"></div>
             </div>
         </SaaSLayout>
     );
@@ -201,9 +201,9 @@ export default function QuestionEditor() {
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-6">
                     <div className="space-y-1">
                         <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                            <span className="hover:text-indigo-600 cursor-pointer" onClick={() => navigate(`/admin/course/${courseId}/questions`)}>Question Bank</span>
+                            <span className="hover:text-blue-600 cursor-pointer" onClick={() => navigate(`/admin/course/${courseId}/questions`)}>Question Bank</span>
                             <ArrowLeft size={10} />
-                            <span className="text-indigo-600">Edit Question</span>
+                            <span className="text-blue-600">Edit Question</span>
                         </div>
                         <h1 className="text-2xl font-black text-slate-900 tracking-tight">Edit Question</h1>
                     </div>
@@ -217,7 +217,7 @@ export default function QuestionEditor() {
                         <button
                             onClick={handleSave}
                             disabled={saving}
-                            className="flex items-center gap-2 px-8 py-2.5 bg-indigo-600 text-white rounded-xl font-black hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200 text-xs uppercase tracking-widest disabled:opacity-50"
+                            className="flex items-center gap-2 px-8 py-2.5 bg-blue-600 text-white rounded-xl font-black hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 text-xs uppercase tracking-widest disabled:opacity-50"
                         >
                             <Save size={16} /> {saving ? "Saving..." : "Save Question"}
                         </button>
@@ -241,7 +241,7 @@ export default function QuestionEditor() {
                                 type="text"
                                 value={formData.title}
                                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-sm font-bold focus:ring-2 focus:ring-indigo-500/20 focus:bg-white transition-all outline-none"
+                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-sm font-bold focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all outline-none"
                                 placeholder="Structural Webpage with Divs"
                             />
                         </div>
@@ -256,7 +256,7 @@ export default function QuestionEditor() {
                             <textarea
                                 value={formData.description}
                                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-sm font-medium focus:ring-2 focus:ring-indigo-500/20 focus:bg-white transition-all outline-none min-h-[100px]"
+                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg text-sm font-medium focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-all outline-none min-h-[100px]"
                                 placeholder="Create a webpage with a main <div> that contains a heading and two paragraphs..."
                             />
                         </div>
@@ -271,7 +271,7 @@ export default function QuestionEditor() {
                             <textarea
                                 value={formData.instructions}
                                 onChange={(e) => setFormData({ ...formData, instructions: e.target.value })}
-                                className="w-full px-4 py-3 bg-[#0f172a] text-indigo-100 border-none rounded-lg font-mono text-xs focus:ring-2 focus:ring-indigo-500/20 transition-all outline-none min-h-[150px] leading-relaxed"
+                                className="w-full px-4 py-3 bg-[#0f172a] text-blue-100 border-none rounded-lg font-mono text-xs focus:ring-2 focus:ring-blue-500/20 transition-all outline-none min-h-[150px] leading-relaxed"
                                 placeholder="Enter specific tasks or constraints (e.g. use Flexbox, center the content)..."
                             />
                         </div>
@@ -371,7 +371,7 @@ export default function QuestionEditor() {
                                 type="number"
                                 value={formData.points}
                                 onChange={(e) => setFormData({ ...formData, points: parseInt(e.target.value) })}
-                                className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold focus:ring-2 focus:ring-indigo-500/20 transition-all outline-none"
+                                className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold focus:ring-2 focus:ring-blue-500/20 transition-all outline-none"
                             />
                         </div>
                         <div className="space-y-2">
@@ -380,7 +380,7 @@ export default function QuestionEditor() {
                                 type="text"
                                 value={formData.tags}
                                 onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
-                                className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold focus:ring-2 focus:ring-indigo-500/20 transition-all outline-none"
+                                className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold focus:ring-2 focus:ring-blue-500/20 transition-all outline-none"
                                 placeholder="Flex, Grid, Layout"
                             />
                         </div>
@@ -390,7 +390,7 @@ export default function QuestionEditor() {
                                     type="checkbox"
                                     checked={formData.isLocked}
                                     onChange={(e) => setFormData({ ...formData, isLocked: e.target.checked })}
-                                    className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                                    className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                                 />
                                 <span className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Enforce Hierarchy</span>
                             </label>
@@ -400,9 +400,9 @@ export default function QuestionEditor() {
 
                 {/* Footer info/tip */}
                 <div className="pt-8 border-t border-slate-200">
-                    <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100 flex items-start gap-3">
-                        <AlertCircle className="text-indigo-600 shrink-0" size={16} />
-                        <p className="text-[10px] text-indigo-700 leading-relaxed font-bold uppercase tracking-wider">
+                    <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 flex items-start gap-3">
+                        <AlertCircle className="text-blue-600 shrink-0" size={16} />
+                        <p className="text-[10px] text-blue-700 leading-relaxed font-bold uppercase tracking-wider">
                             HTML/CSS Challenge Mode: Students will solve HTML, CSS, and JS code to match the expected output. The expected code above serves as the reference solution.
                         </p>
                     </div>

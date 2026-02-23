@@ -112,13 +112,13 @@ export default function Login({ isAdmin = false, onLogin }) {
   return (
     <div className="min-h-screen flex items-center justify-center p-6 bg-slate-50 relative overflow-hidden">
       {/* Decorative Elements */}
-      <div className="absolute -top-24 -left-24 w-96 h-96 bg-primary-100/50 rounded-full blur-3xl" />
-      <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-primary-200/30 rounded-full blur-3xl" />
+      <div className="absolute -top-24 -left-24 w-96 h-96 bg-blue-100/50 rounded-full blur-3xl" />
+      <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-blue-200/30 rounded-full blur-3xl" />
 
       <div className="max-w-lg w-full relative z-10">
         {/* Logo/Header */}
         <div className="text-center mb-12 animate-fade-in-up">
-          <div className="w-20 h-20 bg-primary-600 rounded-3xl mx-auto mb-6 flex items-center justify-center text-white font-display font-black text-3xl shadow-xl shadow-primary-600/20 rotate-3">
+          <div className="w-20 h-20 bg-blue-600 rounded-3xl mx-auto mb-6 flex items-center justify-center text-white font-display font-black text-3xl shadow-xl shadow-blue-600/20 rotate-3">
             P
           </div>
           <h1 className="text-4xl font-display font-bold mb-3 text-slate-900 tracking-tight">
@@ -127,7 +127,7 @@ export default function Login({ isAdmin = false, onLogin }) {
           <p className="text-slate-500 font-medium text-lg">Sign in to continue your professional journey</p>
         </div>
 
-        <div className="card shadow-premium-hover p-10 animate-fade-in-up delay-100">
+        <div className="bg-white rounded-[2.5rem] shadow-xl border border-slate-100 p-10 animate-fade-in-up delay-100">
           <h2 className="text-2xl font-display font-bold text-slate-900 mb-8">Authentication</h2>
 
           {error && (
@@ -267,7 +267,7 @@ export default function Login({ isAdmin = false, onLogin }) {
 
         <div className="mt-10 text-center animate-fade-in-up delay-200">
           <p className="text-sm font-medium text-slate-500">
-            Don't have an account? <span className="text-primary-600 font-bold cursor-pointer hover:underline">Contact Administrator</span>
+            Don't have an account? <span className="text-blue-600 font-bold cursor-pointer hover:underline">Contact Administrator</span>
           </p>
         </div>
       </div>

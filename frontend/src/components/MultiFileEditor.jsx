@@ -175,7 +175,6 @@ const MultiFileEditor = ({
     const handleDeleteFile = (filename, e) => {
         e.stopPropagation();
         if (defaultFiles.includes(filename)) return;
-        if (!confirm(`Delete "${filename}"?`)) return;
 
         const newFiles = { ...files };
         delete newFiles[filename];
@@ -246,7 +245,7 @@ const MultiFileEditor = ({
                                 onClick={() => !renamingFile && setActiveFile(filename)}
                                 className={`group flex items-center gap-2 px-3 py-2 cursor-pointer border-r border-[#313244] transition-all
                 ${isActive
-                                        ? 'bg-[#1e1e2e] text-white border-t-2 border-t-indigo-500'
+                                        ? 'bg-[#1e1e2e] text-white border-t-2 border-t-blue-500'
                                         : 'text-gray-400 hover:bg-[#1e1e2e]/50 hover:text-white'
                                     }`}
                             >
@@ -322,7 +321,7 @@ const MultiFileEditor = ({
                         lineNumbers: 'on',
                         scrollBeyondLastLine: false,
                         automaticLayout: true,
-                        tabSize: 2, 
+                        tabSize: 2,
                         readOnly: readOnly,
                         domReadOnly: readOnly,
                         padding: { top: 12 },

@@ -163,10 +163,10 @@ const AdminAssetManager = () => {
                     <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 pb-10 border-b border-slate-200/60">
                         <div className="text-left">
                             <div className="flex items-center gap-3 mb-4">
-                                <div className="w-10 h-10 bg-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-indigo-200">
+                                <div className="w-10 h-10 bg-blue-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-blue-200">
                                     <ImageIcon size={20} />
                                 </div>
-                                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-600 bg-indigo-50 px-3 py-1.5 rounded-full">
+                                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-600 bg-blue-50 px-3 py-1.5 rounded-full">
                                     Asset Manager • Persistent Cloud Storage
                                 </span>
                             </div>
@@ -182,7 +182,7 @@ const AdminAssetManager = () => {
                             <button
                                 onClick={() => fileInputRef.current?.click()}
                                 disabled={uploading}
-                                className="w-full lg:w-auto px-6 md:px-8 py-3 md:py-4 bg-slate-900 text-white rounded-2xl font-bold text-sm tracking-tight transition-all hover:bg-indigo-600 shadow-xl shadow-slate-200 flex items-center justify-center gap-2"
+                                className="w-full lg:w-auto px-6 md:px-8 py-3 md:py-4 bg-slate-900 text-white rounded-2xl font-black text-sm tracking-tight transition-all hover:bg-blue-600 shadow-xl shadow-slate-200 flex items-center justify-center gap-2"
                             >
                                 {uploading ? <Loader2 size={18} className="animate-spin" /> : <Plus size={18} />}
                                 <span>{uploading ? 'Processing...' : 'Upload New Asset'}</span>
@@ -206,7 +206,7 @@ const AdminAssetManager = () => {
                         <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm text-left">
                             <div className="flex items-center justify-between mb-6">
                                 <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
-                                    <Filter size={14} className="text-indigo-600" />
+                                    <Filter size={14} className="text-blue-600" />
                                     Categories
                                 </h3>
                                 <div className="w-8 h-8 bg-slate-50 rounded-lg flex items-center justify-center text-slate-400">
@@ -216,7 +216,7 @@ const AdminAssetManager = () => {
                             <div className="space-y-2">
                                 <button
                                     onClick={() => setSelectedCategory(null)}
-                                    className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-xs font-bold transition-all ${!selectedCategory ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' : 'text-slate-500 hover:bg-slate-50'}`}
+                                    className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-xs font-black transition-all ${!selectedCategory ? 'bg-blue-600 text-white shadow-lg shadow-blue-100' : 'text-slate-500 hover:bg-slate-50'}`}
                                 >
                                     <span>All Assets</span>
                                     <ChevronRight size={14} className={!selectedCategory ? 'text-white/60' : 'text-slate-300'} />
@@ -225,7 +225,7 @@ const AdminAssetManager = () => {
                                     <button
                                         key={cat}
                                         onClick={() => setSelectedCategory(cat)}
-                                        className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-xs font-bold transition-all ${selectedCategory === cat ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-100' : 'text-slate-500 hover:bg-slate-50'}`}
+                                        className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-xs font-black transition-all ${selectedCategory === cat ? 'bg-blue-600 text-white shadow-lg shadow-blue-100' : 'text-slate-500 hover:bg-slate-50'}`}
                                     >
                                         <span className="capitalize">{cat}</span>
                                         <ChevronRight size={14} className={selectedCategory === cat ? 'text-white/60' : 'text-slate-300'} />
@@ -234,7 +234,7 @@ const AdminAssetManager = () => {
                             </div>
                         </div>
 
-                        <div className="bg-indigo-600 p-8 rounded-[2rem] text-white text-left relative overflow-hidden">
+                        <div className="bg-blue-600 p-8 rounded-[2rem] text-white text-left relative overflow-hidden">
                             <div className="absolute top-[-20px] right-[-20px] w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
                             <span className="text-xs font-bold text-white/50 uppercase tracking-widest block mb-4">Storage Usage</span>
                             <div className="text-3xl font-black mb-2">{assets.length} <span className="text-sm font-medium text-white/60">Files</span></div>
@@ -262,18 +262,18 @@ const AdminAssetManager = () => {
                         {/* Search & Bulk Section */}
                         <div className="bg-white p-4 rounded-[1.5rem] border border-slate-100 shadow-sm flex flex-col md:flex-row gap-4 items-center">
                             <div className="relative flex-1 group w-full">
-                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-indigo-600 transition-colors" />
+                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 group-focus-within:text-blue-600 transition-colors" />
                                 <input
                                     type="text"
                                     placeholder="Search assets by name or ID..."
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="w-full pl-12 pr-4 py-3 bg-slate-50 border-2 border-transparent rounded-[1rem] text-sm font-bold text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-indigo-600 focus:bg-white transition-all shadow-inner"
+                                    className="w-full pl-12 pr-6 py-4 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-none focus:bg-white focus:border-blue-600 transition-all placeholder:text-slate-300"
                                 />
                             </div>
                             <button
                                 onClick={fetchAssets}
-                                className="px-5 py-3 bg-slate-50 text-slate-400 hover:text-indigo-600 rounded-xl transition-all hover:bg-indigo-50 flex items-center gap-2 font-bold text-xs"
+                                className="px-4 py-2 text-[10px] font-bold text-blue-400 hover:text-blue-300 uppercase tracking-widest transition-all rounded-lg hover:bg-blue-500/5 flex items-center gap-2"
                             >
                                 <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
                                 Sync
@@ -286,24 +286,24 @@ const AdminAssetManager = () => {
                             onDragLeave={handleDrag}
                             onDragOver={handleDrag}
                             onDrop={handleDrop}
-                            className={`relative border-2 border-dashed rounded-[2.5rem] p-12 text-center transition-all duration-300 ${dragActive ? 'border-indigo-600 bg-indigo-50/50 scale-[1.01] shadow-xl shadow-indigo-100/50' : 'border-slate-200 bg-white hover:border-indigo-300 hover:bg-slate-50/50'}`}
+                            className={`relative border-2 border-dashed rounded-[2.5rem] p-12 text-center transition-all duration-300 ${dragActive ? 'border-blue-600 bg-blue-50/50 scale-[1.01] shadow-xl shadow-blue-100/50' : 'border-slate-200 bg-white hover:border-blue-300 hover:bg-slate-50/50'}`}
                         >
-                            <div className="w-20 h-20 bg-indigo-50 rounded-[2rem] flex items-center justify-center text-indigo-600 mx-auto mb-6 shadow-sm border border-indigo-100">
+                            <div className="w-20 h-20 bg-blue-50 rounded-[2rem] flex items-center justify-center text-blue-600 mx-auto mb-6 shadow-sm border border-blue-100">
                                 <Upload size={32} />
                             </div>
                             <h3 className="text-xl font-black text-slate-900 mb-2">Drop assets here to upload</h3>
                             <p className="text-slate-400 text-sm font-medium max-w-sm mx-auto mb-6">
-                                Supports JPG, PNG, WEBP, and GIF up to <span className="text-indigo-600 font-bold">10MB</span> per file.
+                                Supports JPG, PNG, WEBP, and GIF up to <span className="text-blue-600 font-bold">10MB</span> per file.
                             </p>
                             <button
                                 onClick={() => fileInputRef.current?.click()}
-                                className="px-8 py-3 bg-white border-2 border-slate-100 text-slate-600 rounded-xl font-black text-xs uppercase tracking-widest hover:border-indigo-600 hover:text-indigo-600 transition-all shadow-sm"
+                                className="px-8 py-3 bg-white border-2 border-slate-100 text-slate-600 rounded-xl font-black text-xs uppercase tracking-widest hover:border-blue-600 hover:text-blue-600 transition-all shadow-sm"
                             >
                                 Select from computer
                             </button>
                             {dragActive && (
-                                <div className="absolute inset-0 z-10 rounded-[2.5rem] flex items-center justify-center bg-indigo-600/10 backdrop-blur-[2px]">
-                                    <div className="bg-white px-8 py-4 rounded-2xl shadow-2xl font-black text-indigo-600 flex items-center gap-3 animate-bounce">
+                                <div className="absolute inset-0 z-10 rounded-[2.5rem] flex items-center justify-center bg-blue-600/10 backdrop-blur-[2px]">
+                                    <div className="bg-white px-8 py-4 rounded-2xl shadow-2xl font-black text-blue-600 flex items-center gap-3 animate-bounce">
                                         <Plus size={20} />
                                         Drop to add to {selectedCategory || 'images'}
                                     </div>
@@ -314,7 +314,7 @@ const AdminAssetManager = () => {
                         {/* Grid View */}
                         {loading ? (
                             <div className="py-20 flex flex-col items-center justify-center gap-4 bg-white rounded-[2.5rem] border border-slate-100 shadow-sm">
-                                <div className="w-12 h-12 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin"></div>
+                                <div className="w-12 h-12 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin"></div>
                                 <span className="text-slate-400 font-bold text-[10px] uppercase tracking-[0.2em]">Accessing media vault...</span>
                             </div>
                         ) : filteredAssets.length === 0 ? (
@@ -330,7 +330,7 @@ const AdminAssetManager = () => {
                         ) : (
                             <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6 pb-20">
                                 {filteredAssets.map(asset => (
-                                    <div key={asset.filename} className="group relative bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden hover:shadow-2xl hover:shadow-indigo-200/50 hover:-translate-y-2 transition-all duration-500 text-left">
+                                    <div key={asset.filename} className="group relative bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden hover:shadow-2xl hover:shadow-blue-200/50 hover:-translate-y-2 transition-all duration-500 text-left">
                                         {/* Image Preview Container */}
                                         <div className="aspect-square bg-slate-50 relative overflow-hidden flex items-center justify-center">
                                             {(asset?.type || '').startsWith('image/') ? (
@@ -354,14 +354,14 @@ const AdminAssetManager = () => {
                                             <div className="absolute inset-x-4 bottom-4 flex justify-between gap-2 translate-y-20 group-hover:translate-y-0 transition-transform duration-500 z-10">
                                                 <button
                                                     onClick={() => copyToClipboard(asset.url)}
-                                                    className="flex-1 py-3 bg-white/95 backdrop-blur-md rounded-xl shadow-2xl flex items-center justify-center text-slate-700 hover:text-indigo-600 transition-colors"
+                                                    className="flex-1 py-3 bg-white/95 backdrop-blur-md rounded-xl shadow-2xl flex items-center justify-center text-slate-700 hover:text-blue-600 transition-colors"
                                                     title="Copy Public URL"
                                                 >
                                                     <Copy size={16} />
                                                 </button>
                                                 <button
                                                     onClick={() => setPreviewAsset(asset)}
-                                                    className="flex-1 py-3 bg-indigo-600 rounded-xl shadow-2xl shadow-indigo-200 flex items-center justify-center text-white hover:bg-indigo-700 transition-colors"
+                                                    className="flex-1 py-3 bg-blue-600 rounded-xl shadow-2xl shadow-blue-200 flex items-center justify-center text-white hover:bg-blue-700 transition-colors"
                                                     title="Quick Preview"
                                                 >
                                                     <Eye size={16} />
@@ -382,7 +382,7 @@ const AdminAssetManager = () => {
                                         {/* Asset Info Card */}
                                         <div className="p-5">
                                             <div className="flex items-center justify-between mb-2">
-                                                <span className="text-[9px] font-black text-indigo-600 bg-indigo-50 px-2 py-1 rounded-md uppercase tracking-widest">
+                                                <span className="text-[9px] font-black text-blue-600 bg-blue-50 px-2 py-1 rounded-md uppercase tracking-widest">
                                                     {asset.category}
                                                 </span>
                                                 <span className="text-[10px] font-bold text-slate-400">
@@ -436,7 +436,7 @@ const AdminAssetManager = () => {
                                 <div className="p-10 md:p-12 flex flex-col">
                                     <div className="flex-1">
                                         <div className="flex items-center gap-3 mb-6">
-                                            <div className="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600 shadow-sm">
+                                            <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600 shadow-sm">
                                                 <FileImage size={24} />
                                             </div>
                                             <div>
@@ -463,10 +463,10 @@ const AdminAssetManager = () => {
                                             <div>
                                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Public Access Path</label>
                                                 <div className="flex items-center gap-2 group cursor-pointer" onClick={() => copyToClipboard(previewAsset.url)}>
-                                                    <div className="flex-1 text-[11px] font-mono text-indigo-600 bg-indigo-50/50 p-4 rounded-xl border border-indigo-100 group-hover:border-indigo-400 transition-colors truncate">
+                                                    <div className="flex-1 text-[11px] font-mono text-blue-600 bg-blue-50/50 p-4 rounded-xl border border-blue-100 group-hover:border-blue-400 transition-colors truncate">
                                                         {previewAsset.url}
                                                     </div>
-                                                    <div className="w-14 h-14 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-100 group-hover:scale-105 transition-transform">
+                                                    <div className="w-14 h-14 bg-blue-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-100 group-hover:scale-105 transition-transform">
                                                         <Copy size={20} />
                                                     </div>
                                                 </div>

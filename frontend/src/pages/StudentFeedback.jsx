@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../services/api';
-import { Star, MessageSquare, CheckCircle } from 'lucide-react';
+import { Star, MessageSquare, CheckCircle, RefreshCw } from 'lucide-react';
 
 export default function StudentFeedback() {
     const { submissionId } = useParams();
@@ -44,7 +44,7 @@ export default function StudentFeedback() {
                     </p>
                     <button
                         onClick={() => navigate('/')}
-                        className="w-full bg-indigo-600 text-white rounded-lg py-3 font-semibold hover:bg-indigo-700 transition-colors"
+                        className="w-full bg-blue-600 text-white rounded-lg py-3 font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20"
                     >
                         Return to Dashboard
                     </button>
@@ -57,7 +57,7 @@ export default function StudentFeedback() {
         <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
             <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-8 max-w-lg w-full">
                 <div className="text-center mb-8">
-                    <h1 className="text-2xl font-bold text-gray-900">Assessment Feedback</h1>
+                    <h1 className="text-2xl font-black text-slate-900 tracking-tight">Assessment Feedback</h1>
                     <p className="text-sm text-gray-600 mt-2">
                         Please rate your experience with this challenge.
                     </p>
@@ -113,7 +113,7 @@ export default function StudentFeedback() {
                             value={formData.comments}
                             onChange={(e) => setFormData({ ...formData, comments: e.target.value })}
                             rows={4}
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none font-medium"
                             placeholder="Any issues or suggestions..."
                         />
                     </div>
@@ -121,9 +121,9 @@ export default function StudentFeedback() {
                     <button
                         type="submit"
                         disabled={loading}
-                        className="w-full btn-primary py-3 text-lg"
+                        className="w-full py-4 bg-blue-600 text-white rounded-md font-black uppercase tracking-widest text-sm shadow-xl shadow-blue-600/20 hover:bg-blue-700 transition-all active:scale-95 flex items-center justify-center gap-2"
                     >
-                        {loading ? 'Submitting...' : 'Submit Feedback'}
+                        {loading ? <RefreshCw className="animate-spin" size={18} /> : 'Submit Feedback'}
                     </button>
                 </form>
             </div>

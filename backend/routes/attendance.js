@@ -6,6 +6,8 @@ const multer = require('multer');
 const { query, queryOne } = require('../database/connection');
 const { verifyToken, verifyAdmin } = require('../middleware/auth');
 const GlobalSession = require('../models/GlobalSession');
+const TimerEngine = require('../services/TimerEngine');
+const CourseModel = require('../models/Course');
 
 // Configure multer for reference images
 const storage = multer.diskStorage({
@@ -107,7 +109,34 @@ router.get('/status', verifyToken, async (req, res) => {
 
     try {
         // 1. Check for active global session
-        const activeSession = await GlobalSession.findActive(courseId, level);
+        let activeSession = await GlobalSession.findActive(courseId, level);
+
+        // 1b. Resolve per-level time limit from course level_settings
+        if (activeSession && level) {
+            try {
+                const courseData = await CourseModel.findById(courseId);
+                const levelTimeLimit = TimerEngine.resolveTimeLimit(courseData, level);
+
+                if (levelTimeLimit > 0) {
+                    // Compute a tighter end_time using per-level limit
+                    const { levelEndTime, source } = TimerEngine.computeLevelEndTime(
+                        activeSession.start_time,
+                        activeSession.end_time,
+                        levelTimeLimit
+                    );
+
+                    // Override session end_time and duration if per-level limit is tighter
+                    activeSession = {
+                        ...activeSession,
+                        end_time: levelEndTime.toISOString(),
+                        duration_minutes: levelTimeLimit,
+                        timer_source: source  // for debugging
+                    };
+                }
+            } catch (e) {
+                console.warn('[Attendance Status] Failed to resolve per-level time limit:', e.message);
+            }
+        }
 
         // 2. Get user details
         const user = await queryOne("SELECT is_blocked, roll_no, email, full_name FROM users WHERE id = ?", [userId]);

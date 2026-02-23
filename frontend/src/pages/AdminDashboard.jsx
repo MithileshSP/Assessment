@@ -49,10 +49,10 @@ const AdminDashboard = () => {
 
   const widgets = [
     { label: 'Total Users', value: stats.totalUsers, icon: <Users size={24} />, color: 'blue' },
-    { label: 'Courses', value: stats.totalCourses, icon: <BookOpen size={24} />, color: 'indigo' },
-    { label: 'Submissions', value: stats.totalSubmissions, icon: <FileText size={24} />, color: 'emerald' },
-    { label: 'Attendance Requests', value: stats.pendingAttendance, icon: <Calendar size={24} />, color: 'orange', action: '/admin/attendance' },
-    { label: 'Bulk Level Unlock', value: 'Tools', icon: <Database size={24} />, color: 'purple', action: '/admin/bulk-completion' },
+    { label: 'Courses', value: stats.totalCourses, icon: <BookOpen size={24} />, color: 'blue' },
+    { label: 'Submissions', value: stats.totalSubmissions, icon: <FileText size={24} />, color: 'blue' },
+    { label: 'Attendance Requests', value: stats.pendingAttendance, icon: <Calendar size={24} />, color: 'amber', action: '/admin/attendance' },
+    { label: 'Bulk Level Unlock', value: 'Tools', icon: <Database size={24} />, color: 'blue', action: '/admin/bulk-completion' },
   ];
 
   return (
@@ -66,7 +66,7 @@ const AdminDashboard = () => {
           </div>
           <button
             onClick={() => navigate('/admin/analytics')}
-            className="px-8 py-4 bg-indigo-600 text-white rounded-[2rem] font-black text-sm uppercase tracking-widest flex items-center gap-3 hover:bg-indigo-700 transition-all shadow-2xl shadow-indigo-600/20 active:scale-95 group"
+            className="px-8 py-4 bg-blue-600 text-white rounded-[2rem] font-black text-sm uppercase tracking-widest flex items-center gap-3 hover:bg-blue-700 transition-all shadow-2xl shadow-blue-600/20 active:scale-95 group"
           >
             Intelligence Alpha
             <TrendingUp size={18} className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
@@ -170,11 +170,11 @@ const AdminDashboard = () => {
 
           {/* Pending Tasks */}
           <div className="space-y-8 animate-fade-in-up delay-700">
-            <div className="bg-[#0f172a] rounded-[2.5rem] p-8 text-white shadow-2xl shadow-slate-900/20 relative overflow-hidden group">
-              <div className="absolute -right-10 -top-10 w-40 h-40 bg-blue-500/10 rounded-full blur-3xl group-hover:bg-blue-500/20 transition-all duration-700" />
+            <div className="bg-white rounded-[2.5rem] p-8 text-slate-900 shadow-sm border border-slate-200 relative overflow-hidden group">
+              <div className="absolute -right-10 -top-10 w-40 h-40 bg-blue-500/5 rounded-full blur-3xl group-hover:bg-blue-500/10 transition-all duration-700" />
 
               <h3 className="font-black text-xl mb-8 flex items-center gap-3 relative z-10">
-                <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center text-amber-400 border border-amber-500/20">
+                <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-500 border border-amber-500/10">
                   <AlertCircle size={22} className="animate-pulse" />
                 </div>
                 Pending Tasks
@@ -182,29 +182,29 @@ const AdminDashboard = () => {
 
               <div className="space-y-5 relative z-10">
                 <div
-                  className="bg-slate-800/40 p-5 rounded-3xl border border-white/5 hover:border-white/20 transition-all cursor-pointer group/item flex items-center justify-between"
+                  className="bg-slate-50 p-5 rounded-3xl border border-slate-100 hover:border-blue-200 transition-all cursor-pointer group/item flex items-center justify-between"
                   onClick={() => navigate('/admin/attendance')}
                 >
                   <div>
-                    <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.2em] mb-1">Attendance</p>
-                    <p className="font-black text-3xl group-hover/item:text-blue-400 transition-colors">{stats.pendingAttendance}</p>
-                    <p className="text-xs text-slate-500 mt-1 font-bold">Waiting to start</p>
+                    <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] mb-1">Attendance</p>
+                    <p className="font-black text-3xl group-hover/item:text-blue-600 transition-colors">{stats.pendingAttendance}</p>
+                    <p className="text-xs text-slate-400 mt-1 font-bold">Waiting to start</p>
                   </div>
-                  <div className="w-12 h-12 rounded-2xl bg-slate-700/50 flex items-center justify-center text-slate-400 group-hover/item:bg-blue-500/20 group-hover/item:text-blue-400 transition-all">
+                  <div className="w-12 h-12 rounded-2xl bg-white border border-slate-100 flex items-center justify-center text-slate-400 group-hover/item:bg-blue-50 group-hover/item:text-blue-600 transition-all">
                     <Clock size={24} />
                   </div>
                 </div>
 
                 <div
-                  className="bg-slate-800/40 p-5 rounded-3xl border border-white/5 hover:border-white/20 transition-all cursor-pointer group/item flex items-center justify-between"
+                  className="bg-slate-50 p-5 rounded-3xl border border-slate-100 hover:border-blue-200 transition-all cursor-pointer group/item flex items-center justify-between"
                   onClick={() => navigate('/admin/assignment')}
                 >
                   <div>
-                    <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.2em] mb-1">Evaluations</p>
-                    <p className="font-black text-3xl group-hover/item:text-emerald-400 transition-colors">{stats.pendingEvaluations}</p>
-                    <p className="text-xs text-slate-500 mt-1 font-bold">Needs Review</p>
+                    <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] mb-1">Evaluations</p>
+                    <p className="font-black text-3xl group-hover/item:text-blue-600 transition-colors">{stats.pendingEvaluations}</p>
+                    <p className="text-xs text-slate-400 mt-1 font-bold">Needs Review</p>
                   </div>
-                  <div className="w-12 h-12 rounded-2xl bg-slate-700/50 flex items-center justify-center text-slate-400 group-hover/item:bg-emerald-500/20 group-hover/item:text-emerald-400 transition-all">
+                  <div className="w-12 h-12 rounded-2xl bg-white border border-slate-100 flex items-center justify-center text-slate-400 group-hover/item:bg-blue-50 group-hover/item:text-blue-600 transition-all">
                     <CheckCircle size={24} />
                   </div>
                 </div>
@@ -212,7 +212,7 @@ const AdminDashboard = () => {
             </div>
 
             {/* Quick Tips */}
-            <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-[2.5rem] p-8 text-white shadow-2xl shadow-blue-600/30 relative overflow-hidden group border border-blue-500/20">
+            <div className="bg-gradient-to-br from-blue-600 to-blue-700 rounded-[2.5rem] p-8 text-white shadow-2xl shadow-blue-600/20 relative overflow-hidden group border border-blue-500/20">
               <div className="absolute -right-12 -bottom-12 w-48 h-48 bg-white/10 rounded-full group-hover:scale-150 transition-transform duration-700 blur-2xl" />
               <div className="relative z-10">
                 <div className="w-12 h-12 rounded-2xl bg-white/10 flex items-center justify-center mb-6 border border-white/10">

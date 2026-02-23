@@ -347,7 +347,7 @@ const QuestionBank = () => {
                             <ArrowLeft size={20} />
                         </button>
                         <div className="text-left">
-                            <div className="flex items-center gap-2 text-[10px] font-black text-indigo-500 uppercase tracking-[0.2em] mb-1">
+                            <div className="flex items-center gap-2 text-[10px] font-black text-blue-500 uppercase tracking-[0.2em] mb-1">
                                 <BookOpen size={10} />
                                 <span>Level Management</span>
                             </div>
@@ -376,13 +376,13 @@ const QuestionBank = () => {
                             <div className="text-left">
                                 <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3">Search Database</label>
                                 <div className="relative group">
-                                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-500 transition-colors" size={16} />
+                                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-blue-500 transition-colors" size={16} />
                                     <input
                                         type="text"
                                         placeholder="Find questions..."
                                         value={searchTerm}
                                         onChange={(e) => setSearchTerm(e.target.value)}
-                                        className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium focus:ring-4 focus:ring-indigo-500/5 focus:bg-white transition-all outline-none"
+                                        className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium focus:ring-4 focus:ring-blue-500/5 focus:bg-white transition-all outline-none"
                                     />
                                 </div>
                             </div>
@@ -392,9 +392,9 @@ const QuestionBank = () => {
                                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Total Items</p>
                                     <p className="text-2xl font-black text-slate-900 mt-2">{totals.questions}</p>
                                 </div>
-                                <div className="bg-indigo-50 p-4 rounded-3xl border border-indigo-100 text-left">
-                                    <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest leading-none">Levels</p>
-                                    <p className="text-2xl font-black text-indigo-600 mt-2">1</p>
+                                <div className="bg-blue-50 p-4 rounded-3xl border border-blue-100 text-left">
+                                    <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest leading-none">Levels</p>
+                                    <p className="text-2xl font-black text-blue-600 mt-2">1</p>
                                 </div>
                             </div>
 
@@ -410,14 +410,14 @@ const QuestionBank = () => {
                         </div>
 
                         {/* Quick Actions */}
-                        <div className="bg-gradient-to-br from-indigo-600 to-violet-700 p-6 rounded-[2.5rem] text-white shadow-xl shadow-indigo-200 text-left">
+                        <div className="bg-gradient-to-br from-blue-600 to-violet-700 p-6 rounded-[2.5rem] text-white shadow-xl shadow-blue-200 text-left">
                             <h3 className="font-black text-lg mb-4 flex items-center gap-2">
                                 <Zap size={20} className="text-amber-400" />
                                 Bulk Operations
                             </h3>
                             <div className="space-y-3">
                                 <div className="w-full bg-white/10 p-4 rounded-2xl border border-white/10 transition-all text-left group">
-                                    <p className="font-bold text-xs uppercase tracking-widest text-indigo-100 mb-3">Download Templates</p>
+                                    <p className="font-bold text-xs uppercase tracking-widest text-blue-100 mb-3">Download Templates</p>
                                     <div className="flex gap-2">
                                         <a
                                             href={`${api.BASE_URL}/courses/sample/csv?courseId=${courseId}`}
@@ -503,7 +503,7 @@ const QuestionBank = () => {
                                         className="px-8 py-5 flex items-center justify-between cursor-pointer hover:bg-slate-50/50 transition-colors border-b border-slate-50"
                                     >
                                         <div className="flex items-center gap-4">
-                                            <div className={`w-10 h-10 ${questions.length > 0 ? 'bg-indigo-50 text-indigo-600' : 'bg-slate-100 text-slate-400'} rounded-xl flex items-center justify-center font-black shadow-sm`}>
+                                            <div className={`w-10 h-10 ${questions.length > 0 ? 'bg-blue-50 text-blue-600' : 'bg-slate-100 text-slate-400'} rounded-xl flex items-center justify-center font-black shadow-sm`}>
                                                 {lv}
                                             </div>
                                             <div className="text-left">
@@ -528,14 +528,14 @@ const QuestionBank = () => {
                                                             type="checkbox"
                                                             checked={questions.length > 0 && questions.every(q => selectedQuestions.includes(q.id))}
                                                             onChange={() => toggleSelectAllInLevel(lv)}
-                                                            className="w-5 h-5 rounded-lg border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                                                            className="w-5 h-5 rounded-lg border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
                                                         />
                                                         <span className="text-sm font-bold text-slate-600">
                                                             Select All ({questions.length})
                                                         </span>
                                                     </label>
                                                     {questions.filter(q => selectedQuestions.includes(q.id)).length > 0 && (
-                                                        <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded-lg">
+                                                        <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-lg">
                                                             {questions.filter(q => selectedQuestions.includes(q.id)).length} selected
                                                         </span>
                                                     )}
@@ -544,18 +544,18 @@ const QuestionBank = () => {
                                             {filtered.length > 0 ? filtered.map((q) => (
                                                 <div
                                                     key={q.id}
-                                                    className={`bg-white p-6 rounded-3xl border ${selectedQuestions.includes(q.id) ? 'border-indigo-400 bg-indigo-50/30' : 'border-slate-200'} hover:border-indigo-300 transition-all group flex items-start justify-between gap-6 shadow-sm`}
+                                                    className={`bg-white p-6 rounded-3xl border ${selectedQuestions.includes(q.id) ? 'border-blue-400 bg-blue-50/30' : 'border-slate-200'} hover:border-blue-300 transition-all group flex items-start justify-between gap-6 shadow-sm`}
                                                 >
                                                     <div className="flex items-start gap-4 flex-1">
                                                         <input
                                                             type="checkbox"
                                                             checked={selectedQuestions.includes(q.id)}
                                                             onChange={() => toggleSelectQuestion(q.id)}
-                                                            className="mt-1.5 w-5 h-5 rounded-lg border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                                                            className="mt-1.5 w-5 h-5 rounded-lg border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
                                                         />
                                                         <div className="flex-1 space-y-3 text-left">
                                                             <div className="flex items-center gap-3">
-                                                                <span className="bg-indigo-50 text-indigo-600 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">
+                                                                <span className="bg-blue-50 text-blue-600 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">
                                                                     Q{q.questionNumber || 'X'}
                                                                 </span>
                                                                 <h4 className="font-bold text-slate-900">{q.title}</h4>
@@ -566,7 +566,7 @@ const QuestionBank = () => {
                                                             </p>
                                                             <div className="flex items-center gap-2 mt-1">
                                                                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Added by:</span>
-                                                                <span className="text-[10px] font-black text-indigo-500 bg-indigo-50 px-2 py-0.5 rounded-md uppercase tracking-widest border border-indigo-100/50">
+                                                                <span className="text-[10px] font-black text-blue-500 bg-blue-50 px-2 py-0.5 rounded-md uppercase tracking-widest border border-blue-100/50">
                                                                     {q.creatorName || 'System'}
                                                                 </span>
                                                             </div>
@@ -583,7 +583,7 @@ const QuestionBank = () => {
                                                     <div className="flex flex-col gap-2">
                                                         <button
                                                             onClick={() => handleEdit(q)}
-                                                            className="flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-600 rounded-xl hover:bg-indigo-600 hover:text-white transition-all font-bold text-xs"
+                                                            className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-600 hover:text-white transition-all font-bold text-xs"
                                                         >
                                                             <Edit3 size={14} />
                                                             Edit
@@ -622,7 +622,7 @@ const QuestionBank = () => {
                                     <X size={20} />
                                 </button>
                             </div>
-                            <div className="border-2 border-dashed border-slate-200 rounded-2xl p-10 text-center hover:border-indigo-400 transition-colors">
+                            <div className="border-2 border-dashed border-slate-200 rounded-2xl p-10 text-center hover:border-blue-400 transition-colors">
                                 <Upload className="mx-auto text-slate-300 mb-4" size={40} />
                                 <input
                                     type="file"
@@ -631,7 +631,7 @@ const QuestionBank = () => {
                                     className="hidden"
                                     id="import-file"
                                 />
-                                <label htmlFor="import-file" className="cursor-pointer text-indigo-600 hover:text-indigo-700 font-bold text-sm underline">
+                                <label htmlFor="import-file" className="cursor-pointer text-blue-600 hover:text-blue-700 font-bold text-sm underline">
                                     {importFile ? importFile.name : 'Select a CSV or JSON file'}
                                 </label>
                             </div>
@@ -648,7 +648,7 @@ const QuestionBank = () => {
                                 <button
                                     onClick={handleImport}
                                     disabled={!importFile || importing}
-                                    className="flex-1 py-3 bg-indigo-600 text-white rounded-2xl font-bold hover:bg-indigo-700 disabled:opacity-50"
+                                    className="flex-1 py-3 bg-blue-600 text-white rounded-2xl font-bold hover:bg-blue-700 disabled:opacity-50"
                                 >
                                     {importing ? 'Importing...' : 'Import'}
                                 </button>
@@ -665,9 +665,9 @@ const QuestionBank = () => {
 };
 
 const RestrictionToggle = ({ title, description, icon, enabled, onChange }) => (
-    <div className="p-8 bg-white rounded-[2.5rem] border border-slate-200 shadow-sm flex items-center justify-between hover:border-indigo-300 transition-all group">
+    <div className="p-8 bg-white rounded-[2.5rem] border border-slate-200 shadow-sm flex items-center justify-between hover:border-blue-300 transition-all group">
         <div className="flex items-center gap-5 text-left">
-            <div className="w-14 h-14 bg-slate-50 group-hover:bg-indigo-50 rounded-2xl flex items-center justify-center text-slate-400 group-hover:text-indigo-500 transition-colors">
+            <div className="w-14 h-14 bg-slate-50 group-hover:bg-blue-50 rounded-2xl flex items-center justify-center text-slate-400 group-hover:text-blue-500 transition-colors">
                 {icon}
             </div>
             <div className="text-left">
@@ -682,7 +682,7 @@ const RestrictionToggle = ({ title, description, icon, enabled, onChange }) => (
                 checked={enabled || false}
                 onChange={(e) => onChange && onChange(e.target.checked)}
             />
-            <div className="w-14 h-8 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-indigo-600 shadow-inner"></div>
+            <div className="w-14 h-8 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-blue-600 shadow-inner"></div>
         </label>
     </div>
 );

@@ -49,36 +49,6 @@ const SaaSLayout = ({ children, fullWidth = false }) => {
         }
     })();
 
-    const theme = {
-        admin: {
-            accent: 'from-indigo-600 to-indigo-800',
-            glow: 'shadow-indigo-500/30',
-            text: 'text-indigo-500',
-            active: 'bg-indigo-600/10 border-indigo-500/20',
-            pulse: 'bg-indigo-500 shadow-[0_0_12px_#6366f1]'
-        },
-        faculty: {
-            accent: 'from-emerald-600 to-emerald-800',
-            glow: 'shadow-emerald-500/30',
-            text: 'text-emerald-500',
-            active: 'bg-emerald-600/10 border-emerald-500/20',
-            pulse: 'bg-emerald-500 shadow-[0_0_12px_#10b981]'
-        },
-        student: {
-            accent: 'from-primary-600 to-primary-800',
-            glow: 'shadow-primary-500/30',
-            text: 'text-primary-500',
-            active: 'bg-primary-600/10 border-primary-500/20',
-            pulse: 'bg-primary-500 shadow-[0_0_12px_#0e8ce9]'
-        }
-    }[role] || {
-        accent: 'from-slate-700 to-slate-900',
-        glow: 'shadow-slate-500/30',
-        text: 'text-slate-500',
-        active: 'bg-slate-600/10 border-slate-500/20',
-        pulse: 'bg-slate-500 shadow-[0_0_12px_#64748b]'
-    };
-
     const handleLogout = () => {
         navigate('/logout');
     };
@@ -90,7 +60,7 @@ const SaaSLayout = ({ children, fullWidth = false }) => {
             { id: 'courses', label: 'Courses', icon: <BookOpen size={20} />, path: '/admin/courses' },
             { id: 'attendance', label: 'Attendance', icon: <Calendar size={20} />, path: '/admin/attendance' },
             { id: 'schedule', label: 'Schedule', icon: <Clock size={20} />, path: '/admin/schedule' },
-            { id: 'faculty', label: 'Assignment', icon: <Briefcase size={20} />, path: '/admin/assignment' },
+            { id: 'faculty', label: 'Faculty', icon: <Briefcase size={20} />, path: '/admin/assignment' },
             { id: 'results', label: 'Results', icon: <Trophy size={20} />, path: '/admin/results' },
             { id: 'restrictions', label: 'Restrictions', icon: <Shield size={20} />, path: '/admin/restrictions' },
             { id: 'reset', label: 'Reset Level', icon: <RefreshCw size={20} />, path: '/admin/reset-level' },
@@ -119,7 +89,7 @@ const SaaSLayout = ({ children, fullWidth = false }) => {
             {/* Mobile Sidebar Overlay */}
             {isSidebarOpen && (
                 <div
-                    className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-40 md:hidden"
+                    className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 md:hidden transition-opacity"
                     onClick={() => setSidebarOpen(false)}
                 />
             )}
@@ -131,28 +101,28 @@ const SaaSLayout = ({ children, fullWidth = false }) => {
                 className={`
                     fixed inset-y-0 left-0 z-50 
                     md:relative md:z-30 md:flex
-                    bg-[#0f172a] text-slate-300 
-                    transition-all duration-300
+                    bg-white border-r border-slate-200 shadow-xl md:shadow-none
+                    transition-all duration-300 ease-in-out
                     flex flex-col 
                     ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
-                    ${isSidebarOpenEffectively ? 'w-64' : 'w-20'}
+                    ${isSidebarOpenEffectively ? 'w-72' : 'w-20'}
                 `}
             >
                 {/* Sidebar Header */}
-                <div className="h-16 flex items-center px-6 border-b border-slate-800">
+                <div className="h-20 flex items-center justify-center border-b border-slate-100">
                     <div
-                        className="flex items-center gap-3 cursor-pointer"
+                        className="flex items-center gap-3 cursor-pointer group"
                         onClick={() => {
                             if (role === 'admin') navigate('/admin/dashboard');
                             else if (role === 'faculty') navigate('/faculty/dashboard');
                             else navigate('/');
                         }}
                     >
-                        <div className={`w-8 h-8 flex-shrink-0 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold`}>
-                            P
+                        <div className={`w-10 h-10 flex-shrink-0 bg-gradient-to-tr from-blue-600 to-blue-500 rounded-xl flex items-center justify-center text-white font-bold shadow-lg shadow-blue-500/30 transition-transform group-hover:scale-105 duration-300`}>
+                            <span className="text-xl">P</span>
                         </div>
-                        <div className={`transition-all duration-300 ${isSidebarOpenEffectively ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-10 pointer-events-none'}`}>
-                            <span className="font-bold text-lg text-white">Portal</span>
+                        <div className={`transition-all duration-300 overflow-hidden ${isSidebarOpenEffectively ? 'opacity-100 w-auto' : 'opacity-0 w-0 pointer-events-none'}`}>
+                            <span className="font-extrabold text-lg text-slate-800 tracking-tight">Portal</span>
                         </div>
                     </div>
                 </div>
@@ -165,32 +135,35 @@ const SaaSLayout = ({ children, fullWidth = false }) => {
                             <Link
                                 key={item.id}
                                 to={item.path}
-                                className={`flex items-center gap-4 py-3 px-3 rounded-xl transition-all duration-200 group relative ${isActive
-                                    ? 'bg-blue-600 text-white'
-                                    : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                                className={`flex items-center gap-4 py-3 px-3.5 rounded-2xl transition-all duration-300 group relative ${isActive
+                                    ? 'bg-blue-50 text-blue-700 shadow-sm'
+                                    : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
                                     }`}
                             >
-                                <div className="w-6 flex-shrink-0 flex items-center justify-center">
-                                    {isActive ? item.icon : React.cloneElement(item.icon, { size: 20 })}
+                                <div className={`relative z-10 transition-transform duration-300 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`}>
+                                    {isActive ? React.cloneElement(item.icon, { fill: "currentColor", fillOpacity: 0.2 }) : item.icon}
                                 </div>
-                                <span className={`text-sm font-medium whitespace-nowrap transition-all duration-300 ${isSidebarOpenEffectively ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-10 pointer-events-none w-0'}`}>
+                                <span className={`text-sm font-black whitespace-nowrap transition-all duration-300 ${isSidebarOpenEffectively ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4 pointer-events-none w-0'}`}>
                                     {item.label}
                                 </span>
+                                {isActive && (
+                                    <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-blue-600 rounded-l-full" />
+                                )}
                             </Link>
                         );
                     })}
                 </nav>
 
                 {/* Sidebar Footer */}
-                <div className="p-4 border-t border-slate-800">
+                <div className="p-4 border-t border-slate-100">
                     <button
                         onClick={handleLogout}
-                        className="w-full flex items-center gap-4 py-3 px-3 rounded-xl text-slate-400 hover:bg-rose-500/10 hover:text-rose-500 transition-all duration-200 group"
+                        className="w-full flex items-center gap-4 py-3 px-3.5 rounded-2xl text-slate-500 hover:bg-rose-50 hover:text-rose-600 transition-all duration-300 group"
                     >
-                        <div className="w-6 flex-shrink-0 flex items-center justify-center">
+                        <div className="transition-transform duration-300 group-hover:-translate-x-1">
                             <LogOut size={20} />
                         </div>
-                        <span className={`text-sm font-medium whitespace-nowrap transition-all duration-300 ${isSidebarOpenEffectively ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-10 pointer-events-none w-0'}`}>
+                        <span className={`text-sm font-black whitespace-nowrap transition-all duration-300 ${isSidebarOpenEffectively ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4 pointer-events-none w-0'}`}>
                             Logout
                         </span>
                     </button>
@@ -200,72 +173,57 @@ const SaaSLayout = ({ children, fullWidth = false }) => {
             {/* Main Content Area */}
             <div className={`flex-1 flex flex-col overflow-hidden relative transition-all duration-500`}>
                 {/* Top Navigation */}
-                <header className="h-24 bg-white/80 backdrop-blur-2xl border-b border-slate-200/60 flex items-center justify-between px-8 md:px-12 z-20 sticky top-0 shadow-sm">
-                    <div className="flex items-center gap-10">
+                <header className="h-16 bg-white/80 backdrop-blur-md border-b border-slate-200/60 flex items-center justify-between px-8 z-20 sticky top-0">
+                    <div className="flex items-center gap-4">
                         <button
                             onClick={() => setSidebarOpen(!isSidebarOpen)}
-                            className="bg-slate-50 p-3.5 hover:bg-white rounded-2xl text-slate-600 transition-all active:scale-95 border border-slate-200/60 shadow-sm hover:shadow-md hover:border-primary-100 group"
+                            className="p-2.5 hover:bg-slate-100 rounded-xl text-slate-500 transition-all duration-200 active:scale-95"
                         >
-                            {isSidebarOpenEffectively ? <ChevronLeft size={22} className="group-hover:-translate-x-0.5 transition-transform" /> : <ChevronRight size={22} className="group-hover:translate-x-0.5 transition-transform" />}
+                            {isSidebarOpenEffectively ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
                         </button>
 
-                        <div className="hidden lg:flex flex-col">
-                            <div className="flex items-center gap-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1.5">
-                                <span className="hover:text-primary-600 transition-colors cursor-default underline decoration-indigo-500/30 underline-offset-4">{role} system v3.4.25 - LATEST</span>
-                                <ChevronRight size={10} className="text-slate-300" />
-                                <span className={`${theme.text} font-black`}>{location.pathname.split('/').filter(Boolean).pop()?.replace('-', ' ') || 'Home'}</span>
-                            </div>
-                            <h2 className="text-xl font-display font-bold text-slate-900 tracking-tight capitalize">
-                                {location.pathname.split('/').filter(Boolean).pop()?.split('-').join(' ') || 'Main Dashboard'}
+                        <div className="hidden lg:flex items-center gap-2">
+                            <span className="px-2.5 py-0.5 rounded-full bg-slate-100 text-xs font-black text-slate-500 uppercase tracking-wider">{role}</span>
+                            <span className="text-slate-300">/</span>
+                            <h2 className="text-sm font-black text-slate-800 uppercase tracking-wide">
+                                {location.pathname.split('/').filter(Boolean).pop()?.split('-').join(' ') || 'Dashboard'}
                             </h2>
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-10">
-                        <div className="hidden md:flex items-center gap-4 bg-slate-50 border border-slate-200/60 pl-6 pr-4 py-3.5 rounded-2xl shadow-inner group focus-within:ring-4 focus-within:ring-primary-500/10 focus-within:bg-white transition-all">
-                            <Search size={18} className="text-slate-400 group-focus-within:text-primary-600 transition-colors" />
+                    <div className="flex items-center gap-6">
+                        <div className="hidden md:flex items-center gap-3 bg-slate-100/50 border border-slate-200 px-4 py-2 rounded-2xl focus-within:ring-2 focus-within:ring-blue-100 focus-within:bg-white transition-all w-64">
+                            <Search size={16} className="text-slate-400" />
                             <input
                                 type="text"
-                                placeholder="Search repository..."
-                                className="bg-transparent border-none focus:ring-0 text-sm w-56 text-slate-600 font-semibold placeholder:text-slate-400"
+                                placeholder="Search workspace..."
+                                className="bg-transparent border-none focus:ring-0 text-sm w-full text-slate-600 placeholder:text-slate-400 font-medium"
                             />
                         </div>
 
-                        <div className="flex items-center gap-6">
-                            <button className="relative p-3.5 text-slate-400 hover:text-primary-600 transition-all hover:bg-primary-50 rounded-2xl border border-transparent hover:border-primary-100 group">
-                                <Bell size={22} className="group-hover:rotate-12 transition-transform" />
-                                <span className="absolute top-3.5 right-3.5 w-3 h-3 bg-primary-600 rounded-full border-[3px] border-white ring-4 ring-primary-100 animate-pulse" />
-                            </button>
+                        <div className="h-8 w-px bg-slate-200 hidden sm:block" />
 
-                            <div className="h-12 w-[1px] bg-slate-200 hidden sm:block" />
-
-                            <div className="flex items-center gap-4 group cursor-pointer pl-2">
-                                <div className="text-right hidden sm:block">
-                                    <p className="text-[11px] font-display font-bold text-slate-900 leading-none mb-1 group-hover:text-primary-600 transition-colors">
-                                        {userData.fullName || userData.username || 'Unidentified User'}
+                        <div className="flex items-center gap-3 pl-2">
+                            <div className="text-right hidden sm:block leading-tight">
+                                <p className="text-sm font-black text-slate-800">
+                                    {userData.fullName || userData.username || 'User'}
+                                </p>
+                                {userData.rollNo && (
+                                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+                                        ID: {userData.rollNo}
                                     </p>
-                                    {userData.rollNo && (
-                                        <p className="text-[11px] font-display font-bold text-slate-500 leading-none mb-2 uppercase tracking-tight">
-                                            {userData.rollNo}
-                                        </p>
-                                    )}
-                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest flex items-center justify-end gap-1.5">
-                                        <div className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
-                                        System Online
-                                    </p>
-                                </div>
-                                <div className="w-14 h-14 rounded-[1.5rem] bg-slate-950 flex items-center justify-center text-white font-display font-black text-xl shadow-2xl shadow-slate-950/20 group-hover:rotate-6 transition-all duration-500 relative ring-4 ring-white border border-white/10 group-hover:scale-105">
-                                    {(userData.fullName || userData.username || 'U').charAt(0).toUpperCase()}
-                                    <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-500 rounded-full border-4 border-white shadow-xl" />
-                                </div>
+                                )}
+                            </div>
+                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 border border-slate-200 flex items-center justify-center text-slate-600 font-bold text-sm shadow-sm ring-2 ring-white">
+                                {(userData.fullName || userData.username || 'U').charAt(0).toUpperCase()}
                             </div>
                         </div>
                     </div>
                 </header>
 
                 {/* Page Content */}
-                <main className={`flex-1 overflow-y-auto custom-scrollbar relative ${fullWidth ? 'p-0' : 'p-8 md:p-12 lg:p-16'}`}>
-                    <div className={`w-full mx-auto ${fullWidth ? 'max-w-none' : 'max-w-[1920px]'}`}>
+                <main className={`flex-1 overflow-y-auto custom-scrollbar relative bg-slate-50/30 ${fullWidth ? 'p-0' : 'p-6 md:p-10'}`}>
+                    <div className={`w-full h-full mx-auto ${fullWidth ? 'max-w-none' : 'max-w-[1600px]'}`}>
                         {children}
                     </div>
                 </main>

@@ -100,7 +100,7 @@ export default function AssetsTab({ assets, onLoadAssets }) {
                             🗑️ Delete Selected ({selectedAssets.size})
                         </button>
                     )}
-                    <label className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 cursor-pointer transition">
+                    <label className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer transition font-black uppercase tracking-widest text-[10px] shadow-lg shadow-blue-600/20">
                         {uploadingAsset ? 'Uploading...' : '📤 Upload Asset'}
                         <input
                             type="file"
@@ -135,11 +135,11 @@ export default function AssetsTab({ assets, onLoadAssets }) {
                         <div
                             key={index}
                             onClick={() => toggleAssetSelection(asset.filename)}
-                            className={`bg-white rounded-lg border overflow-hidden hover:shadow-sm transition-all group cursor-pointer relative ${selectedAssets.has(asset.filename) ? 'border-blue-500 ring-1 ring-blue-500' : 'border-gray-200'
+                            className={`bg-white rounded-lg border overflow-hidden hover:shadow-sm transition-all group cursor-pointer relative ${selectedAssets.has(asset.filename) ? 'border-blue-600 ring-1 ring-blue-600 shadow-md shadow-blue-100' : 'border-gray-200'
                                 }`}
                         >
                             {selectedAssets.has(asset.filename) && (
-                                <div className="absolute top-2 right-2 z-10 bg-blue-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs shadow-sm">
+                                <div className="absolute top-2 right-2 z-10 bg-blue-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-black shadow-md shadow-blue-500/20">
                                     ✓
                                 </div>
                             )}
@@ -166,7 +166,7 @@ export default function AssetsTab({ assets, onLoadAssets }) {
 
                             {/* Info */}
                             <div className="p-3">
-                                <h3 className="font-semibold truncate text-sm mb-1 text-gray-900" title={asset.filename}>{asset.filename}</h3>
+                                <h3 className="font-black truncate text-sm mb-1 text-gray-900" title={asset.filename}>{asset.filename}</h3>
                                 <div className="text-[10px] text-gray-500 mb-2 space-y-0.5">
                                     <div>{(asset.size / 1024).toFixed(2)} KB • {new Date(asset.uploadedAt).toLocaleDateString()}</div>
                                 </div>
@@ -178,7 +178,7 @@ export default function AssetsTab({ assets, onLoadAssets }) {
                                             e.stopPropagation();
                                             copyToClipboard(asset.url);
                                         }}
-                                        className="flex-1 px-2 py-1.5 bg-gray-100 text-gray-700 text-xs font-medium rounded hover:bg-gray-200 border border-gray-200 transition-colors"
+                                        className="flex-1 px-2 py-1.5 bg-blue-50 text-blue-700 text-[10px] font-black uppercase tracking-widest rounded-lg hover:bg-blue-600 hover:text-white transition-all border border-blue-100"
                                     >
                                         🔗 Copy URL
                                     </button>
@@ -204,7 +204,7 @@ export default function AssetsTab({ assets, onLoadAssets }) {
                     <div className="text-4xl mb-3 opacity-30">📁</div>
                     <h3 className="text-lg font-semibold mb-1 text-gray-900">No Assets Yet</h3>
                     <p className="text-sm text-gray-500 mb-4">Upload images to get started</p>
-                    <label className="inline-block px-5 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-black cursor-pointer transition-colors">
+                    <label className="inline-block px-5 py-2 bg-blue-600 text-white text-xs font-black uppercase tracking-widest rounded-lg hover:bg-blue-700 cursor-pointer transition-colors shadow-lg shadow-blue-600/20">
                         Upload Asset
                         <input
                             type="file"

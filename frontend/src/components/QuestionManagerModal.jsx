@@ -593,7 +593,7 @@ export default function QuestionManagerModal({ courseId, courseName, onClose, st
           Manage Questions
         </h2>
         <p className="text-sm font-medium text-gray-500 flex items-center gap-2 mt-1">
-          <span className="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded textxs">{courseName}</span>
+          <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded textxs font-black">{courseName}</span>
           <span>•</span>
           <span>{questions.length} Total Questions</span>
         </p>
@@ -621,7 +621,7 @@ export default function QuestionManagerModal({ courseId, courseName, onClose, st
         <div className="flex flex-wrap gap-3">
           <button
             onClick={handleAddNew}
-            className="flex items-center gap-2 px-5 py-2.5 bg-gray-900 text-white rounded-xl hover:bg-black font-semibold transition-all transform hover:-translate-y-0.5 active:translate-y-0"
+            className="flex items-center gap-2 px-5 py-2.5 bg-slate-900 text-white rounded-xl hover:bg-blue-600 font-black transition-all transform hover:-translate-y-0.5 active:translate-y-0"
           >
             <span>➕</span> Add New Question
           </button>
@@ -656,7 +656,7 @@ export default function QuestionManagerModal({ courseId, courseName, onClose, st
 
         {loading ? (
           <div className="text-center py-24 bg-white rounded-2xl shadow-sm border border-gray-100">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
             <p className="text-gray-500 font-medium">Loading questions library...</p>
           </div>
         ) : (
@@ -676,7 +676,7 @@ export default function QuestionManagerModal({ courseId, courseName, onClose, st
                       }`}
                   >
                     <div className="flex items-center gap-5" onClick={() => toggleLevel(level)}>
-                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-xl shadow-sm ${isExpanded ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-500'
+                      <div className={`w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center text-xl shadow-sm ${isExpanded ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-500'
                         }`}>
                         {level}
                       </div>
@@ -684,7 +684,7 @@ export default function QuestionManagerModal({ courseId, courseName, onClose, st
                       <div>
                         <div className="flex items-center gap-3">
                           <h4 className={`text-lg font-bold text-gray-900`}>Level {level}</h4>
-                          <span className="px-2.5 py-0.5 bg-gray-100 text-gray-600 rounded-lg text-xs font-semibold uppercase tracking-wide">
+                          <span className="px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-xs font-black flex items-center gap-2 tracking-wide">
                             {levelQuestions.length} Questions
                           </span>
                         </div>
@@ -711,7 +711,7 @@ export default function QuestionManagerModal({ courseId, courseName, onClose, st
                               if (input) input.indeterminate = someLevelSelected;
                             }}
                             onChange={() => { }}
-                            className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                            className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
                           />
                           <span className="text-sm font-medium text-gray-600">Select All</span>
                         </div>
@@ -744,8 +744,8 @@ export default function QuestionManagerModal({ courseId, courseName, onClose, st
                     <div className="border-t border-gray-100 bg-white animate-fade-in">
                       {levelQuestions.length === 0 ? (
                         <div className="text-center py-12 px-4">
-                          <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl">📭</div>
-                          <p className="text-gray-900 font-medium">No questions yet</p>
+                          <div className="w-full h-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center mx-auto mb-3 text-2xl">📭</div>
+                          <p className="text-blue-300 text-xs">See how students will view this course</p>
                           <p className="text-sm text-gray-500 mt-1 max-w-xs mx-auto">
                             Add individual questions or upload a JSON question bank to populate this level.
                           </p>
@@ -754,7 +754,7 @@ export default function QuestionManagerModal({ courseId, courseName, onClose, st
                               setEditingQuestion(null);
                               setShowEditModal(true);
                             }}
-                            className="mt-4 text-indigo-600 hover:text-indigo-700 text-sm font-semibold"
+                            className="text-blue-300 hover:text-rose-500 transition-colors"
                           >
                             + Add Question
                           </button>
@@ -773,10 +773,10 @@ export default function QuestionManagerModal({ courseId, courseName, onClose, st
                                       checked={isSelected}
                                       onChange={() => handleSelectQuestion(question.id)}
                                       onClick={(e) => e.stopPropagation()}
-                                      className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer mt-2"
+                                      className={`w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 ${isSelected ? 'bg-blue-600 border-blue-600' : 'bg-slate-50 border-slate-200 text-slate-400 focus:border-blue-500'} cursor-pointer mt-2`}
                                     />
                                     <div className="flex-shrink-0 pt-1">
-                                      <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-50 text-indigo-700 text-sm font-bold">
+                                      <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 text-blue-700 text-sm font-black">
                                         {question.questionNumber || idx + 1}
                                       </span>
                                     </div>
@@ -811,7 +811,7 @@ export default function QuestionManagerModal({ courseId, courseName, onClose, st
                                   <div className="flex items-center gap-2 mt-2 md:mt-0">
                                     <button
                                       onClick={() => handleEdit(question)}
-                                      className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-600 hover:text-white transition-all font-bold text-xs"
+                                      className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-600 hover:text-white transition-all font-black text-xs"
                                       title="Edit Question"
                                     >
                                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
@@ -850,7 +850,7 @@ export default function QuestionManagerModal({ courseId, courseName, onClose, st
       <ToastContainer toasts={toasts} removeToast={removeToast} />
     </div>
   ) : createPortal(
-    <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center p-6 animate-fade-in" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 99999 }}>
+    <div className="fixed inset-0 bg-gradient-to-br from-slate-900/80 to-blue-900/80 backdrop-blur-md flex items-center justify-center p-6 animate-fade-in" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 99999 }}>
       <div className="bg-white rounded-2xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-y-auto overflow-x-hidden relative">
         {header}
         {body}
@@ -880,7 +880,7 @@ export default function QuestionManagerModal({ courseId, courseName, onClose, st
         <div className="fixed inset-0 bg-gray-900/70 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[85vh] flex flex-col overflow-hidden">
             <div className="px-6 py-4 border-b flex items-center justify-between bg-white sticky top-0">
-              <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+              <h2 className="text-xl font-black text-gray-900 flex items-center gap-2">
                 <span className="text-2xl">📤</span>
                 Upload Questions (Level {selectedLevel})
               </h2>
@@ -932,8 +932,8 @@ export default function QuestionManagerModal({ courseId, courseName, onClose, st
                         file:mr-4 file:py-2 file:px-4
                         file:rounded-full file:border-0
                         file:text-sm file:font-semibold
-                        file:bg-indigo-50 file:text-indigo-700
-                        hover:file:bg-indigo-100
+                        file:bg-blue-50 file:text-blue-700
+                        hover:file:bg-blue-100
                         cursor-pointer border border-gray-300 rounded-xl bg-white"
                     />
                   </div>
@@ -941,7 +941,7 @@ export default function QuestionManagerModal({ courseId, courseName, onClose, st
                   <textarea
                     value={levelQuestionData}
                     onChange={(event) => setLevelQuestionData(event.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl font-mono text-xs focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all shadow-sm"
+                    className="w-full px-4 py-3 bg-slate-50 border-2 border-transparent rounded-xl text-sm font-black focus:border-blue-600 focus:bg-white outline-none transition-all disabled:opacity-50"
                     rows={12}
                     placeholder={`Paste content manually if you prefer...\n\nSupports:\n- JSON Arrays\n- CSV (Comma Separated)\n- TSV (Excel Copy-Paste)`}
                   />
@@ -964,7 +964,7 @@ export default function QuestionManagerModal({ courseId, courseName, onClose, st
                           max="20"
                           value={currentRandomizeCount}
                           onChange={(event) => setCurrentRandomizeCount(parseInt(event.target.value, 10) || 1)}
-                          className="px-4 py-2 border rounded-lg w-20 text-center font-bold text-indigo-600"
+                          className="w-16 px-2 py-1 bg-slate-50 border rounded-lg text-sm text-center font-black outline-none focus:border-blue-500"
                         />
                         <span className="text-sm font-medium text-gray-700">Questions</span>
                       </div>
@@ -1017,7 +1017,7 @@ export default function QuestionManagerModal({ courseId, courseName, onClose, st
             <div className="p-6 space-y-6">
               <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-4">
                 <span className="text-2xl">⚠️</span>
-                <div>
+                <div className="w-80 bg-gradient-to-br from-slate-900 to-blue-950 p-8 flex flex-col hidden lg:flex">
                   <h3 className="font-bold text-amber-900 text-sm">Security Configuration</h3>
                   <p className="text-xs text-amber-800 mt-1">
                     These settings apply to <strong>every student</strong> taking this course. Be careful with strict limits.
@@ -1041,7 +1041,7 @@ export default function QuestionManagerModal({ courseId, courseName, onClose, st
                 />
 
                 <div className="grid grid-cols-2 gap-4 pt-4">
-                  <div className="p-4 bg-gray-50 rounded-xl border hover:border-indigo-300 transition-colors">
+                  <div className="p-4 bg-gray-50 rounded-xl border hover:border-blue-300 transition-colors">
                     <label className="font-bold text-gray-900 block mb-1 text-sm">Violations Limit</label>
                     <input
                       type="number"
@@ -1085,7 +1085,7 @@ export default function QuestionManagerModal({ courseId, courseName, onClose, st
                 </button>
                 <button
                   onClick={handleSaveRestrictions}
-                  className="px-6 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 font-semibold shadow-lg shadow-indigo-200"
+                  className="px-5 bg-blue-100 text-blue-600 rounded-xl font-black text-sm hover:bg-blue-200 transition-all flex items-center gap-2 shadow-lg shadow-blue-200"
                 >
                   Save Configuration
                 </button>
@@ -1100,7 +1100,7 @@ export default function QuestionManagerModal({ courseId, courseName, onClose, st
 
 function ToggleRow({ label, description, checked, onChange }) {
   return (
-    <div className="flex items-center justify-between p-4 bg-white border rounded-xl hover:border-indigo-200 transition-colors shadow-sm">
+    <div className="flex items-center justify-between p-4 bg-white border rounded-xl hover:border-blue-200 transition-colors shadow-sm">
       <div>
         <p className="font-bold text-gray-900 text-sm">{label}</p>
         <p className="text-xs text-gray-500 mt-0.5">{description}</p>
@@ -1112,7 +1112,7 @@ function ToggleRow({ label, description, checked, onChange }) {
           checked={checked}
           onChange={(event) => onChange(event.target.checked)}
         />
-        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+        <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
       </label>
     </div>
   );

@@ -71,16 +71,16 @@ export default function CandidateDashboard() {
             <Filter size={18} />
           </div>
           {[
-            { id: 'all', label: 'All Modules', color: 'bg-slate-900 text-white' },
-            { id: 'beginner', label: 'Junior', color: 'bg-emerald-50 text-emerald-600' },
-            { id: 'intermediate', label: 'Associate', color: 'bg-amber-50 text-amber-600' },
-            { id: 'advanced', label: 'Senior', color: 'bg-rose-50 text-rose-600' }
+            { id: 'all', label: 'All Modules', color: 'bg-blue-600 text-white' },
+            { id: 'beginner', label: 'Junior', color: 'bg-blue-50 text-blue-600' },
+            { id: 'intermediate', label: 'Associate', color: 'bg-blue-100 text-blue-700' },
+            { id: 'advanced', label: 'Senior', color: 'bg-blue-200 text-blue-800' }
           ].map(f => (
             <button
               key={f.id}
               onClick={() => setFilter(f.id)}
-              className={`px-5 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all
-                        ${filter === f.id ? (f.id === 'all' ? 'bg-slate-900 text-white shadow-xl shadow-slate-900/10' : f.color + ' border border-transparent shadow-lg') : 'bg-white border border-slate-200 text-slate-500 hover:bg-slate-50'}
+              className={`px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all
+                        ${filter === f.id ? (f.id === 'all' ? 'bg-blue-600 text-white shadow-xl shadow-blue-600/20' : f.color + ' border border-blue-200 shadow-lg') : 'bg-white border border-slate-200 text-slate-500 hover:bg-slate-50'}
                     `}
             >
               {f.label}

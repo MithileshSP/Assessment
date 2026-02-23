@@ -222,7 +222,7 @@ const AdminViolations = () => {
                                             <td className="px-6 py-6 text-right">
                                                 <button
                                                     onClick={() => setSelectedViolation(v)}
-                                                    className="h-10 px-6 bg-slate-900 text-white rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-slate-800 transition-all active:scale-95 shadow-lg shadow-slate-900/20"
+                                                    className="h-10 px-6 bg-blue-600 text-white rounded-xl text-xs font-black uppercase tracking-widest flex items-center gap-2 hover:bg-blue-700 transition-all active:scale-95 shadow-lg shadow-blue-600/20"
                                                 >
                                                     Review
                                                 </button>

@@ -103,9 +103,9 @@ export default function CourseDetail() {
                   `}
                 >
                   {/* Timeline Node */}
-                  <div className={`absolute left-0 w-16 h-16 rounded-2xl flex items-center justify-center border-4 border-white shadow-xl z-10 transition-transform group-hover:scale-105
+                  <div className={`absolute left-0 w-16 h-16 rounded-3xl flex items-center justify-center border-4 border-white shadow-xl z-10 transition-transform group-hover:scale-110 group-hover:rotate-3
                     ${isCompleted ? 'bg-emerald-500 text-white' :
-                      isCurrent ? 'bg-primary-600 text-white shadow-[0_0_20px_rgba(37,99,235,0.3)]' :
+                      isCurrent ? 'bg-blue-600 text-white shadow-xl shadow-blue-600/30' :
                         'bg-slate-100 text-slate-400'
                     }
                   `}>
@@ -126,12 +126,12 @@ export default function CourseDetail() {
                     <div className="flex justify-between items-center">
                       <div>
                         <div className="flex items-center gap-3 mb-1">
-                          <h3 className={`text-xl font-bold ${isUnlocked ? 'text-slate-900' : 'text-slate-400'}`}>
+                          <h3 className={`text-2xl font-black tracking-tight ${isUnlocked ? 'text-slate-900' : 'text-slate-400'}`}>
                             Level {level}
                           </h3>
                           {isCurrent && (
-                            <span className="px-2 py-0.5 bg-primary-100 text-primary-700 text-[10px] font-bold uppercase rounded-full">
-                              Current
+                            <span className="px-2.5 py-1 bg-blue-100 text-blue-700 text-[9px] font-black uppercase tracking-widest rounded-full">
+                              Active
                             </span>
                           )}
                         </div>

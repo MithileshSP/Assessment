@@ -769,10 +769,8 @@ export default function LevelChallenge() {
     if (attendanceStatus !== 'started') return;
     window.history.pushState({ testInProgress: true }, '', window.location.href);
     const hp = () => { window.history.pushState({ testInProgress: true }, '', window.location.href); setShowNavWarning(true); setTimeout(() => setShowNavWarning(false), 4000); };
-    const hb = (e) => { e.preventDefault(); e.returnValue = "Assessment in progress!"; return "Assessment in progress!"; };
     window.addEventListener('popstate', hp);
-    window.addEventListener('beforeunload', hb);
-    return () => { window.removeEventListener('popstate', hp); window.removeEventListener('beforeunload', hb); };
+    return () => { window.removeEventListener('popstate', hp); };
   }, [attendanceStatus]);
 
   const handlePreviousQuestion = () => {
@@ -821,11 +819,11 @@ export default function LevelChallenge() {
 
           {/* Header */}
           <div className="flex flex-col items-center text-center mb-12">
-            <div className="w-12 h-12 flex items-center justify-center border border-[#e5e7eb] rounded-[6px] mb-6 bg-white">
-              <Shield className="text-slate-700" size={24} />
+            <div className="w-16 h-16 flex items-center justify-center bg-blue-600 rounded-3xl mb-6 shadow-xl shadow-blue-600/20 rotate-3">
+              <Shield className="text-white" size={32} />
             </div>
-            <h1 className="text-2xl font-bold text-slate-900 mb-2 tracking-tight">Assessment Security Checkpoint</h1>
-            <p className="text-slate-500 text-sm max-w-md mx-auto">Please confirm your identity and agree to the assessment guidelines before proceeding.</p>
+            <h1 className="text-4xl font-black text-slate-900 mb-3 tracking-tight">Security Checkpoint</h1>
+            <p className="text-slate-500 font-medium text-lg max-w-md mx-auto">Verify your credentials and assessment protocols.</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
@@ -899,9 +897,9 @@ export default function LevelChallenge() {
                           type="checkbox"
                           checked={securityAck[idx]}
                           onChange={() => toggleCheck(idx)}
-                          className="mt-0.5 w-4 h-4 border-[#e5e7eb] rounded-[4px] text-slate-900 focus:ring-0 focus:ring-offset-0 transition-colors cursor-pointer"
+                          className="mt-0.5 w-5 h-5 border-slate-200 rounded-lg text-blue-600 focus:ring-blue-500/20 transition-all cursor-pointer"
                         />
-                        <span className="text-sm text-slate-600 group-hover:text-slate-900 transition-colors select-none">
+                        <span className="text-sm text-slate-600 font-medium group-hover:text-slate-900 transition-colors select-none">
                           {label}
                         </span>
                       </label>
@@ -917,16 +915,16 @@ export default function LevelChallenge() {
                     <button
                       onClick={startTest}
                       disabled={!allChecksPassed}
-                      className={`w-full py-3 px-8 rounded-[6px] flex items-center justify-center gap-2 transition-all font-semibold ${allChecksPassed
-                        ? "bg-slate-900 text-white hover:bg-slate-800 shadow-md transform active:scale-[0.98]"
-                        : "bg-[#d1d5db] text-white cursor-not-allowed"
+                      className={`w-full py-4 px-8 rounded-2xl flex items-center justify-center gap-3 transition-all font-black uppercase tracking-widest text-sm ${allChecksPassed
+                        ? "bg-blue-600 text-white hover:bg-blue-700 shadow-xl shadow-blue-600/20 active:scale-95"
+                        : "bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200"
                         }`}
                     >
-                      Start Assessment
+                      Authenticate & Start
                       <ArrowLeft className="rotate-180" size={18} />
                     </button>
                     {!allChecksPassed && (
-                      <p className="text-[10px] text-center text-slate-400 mt-3 italic">Button enables after checking all instructions</p>
+                      <p className="text-[10px] text-center text-slate-400 mt-4 font-bold uppercase tracking-wider">Acknowledge all protocols to activate</p>
                     )}
                   </>
                 ) : (
@@ -971,11 +969,11 @@ export default function LevelChallenge() {
         <div className="flex items-center gap-4">
           <button
             onClick={() => setShowInstructions(!showInstructions)}
-            className={`px-3 py-2 rounded-md transition-all flex items-center gap-2 ${showInstructions ? 'bg-slate-100 text-slate-900 border' : 'bg-slate-900 text-white shadow-md'}`}
+            className={`px-4 py-2 rounded-xl transition-all flex items-center gap-2 border ${showInstructions ? 'bg-slate-50 text-slate-600 border-slate-200' : 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-600/20'}`}
             title={showInstructions ? "Hide Instructions" : "Show Instructions"}
           >
             <Layout size={18} />
-            <span className="text-[10px] font-bold uppercase tracking-wider">{showInstructions ? 'Hide Task' : 'Show Task'}</span>
+            <span className="text-[10px] font-black uppercase tracking-widest">{showInstructions ? 'Hide Side' : 'Show Side'}</span>
           </button>
           <div className="h-6 w-px bg-slate-200" />
           <div>
@@ -989,7 +987,7 @@ export default function LevelChallenge() {
 
         <div className="flex items-center gap-4">
           {timeRemaining !== null && (
-            <div className={`px-4 py-1.5 rounded-md border font-bold text-sm flex items-center gap-2 transition-colors ${timeRemaining <= 300 ? "bg-red-50 border-red-200 text-red-600 animate-pulse" : "bg-slate-900 text-white"}`}>
+            <div className={`px-4 py-1.5 rounded-xl border font-black text-sm flex items-center gap-2 transition-all ${timeRemaining <= 300 ? "bg-rose-50 border-rose-200 text-rose-600 animate-pulse" : "bg-blue-600 text-white border-blue-500 shadow-lg shadow-blue-600/20"}`}>
               <Clock size={16} /> <span>{formatTime(timeRemaining)}</span>
             </div>
           )}
@@ -1009,15 +1007,15 @@ export default function LevelChallenge() {
           )}
 
           <div className="flex items-center gap-2">
-            <button onClick={handleRunCode} className="px-3 py-1.5 bg-slate-100 rounded-md hover:bg-slate-200 font-bold text-xs flex items-center gap-2">
+            <button onClick={handleRunCode} className="px-4 py-1.5 bg-white border border-slate-200 rounded-md hover:bg-slate-50 font-black text-[11px] uppercase tracking-wider flex items-center gap-2 shadow-sm transition-all">
               <RefreshCw size={14} /> Run
             </button>
-            <button onClick={handleSubmit} disabled={submitting} className="px-3 py-1.5 bg-slate-900 text-white rounded-md hover:bg-slate-800 font-bold text-xs">
+            <button onClick={handleSubmit} disabled={submitting} className="px-5 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-black text-[11px] uppercase tracking-widest shadow-lg shadow-blue-600/20 transition-all active:scale-95">
               Submit
             </button>
             {assignedQuestions.every(q => userAnswers[q.id]?.submitted) && (
-              <button onClick={() => handleFinishLevel({ reason: "manual" })} className="px-3 py-1.5 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 font-bold text-xs flex items-center gap-1">
-                <CheckCircle size={14} /> Finish
+              <button onClick={() => handleFinishLevel({ reason: "manual" })} className="px-5 py-1.5 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 font-black text-[11px] uppercase tracking-widest flex items-center gap-2 shadow-lg shadow-emerald-500/20 transition-all active:scale-95 animate-in slide-in-from-right duration-500">
+                <CheckCircle size={14} /> Finish Test
               </button>
             )}
           </div>
@@ -1064,7 +1062,7 @@ export default function LevelChallenge() {
                           const pathStr = typeof assetItem === 'string' ? assetItem : (assetItem?.path || '');
                           if (!pathStr) return null;
                           return (
-                            <code key={idx} className="block font-mono text-xs bg-white px-2 py-1 rounded border text-indigo-600 mb-1 break-all select-all cursor-pointer hover:bg-slate-50" title="Click to copy" onClick={() => navigator.clipboard.writeText(pathStr)}>{pathStr}</code>
+                            <code key={idx} className="block font-mono text-xs bg-white px-3 py-2 rounded-xl border border-slate-200 text-blue-600 mb-2 break-all select-all cursor-pointer hover:bg-slate-50 transition-colors shadow-sm" title="Click to copy" onClick={() => navigator.clipboard.writeText(pathStr)}>{pathStr}</code>
                           );
                         })}
                       </div>
@@ -1100,23 +1098,23 @@ export default function LevelChallenge() {
               <div className="flex gap-1 h-full">
                 <button
                   onClick={() => setPreviewTab("live")}
-                  className={`px-3 py-1 text-[10px] font-bold transition-all flex items-center gap-1.5 border-b-2 ${previewTab === 'live' ? 'border-slate-900 text-slate-900 bg-white' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
+                  className={`px-4 py-1 text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 border-b-2 ${previewTab === 'live' ? 'border-blue-600 text-blue-600 bg-white' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
                 >
                   <Layout size={12} /> Live Preview
                 </button>
                 {(challenge.expectedHtml || challenge.expectedCss || challenge.expectedJs || (challenge.assets && challenge.assets.reference)) && (
                   <button
                     onClick={() => setPreviewTab("expected")}
-                    className={`px-3 py-1 text-[10px] font-bold transition-all flex items-center gap-1.5 border-b-2 ${previewTab === 'expected' ? 'border-slate-900 text-slate-900 bg-white' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
+                    className={`px-4 py-1 text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 border-b-2 ${previewTab === 'expected' ? 'border-blue-600 text-blue-600 bg-white' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
                   >
-                    <Eye size={12} /> Expected Result
+                    <Eye size={12} /> Target Design
                   </button>
                 )}
                 <button
                   onClick={() => setPreviewTab("terminal")}
-                  className={`px-3 py-1 text-[10px] font-bold transition-all flex items-center gap-1.5 border-b-2 ${previewTab === 'terminal' ? 'border-slate-900 text-slate-900 bg-white' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
+                  className={`px-4 py-1 text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2 border-b-2 ${previewTab === 'terminal' ? 'border-blue-600 text-blue-600 bg-white' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
                 >
-                  <RefreshCw size={12} /> Execution Output
+                  <RefreshCw size={12} /> Console
                 </button>
               </div>
               <button
@@ -1222,14 +1220,14 @@ export default function LevelChallenge() {
 
       {/* Fullscreen Required Overlay */}
       {restrictions.forceFullscreen && !document.fullscreenElement && !isLocked && attendanceStatus === 'started' && (
-        <div className="fixed inset-0 z-[90] bg-slate-900/40 backdrop-blur-md flex items-center justify-center p-6">
-          <div className="max-w-md w-full bg-white rounded-[2rem] p-10 shadow-2xl border border-slate-100 text-center animate-in fade-in zoom-in duration-300">
-            <div className="w-20 h-20 bg-indigo-50 rounded-2xl flex items-center justify-center mx-auto mb-8">
-              <Maximize2 size={36} className="text-indigo-600" />
+        <div className="fixed inset-0 z-[90] bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-6">
+          <div className="max-w-md w-full bg-white rounded-[2.5rem] p-12 shadow-2xl border border-slate-100 text-center animate-in fade-in zoom-in duration-300">
+            <div className="w-24 h-24 bg-blue-50 rounded-[2rem] flex items-center justify-center mx-auto mb-10 shadow-lg shadow-blue-600/10">
+              <Maximize2 size={48} className="text-blue-600" />
             </div>
-            <h2 className="text-2xl font-black text-slate-900 mb-3 tracking-tight">Full-Screen Required</h2>
-            <p className="text-slate-500 font-bold mb-10 px-4">
-              To proceed with the assessment, you must enter full-screen mode and maintain focus.
+            <h2 className="text-3xl font-black text-slate-900 mb-4 tracking-tight">Full-Screen Required</h2>
+            <p className="text-slate-500 font-bold mb-10 px-4 leading-relaxed text-lg">
+              To proceed, you must enter full-screen mode and maintain focus throughout the assessment.
             </p>
             <button
               onClick={() => {
@@ -1237,11 +1235,11 @@ export default function LevelChallenge() {
                   addToast("Browser blocked fullscreen request. Please click anywhere and try again.", "error");
                 });
               }}
-              className="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl shadow-indigo-200 hover:bg-indigo-700 hover:-translate-y-1 active:translate-y-0 transition-all flex items-center justify-center gap-3"
+              className="w-full py-5 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl shadow-blue-600/20 hover:bg-blue-700 hover:-translate-y-1 active:translate-y-0 transition-all flex items-center justify-center gap-3"
             >
-              Resume in Fullscreen <ArrowLeft className="rotate-180" size={18} />
+              Enter Fullscreen <ArrowLeft className="rotate-180" size={18} />
             </button>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mt-8">Exiting fullscreen will trigger a violation record.</p>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mt-10 italic">Exiting will record a security violation.</p>
           </div>
         </div>
       )}

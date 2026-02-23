@@ -22,9 +22,9 @@ router.get('/stats', verifyFaculty, async (req, res) => {
             [facultyId]
         );
 
-        // 3. Count pending submissions
+        // 3. Count pending submissions (assigned + in_progress)
         const pendingResult = await db.query(
-            "SELECT COUNT(*) as count FROM submission_assignments WHERE faculty_id = ? AND status = 'pending'",
+            "SELECT COUNT(*) as count FROM submission_assignments WHERE faculty_id = ? AND status IN ('assigned','in_progress','pending')",
             [facultyId]
         );
 
@@ -54,7 +54,7 @@ router.get('/queue', verifyFaculty, async (req, res) => {
             LEFT JOIN users u ON s.user_id = u.id
             LEFT JOIN challenges c ON s.challenge_id = c.id
             LEFT JOIN courses co ON s.course_id = co.id
-            WHERE sa.faculty_id = ? AND sa.status = 'pending'
+            WHERE sa.faculty_id = ? AND sa.status IN ('assigned','in_progress','pending')
             ORDER BY s.submitted_at ASC
         `;
 
@@ -185,11 +185,35 @@ router.post('/evaluate', verifyFaculty, async (req, res) => {
             [status, passed, submissionId]
         );
 
-        // Mark assignment as evaluated
+        // Mark assignment as evaluated with optimistic lock + release lock
         await db.query(
-            "UPDATE submission_assignments SET status = 'evaluated' WHERE submission_id = ?",
+            `UPDATE submission_assignments
+             SET status = 'evaluated', version = version + 1, locked_by = NULL, locked_at = NULL
+             WHERE submission_id = ?`,
             [submissionId]
         );
+
+        // Update derived load cache for this faculty
+        await db.query(
+            `UPDATE users SET current_load = (
+              SELECT COALESCE(SUM(submission_weight), 0)
+              FROM submission_assignments
+              WHERE faculty_id = ? AND status IN ('assigned','in_progress')
+            ) WHERE id = ?`,
+            [facultyId, facultyId]
+        );
+
+        // Audit log
+        try {
+            await db.query(
+                `INSERT INTO assignment_logs
+                 (submission_id, action_type, to_faculty_id, actor_role, notes)
+                 VALUES (?, 'evaluate', ?, 'faculty', 'Faculty completed evaluation')`,
+                [submissionId, facultyId]
+            );
+        } catch (logErr) {
+            console.warn('Audit log insert failed:', logErr.message);
+        }
 
         // Level Unlock Logic: If passed, unlock next level in user_progress and record completion
         if (passed) {
@@ -256,7 +280,7 @@ router.get('/history', verifyFaculty, async (req, res) => {
             LEFT JOIN challenges c ON s.challenge_id = c.id
             LEFT JOIN courses co ON s.course_id = co.id
             LEFT JOIN manual_evaluations me ON s.id = me.submission_id
-            WHERE sa.faculty_id = ? AND sa.status = 'evaluated'
+            WHERE sa.faculty_id = ? AND sa.status IN ('evaluated')
             ORDER BY s.evaluated_at DESC
         `;
 
@@ -414,6 +438,198 @@ router.get('/export-backup', verifyFaculty, async (req, res) => {
     } catch (error) {
         console.error("Backup export error:", error);
         res.status(500).json({ error: "Failed to generate backup export" });
+    }
+});
+
+// ─────────────────────────────────────────────────────────────
+// ENTERPRISE ENDPOINTS (v4.0)
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * POST /api/faculty/reallocate
+ * Faculty-initiated re-allocation with 7 validation guards.
+ */
+router.post('/reallocate', verifyFaculty, async (req, res) => {
+    try {
+        const { submissionId, targetFacultyId, reason } = req.body;
+        const facultyId = req.user.id;
+
+        if (!submissionId || !targetFacultyId) {
+            return res.status(400).json({ error: 'submissionId and targetFacultyId are required' });
+        }
+        if (targetFacultyId === facultyId) {
+            return res.status(400).json({ error: 'Cannot reallocate to yourself' });
+        }
+
+        await db.transaction(async (conn) => {
+            // 1. Lock and fetch current assignment
+            const assignments = await conn.execute(
+                `SELECT sa.*, sa.version FROM submission_assignments sa
+                 WHERE sa.submission_id = ? FOR UPDATE`,
+                [submissionId]
+            );
+            const assignArr = Array.isArray(assignments[0]) ? assignments[0] : (assignments || []);
+            const assignment = assignArr[0];
+
+            if (!assignment) {
+                throw { status: 404, message: 'Assignment not found' };
+            }
+
+            // Guard 1: Ownership
+            if (assignment.faculty_id !== facultyId) {
+                throw { status: 403, message: 'You do not own this submission' };
+            }
+
+            // Guard 2: Not already evaluated
+            if (assignment.status === 'evaluated') {
+                throw { status: 400, message: 'Cannot reallocate an evaluated submission' };
+            }
+
+            // Guard 3: Lock check
+            if (assignment.locked_by && assignment.locked_by !== facultyId) {
+                throw { status: 409, message: 'Submission is locked by another evaluator' };
+            }
+
+            // Guard 6: Max reallocations
+            if ((assignment.reallocation_count || 0) >= 3) {
+                throw { status: 400, message: 'Maximum reallocation limit (3) reached for this submission' };
+            }
+
+            // Guard 7: Cooldown (5 minutes)
+            if (assignment.last_reallocated_at) {
+                const cooldownMs = 5 * 60 * 1000;
+                const lastTime = new Date(assignment.last_reallocated_at).getTime();
+                if (Date.now() - lastTime < cooldownMs) {
+                    const remainSec = Math.ceil((cooldownMs - (Date.now() - lastTime)) / 1000);
+                    throw { status: 429, message: `Reallocation cooldown active. Try again in ${remainSec}s` };
+                }
+            }
+
+            // 2. Lock and validate target faculty
+            const targets = await conn.execute(
+                `SELECT id, max_capacity, is_available,
+                  (SELECT COALESCE(SUM(submission_weight), 0) FROM submission_assignments
+                   WHERE faculty_id = ? AND status IN ('assigned','in_progress')) as effective_load
+                 FROM users WHERE id = ? AND role = 'faculty' FOR UPDATE`,
+                [targetFacultyId, targetFacultyId]
+            );
+            const targetArr = Array.isArray(targets[0]) ? targets[0] : (targets || []);
+            const target = targetArr[0];
+
+            if (!target) {
+                throw { status: 404, message: 'Target faculty not found' };
+            }
+
+            // Guard 5: Availability
+            if (!target.is_available) {
+                throw { status: 400, message: 'Target faculty is currently unavailable' };
+            }
+
+            // Guard 4: Capacity
+            const targetLoad = parseInt(target.effective_load) || 0;
+            const targetCap = parseInt(target.max_capacity) || 10;
+            if (targetLoad >= targetCap) {
+                throw { status: 400, message: 'Target faculty is at max capacity' };
+            }
+
+            // 3. Perform reallocation with optimistic lock
+            const [updateResult] = await conn.execute(
+                `UPDATE submission_assignments
+                 SET faculty_id = ?, status = 'assigned',
+                     version = version + 1,
+                     locked_by = NULL, locked_at = NULL,
+                     reallocation_count = reallocation_count + 1,
+                     last_reallocated_at = NOW()
+                 WHERE id = ? AND version = ?`,
+                [targetFacultyId, assignment.id, assignment.version]
+            );
+
+            if ((updateResult?.affectedRows ?? updateResult) === 0) {
+                throw { status: 409, message: 'Version conflict — record modified by another user' };
+            }
+
+            // 4. Update derived load caches for both faculty
+            for (const fId of [facultyId, targetFacultyId]) {
+                await conn.execute(
+                    `UPDATE users SET current_load = (
+                      SELECT COALESCE(SUM(submission_weight), 0)
+                      FROM submission_assignments
+                      WHERE faculty_id = ? AND status IN ('assigned','in_progress')
+                    ) WHERE id = ?`,
+                    [fId, fId]
+                );
+            }
+
+            // 5. Audit log
+            await conn.execute(
+                `INSERT INTO assignment_logs
+                 (submission_id, action_type, from_faculty_id, to_faculty_id, actor_role, notes)
+                 VALUES (?, 'faculty_reallocate', ?, ?, 'faculty', ?)`,
+                [submissionId, facultyId, targetFacultyId, reason || 'Faculty-initiated reallocation']
+            );
+        });
+
+        res.json({ message: 'Submission reallocated successfully', submissionId, targetFacultyId });
+    } catch (error) {
+        const status = error.status || 500;
+        const message = error.message || 'Reallocation failed';
+        if (status === 500) console.error("Faculty reallocate error:", error);
+        res.status(status).json({ error: message });
+    }
+});
+
+/**
+ * PATCH /api/faculty/heartbeat
+ * Refresh locked_at timestamp for active evaluation.
+ */
+router.patch('/heartbeat', verifyFaculty, async (req, res) => {
+    try {
+        const { submissionId } = req.body;
+        const facultyId = req.user.id;
+
+        if (!submissionId) {
+            return res.status(400).json({ error: 'submissionId is required' });
+        }
+
+        const result = await db.query(
+            `UPDATE submission_assignments
+             SET locked_at = NOW()
+             WHERE submission_id = ? AND locked_by = ? AND status = 'in_progress'`,
+            [submissionId, facultyId]
+        );
+
+        const affected = result?.affectedRows ?? result;
+        if (affected === 0) {
+            return res.status(404).json({ error: 'No active lock found for this submission' });
+        }
+
+        res.json({ message: 'Heartbeat acknowledged', submissionId });
+    } catch (error) {
+        console.error("Heartbeat error:", error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+/**
+ * GET /api/faculty/available-faculty
+ * Get list of available faculty for the re-allocate picker.
+ */
+router.get('/available-faculty', verifyFaculty, async (req, res) => {
+    try {
+        const facultyId = req.user.id;
+
+        const faculty = await db.query(
+            `SELECT u.id, u.full_name, u.email, u.max_capacity, u.is_available, u.current_load
+             FROM users u
+             WHERE u.role = 'faculty' AND u.is_available = TRUE AND u.id != ?
+             ORDER BY u.current_load ASC`,
+            [facultyId]
+        );
+
+        res.json(faculty);
+    } catch (error) {
+        console.error("Available faculty error:", error);
+        res.status(500).json({ error: error.message });
     }
 });
 

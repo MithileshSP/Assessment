@@ -246,7 +246,7 @@ export default function CourseManager() {
                       <div className="flex gap-3">
                         <button
                           onClick={() => navigate(`/admin/course/${course.id}/questions`)} // Updated onClick to navigate
-                          className="flex items-center gap-2 px-5 py-2.5 bg-slate-100 text-slate-600 rounded-xl text-xs font-bold hover:bg-indigo-600 hover:text-white transition-all" // Updated styling
+                          className="flex items-center gap-2 px-5 py-2.5 bg-blue-50 text-blue-600 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-blue-600 hover:text-white transition-all shadow-sm" // Updated styling
                         >
                           <Briefcase size={14} /> Manage Question Bank {/* Updated icon */}
                         </button>
@@ -266,13 +266,13 @@ export default function CourseManager() {
         </div>
 
         {/* Info Zone */}
-        <div className="bg-indigo-600 rounded-3xl p-8 text-white relative overflow-hidden">
+        <div className="bg-blue-600 rounded-3xl p-8 text-white relative overflow-hidden shadow-xl shadow-blue-600/20">
           <div className="absolute top-0 right-0 p-8 opacity-10">
             <Settings size={120} />
           </div>
           <div className="relative z-10 max-w-2xl">
-            <h3 className="text-xl font-bold mb-4">Core Architecture Tips</h3>
-            <p className="text-indigo-100 text-sm leading-relaxed mb-6">
+            <h3 className="text-xl font-black mb-4 uppercase tracking-wider">Core Architecture Tips</h3>
+            <p className="text-blue-100 text-sm leading-relaxed mb-6 font-bold">
               Courses are defined by their levels and assessment banks. Changes made here propagate immediately to the student experience.
               Use the **Private** toggle to work on courses in draft mode before releasing them to the public.
             </p>

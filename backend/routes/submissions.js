@@ -198,20 +198,29 @@ router.post("/", async (req, res) => {
         submissionId = dbSubmission.id;
       }
 
-      // Auto-assign to faculty for evaluation
+      // Auto-assign to faculty for evaluation (v3.5.0: least-loaded + capacity-aware)
       try {
         if (courseId) {
+          // Try course-specific faculty first, then any available faculty
           let faculty = await query(
-            `SELECT u.id FROM users u 
-             INNER JOIN faculty_course_assignments fca ON u.id = fca.faculty_id 
-             WHERE fca.course_id = ? AND u.role = 'faculty' 
-             ORDER BY RAND() LIMIT 1`,
+            `SELECT u.id, u.max_capacity,
+              (SELECT COUNT(*) FROM submission_assignments sa WHERE sa.faculty_id = u.id AND sa.status = 'pending') as current_load
+             FROM users u
+             INNER JOIN faculty_course_assignments fca ON u.id = fca.faculty_id
+             WHERE fca.course_id = ? AND u.role = 'faculty' AND u.is_available = TRUE
+             HAVING current_load < u.max_capacity
+             ORDER BY current_load ASC LIMIT 1`,
             [courseId]
           );
 
           if (faculty.length === 0) {
             faculty = await query(
-              "SELECT id FROM users WHERE role = 'faculty' ORDER BY RAND() LIMIT 1"
+              `SELECT u.id, u.max_capacity,
+                (SELECT COUNT(*) FROM submission_assignments sa WHERE sa.faculty_id = u.id AND sa.status = 'pending') as current_load
+               FROM users u
+               WHERE u.role = 'faculty' AND u.is_available = TRUE
+               HAVING current_load < u.max_capacity
+               ORDER BY current_load ASC LIMIT 1`
             );
           }
 
@@ -222,6 +231,13 @@ router.post("/", async (req, res) => {
                ON DUPLICATE KEY UPDATE faculty_id = VALUES(faculty_id), assigned_at = NOW()`,
               [submissionId, faculty[0].id]
             );
+            // Audit log
+            try {
+              await query(
+                `INSERT INTO assignment_logs (submission_id, action_type, to_faculty_id, notes) VALUES (?, 'auto_assign', ?, 'On-submit auto-assign')`,
+                [submissionId, faculty[0].id]
+              );
+            } catch (logErr) { console.warn('[Submissions] Audit log failed:', logErr.message); }
           }
         }
       } catch (assignError) {

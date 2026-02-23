@@ -226,17 +226,17 @@ const AdminAttendance = () => {
                         <div className="max-w-[1600px] mx-auto flex items-end justify-between">
                             <div>
                                 <div className="flex items-center gap-2.5 mb-3">
-                                    <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white shadow-md shadow-indigo-100">
+                                    <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white shadow-md shadow-blue-100">
                                         <Shield size={16} />
                                     </div>
                                     <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
                                         Attendance Management System
                                     </span>
                                 </div>
-                                <h1 className="text-4xl font-bold text-slate-900 tracking-tight mb-2">
+                                <h1 className="text-4xl font-black text-slate-900 tracking-tight mb-2">
                                     Dashboard
                                 </h1>
-                                <p className="text-slate-500 font-medium text-base max-w-2xl">
+                                <p className="text-slate-500 font-medium text-base max-w-2xl text-left">
                                     Monitor real-time student activity and manage access permissions for current assessment sessions.
                                 </p>
                             </div>
@@ -249,7 +249,7 @@ const AdminAttendance = () => {
                                 <div className="h-8 w-px bg-slate-200" />
                                 <div className="text-right">
                                     <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Status</p>
-                                    <div className="flex items-center gap-2 justify-end text-indigo-600">
+                                    <div className="flex items-center gap-2 justify-end text-blue-600">
                                         <RefreshCw size={12} className={isPolling ? "animate-spin" : ""} />
                                         <span className="text-[11px] font-bold uppercase tracking-wider">Sync Active</span>
                                     </div>
@@ -268,13 +268,13 @@ const AdminAttendance = () => {
                                             key={tab}
                                             onClick={() => setFilterTab(tab)}
                                             className={`px-8 py-4 text-[11px] font-bold uppercase tracking-widest transition-all relative group ${filterTab === tab
-                                                ? 'text-indigo-600'
+                                                ? 'text-blue-600'
                                                 : 'text-slate-400 hover:text-slate-600'
                                                 }`}
                                         >
                                             <span className="relative z-10">{tab}</span>
                                             {filterTab === tab && (
-                                                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-indigo-600 rounded-t-full shadow-[0_-2px_8px_rgba(79,70,229,0.2)]" />
+                                                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 rounded-t-full shadow-[0_-2px_8px_rgba(37,99,235,0.2)]" />
                                             )}
                                         </button>
                                     ))}
@@ -304,7 +304,7 @@ const AdminAttendance = () => {
                                                 onClick={() => session.status !== 'ended' && setSelectedSession(session)}
                                                 className={`group transition-all duration-200 ${session.status === 'ended'
                                                     ? 'opacity-60 grayscale cursor-not-allowed'
-                                                    : 'hover:bg-indigo-50/20 cursor-pointer'
+                                                    : 'hover:bg-blue-50/20 cursor-pointer'
                                                     }`}
                                             >
                                                 <td className="px-8 py-6">
@@ -313,7 +313,7 @@ const AdminAttendance = () => {
                                                             session.status === 'upcoming' ? 'bg-amber-500' : 'bg-slate-300'
                                                             }`} />
                                                         <div>
-                                                            <p className="font-bold text-slate-900 text-lg transition-colors group-hover:text-indigo-600">
+                                                            <p className="font-bold text-slate-900 text-lg transition-colors group-hover:text-blue-600">
                                                                 {session.session_name}
                                                             </p>
                                                             <div className="flex items-center gap-2 mt-1">
@@ -328,7 +328,7 @@ const AdminAttendance = () => {
                                                     </div>
                                                 </td>
                                                 <td className="px-8 py-6">
-                                                    <span className="px-3 py-1 bg-white border border-slate-200 rounded text-[9px] font-bold text-slate-500 uppercase tracking-widest group-hover:border-indigo-100 group-hover:text-indigo-600 transition-all">
+                                                    <span className="px-3 py-1 bg-white border border-slate-200 rounded text-[9px] font-bold text-slate-500 uppercase tracking-widest group-hover:border-blue-100 group-hover:text-blue-600 transition-all">
                                                         {session.mode}
                                                     </span>
                                                 </td>
@@ -351,7 +351,7 @@ const AdminAttendance = () => {
                                                 <td className="px-8 py-6 text-right">
                                                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${session.status === 'ended'
                                                         ? 'text-slate-200'
-                                                        : 'bg-white border border-slate-200 text-slate-400 group-hover:bg-indigo-600 group-hover:border-indigo-600 group-hover:text-white group-hover:shadow-md'
+                                                        : 'bg-white border border-slate-200 text-slate-400 group-hover:bg-blue-600 group-hover:border-blue-600 group-hover:text-white group-hover:shadow-md'
                                                         }`}>
                                                         <ChevronRight size={18} />
                                                     </div>
@@ -421,14 +421,14 @@ const AdminAttendance = () => {
                             </button>
                             <div>
                                 <div className="flex items-center gap-3 mb-1.5">
-                                    <div className="px-2.5 py-0.5 bg-indigo-500/10 border border-indigo-500/20 rounded text-[9px] font-bold uppercase tracking-wider text-indigo-400">
+                                    <div className="px-2.5 py-0.5 bg-blue-500/10 border border-blue-500/20 rounded text-[9px] font-black uppercase tracking-wider text-blue-400">
                                         Live Terminal
                                     </div>
                                     <span className="text-[10px] font-medium text-slate-500 uppercase tracking-widest">
                                         Pool ID: {selectedSession?.id || 'GLOBAL'}
                                     </span>
                                 </div>
-                                <h1 className="text-3xl font-bold text-white tracking-tight leading-none">
+                                <h1 className="text-3xl font-black text-white tracking-tight leading-none">
                                     {selectedSession?.title || `Level ${selectedSession?.level || '?'} Monitoring`}
                                 </h1>
                                 <p className="text-slate-400 font-medium text-sm mt-1">
@@ -447,7 +447,7 @@ const AdminAttendance = () => {
                                 </button>
                                 <button
                                     onClick={() => fileInputRef.current.click()}
-                                    className="px-4 py-2 text-[10px] font-bold text-indigo-400 hover:text-indigo-300 uppercase tracking-widest transition-all rounded-lg hover:bg-indigo-500/5 flex items-center gap-2"
+                                    className="px-4 py-2 text-[10px] font-black text-blue-400 hover:text-blue-300 uppercase tracking-widest transition-all rounded-lg hover:bg-blue-500/5 flex items-center gap-2"
                                 >
                                     <Upload size={12} /> CSV Upload
                                 </button>
@@ -457,7 +457,7 @@ const AdminAttendance = () => {
 
                             <button
                                 onClick={() => setShowManualModal(true)}
-                                className="px-8 py-3 bg-indigo-600 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all hover:bg-indigo-500 shadow-lg shadow-indigo-600/20 flex items-center gap-2 active:scale-95"
+                                className="px-8 py-3 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all hover:bg-blue-500 shadow-lg shadow-blue-600/20 flex items-center gap-2 active:scale-95"
                             >
                                 <Plus size={16} /> Manual Unblock
                             </button>
@@ -476,7 +476,7 @@ const AdminAttendance = () => {
                                     className="w-full p-6 flex items-center justify-between hover:bg-slate-50/50 transition-colors"
                                 >
                                     <div className="flex items-center gap-3">
-                                        <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600">
+                                        <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600">
                                             <FileSpreadsheet size={16} />
                                         </div>
                                         <h3 className="text-[11px] font-bold text-slate-800 uppercase tracking-widest">
@@ -493,12 +493,12 @@ const AdminAttendance = () => {
                                             onChange={(e) => setBulkEmails(e.target.value)}
                                             rows={8}
                                             placeholder="Student emails (one per line)..."
-                                            className="w-full p-4 bg-slate-50 border border-slate-100 rounded-xl text-xs font-medium focus:outline-none focus:bg-white focus:border-indigo-600 transition-all resize-none mb-4 placeholder:text-slate-300"
+                                            className="w-full p-4 bg-slate-50 border border-slate-100 rounded-xl text-xs font-medium focus:outline-none focus:bg-white focus:border-blue-600 transition-all resize-none mb-4 placeholder:text-slate-300"
                                         />
                                         <button
                                             onClick={handleBulkUnblock}
                                             disabled={submitting || !bulkEmails.trim()}
-                                            className="w-full py-4 bg-slate-900 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-indigo-600 transition-all disabled:opacity-50 active:scale-95 shadow-sm"
+                                            className="w-full py-4 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 transition-all disabled:opacity-50 active:scale-95 shadow-sm"
                                         >
                                             {submitting ? 'Processing...' : 'Sync Registry'}
                                         </button>
@@ -530,10 +530,10 @@ const AdminAttendance = () => {
 
                                     <div className="pt-4 border-t border-slate-50 flex items-center justify-between">
                                         <div className="flex items-center gap-2 text-slate-400">
-                                            <div className="w-1.5 h-1.5 rounded-full bg-indigo-400" />
+                                            <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />
                                             <span className="text-[9px] font-bold uppercase tracking-widest">Active Sync</span>
                                         </div>
-                                        <span className="text-[9px] font-bold text-indigo-600 uppercase tracking-wider px-1.5 py-0.5 bg-indigo-50 rounded">v3.6.1</span>
+                                        <span className="text-[9px] font-bold text-blue-600 uppercase tracking-wider px-1.5 py-0.5 bg-blue-50 rounded">v3.6.1</span>
                                     </div>
                                 </div>
                             </div>
@@ -569,9 +569,9 @@ const AdminAttendance = () => {
                                     <div className="pr-4 flex items-center gap-3">
                                         {isPolling && (
                                             <div className="flex items-center gap-1.5">
-                                                <div className="h-1 w-1 bg-indigo-400 rounded-full" />
-                                                <div className="h-1 w-1 bg-indigo-400 rounded-full" />
-                                                <div className="h-1 w-1 bg-indigo-400 rounded-full" />
+                                                <div className="h-1 w-1 bg-blue-400 rounded-full" />
+                                                <div className="h-1 w-1 bg-blue-400 rounded-full" />
+                                                <div className="h-1 w-1 bg-blue-400 rounded-full" />
                                             </div>
                                         )}
                                     </div>
@@ -580,7 +580,7 @@ const AdminAttendance = () => {
                                 <div className="flex-1 overflow-x-auto">
                                     {loading ? (
                                         <div className="flex flex-col items-center justify-center h-full py-32 gap-3">
-                                            <RefreshCw className="animate-spin text-indigo-400" size={32} />
+                                            <RefreshCw className="animate-spin text-blue-400" size={32} />
                                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Updating Registry...</p>
                                         </div>
                                     ) : studentListTab === 'active' ? (
@@ -735,7 +735,7 @@ const AdminAttendance = () => {
                                         placeholder="Search by name, email or ID..."
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
-                                        className="w-full pl-12 pr-6 py-4 bg-slate-50 border border-slate-200 rounded-xl font-medium focus:outline-none focus:bg-white focus:border-indigo-600 transition-all placeholder:text-slate-300"
+                                        className="w-full pl-12 pr-6 py-4 bg-slate-50 border border-slate-200 rounded-xl font-black focus:outline-none focus:bg-white focus:border-blue-600 transition-all placeholder:text-slate-300"
                                     />
                                 </div>
 
@@ -749,7 +749,7 @@ const AdminAttendance = () => {
                                         )
                                         .slice(0, 15)
                                         .map(user => (
-                                            <div key={user.id} className="p-4 rounded-xl border border-slate-100 hover:border-indigo-100 hover:bg-indigo-50/20 flex items-center justify-between group transition-all">
+                                            <div key={user.id} className="p-4 rounded-xl border border-slate-100 hover:border-blue-100 hover:bg-blue-50/20 flex items-center justify-between group transition-all">
                                                 <div className="flex items-center gap-4">
                                                     <div className="w-10 h-10 rounded-lg bg-slate-50 border border-slate-200/50 flex items-center justify-center text-slate-700 font-bold text-sm">
                                                         {user.full_name?.charAt(0) || user.username?.charAt(0) || 'U'}
@@ -761,7 +761,7 @@ const AdminAttendance = () => {
                                                 </div>
                                                 <button
                                                     onClick={() => handleToggleBlock(user.id, true)}
-                                                    className="px-4 py-2 bg-slate-900 text-white hover:bg-indigo-600 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-all"
+                                                    className="px-4 py-2 bg-slate-900 text-white hover:bg-blue-600 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all"
                                                 >
                                                     Manual Unblock
                                                 </button>
@@ -792,7 +792,7 @@ const AdminAttendance = () => {
                 .scale-in { animation: scaleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
                 @keyframes scaleIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
             `}} />
-        </SaaSLayout>
+        </SaaSLayout >
     );
 };
 

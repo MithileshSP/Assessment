@@ -58,9 +58,9 @@ const TestResultsPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-indigo-600 mx-auto"></div>
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading test results...</p>
         </div>
       </div>
@@ -69,13 +69,13 @@ const TestResultsPage = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center">
         <div className="bg-white p-8 rounded-lg shadow-lg max-w-md">
           <div className="text-red-600 text-xl font-semibold mb-4">Error</div>
           <p className="text-gray-700 mb-6">{error}</p>
           <button
             onClick={() => navigate('/courses')}
-            className="w-full bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700"
+            className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700"
           >
             Back to Courses
           </button>
@@ -97,7 +97,7 @@ const TestResultsPage = () => {
     : (computedTotalQuestions > 0 && computedPassedCount === computedTotalQuestions));
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 py-8 px-4">
       <div className="max-w-4xl mx-auto">
         {/* Overall Result Header */}
         <div className={`rounded-lg shadow-xl p-8 mb-8 ${overallPassed
@@ -162,19 +162,19 @@ const TestResultsPage = () => {
                         <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-3">
                           <div className="bg-white rounded p-2 text-center">
                             <div className="text-xs text-gray-600">Content</div>
-                            <div className="text-lg font-bold text-indigo-600">
+                            <div className="text-lg font-bold text-blue-600">
                               {submission.content_score || 0}%
                             </div>
                           </div>
                           <div className="bg-white rounded p-2 text-center">
                             <div className="text-xs text-gray-600">Visual</div>
-                            <div className="text-lg font-bold text-indigo-600">
+                            <div className="text-lg font-bold text-blue-600">
                               {submission.visual_score || 0}%
                             </div>
                           </div>
                           <div className="bg-white rounded p-2 text-center">
                             <div className="text-xs text-gray-600">Structure</div>
-                            <div className="text-lg font-bold text-indigo-600">
+                            <div className="text-lg font-bold text-blue-600">
                               {submission.structure_score || 0}%
                             </div>
                           </div>
@@ -216,7 +216,7 @@ const TestResultsPage = () => {
               value={feedback}
               onChange={(e) => setFeedback(e.target.value)}
               placeholder="What did you think about this test? Any suggestions?"
-              className="w-full border-2 border-gray-300 rounded-lg p-3 min-h-[120px] focus:border-indigo-500 focus:outline-none"
+              className="w-full border-2 border-gray-300 rounded-lg p-3 min-h-[120px] focus:border-blue-500 focus:outline-none"
             />
 
             <button
@@ -224,7 +224,7 @@ const TestResultsPage = () => {
               disabled={submitting || !feedback.trim()}
               className={`w-full mt-4 py-3 rounded-lg font-semibold transition-all ${submitting || !feedback.trim()
                 ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                : 'bg-indigo-600 text-white hover:bg-indigo-700'
+                : 'bg-blue-600 text-white hover:bg-blue-700'
                 }`}
             >
               {submitting ? 'Submitting...' : 'Submit Feedback & Continue'}
@@ -236,7 +236,7 @@ const TestResultsPage = () => {
         <div className="flex gap-4">
           <button
             onClick={() => navigate(`/course/${sessionData.course_id}`)}
-            className="flex-1 bg-white text-indigo-600 border-2 border-indigo-600 py-3 rounded-lg font-semibold hover:bg-indigo-50 transition-all"
+            className="flex-1 bg-white text-blue-600 border-2 border-blue-600 py-3 rounded-lg font-semibold hover:bg-blue-50 transition-all"
           >
             Back to Course
           </button>
@@ -244,7 +244,7 @@ const TestResultsPage = () => {
           {isAdminSessionActive() && (
             <button
               onClick={() => navigate(`/level/${sessionData.course_id}/${sessionData.level}`)}
-              className="flex-1 bg-indigo-600 text-white py-3 rounded-lg font-semibold hover:bg-indigo-700 transition-all"
+              className="flex-1 bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition-all"
             >
               Retry Test (Admin Only)
             </button>

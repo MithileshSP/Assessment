@@ -92,7 +92,7 @@ export default function LevelPage() {
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Completion</p>
               <p className="text-sm font-bold text-slate-900">{completedCount} / {questions.length} Solved</p>
             </div>
-            <div className="w-12 h-12 rounded-xl bg-blue-600 flex items-center justify-center text-white">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white">
               <CheckCircle size={20} />
             </div>
           </div>
@@ -153,7 +153,7 @@ export default function LevelPage() {
                   </div>
                   {question.assets?.images?.length > 0 && (
                     <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-50 rounded-xl">
-                      <ImageIcon size={14} className="text-indigo-500" />
+                      <ImageIcon size={14} className="text-blue-500" />
                       <span className="text-xs font-bold text-slate-600">{question.assets.images.length} Media Assets</span>
                     </div>
                   )}

@@ -136,7 +136,7 @@ const FacultyEvaluation = () => {
                 <div className="flex items-center gap-6">
                     <button
                         onClick={() => navigate('/faculty/dashboard')}
-                        className="group flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-slate-400 hover:text-primary-600 transition-all bg-slate-50 px-3 py-2 rounded-xl border border-slate-200 hover:border-primary-200"
+                        className="group flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-blue-600 transition-all bg-slate-50 px-3 py-2 rounded-xl border border-slate-200 hover:border-blue-200"
                     >
                         <span>&larr;</span>
                         BACK
@@ -144,7 +144,7 @@ const FacultyEvaluation = () => {
                     <div className="h-6 w-px bg-slate-200" />
                     <div>
                         <h1 className="text-sm font-display font-black text-slate-900 uppercase tracking-tight flex items-center gap-2">
-                            <span className="text-primary-600">eval:</span> {submission.candidate_name}
+                            <span className="text-blue-600">eval:</span> {submission.candidate_name}
                         </h1>
                         <div className="flex items-center gap-2 mt-0.5">
                             <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none">{submission.course_title}</span>
@@ -208,7 +208,7 @@ const FacultyEvaluation = () => {
                                         <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mb-3">Clarity</p>
                                         <div className="flex gap-1.5">
                                             {[1, 2, 3, 4, 5].map(star => (
-                                                <div key={star} className={`w-1.5 h-1.5 rounded-full ${star <= data.studentFeedback.clarity_rating ? 'bg-primary-500' : 'bg-slate-200'}`} />
+                                                <div key={star} className={`w-1.5 h-1.5 rounded-full ${star <= data.studentFeedback.clarity_rating ? 'bg-blue-500' : 'bg-slate-200'}`} />
                                             ))}
                                         </div>
                                     </div>
@@ -247,7 +247,7 @@ const FacultyEvaluation = () => {
                             {[
                                 { id: 'student_live', label: 'LIVE', icon: Play, color: 'text-emerald-500' },
                                 { id: 'expected_live', label: 'REF', icon: BookOpen, color: 'text-blue-500' },
-                                { id: 'compare', label: 'MATCH', icon: Activity, color: 'text-primary-500' }
+                                { id: 'compare', label: 'MATCH', icon: Activity, color: 'text-blue-500' }
                             ].map(tab => (
                                 <button
                                     key={tab.id}
@@ -275,10 +275,10 @@ const FacultyEvaluation = () => {
                                             key={`custom_${name}`}
                                             onClick={() => { setActiveTab(`file_${name}`); setActiveCustomFile(name); }}
                                             className={`px-3 h-8 rounded-lg flex items-center gap-2 text-[8px] font-bold tracking-widest uppercase transition-all ${activeTab === `file_${name}`
-                                                ? 'bg-slate-100 text-indigo-600 shadow-sm'
+                                                ? 'bg-slate-100 text-blue-600 shadow-sm'
                                                 : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'}`}
                                         >
-                                            <FileText size={10} className="text-indigo-400" />
+                                            <FileText size={10} className="text-blue-400" />
                                             <span>{name}</span>
                                         </button>
                                     ));
@@ -394,13 +394,13 @@ const FacultyEvaluation = () => {
                                 <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/30">
                                     <div className="flex items-center gap-4">
                                         <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center shadow-sm border border-slate-200">
-                                            <FileCode size={14} className="text-indigo-600" />
+                                            <FileCode size={14} className="text-blue-600" />
                                         </div>
                                         <h4 className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-900 leading-none">
                                             {activeTab.replace('file_', '')}
                                         </h4>
                                     </div>
-                                    <div className="px-3 py-1 rounded-full bg-indigo-600 text-white text-[9px] font-black uppercase tracking-widest shadow-md shadow-indigo-500/10">
+                                    <div className="px-3 py-1 rounded-full bg-blue-600 text-white text-[9px] font-black uppercase tracking-widest shadow-md shadow-blue-500/10">
                                         SOURCE
                                     </div>
                                 </div>
@@ -434,7 +434,7 @@ const FacultyEvaluation = () => {
                                             <div className="px-3 py-1 rounded-full bg-slate-50 border border-slate-200 text-[8px] font-bold text-slate-500 uppercase tracking-widest">
                                                 ID: {submission.challenge_id || 'SYS'}
                                             </div>
-                                            <div className="px-3 py-1 rounded-full bg-primary-50 border border-primary-100 text-[8px] font-bold text-primary-600 uppercase tracking-widest">
+                                            <div className="px-3 py-1 rounded-full bg-blue-50 border border-blue-100 text-[8px] font-black text-blue-600 uppercase tracking-widest">
                                                 {submission.course_title}
                                             </div>
                                         </div>
@@ -525,13 +525,13 @@ const FacultyEvaluation = () => {
                                         <div className="flex items-center justify-between px-6 py-3 border-b border-slate-100 bg-slate-100/10">
                                             <div className="flex items-center gap-3">
                                                 <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center border border-slate-200 shadow-sm">
-                                                    <BookOpen size={14} className="text-primary-600" />
+                                                    <BookOpen size={14} className="text-blue-600" />
                                                 </div>
                                                 <h4 className="text-[10px] font-bold uppercase tracking-widest text-slate-900 leading-none">
                                                     REFERENCE {activeTab.toUpperCase()}
                                                 </h4>
                                             </div>
-                                            <div className="px-3 py-1 rounded-md bg-primary-600 text-white text-[8px] font-bold uppercase tracking-widest shadow-lg shadow-primary-600/20">
+                                            <div className="px-3 py-1 rounded-md bg-blue-600 text-white text-[8px] font-black uppercase tracking-widest shadow-lg shadow-blue-600/20">
                                                 EXPECTED TARGET
                                             </div>
                                         </div>
@@ -570,7 +570,7 @@ const FacultyEvaluation = () => {
                                         type="number" min="0" max={pod.max}
                                         value={scores[pod.id]}
                                         onChange={e => setScores({ ...scores, [pod.id]: Math.min(pod.max, Math.max(0, parseInt(e.target.value) || 0)) })}
-                                        className="flex-1 h-10 px-3 bg-white border border-slate-200 rounded-lg text-lg font-black text-primary-600 text-center focus:border-primary-400 outline-none transition-all tabular-nums"
+                                        className="flex-1 h-10 px-3 bg-white border border-slate-200 rounded-lg text-lg font-black text-blue-600 text-center focus:border-blue-400 outline-none transition-all tabular-nums"
                                     />
                                     <span className="text-[8px] font-bold text-slate-300 uppercase tracking-tighter">PTS</span>
                                 </div>
@@ -595,7 +595,7 @@ const FacultyEvaluation = () => {
                             <button
                                 onClick={handleSubmit}
                                 disabled={submitting}
-                                className="w-full py-4 bg-primary-600 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-primary-700 transition-all disabled:opacity-50"
+                                className="w-full py-4 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all disabled:opacity-50"
                             >
                                 {submitting ? 'DEPLOYING...' : 'FINALIZE EVAL'}
                             </button>

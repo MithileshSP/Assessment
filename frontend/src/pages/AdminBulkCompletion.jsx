@@ -100,7 +100,7 @@ const AdminBulkCompletion = () => {
                 <div className="mx-auto mb-10 pb-10 border-b-2 border-slate-100 flex items-end justify-between">
                     <div>
                         <div className="flex items-center gap-3 mb-4">
-                            <div className="p-2.5 bg-indigo-50 rounded-xl text-indigo-600">
+                            <div className="p-2.5 bg-blue-50 rounded-xl text-blue-600">
                                 <Database size={24} />
                             </div>
                             <span className="text-xs font-black uppercase tracking-[0.3em] text-slate-400">
@@ -125,7 +125,7 @@ const AdminBulkCompletion = () => {
                                     <select
                                         value={selectedCourse}
                                         onChange={(e) => setSelectedCourse(e.target.value)}
-                                        className="w-full bg-white border-2 border-slate-100 rounded-2xl px-6 py-5 text-lg font-black text-slate-800 focus:ring-8 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all outline-none appearance-none cursor-pointer shadow-sm"
+                                        className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg font-bold focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all appearance-none cursor-pointer shadow-sm"
                                     >
                                         {courses.map(c => (
                                             <option key={c.id} value={c.id}>{c.title}</option>
@@ -144,13 +144,13 @@ const AdminBulkCompletion = () => {
                                 <div className="flex gap-4 p-1.5 bg-slate-50 rounded-2xl border border-slate-100">
                                     <button
                                         onClick={() => setIdentifierType('email')}
-                                        className={`flex-1 py-4 text-xs font-black uppercase tracking-widest rounded-xl transition-all ${identifierType === 'email' ? 'bg-white text-indigo-600 shadow-md border border-slate-100' : 'text-slate-400 hover:text-slate-600'}`}
+                                        className={`flex-1 py-4 text-xs font-black uppercase tracking-widest rounded-xl transition-all ${identifierType === 'email' ? 'bg-white text-blue-600 shadow-md border border-slate-100' : 'text-slate-400 hover:text-slate-600'}`}
                                     >
                                         Email Addresses
                                     </button>
                                     <button
                                         onClick={() => setIdentifierType('rollNo')}
-                                        className={`flex-1 py-4 text-xs font-black uppercase tracking-widest rounded-xl transition-all ${identifierType === 'rollNo' ? 'bg-white text-indigo-600 shadow-md border border-slate-100' : 'text-slate-400 hover:text-slate-600'}`}
+                                        className={`flex-1 py-4 text-xs font-black uppercase tracking-widest rounded-xl transition-all ${identifierType === 'rollNo' ? 'bg-white text-blue-600 shadow-md border border-slate-100' : 'text-slate-400 hover:text-slate-600'}`}
                                     >
                                         Roll Numbers
                                     </button>
@@ -161,13 +161,13 @@ const AdminBulkCompletion = () => {
                                         placeholder={`Entry list for ${identifierType === 'email' ? 'emails' : 'roll numbers'} (one per line)...`}
                                         value={identifiers}
                                         onChange={(e) => setIdentifiers(e.target.value)}
-                                        className="w-full bg-slate-50 border-2 border-slate-100 rounded-[2rem] p-8 text-lg font-bold placeholder:text-slate-300 focus:ring-8 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all outline-none font-mono min-h-[350px] custom-scrollbar"
+                                        className="w-full bg-slate-50 border-2 border-slate-100 rounded-[2rem] p-8 text-lg font-bold placeholder:text-slate-300 focus:ring-8 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none font-mono min-h-[350px] custom-scrollbar"
                                     ></textarea>
                                 </div>
                                 <div className="flex flex-col sm:flex-row items-center gap-4 pt-4">
                                     <label className="w-full sm:w-auto flex-1 cursor-pointer group">
                                         <input type="file" accept=".csv,.txt" onChange={handleFileUpload} className="hidden" />
-                                        <div className="flex items-center justify-center gap-3 py-5 px-8 border-2 border-dashed border-slate-200 rounded-2xl text-slate-400 group-hover:border-indigo-300 group-hover:text-indigo-500 transition-all bg-slate-50/50 group-hover:bg-indigo-50/30">
+                                        <div className="flex items-center justify-center gap-3 py-5 px-8 border-2 border-dashed border-slate-200 rounded-2xl text-slate-400 group-hover:border-blue-300 group-hover:text-blue-500 transition-all bg-slate-50/50 group-hover:bg-blue-50/30">
                                             <Upload size={20} />
                                             <span className="text-xs font-black uppercase tracking-widest">Import CSV / Text</span>
                                         </div>
@@ -175,7 +175,7 @@ const AdminBulkCompletion = () => {
                                     <button
                                         onClick={handleBulkComplete}
                                         disabled={isProcessing}
-                                        className="w-full sm:w-auto flex-[1.5] bg-indigo-600 text-white rounded-2xl py-5 px-8 text-sm font-black uppercase tracking-[0.2em] shadow-xl shadow-indigo-600/20 hover:bg-indigo-700 hover:-translate-y-1 active:translate-y-0 disabled:opacity-50 transition-all flex items-center justify-center gap-3"
+                                        className="w-full sm:w-auto px-10 py-3 bg-blue-600 text-white rounded-lg font-black text-sm transition-all hover:bg-blue-700 active:scale-[0.98] shadow-md shadow-blue-200 flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
                                         {isProcessing ? 'Synchronizing...' : 'Execute Bulk Unlock'}
                                         {!isProcessing && <ArrowRight size={18} />}
@@ -188,7 +188,7 @@ const AdminBulkCompletion = () => {
                     {/* Right: Results */}
                     <div className="lg:col-span-7">
                         <div className="bg-slate-900 rounded-[2.5rem] p-10 text-white shadow-2xl shadow-slate-900/40 h-full min-h-[600px] border border-white/5 relative overflow-hidden flex flex-col">
-                            <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-500/10 rounded-full blur-[120px] pointer-events-none" />
+                            <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/10 rounded-full blur-[120px] pointer-events-none" />
                             <div className="absolute bottom-0 left-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-[100px] pointer-events-none" />
 
                             {!results && !isProcessing && (
@@ -204,12 +204,12 @@ const AdminBulkCompletion = () => {
                             {isProcessing && (
                                 <div className="flex-1 flex flex-col items-center justify-center text-center py-20 relative z-10">
                                     <div className="relative mb-12">
-                                        <div className="w-24 h-24 border-8 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin"></div>
+                                        <div className="w-24 h-24 border-8 border-blue-500/20 border-t-blue-500 rounded-full animate-spin"></div>
                                         <div className="absolute inset-0 flex items-center justify-center">
-                                            <Database size={32} className="text-indigo-400 animate-pulse" />
+                                            <Database size={32} className="text-blue-400 animate-pulse" />
                                         </div>
                                     </div>
-                                    <h4 className="text-indigo-400 font-black text-sm uppercase tracking-[0.3em]">Processing Batch</h4>
+                                    <h4 className="text-blue-400 font-black text-sm uppercase tracking-[0.3em]">Processing Batch</h4>
                                     <p className="text-slate-400 text-base mt-4 font-bold">Updating blockchain records and unlocking progression milestones...</p>
                                 </div>
                             )}
@@ -273,7 +273,7 @@ const AdminBulkCompletion = () => {
                                         <div className="mt-8 pt-6 border-t border-white/10 flex justify-end">
                                             <button
                                                 onClick={() => setResults(null)}
-                                                className="px-6 py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all"
+                                                className="w-full sm:w-auto px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg text-xs font-black uppercase tracking-widest transition-all border border-blue-100 flex items-center justify-center gap-2"
                                             >
                                                 Clear Manifest
                                             </button>

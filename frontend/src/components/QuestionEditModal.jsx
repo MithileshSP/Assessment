@@ -162,7 +162,7 @@ export default function QuestionEditModal({ question, courseId, onSave, onClose 
         {/* Header */}
         <div className="px-10 py-8 border-b border-slate-100 flex items-center justify-between bg-white shrink-0">
           <div>
-            <div className="flex items-center gap-2 text-[10px] font-black text-indigo-500 uppercase tracking-[0.2em] mb-1">
+            <div className="flex items-center gap-2 text-[10px] font-black text-blue-500 uppercase tracking-[0.2em] mb-1">
               <Code size={10} />
               <span>Assessment Architect</span>
             </div>
@@ -189,13 +189,13 @@ export default function QuestionEditModal({ question, courseId, onSave, onClose 
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 py-5 text-xs font-black uppercase tracking-[0.15em] transition-all relative ${activeTab === tab.id ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'
+              className={`flex items-center gap-2 py-5 text-xs font-black uppercase tracking-[0.15em] transition-all relative ${activeTab === tab.id ? 'text-blue-600' : 'text-slate-400 hover:text-slate-600'
                 }`}
             >
               {tab.icon}
               {tab.label}
               {activeTab === tab.id && (
-                <div className="absolute bottom-0 left-0 right-0 h-1 bg-indigo-600 rounded-t-full shadow-[0_-4px_12px_rgba(79,70,229,0.3)]" />
+                <div className="absolute bottom-0 left-0 right-0 h-1 bg-blue-600 rounded-t-full shadow-[0_-4px_12px_rgba(37,99,235,0.3)]" />
               )}
             </button>
           ))}
@@ -212,7 +212,7 @@ export default function QuestionEditModal({ question, courseId, onSave, onClose 
                     type="text"
                     value={formData.id}
                     onChange={(e) => setFormData({ ...formData, id: e.target.value })}
-                    className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-indigo-500/5 focus:bg-white focus:border-indigo-500 transition-all outline-none"
+                    className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-black focus:ring-4 focus:ring-blue-500/5 focus:bg-white focus:border-blue-500 transition-all outline-none"
                     required
                     disabled={!!question}
                   />
@@ -223,7 +223,7 @@ export default function QuestionEditModal({ question, courseId, onSave, onClose 
                     type="text"
                     value={formData.title}
                     onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                    className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-indigo-500/5 focus:bg-white focus:border-indigo-500 transition-all outline-none"
+                    className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-black focus:ring-4 focus:ring-blue-500/5 focus:bg-white focus:border-blue-500 transition-all outline-none"
                     required
                     placeholder="e.g. Navigation Bar Construction"
                   />
@@ -235,7 +235,7 @@ export default function QuestionEditModal({ question, courseId, onSave, onClose 
                 <textarea
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium focus:ring-4 focus:ring-indigo-500/5 focus:bg-white focus:border-indigo-500 transition-all outline-none min-h-[80px]"
+                  className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium focus:ring-4 focus:ring-blue-500/5 focus:bg-white focus:border-blue-500 transition-all outline-none min-h-[80px]"
                   required
                 />
               </div>
@@ -245,7 +245,7 @@ export default function QuestionEditModal({ question, courseId, onSave, onClose 
                 <textarea
                   value={formData.instructions}
                   onChange={(e) => setFormData({ ...formData, instructions: e.target.value })}
-                  className="w-full px-5 py-4 bg-[#0f172a] text-indigo-100 border-none rounded-2xl text-sm font-mono focus:ring-4 focus:ring-indigo-500/20 transition-all outline-none min-h-[160px]"
+                  className="w-full px-5 py-4 bg-[#0f172a] text-blue-100 border-none rounded-2xl text-sm font-mono focus:ring-4 focus:ring-blue-500/20 transition-all outline-none min-h-[160px]"
                   required
                 />
               </div>
@@ -260,7 +260,7 @@ export default function QuestionEditModal({ question, courseId, onSave, onClose 
                     <select
                       value={formData.level}
                       onChange={(e) => setFormData({ ...formData, level: parseInt(e.target.value) })}
-                      className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-indigo-500/5 focus:bg-white transition-all outline-none appearance-none cursor-pointer"
+                      className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-black focus:ring-4 focus:ring-blue-500/5 focus:bg-white transition-all outline-none appearance-none cursor-pointer"
                       required
                     >
                       {[...Array(12)].map((_, i) => (
@@ -307,7 +307,7 @@ export default function QuestionEditModal({ question, courseId, onSave, onClose 
                     type="text"
                     value={formData.tags}
                     onChange={(e) => setFormData({ ...formData, tags: e.target.value })}
-                    className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-indigo-500/5 focus:bg-white focus:border-indigo-500 transition-all outline-none"
+                    className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-black focus:ring-4 focus:ring-blue-500/5 focus:bg-white focus:border-blue-500 transition-all outline-none"
                     placeholder="e.g. Flexbox, Semantic HTML, Grid"
                   />
                 </div>
@@ -321,7 +321,7 @@ export default function QuestionEditModal({ question, courseId, onSave, onClose 
                         onChange={(e) => setFormData({ ...formData, isLocked: e.target.checked })}
                         className="sr-only peer"
                       />
-                      <div className="w-14 h-8 bg-slate-300 rounded-full peer peer-checked:bg-indigo-600 transition-all after:content-[''] after:absolute after:top-1 after:left-1 after:bg-white after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:after:translate-x-6 shadow-inner" />
+                      <div className="w-14 h-8 bg-slate-300 rounded-full peer peer-checked:bg-blue-600 transition-all after:content-[''] after:absolute after:top-1 after:left-1 after:bg-white after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:after:translate-x-6 shadow-inner" />
                     </div>
                     <div className="flex flex-col">
                       <span className="text-sm font-black text-slate-700 uppercase tracking-widest">Enforce Unlock</span>
@@ -336,7 +336,7 @@ export default function QuestionEditModal({ question, courseId, onSave, onClose 
                 <textarea
                   value={formData.hints}
                   onChange={(e) => setFormData({ ...formData, hints: e.target.value })}
-                  className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium focus:ring-4 focus:ring-indigo-500/5 focus:bg-white transition-all outline-none min-h-[120px]"
+                  className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium focus:ring-4 focus:ring-blue-500/5 focus:bg-white transition-all outline-none min-h-[120px]"
                   placeholder="Provide iterative guidance for stuck candidates..."
                 />
               </div>
@@ -421,13 +421,13 @@ export default function QuestionEditModal({ question, courseId, onSave, onClose 
 
           {activeTab === 'assets' && (
             <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-300">
-              <div className="bg-indigo-50 border border-indigo-100 rounded-[2rem] p-8 flex items-start gap-6">
-                <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center text-indigo-600 shadow-sm shrink-0">
+              <div className="bg-blue-50 border border-blue-100 rounded-[2rem] p-8 flex items-start gap-6">
+                <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center text-blue-600 shadow-sm shrink-0">
                   <Image size={28} />
                 </div>
                 <div className="space-y-2">
-                  <h4 className="text-lg font-black text-indigo-900">CDN Asset Registry</h4>
-                  <p className="text-indigo-600/70 text-sm leading-relaxed"> List the absolute paths of images required for this challenge. Use the button below to auto-detect images referenced in your solution code.</p>
+                  <h4 className="text-lg font-black text-blue-900">CDN Asset Registry</h4>
+                  <p className="text-blue-600/70 text-sm leading-relaxed"> List the absolute paths of images required for this challenge. Use the button below to auto-detect images referenced in your solution code.</p>
                 </div>
               </div>
 
@@ -437,7 +437,7 @@ export default function QuestionEditModal({ question, courseId, onSave, onClose 
                   <button
                     type="button"
                     onClick={handleExtractAssets}
-                    className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-200"
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg shadow-blue-200"
                   >
                     <Zap size={14} />
                     Auto-Detect Assets
@@ -446,7 +446,7 @@ export default function QuestionEditModal({ question, courseId, onSave, onClose 
                 <textarea
                   value={formData.assetImages}
                   onChange={(e) => setFormData({ ...formData, assetImages: e.target.value })}
-                  className="w-full px-6 py-5 bg-slate-50 border border-slate-200 rounded-3xl text-sm font-mono focus:ring-4 focus:ring-indigo-500/5 focus:bg-white focus:border-indigo-500 transition-all outline-none min-h-[200px]"
+                  className="w-full px-6 py-5 bg-slate-50 border border-slate-200 rounded-3xl text-sm font-mono focus:ring-4 focus:ring-blue-500/5 focus:bg-white focus:border-blue-500 transition-all outline-none min-h-[200px]"
                   placeholder="/assets/images/sample-media.webp"
                 />
               </div>
@@ -472,7 +472,7 @@ export default function QuestionEditModal({ question, courseId, onSave, onClose 
             </button>
             <button
               onClick={handleSubmit}
-              className="px-10 py-3.5 bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] hover:bg-indigo-700 transition-all shadow-xl shadow-indigo-100 flex items-center gap-3 active:scale-95"
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 cursor-pointer transition font-black uppercase tracking-widest text-[10px] shadow-xl shadow-blue-100 flex items-center gap-3 active:scale-95"
             >
               <Save size={18} />
               {question ? 'Confirm Changes' : 'Deploy Question'}
@@ -519,7 +519,7 @@ const MetricInput = ({ label, value, onChange, icon }) => (
       type="number"
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold focus:ring-4 focus:ring-indigo-500/5 focus:bg-white transition-all outline-none"
+      className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-black focus:ring-4 focus:ring-blue-500/5 focus:bg-white transition-all outline-none"
       required
     />
   </div>

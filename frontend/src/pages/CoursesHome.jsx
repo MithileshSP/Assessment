@@ -51,11 +51,11 @@ export default function CoursesHome() {
       <div className="max-w-4xl mx-auto space-y-12 pb-20">
         {/* Header */}
         <div className="text-center space-y-4 animate-fade-in-up">
-          <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-xs font-bold uppercase tracking-wider">
+          <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-xs font-black uppercase tracking-wider">
             <Layers size={14} />
             <span>Structured Curriculum</span>
           </div>
-          <h1 className="text-4xl md:text-5xl font-display font-bold text-slate-900 tracking-tight">
+          <h1 className="text-4xl md:text-5xl font-display font-black text-slate-900 tracking-tight">
             Your Skill Path
           </h1>
           <p className="text-lg text-slate-500 max-w-2xl mx-auto leading-relaxed">
@@ -93,12 +93,11 @@ export default function CoursesHome() {
 
                     {/* Timeline Node */}
                     <div className={`absolute left-0 md:left-1/2 -translate-x-1/2 w-10 h-10 rounded-full border-4 border-white shadow-md z-10 flex items-center justify-center transition-transform hover:scale-110
-                      ${isLocked
                         ? 'bg-slate-200 text-slate-400'
-                        : 'bg-primary-600 text-white shadow-[0_0_20px_rgba(37,99,235,0.4)]'
+                        : 'bg-blue-600 text-white shadow-[0_0_20px_rgba(37,99,235,0.4)]'
                       }
                     `}>
-                      {isLocked ? <Lock size={16} /> : <span className="font-bold text-sm">{index + 1}</span>}
+                      {isLocked ? <Lock size={16} /> : <span className="font-black text-sm">{index + 1}</span>}
                     </div>
 
                     {/* Spacer for Desktop Alignment */}
@@ -127,25 +126,25 @@ export default function CoursesHome() {
                                 className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                               />
                             ) : (
-                              <div className="w-full h-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+                              <div className="w-full h-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
                                 <BookOpen size={48} className="text-white/20" />
                               </div>
                             )}
 
                             <div className="absolute top-4 right-4">
                               {course.isCompleted ? (
-                                <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-emerald-600 bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-full shadow-sm">
+                                <span className="flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-emerald-600 bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-full shadow-sm">
                                   <CheckCircle size={10} /> Cleared
                                 </span>
                               ) : isLocked && (
-                                <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-rose-600 bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-full shadow-sm">
+                                <span className="flex items-center gap-1 text-[10px] font-black uppercase tracking-wider text-rose-600 bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-full shadow-sm">
                                   <Lock size={10} /> Locked
                                 </span>
                               )}
                             </div>
                           </div>
 
-                          <h3 className="text-xl font-bold text-slate-900 mb-2 group-hover:text-primary-600 transition-colors flex items-center gap-2">
+                          <h3 className="text-xl font-black text-slate-900 mb-2 group-hover:text-blue-600 transition-colors flex items-center gap-2">
                             Level {index}: {course.title}
                             {course.isCompleted && <div className="w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center"><ArrowRight size={12} className="text-white" /></div>}
                           </h3>
@@ -168,7 +167,7 @@ export default function CoursesHome() {
                                   ? 'bg-emerald-50 text-emerald-600 cursor-default'
                                   : isLocked
                                     ? 'bg-slate-100 text-slate-400'
-                                    : 'bg-primary-50 text-primary-600 group-hover:bg-primary-600 group-hover:text-white'
+                                    : 'bg-blue-50 text-blue-600 group-hover:bg-blue-600 group-hover:text-white'
                                 }
                               `}
                             >

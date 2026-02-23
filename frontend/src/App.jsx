@@ -45,6 +45,8 @@ import QuestionEditor from "./pages/QuestionEditor";
 import AdminAnalytics from "./pages/AdminAnalytics";
 import AdminBulkCompletion from "./pages/AdminBulkCompletion";
 import AdminViolations from "./pages/AdminViolations";
+import AdminFacultyList from "./pages/AdminFacultyList";
+import AdminFacultyDetail from "./pages/AdminFacultyDetail";
 
 // Auth & Components
 import Login from "./pages/Login";
@@ -118,6 +120,8 @@ function App() {
           <Route path="/admin/users" element={role === 'admin' ? <UserManagement /> : <Navigate to="/admin/login" />} />
           <Route path="/admin/results" element={role === 'admin' ? <AdminResults /> : <Navigate to="/admin/login" />} />
           <Route path="/admin/assignment" element={role === 'admin' ? <AdminAssignment /> : <Navigate to="/admin/login" />} />
+          <Route path="/admin/faculty" element={role === 'admin' ? <AdminFacultyList /> : <Navigate to="/admin/login" />} />
+          <Route path="/admin/faculty/:facultyId" element={role === 'admin' ? <AdminFacultyDetail /> : <Navigate to="/admin/login" />} />
           <Route path="/admin/submission/:submissionId" element={role === 'admin' ? <AdminSubmissionDetails /> : <Navigate to="/admin/login" />} />
           <Route path="/admin/level-management" element={role === 'admin' ? <LevelManagement /> : <Navigate to="/admin/login" />} />
           <Route path="/admin/course/:courseId/questions" element={(role === 'admin' || role === 'faculty') ? <QuestionBank /> : <Navigate to="/admin/login" />} />

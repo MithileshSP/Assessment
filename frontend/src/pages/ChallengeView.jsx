@@ -304,16 +304,16 @@ export default function ChallengeView() {
                 <button
                   onClick={handlePreviousQuestion}
                   disabled={currentQuestionIndex === 0}
-                  className="px-3 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                  className="px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 text-xs font-black uppercase tracking-wider shadow-sm transition-all"
                   title="Previous Question"
                 >
                   <ChevronLeft size={16} />
-                  Previous
+                  Prev
                 </button>
                 <button
                   onClick={handleNextQuestion}
                   disabled={currentQuestionIndex === allLevelQuestions.length - 1}
-                  className="px-3 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                  className="px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 text-xs font-black uppercase tracking-wider shadow-sm transition-all"
                   title="Next Question"
                 >
                   Next
@@ -321,16 +321,16 @@ export default function ChallengeView() {
                 </button>
               </div>
             )}
-            <button onClick={handleRunCode} className="btn-secondary flex items-center gap-2">
-              <Play size={16} /> Run Code
+            <button onClick={handleRunCode} className="px-5 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl hover:bg-slate-50 flex items-center gap-2 text-xs font-black uppercase tracking-wider shadow-sm transition-all">
+              <Play size={16} /> Run
             </button>
             <button
               onClick={handleSubmit}
               disabled={submitting || evaluating}
-              className="btn-success disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              className="px-6 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 text-xs font-black uppercase tracking-widest shadow-lg shadow-blue-600/20 transition-all active:scale-95"
             >
-              {submitting || evaluating ? <RefreshCw size={16} className="animate-spin" /> : <CheckCircle size={16} />}
-              {submitting || evaluating ? 'Evaluating...' : 'Submit & Evaluate'}
+              {submitting || evaluating ? <RefreshCw size={16} className="animate-spin" /> : <Rocket size={16} />}
+              {submitting || evaluating ? 'Evaluating...' : 'Submit Now'}
             </button>
           </div>
         </div>
@@ -343,15 +343,17 @@ export default function ChallengeView() {
           {/* Toggle Instructions Button */}
           <button
             onClick={() => setShowInstructions(!showInstructions)}
-            className="flex items-center justify-between px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+            className="flex items-center justify-between px-6 py-3 bg-white border border-slate-200 text-slate-700 rounded-2xl hover:bg-slate-50 transition-all shadow-sm group"
           >
-            <span className="font-semibold flex items-center gap-2">
-              <BookOpen size={18} />
+            <span className="text-xs font-black uppercase tracking-widest flex items-center gap-3">
+              <div className="p-1.5 bg-blue-50 text-blue-600 rounded-lg group-hover:scale-110 transition-transform">
+                <BookOpen size={16} />
+              </div>
               {showInstructions ? 'Hide Instructions' : 'Show Instructions'}
             </span>
-            <ChevronRight
+            <ChevronDown
               size={20}
-              className={`transition-transform ${showInstructions ? '-rotate-90' : 'rotate-90'}`}
+              className={`transition-transform text-slate-400 ${showInstructions ? 'rotate-180' : 'rotate-0'}`}
             />
           </button>
 

@@ -173,17 +173,17 @@ export default function UserManagement() {
 
   const getRoleIcon = (role) => {
     switch (role) {
-      case 'admin': return <Shield size={14} className="text-purple-500" />;
-      case 'faculty': return <GraduationCap size={14} className="text-orange-500" />;
-      default: return <User size={14} className="text-blue-500" />;
+      case 'admin': return <Shield size={14} className="text-blue-600" />;
+      case 'faculty': return <GraduationCap size={14} className="text-blue-500" />;
+      default: return <User size={14} className="text-blue-400" />;
     }
   };
 
   const getRoleStyles = (role) => {
     switch (role) {
-      case 'admin': return 'bg-purple-50 text-purple-700 border-purple-100';
-      case 'faculty': return 'bg-orange-50 text-orange-700 border-orange-100';
-      default: return 'bg-blue-50 text-blue-700 border-blue-100';
+      case 'admin': return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'faculty': return 'bg-blue-50 text-blue-700 border-blue-100';
+      default: return 'bg-slate-50 text-slate-700 border-slate-200';
     }
   };
 
@@ -243,7 +243,7 @@ export default function UserManagement() {
             </div>
           </div>
 
-          <div className="bg-gradient-to-br from-blue-600 to-indigo-600 rounded-2xl p-5 text-white flex items-center justify-between shadow-xl shadow-blue-600/20 hover:scale-[1.02] transition-transform">
+          <div className="bg-gradient-to-br from-blue-600 to-blue-500 rounded-2xl p-5 text-white flex items-center justify-between shadow-xl shadow-blue-600/20 hover:scale-[1.02] transition-transform">
             <div>
               <p className="text-[10px] font-black opacity-70 uppercase tracking-[0.2em] text-left">Active Base</p>
               <p className="text-3xl font-black text-left mt-1">
