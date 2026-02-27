@@ -384,7 +384,8 @@ router.get('/export-backup', verifyFaculty, async (req, res) => {
                 s.css_code,
                 s.js_code,
                 s.user_screenshot,
-                ch.expected_screenshot_url as expected_screenshot
+                ch.expected_screenshot_url as expected_screenshot,
+                s.submitted_at
             FROM submissions s
             JOIN users u ON s.user_id = u.id
             LEFT JOIN courses co ON s.course_id = co.id
@@ -402,9 +403,9 @@ router.get('/export-backup', verifyFaculty, async (req, res) => {
         const headers = [
             'Student UID', 'Student Name', 'Email', 'Course', 'Level', 'courseId',
             'title', 'description', 'instructions', 'studentHtml', 'studentCss',
-            'studentJs', 'studentScreenshot', 'expectedScreenshot'
+            'studentJs', 'studentScreenshot', 'expectedScreenshot', 'Submitted At'
         ];
-        const csvRows = [headers.join('\t')]; // Using Tab as separator for code content compatibility
+        const csvRows = [headers.join(',')]; // Using comma separator for standard Excel compatibility
 
         for (const row of results) {
             const escape = (val) => `"${(val || '').toString().replace(/"/g, '""').replace(/\n/g, ' ')}"`;
@@ -423,9 +424,10 @@ router.get('/export-backup', verifyFaculty, async (req, res) => {
                 escape(row.css_code),
                 escape(row.js_code),
                 escape(`${req.protocol}://${req.get('host')}${row.user_screenshot}`),
-                escape(row.expected_screenshot)
+                escape(row.expected_screenshot),
+                escape(row.submitted_at ? new Date(row.submitted_at).toLocaleString() : '')
             ];
-            csvRows.push(csvRow.join('\t'));
+            csvRows.push(csvRow.join(','));
         }
 
         const csvContent = csvRows.join('\n');

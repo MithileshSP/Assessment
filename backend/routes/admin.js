@@ -85,7 +85,7 @@ router.get('/faculty-load', verifyAdmin, async (req, res) => {
 
     const assignments = await db.query(
       `SELECT faculty_id, status, COUNT(*) as count 
-       FROM submission_assignments 
+       FROM submission_assignments
        GROUP BY faculty_id, status`
     );
 
@@ -139,12 +139,15 @@ router.post('/assign/smart', verifyAdmin, async (req, res) => {
 
     // 2. Get available faculty with current load, sorted by least loaded
     const availableFaculty = await db.query(`
-      SELECT u.id, u.max_capacity,
-        (SELECT COUNT(*) FROM submission_assignments sa WHERE sa.faculty_id = u.id AND sa.status = 'pending') as current_load
-      FROM users u
-      WHERE u.role = 'faculty' AND u.is_available = TRUE
-      HAVING current_load < u.max_capacity
-      ORDER BY current_load ASC
+      SELECT f.id, f.max_capacity, f.current_load
+      FROM (
+        SELECT u.id, u.max_capacity,
+          (SELECT COUNT(*) FROM submission_assignments sa WHERE sa.faculty_id = u.id AND sa.status = 'pending') as current_load
+        FROM users u
+        WHERE u.role = 'faculty' AND u.is_available = TRUE
+      ) as f
+      WHERE f.current_load < COALESCE(f.max_capacity, 10)
+      ORDER BY f.current_load ASC
     `);
 
     if (availableFaculty.length === 0) {
@@ -201,8 +204,12 @@ router.post('/assign/smart', verifyAdmin, async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Error running auto-assign:", error);
-    res.status(500).json({ error: error.message });
+    console.error("Error running auto-assign.");
+    console.error("Message:", error.message);
+    if (error.code) console.error("Code:", error.code);
+    if (error.sqlMessage) console.error("SQL Message:", error.sqlMessage);
+    if (error.sql) console.error("SQL:", error.sql);
+    res.status(500).json({ error: error.message, code: error.code, sqlMessage: error.sqlMessage });
   }
 });
 
@@ -1043,6 +1050,18 @@ router.get('/all-submissions', verifyAdmin, async (req, res) => {
       conditions.push('s.level = ?');
       params.push(parseInt(level));
     }
+    if (req.query.facultyName) {
+      conditions.push('f.full_name = ?');
+      params.push(req.query.facultyName);
+    }
+    if (req.query.courseTitle) {
+      conditions.push('c.title = ?');
+      params.push(req.query.courseTitle);
+    }
+    if (req.query.studentName) {
+      conditions.push('u.full_name LIKE ?');
+      params.push(`%${req.query.studentName}%`);
+    }
     if (search) {
       conditions.push('(u.full_name LIKE ? OR u.email LIKE ? OR s.id LIKE ?)');
       const searchTerm = `%${search}%`;
@@ -1181,6 +1200,49 @@ router.get('/assignment-logs', verifyAdmin, async (req, res) => {
   } catch (error) {
     console.error("Assignment logs error:", error);
     res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * DELETE /api/admin/submissions/:id
+ * Manually delete a submission and clean up its filesystem screenshots.
+ */
+router.delete('/submissions/:id', verifyAdmin, async (req, res) => {
+  const { id } = req.params;
+  const fs = require('fs').promises;
+  const path = require('path');
+
+  try {
+    const existing = await db.query(
+      `SELECT user_screenshot, expected_screenshot, diff_screenshot FROM submissions WHERE id = ?`,
+      [id]
+    );
+
+    if (!existing || existing.length === 0) {
+      return res.status(404).json({ error: "Submission not found" });
+    }
+
+    // Clean up files asynchronously
+    const files = [
+      existing[0].user_screenshot,
+      existing[0].expected_screenshot,
+      existing[0].diff_screenshot
+    ].filter(Boolean);
+
+    for (const fileUrl of files) {
+      try {
+        const filePath = path.join(__dirname, '..', fileUrl);
+        await fs.unlink(filePath).catch(() => { });
+      } catch (err) { }
+    }
+
+    // Delete from database (foreign key ON DELETE CASCADE will handle assignments/logs)
+    await db.query(`DELETE FROM submissions WHERE id = ?`, [id]);
+
+    res.json({ message: "Submission manually deleted" });
+  } catch (error) {
+    console.error("Manual submission delete error:", error);
+    res.status(500).json({ error: "Failed to delete submission" });
   }
 });
 

@@ -99,7 +99,7 @@ function FilterPopover({ column, value, onChange, onClose, allValues }) {
         onClose();
     };
 
-    const uniqueValues = [...new Set(allValues || [])].filter(Boolean).sort();
+    const uniqueValues = column.filterOptions || [...new Set(allValues || [])].filter(Boolean).sort();
 
     return (
         <div ref={ref} className="absolute top-full left-0 mt-1 w-56 bg-white border border-slate-200 rounded-lg shadow-lg z-50 overflow-hidden animate-fade-in-up" onClick={e => e.stopPropagation()}>
@@ -121,17 +121,21 @@ function FilterPopover({ column, value, onChange, onClose, allValues }) {
                 {tab === 'values' ? (
                     uniqueValues.length > 0 ? (
                         <div className="space-y-0.5">
-                            {uniqueValues.map(v => (
-                                <label key={v} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-slate-50 cursor-pointer text-xs">
-                                    <input
-                                        type="checkbox"
-                                        checked={checkedValues.has(v)}
-                                        onChange={() => toggleValue(v)}
-                                        className="w-3.5 h-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                                    />
-                                    <span className="text-slate-700 font-medium truncate">{String(v)}</span>
-                                </label>
-                            ))}
+                            {uniqueValues.map(v => {
+                                const val = typeof v === 'object' ? v.value : v;
+                                const label = typeof v === 'object' ? v.label : String(v);
+                                return (
+                                    <label key={val} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-slate-50 cursor-pointer text-xs">
+                                        <input
+                                            type="checkbox"
+                                            checked={checkedValues.has(val)}
+                                            onChange={() => toggleValue(val)}
+                                            className="w-3.5 h-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                                        />
+                                        <span className="text-slate-700 font-medium truncate">{label}</span>
+                                    </label>
+                                );
+                            })}
                         </div>
                     ) : <p className="text-xs text-slate-400 text-center py-4">No values available</p>
                 ) : (

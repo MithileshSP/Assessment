@@ -259,16 +259,17 @@ const FacultyDashboard = () => {
                                 <tr>
                                     <th className="px-5 py-3">Candidate</th>
                                     <th className="px-5 py-3">Course & Level</th>
-                                    <th className="px-5 py-3">Submitted</th>
+                                    <th className="px-5 py-3">Date</th>
+                                    <th className="px-5 py-3">Time</th>
                                     <th className="px-5 py-3 text-right">Action</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100 text-sm">
                                 {loading ? (
-                                    <tr><td colSpan="4" className="px-5 py-8 text-center text-slate-500 text-xs font-medium">Loading queue...</td></tr>
+                                    <tr><td colSpan="5" className="px-5 py-8 text-center text-slate-500 text-xs font-medium">Loading queue...</td></tr>
                                 ) : filteredQueue.length === 0 ? (
                                     <tr>
-                                        <td colSpan="4" className="px-5 py-12 text-center">
+                                        <td colSpan="5" className="px-5 py-12 text-center">
                                             <div className="flex flex-col items-center gap-2">
                                                 <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center text-slate-400">
                                                     <CheckCircle size={20} />
@@ -299,6 +300,9 @@ const FacultyDashboard = () => {
                                             <td className="px-5 py-3 text-slate-500 font-medium text-xs">
                                                 {new Date(item.submitted_at).toLocaleDateString()}
                                             </td>
+                                            <td className="px-5 py-3 text-slate-500 font-medium text-xs">
+                                                {new Date(item.submitted_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}
+                                            </td>
                                             <td className="px-5 py-3 text-right">
                                                 <div className="flex items-center justify-end gap-2">
                                                     <button
@@ -307,13 +311,6 @@ const FacultyDashboard = () => {
                                                     >
                                                         Evaluate
                                                         <ArrowRight size={14} />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => openReallocModal(item.id)}
-                                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 text-slate-600 rounded-md text-[10px] font-bold hover:bg-slate-50 transition-all"
-                                                        title="Re-allocate"
-                                                    >
-                                                        <Shuffle size={12} />
                                                     </button>
                                                 </div>
                                             </td>

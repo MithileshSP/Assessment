@@ -25,7 +25,7 @@ services:
       start_period: 60s
 
   backend:
-    image: gokulv456/assessment-backend:v3.4.25
+    image: gokulv456/assessment-backend:v3.4.26
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -54,7 +54,7 @@ services:
       - ./backend/assets:/var/www/portal-assets
       - ./backend/public/reference_images:/app/public/reference_images
     deploy:
-      replicas: 1
+      replicas: 3
     networks:
       - test-portal-network
 
@@ -65,7 +65,7 @@ services:
       args:
         VITE_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
         VITE_API_URL: /fullstack/api
-    image: gokulv456/assessment-frontend:v3.4.25
+    image: gokulv456/assessment-frontend:v3.4.26
     container_name: portal_frontend
     restart: unless-stopped
     ports:

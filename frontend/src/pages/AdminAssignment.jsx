@@ -286,9 +286,16 @@ export default function AdminAssignment() {
                 params.set('status', subFilters.assignment_status.checked[0]);
             }
             if (subFilters.faculty_name?.checked?.length) {
-                // If support for filtering by faculty name directly isn't in API, this might fail or be ignored.
-                // Assuming it might work or just ignored. The user asked for filters to work properly.
-                // We'll pass it as a generic filter param if backend supports.
+                params.set('facultyName', subFilters.faculty_name.checked[0]);
+            }
+            if (subFilters.course_title?.checked?.length) {
+                params.set('courseTitle', subFilters.course_title.checked[0]);
+            }
+            if (subFilters.level?.checked?.length) {
+                params.set('level', subFilters.level.checked[0]);
+            }
+            if (subFilters.student_name?.text) {
+                params.set('studentName', subFilters.student_name.text);
             }
 
             const res = await api.get(`/admin/all-submissions?${params}`);
@@ -429,6 +436,35 @@ export default function AdminAssignment() {
         } catch (e) { showToast('Export failed', 'error'); }
     };
 
+    const handleExportBackup = async () => {
+        try {
+            const response = await api.get('/faculty/export-backup', {
+                responseType: 'blob'
+            });
+
+            const contentType = response.headers['content-type'];
+            if (contentType && contentType.includes('application/json')) {
+                const text = await response.data.text();
+                const json = JSON.parse(text);
+                showToast(json.message || 'Export failed', 'error');
+                return;
+            }
+
+            const blob = new Blob([response.data], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `submissions_backup_${new Date().toISOString().slice(0, 10)}.csv`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            window.URL.revokeObjectURL(url);
+        } catch (error) {
+            console.error('Export failed:', error);
+            showToast('Failed to export backup', 'error');
+        }
+    };
+
     // ── Derived stats ──
     const totalPending = facultyLoad.reduce((a, f) => a + (f.pending || 0), 0);
     const totalCompleted = facultyLoad.reduce((a, f) => a + (f.completed || 0), 0);
@@ -465,6 +501,18 @@ export default function AdminAssignment() {
 
     const navigate = useNavigate(); // Hooks must be at top level but placing here for context of usage in columns
 
+    const handleDeleteSubmission = useCallback(async (id) => {
+        if (!window.confirm("Are you sure you want to manually delete this submission? This action cannot be undone.")) return;
+
+        try {
+            await api.delete(`/admin/submissions/${id}`);
+            showToast('Submission deleted successfully');
+            loadSubmissions(); // Refresh table
+        } catch (e) {
+            showToast(e.response?.data?.error || 'Failed to delete submission', 'error');
+        }
+    }, [loadSubmissions, showToast]);
+
     const submissionCols = useMemo(() => [
         {
             key: 'student_name', label: 'Student', sortable: true, filterable: true,
@@ -482,24 +530,44 @@ export default function AdminAssignment() {
         },
         {
             key: 'course_title', label: 'Course', sortable: true, filterable: true,
+            filterOptions: ['HTML / CSS - Level 1', 'JavaScript - Level 2', 'React - Level 3'],
             renderCell: (v) => <span className="font-medium text-slate-700 text-xs">{v || '—'}</span>
         },
         {
-            key: 'level', label: 'Lvl', sortable: true, width: '50px',
+            key: 'level', label: 'Lvl', sortable: true, width: '50px', filterable: true,
+            filterOptions: [1, 2, 3],
             renderCell: (v) => (
                 <span className="inline-block px-1.5 py-0.5 bg-slate-100 rounded text-[10px] font-bold text-slate-500">{v ?? '-'}</span>
             )
         },
         {
             key: 'assignment_status', label: 'Status', sortable: true, filterable: true,
+            filterOptions: ['assigned', 'unassigned', 'in_progress', 'evaluated', 'pending', 'passed', 'failed', 'reallocated', 'reopened'],
             renderCell: (v) => <StatusBadge value={v || 'unassigned'} />
         },
         {
-            key: 'submitted_at', label: 'Date', sortable: true,
-            renderCell: (v) => <span className="text-xs text-slate-500 font-medium">{v ? formatIST(v) : '—'}</span>
+            key: 'submitted_at_date', label: 'Date', sortable: true,
+            renderCell: (_, row) => {
+                if (!row.submitted_at) return <span className="text-xs text-slate-500 font-medium">—</span>;
+                const d = new Date(row.submitted_at);
+                return <span className="text-xs text-slate-500 font-medium">
+                    {d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
+                </span>;
+            }
+        },
+        {
+            key: 'submitted_at_time', label: 'Time', sortable: false,
+            renderCell: (_, row) => {
+                if (!row.submitted_at) return <span className="text-xs text-slate-500 font-medium">—</span>;
+                const d = new Date(row.submitted_at);
+                return <span className="text-xs text-slate-500 font-medium">
+                    {d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}
+                </span>;
+            }
         },
         {
             key: 'faculty_name', label: 'Assigned To', sortable: true, filterable: true,
+            filterOptions: facultyLoad.map(f => f.full_name).filter(Boolean).sort(),
             renderCell: (v, row) => v ? (
                 <button
                     onClick={(e) => {
@@ -522,7 +590,22 @@ export default function AdminAssignment() {
                 </span>
             ) : <span className="text-slate-200">-</span>
         },
-    ], [navigate]);
+        {
+            key: 'actions', label: 'Action', width: '60px',
+            renderCell: (_, row) => (
+                <button
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteSubmission(row.id);
+                    }}
+                    className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors"
+                    title="Delete Submission"
+                >
+                    <X size={16} />
+                </button>
+            )
+        }
+    ], [navigate, facultyLoad, handleDeleteSubmission]);
 
     const auditCols = useMemo(() => [
         {
@@ -601,6 +684,12 @@ export default function AdminAssignment() {
                 </div>
 
                 <div className="flex items-center gap-2">
+                    <button
+                        onClick={handleExportBackup}
+                        className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors shadow-sm"
+                    >
+                        <Download size={14} /> Export Backup
+                    </button>
                     <button
                         onClick={handleSmartAssign}
                         disabled={actionLoading === 'smart'}

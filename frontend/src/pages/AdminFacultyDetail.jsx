@@ -97,6 +97,10 @@ export default function AdminFacultyDetail() {
     const [activeTab, setActiveTab] = useState('assigned'); // assigned, pending, history
     const [stats, setStats] = useState({ total: 0, pending: 0, completed: 0 });
 
+    // Capacity Editing State
+    const [isEditingCapacity, setIsEditingCapacity] = useState(false);
+    const [tempCapacity, setTempCapacity] = useState('');
+
     // Add states for reallocation
     const [selectedSubs, setSelectedSubs] = useState(new Set());
     const [reassignModalOpen, setReassignModalOpen] = useState(false);
@@ -161,6 +165,25 @@ export default function AdminFacultyDetail() {
         }
     };
 
+    const handleSaveCapacity = async () => {
+        const val = parseInt(tempCapacity, 10);
+        if (isNaN(val) || val < 1 || val > 100) {
+            showToast('Capacity must be between 1 and 100', 'error');
+            return;
+        }
+        setActionLoading(true);
+        try {
+            await api.patch(`/admin/faculty/${facultyId}/capacity`, { maxCapacity: val });
+            showToast('Capacity updated successfully');
+            setIsEditingCapacity(false);
+            loadData(); // Reload to get updated capacity and percentages
+        } catch (err) {
+            showToast(err.response?.data?.error || 'Failed to update capacity', 'error');
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
     if (loading) return <div className="p-8 text-center">Loading profile...</div>;
     if (!faculty) return <div className="p-8 text-center">Faculty not found</div>;
 
@@ -191,9 +214,10 @@ export default function AdminFacultyDetail() {
                         <div className="flex items-center gap-4">
                             <button
                                 onClick={() => navigate('/admin/faculty')}
-                                className="p-2 -ml-2 hover:bg-slate-100 rounded-full text-slate-400 hover:text-slate-700 transition-colors"
+                                className="flex items-center gap-2 px-3 py-1.5 -ml-2 hover:bg-slate-100 rounded-lg text-sm font-semibold text-slate-500 hover:text-slate-800 transition-colors"
                             >
-                                <ChevronLeft size={24} />
+                                <ChevronLeft size={20} />
+                                Back
                             </button>
                             <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center text-white text-xl font-black shadow-lg shadow-blue-500/20">
                                 {(faculty.full_name || '?')[0].toUpperCase()}
@@ -234,9 +258,36 @@ export default function AdminFacultyDetail() {
                         <div className="flex flex-col sm:flex-row items-center gap-8">
                             {/* Bar */}
                             <div className="flex-1 w-full sm:max-w-md">
-                                <div className="flex justify-between text-sm font-semibold mb-2">
+                                <div className="flex justify-between items-center text-sm font-semibold mb-2">
                                     <span className="text-slate-700">Current Workload</span>
-                                    <span className="text-slate-900">{faculty.current_load} / {faculty.max_capacity}</span>
+                                    <div className="flex items-center gap-2">
+                                        {isEditingCapacity ? (
+                                            <div className="flex items-center gap-2 bg-slate-50 p-1 rounded-md border border-slate-200">
+                                                <input
+                                                    type="number"
+                                                    min="1" max="100"
+                                                    value={tempCapacity}
+                                                    onChange={(e) => setTempCapacity(e.target.value)}
+                                                    className="w-16 px-2 py-1 text-xs border border-slate-200 rounded text-center outline-none focus:border-blue-500 font-bold"
+                                                    autoFocus
+                                                />
+                                                <div className="flex items-center gap-1">
+                                                    <button onClick={handleSaveCapacity} disabled={actionLoading} className="px-2 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700 disabled:opacity-50">Save</button>
+                                                    <button onClick={() => setIsEditingCapacity(false)} disabled={actionLoading} className="px-2 py-1 bg-slate-200 text-slate-700 rounded text-xs hover:bg-slate-300 disabled:opacity-50">Cancel</button>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <span className="text-slate-900">{faculty.current_load} / {faculty.max_capacity}</span>
+                                                <button
+                                                    onClick={() => { setIsEditingCapacity(true); setTempCapacity(faculty.max_capacity?.toString() || '10'); }}
+                                                    className="text-[10px] font-bold uppercase tracking-wider text-blue-600 hover:text-blue-800 px-2 py-1 rounded bg-blue-50 hover:bg-blue-100 transition-colors"
+                                                >
+                                                    Edit
+                                                </button>
+                                            </>
+                                        )}
+                                    </div>
                                 </div>
                                 <div className="h-3 w-full bg-slate-100 rounded-full overflow-hidden">
                                     <div
@@ -290,7 +341,7 @@ export default function AdminFacultyDetail() {
                     <DataTable
                         columns={[
                             {
-                                key: 'student_name', label: 'Student', renderCell: (v, r) => (
+                                key: 'student_name', label: 'Student', filterable: true, renderCell: (v, r) => (
                                     <div className="flex items-center gap-3">
                                         <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-500">
                                             {v[0]}
@@ -302,10 +353,22 @@ export default function AdminFacultyDetail() {
                                     </div>
                                 )
                             },
-                            { key: 'course_title', label: 'Course', renderCell: (v) => <span className="font-medium text-slate-700">{v}</span> },
-                            { key: 'level', label: 'Level', width: '80px', renderCell: (v) => <span className="px-2 py-1 bg-slate-100 rounded text-xs font-bold text-slate-600">Lvl {v}</span> },
+                            {
+                                key: 'course_title', label: 'Course', filterable: true,
+                                filterOptions: [...new Set(submissions.map(s => s.course_title).filter(Boolean))],
+                                renderCell: (v) => <span className="font-medium text-slate-700">{v}</span>
+                            },
+                            {
+                                key: 'level', label: 'Level', width: '80px', filterable: true,
+                                filterOptions: [...new Set(submissions.map(s => s.level).filter(Boolean))],
+                                renderCell: (v) => <span className="px-2 py-1 bg-slate-100 rounded text-xs font-bold text-slate-600">Lvl {v}</span>
+                            },
                             { key: 'submitted_at', label: 'Submitted', renderCell: (v) => <span className="text-slate-500 text-sm">{v ? formatIST(v) : '-'}</span> },
-                            { key: 'assignment_status', label: 'Status', renderCell: (v) => <StatusBadge value={v} /> },
+                            {
+                                key: 'assignment_status', label: 'Status', filterable: true,
+                                filterOptions: [...new Set(submissions.map(s => s.assignment_status).filter(Boolean))],
+                                renderCell: (v) => <StatusBadge value={v} />
+                            },
                             {
                                 key: 'id', label: 'Action', width: '100px', renderCell: (v) => (
                                     <button className="px-3 py-1.5 border border-slate-200 rounded-lg text-xs font-bold text-slate-600 hover:bg-slate-50 transition-colors">
