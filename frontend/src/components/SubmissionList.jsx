@@ -252,10 +252,10 @@ export default function SubmissionList({ submissions, onReEvaluate, onDelete }) 
                             })}
                           >
                             <img
-                              src={`http://localhost:5000${submission.user_screenshot || submission.result.visual.screenshots.candidate}`}
+                              src={`${submission.user_screenshot || submission.result?.visual?.screenshots?.candidate || `/screenshots/${submission.id}-candidate.png`}`}
                               alt="Candidate Output"
                               className="w-full border border-gray-200 rounded"
-                              onError={(e) => e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><text x="10" y="50" fill="gray">No Image</text></svg>'}
+                              onError={(e) => { e.target.onerror = null; e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><text x="10" y="50" fill="gray">No Image</text></svg>'; }}
                             />
                           </div>
                           <div className="px-3 py-2 bg-gray-50 text-xs text-gray-600">
@@ -278,10 +278,10 @@ export default function SubmissionList({ submissions, onReEvaluate, onDelete }) 
                             })}
                           >
                             <img
-                              src={`${submission.expected_screenshot || submission.result.visual.screenshots.expected}`}
+                              src={`${submission.expected_screenshot || submission.result?.visual?.screenshots?.expected || `/screenshots/${submission.id}-expected.png`}`}
                               alt="Expected Output"
                               className="w-full border border-gray-200 rounded"
-                              onError={(e) => e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><text x="10" y="50" fill="gray">No Image</text></svg>'}
+                              onError={(e) => { e.target.onerror = null; e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><text x="10" y="50" fill="gray">No Image</text></svg>'; }}
                             />
                           </div>
                           <div className="px-3 py-2 bg-gray-50 text-xs text-gray-600">
@@ -304,10 +304,10 @@ export default function SubmissionList({ submissions, onReEvaluate, onDelete }) 
                             })}
                           >
                             <img
-                              src={`${submission.result.visual.screenshots.diff}`}
+                              src={`${submission.result?.visual?.screenshots?.diff || `/screenshots/${submission.id}-diff.png`}`}
                               alt="Difference Map"
                               className="w-full border border-gray-200 rounded"
-                              onError={(e) => e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><text x="10" y="50" fill="gray">No Image</text></svg>'}
+                              onError={(e) => { e.target.onerror = null; e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><text x="10" y="50" fill="gray">No Image</text></svg>'; }}
                             />
                           </div>
                           <div className="px-3 py-2 bg-gray-50 text-xs text-gray-600">

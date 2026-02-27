@@ -5,6 +5,15 @@ SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
 
 -- ==========================================
+-- 0. Migration Ledger
+-- ==========================================
+CREATE TABLE IF NOT EXISTS applied_migrations (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(255) NOT NULL UNIQUE,
+  applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+-- ==========================================
 -- 1. User Management
 -- ==========================================
 CREATE TABLE IF NOT EXISTS users (
@@ -21,6 +30,9 @@ CREATE TABLE IF NOT EXISTS users (
     current_session_id VARCHAR(100) NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     last_login TIMESTAMP NULL,
+    is_available BOOLEAN DEFAULT TRUE,
+    max_capacity INT DEFAULT 10,
+    current_load INT DEFAULT 0,
     INDEX idx_role (role),
     INDEX idx_session (current_session_id),
     INDEX idx_roll_no (roll_no)
@@ -34,12 +46,9 @@ CREATE TABLE IF NOT EXISTS courses (
     title VARCHAR(255) NOT NULL,
     description TEXT,
     thumbnail VARCHAR(255),
-    icon VARCHAR(10) DEFAULT '📚',
-    color VARCHAR(20) DEFAULT '#3B82F6',
     total_levels INT DEFAULT 1,
     order_index INT NOT NULL DEFAULT 0,
     estimated_time VARCHAR(50) DEFAULT '1 hour',
-    difficulty ENUM('Beginner', 'Intermediate', 'Advanced') DEFAULT 'Beginner',
     tags JSON,
     passing_threshold JSON,
     is_locked BOOLEAN DEFAULT FALSE,
@@ -235,11 +244,39 @@ CREATE TABLE IF NOT EXISTS submission_assignments (
     submission_id VARCHAR(100) NOT NULL,
     faculty_id VARCHAR(100) NOT NULL,
     assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    status ENUM('pending', 'evaluated') DEFAULT 'pending',
+    status ENUM('unassigned','assigned','in_progress','evaluated','reallocated','reopened') DEFAULT 'assigned',
+    version INT NOT NULL DEFAULT 1,
+    locked_by VARCHAR(100) NULL,
+    locked_at TIMESTAMP NULL,
+    reallocation_count INT NOT NULL DEFAULT 0,
+    last_reallocated_at TIMESTAMP NULL,
+    submission_weight INT NOT NULL DEFAULT 1,
     FOREIGN KEY (submission_id) REFERENCES submissions(id) ON DELETE CASCADE,
     FOREIGN KEY (faculty_id) REFERENCES users(id) ON DELETE CASCADE,
     UNIQUE KEY unique_submission_assignment (submission_id),
-    INDEX idx_faculty_status (faculty_id, status)
+    INDEX idx_faculty_status (faculty_id, status),
+    INDEX idx_sa_faculty (faculty_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS assignment_logs (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    submission_id VARCHAR(100) NOT NULL,
+    action_type VARCHAR(50) NOT NULL,
+    from_faculty_id VARCHAR(100) NULL,
+    to_faculty_id VARCHAR(100) NULL,
+    admin_id VARCHAR(100) NULL,
+    actor_role VARCHAR(20) DEFAULT 'system',
+    notes TEXT,
+    metadata JSON NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (submission_id) REFERENCES submissions(id) ON DELETE CASCADE,
+    FOREIGN KEY (from_faculty_id) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (to_faculty_id) REFERENCES users(id) ON DELETE SET NULL,
+    FOREIGN KEY (admin_id) REFERENCES users(id) ON DELETE SET NULL,
+    INDEX idx_al_submission (submission_id),
+    INDEX idx_al_action (action_type),
+    INDEX idx_al_created (created_at),
+    INDEX idx_al_faculty (to_faculty_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS student_feedback (
@@ -300,7 +337,6 @@ CREATE TABLE IF NOT EXISTS assets (
     size INT,
     category VARCHAR(50) DEFAULT 'general',
     checksum_sha256 CHAR(64) NULL,
-    file_data LONGBLOB,
     uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     last_modified TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_category (category),
@@ -315,8 +351,8 @@ INSERT IGNORE INTO users (id, username, password, email, full_name, role, is_blo
 ('user-admin-1', 'admin', '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9', 'admin@example.com', 'Administrator', 'admin', FALSE),
 ('user-faculty-1', 'faculty', '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92', 'faculty@example.com', 'Professor X', 'faculty', FALSE);
 
-INSERT IGNORE INTO courses (id, title, description, icon, color, total_levels, order_index, difficulty, tags) VALUES
-('course-html-css', 'HTML & CSS Mastery', 'Master the fundamentals of web development', '🎨', '#e34c26', 1, 10, 'Beginner', '["HTML", "CSS"]'),
-('course-fullstack', 'Fullstack Development', 'Master both frontend and backend technologies.', '💻', '#3B82F6', 1, 20, 'Advanced', '["Node.js", "React", "Database"]');
+INSERT IGNORE INTO courses (id, title, description, total_levels, order_index, tags) VALUES
+('course-html-css', 'HTML & CSS Mastery', 'Master the fundamentals of web development', 1, 10, '["HTML", "CSS"]'),
+('course-fullstack', 'Fullstack Development', 'Master both frontend and backend technologies.', 1, 20, '["Node.js", "React", "Database"]');
 
 SET FOREIGN_KEY_CHECKS = 1;

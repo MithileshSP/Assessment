@@ -353,6 +353,7 @@ router.get("/", verifyAdmin, async (req, res) => {
     const limit = parseInt(req.query.limit) || 50;
     const search = req.query.search || '';
     const role = req.query.role || 'all';
+    const { username, email, fullName, rollNo, isBlocked } = req.query;
     const offset = (page - 1) * limit;
 
     let users = [];
@@ -360,8 +361,8 @@ router.get("/", verifyAdmin, async (req, res) => {
 
     // Try database first
     try {
-      users = await UserModel.findAll({ limit, offset, search, role });
-      total = await UserModel.count({ search, role });
+      users = await UserModel.findAll({ limit, offset, search, role, username, email, fullName, rollNo, isBlocked });
+      total = await UserModel.count({ search, role, username, email, fullName, rollNo, isBlocked });
     } catch (dbError) {
       console.log(
         "Database error, using JSON file for users:",

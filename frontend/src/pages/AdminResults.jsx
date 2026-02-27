@@ -35,6 +35,16 @@ export default function AdminResults() {
         }
     };
 
+    const handleFilterChange = (key, value) => {
+        setFilters(prev => ({ ...prev, [key]: value }));
+        setPage(1); // Reset to page 1 on filter change
+    };
+
+    // Reset page 1 on search change
+    useEffect(() => {
+        setPage(1);
+    }, [search]);
+
     const handleExportCSV = async () => {
         try {
             // Build query params for date filtering
@@ -332,6 +342,7 @@ export default function AdminResults() {
                     <DataTable
                         columns={columns}
                         data={paginatedResults}
+                        filterData={processed} // Pass full filtered dataset for unique column values
                         loading={loading}
                         totalItems={totalItems}
                         page={page}
@@ -342,7 +353,7 @@ export default function AdminResults() {
                         sortDir={sortDir}
                         onSort={(col, dir) => { setSortBy(col); setSortDir(dir); }}
                         filters={filters}
-                        onFilterChange={setFilters}
+                        onFilterChange={handleFilterChange}
                         emptyMessage="No results found matching your search."
                     />
                 </div>

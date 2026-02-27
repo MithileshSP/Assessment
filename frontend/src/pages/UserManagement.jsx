@@ -18,7 +18,8 @@ import {
   X,
   Hash,
   Lock,
-  Unlock
+  Unlock,
+  Filter
 } from 'lucide-react';
 
 export default function UserManagement() {
@@ -31,6 +32,14 @@ export default function UserManagement() {
   const [uploadResult, setUploadResult] = useState(null);
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
+  const [colFilters, setColFilters] = useState({
+    fullName: '',
+    username: '',
+    rollNo: '',
+    email: '',
+    isBlocked: ''
+  });
+  const [activeFilters, setActiveFilters] = useState({}); // Track which column filters are visible
 
   const [formData, setFormData] = useState({
     username: '',
@@ -50,15 +59,15 @@ export default function UserManagement() {
 
   useEffect(() => {
     loadUsers();
-  }, [pagination.page, roleFilter, search]); // Reload when page, role, or search changes
+  }, [pagination.page, roleFilter, search, colFilters]); // Reload when page, role, search, or colFilters change
 
   // Debounce search to avoid too many requests
   useEffect(() => {
     const timer = setTimeout(() => {
-      setPagination(prev => ({ ...prev, page: 1 })); // Reset to page 1 on search change
+      setPagination(prev => ({ ...prev, page: 1 })); // Reset to page 1 on search or colFilters change
     }, 500);
     return () => clearTimeout(timer);
-  }, [search]);
+  }, [search, colFilters]);
 
   useEffect(() => {
     setPagination(prev => ({ ...prev, page: 1 })); // Reset to page 1 on role change
@@ -72,7 +81,8 @@ export default function UserManagement() {
           page: pagination.page,
           limit: pagination.limit,
           search: search,
-          role: roleFilter
+          role: roleFilter,
+          ...colFilters
         }
       });
 
@@ -150,6 +160,14 @@ export default function UserManagement() {
     } catch (error) {
       alert(error.response?.data?.error || 'Failed to toggle block status');
     }
+  };
+
+  const handleColFilterChange = (key, value) => {
+    setColFilters(prev => ({ ...prev, [key]: value }));
+  };
+
+  const toggleFilter = (key) => {
+    setActiveFilters(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
   const handleCsvUpload = async () => {
@@ -263,11 +281,114 @@ export default function UserManagement() {
             <table className="w-full text-left">
               <thead className="bg-slate-50/50 text-slate-500 font-bold text-[11px] uppercase tracking-widest border-b border-slate-100">
                 <tr>
-                  <th className="px-6 py-4">User</th>
-                  <th className="px-6 py-4">Roll No</th>
-                  <th className="px-6 py-4">Email</th>
-                  <th className="px-6 py-4">Role</th>
-                  <th className="px-6 py-4">Status</th>
+                  <th className="px-6 py-4">
+                    <div className="flex flex-col gap-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <span>User</span>
+                        <button
+                          onClick={() => toggleFilter('fullName')}
+                          className={`p-1 rounded hover:bg-slate-200 transition-colors ${colFilters.fullName ? 'text-blue-600 bg-blue-50' : 'text-slate-400'}`}
+                        >
+                          <Filter size={12} />
+                        </button>
+                      </div>
+                      {activeFilters.fullName && (
+                        <div className="relative group/filter animate-in fade-in slide-in-from-top-1 duration-200">
+                          <Search size={10} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within/filter:text-blue-500 transition-colors" />
+                          <input
+                            type="text"
+                            placeholder="Filter Name..."
+                            value={colFilters.fullName}
+                            onChange={(e) => handleColFilterChange('fullName', e.target.value)}
+                            className="w-full pl-6 pr-2 py-1.5 bg-white border border-slate-200 rounded-lg text-[9px] font-bold normal-case tracking-normal outline-none focus:border-blue-500 transition-all"
+                            autoFocus
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </th>
+                  <th className="px-6 py-4">
+                    <div className="flex flex-col gap-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <span>Roll No</span>
+                        <button
+                          onClick={() => toggleFilter('rollNo')}
+                          className={`p-1 rounded hover:bg-slate-200 transition-colors ${colFilters.rollNo ? 'text-blue-600 bg-blue-50' : 'text-slate-400'}`}
+                        >
+                          <Filter size={12} />
+                        </button>
+                      </div>
+                      {activeFilters.rollNo && (
+                        <div className="relative group/filter animate-in fade-in slide-in-from-top-1 duration-200">
+                          <Hash size={10} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within/filter:text-blue-500 transition-colors" />
+                          <input
+                            type="text"
+                            placeholder="Filter Roll..."
+                            value={colFilters.rollNo}
+                            onChange={(e) => handleColFilterChange('rollNo', e.target.value)}
+                            className="w-full pl-6 pr-2 py-1.5 bg-white border border-slate-200 rounded-lg text-[9px] font-bold normal-case tracking-normal outline-none focus:border-blue-500 transition-all font-mono"
+                            autoFocus
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </th>
+                  <th className="px-6 py-4">
+                    <div className="flex flex-col gap-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <span>Email</span>
+                        <button
+                          onClick={() => toggleFilter('email')}
+                          className={`p-1 rounded hover:bg-slate-200 transition-colors ${colFilters.email ? 'text-blue-600 bg-blue-50' : 'text-slate-400'}`}
+                        >
+                          <Filter size={12} />
+                        </button>
+                      </div>
+                      {activeFilters.email && (
+                        <div className="relative group/filter animate-in fade-in slide-in-from-top-1 duration-200">
+                          <Search size={10} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within/filter:text-blue-500 transition-colors" />
+                          <input
+                            type="text"
+                            placeholder="Filter Email..."
+                            value={colFilters.email}
+                            onChange={(e) => handleColFilterChange('email', e.target.value)}
+                            className="w-full pl-6 pr-2 py-1.5 bg-white border border-slate-200 rounded-lg text-[9px] font-bold normal-case tracking-normal outline-none focus:border-blue-500 transition-all"
+                            autoFocus
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </th>
+                  <th className="px-6 py-4 text-left">
+                    <div className="flex items-center gap-2">
+                      <span>Role</span>
+                    </div>
+                  </th>
+                  <th className="px-6 py-4">
+                    <div className="flex flex-col gap-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <span>Status</span>
+                        <button
+                          onClick={() => toggleFilter('isBlocked')}
+                          className={`p-1 rounded hover:bg-slate-200 transition-colors ${colFilters.isBlocked ? 'text-blue-600 bg-blue-50' : 'text-slate-400'}`}
+                        >
+                          <Filter size={12} />
+                        </button>
+                      </div>
+                      {activeFilters.isBlocked && (
+                        <select
+                          value={colFilters.isBlocked}
+                          onChange={(e) => handleColFilterChange('isBlocked', e.target.value)}
+                          className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-[9px] font-bold normal-case tracking-normal outline-none focus:border-blue-500 transition-all cursor-pointer animate-in fade-in slide-in-from-top-1 duration-200"
+                          autoFocus
+                        >
+                          <option value="">All</option>
+                          <option value="false">Active</option>
+                          <option value="true">Blocked</option>
+                        </select>
+                      )}
+                    </div>
+                  </th>
                   <th className="px-6 py-4 text-right">Actions</th>
                 </tr>
               </thead>

@@ -35,7 +35,7 @@ class UserModel {
   // Get all users
   // Get all users with pagination, search, and ordering
   static async findAll(options = {}) {
-    const { limit, offset, search, role } = options;
+    const { limit, offset, search, role, username, email, fullName, rollNo, isBlocked } = options;
 
     let queryStr = 'SELECT * FROM users';
     const params = [];
@@ -50,6 +50,28 @@ class UserModel {
     if (role && role !== 'all') {
       whereClauses.push('role = ?');
       params.push(role);
+    }
+
+    // New Specific Column Filters
+    if (username) {
+      whereClauses.push('username LIKE ?');
+      params.push(`%${username}%`);
+    }
+    if (email) {
+      whereClauses.push('email LIKE ?');
+      params.push(`%${email}%`);
+    }
+    if (fullName) {
+      whereClauses.push('full_name LIKE ?');
+      params.push(`%${fullName}%`);
+    }
+    if (rollNo) {
+      whereClauses.push('roll_no LIKE ?');
+      params.push(`%${rollNo}%`);
+    }
+    if (isBlocked !== undefined && isBlocked !== null && isBlocked !== '') {
+      whereClauses.push('is_blocked = ?');
+      params.push(isBlocked === 'true' || isBlocked === true ? 1 : 0);
     }
 
     if (whereClauses.length > 0) {
@@ -68,7 +90,7 @@ class UserModel {
 
   // Count users for pagination
   static async count(options = {}) {
-    const { search, role } = options;
+    const { search, role, username, email, fullName, rollNo, isBlocked } = options;
     let queryStr = 'SELECT COUNT(*) as total FROM users';
     const params = [];
     const whereClauses = [];
@@ -82,6 +104,28 @@ class UserModel {
     if (role && role !== 'all') {
       whereClauses.push('role = ?');
       params.push(role);
+    }
+
+    // New Specific Column Filters
+    if (username) {
+      whereClauses.push('username LIKE ?');
+      params.push(`%${username}%`);
+    }
+    if (email) {
+      whereClauses.push('email LIKE ?');
+      params.push(`%${email}%`);
+    }
+    if (fullName) {
+      whereClauses.push('full_name LIKE ?');
+      params.push(`%${fullName}%`);
+    }
+    if (rollNo) {
+      whereClauses.push('roll_no LIKE ?');
+      params.push(`%${rollNo}%`);
+    }
+    if (isBlocked !== undefined && isBlocked !== null && isBlocked !== '') {
+      whereClauses.push('is_blocked = ?');
+      params.push(isBlocked === 'true' || isBlocked === true ? 1 : 0);
     }
 
     if (whereClauses.length > 0) {

@@ -345,8 +345,11 @@ const FacultyEvaluation = () => {
                                                 alt="User Screenshot"
                                                 className="absolute inset-0 w-full h-full object-contain"
                                                 onError={(e) => {
-                                                    if (!e.target.src.includes('retry=1')) {
+                                                    if (!e.target.src.includes('retry=1') && !e.target.src.includes('data:image')) {
                                                         e.target.src += '?retry=1';
+                                                    } else {
+                                                        e.target.onerror = null;
+                                                        e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><text x="10" y="50" fill="gray">No Image</text></svg>';
                                                     }
                                                 }}
                                             />
@@ -367,8 +370,11 @@ const FacultyEvaluation = () => {
                                                 alt="Expected Solution"
                                                 className="absolute inset-0 w-full h-full object-contain"
                                                 onError={(e) => {
-                                                    if (!e.target.src.includes('retry=1')) {
+                                                    if (!e.target.src.includes('retry=1') && !e.target.src.includes('data:image')) {
                                                         e.target.src += '?retry=1';
+                                                    } else {
+                                                        e.target.onerror = null;
+                                                        e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><text x="10" y="50" fill="gray">No Image</text></svg>';
                                                     }
                                                 }}
                                             />

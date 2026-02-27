@@ -210,6 +210,7 @@ export default function DataTable({
     bulkActions,
     onSearch,
     searchValue = '',
+    filterData = null // NEW: Full dataset for populating filter values
 }) {
     const [openFilter, setOpenFilter] = useState(null);
     const [expandedRows, setExpandedRows] = useState(new Set());
@@ -251,8 +252,9 @@ export default function DataTable({
 
     // Extract unique values for filter popovers
     const getColumnValues = useCallback((key) => {
-        return data.map(r => r[key]);
-    }, [data]);
+        const source = filterData || data; // Prefer filterData if provided
+        return source.map(r => r[key]);
+    }, [data, filterData]);
 
     const colCount = columns.length + (selectable ? 1 : 0) + (expandable ? 1 : 0);
 

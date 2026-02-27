@@ -1,0 +1,220 @@
+{
+  "passed": true,
+  "visual": {
+    "error": "Failed to launch the browser process! spawn /app/node_modules/puppeteer/.local-chromium/linux-133/chrome-linux/chrome ENOENT\n\n\nTROUBLESHOOTING: https://pptr.dev/troubleshooting\n",
+    "score": 100,
+    "passed": true
+  },
+  "content": {
+    "score": 100,
+    "passed": true,
+    "details": [
+      {
+        "type": "text_content",
+        "score": 100,
+        "passed": true,
+        "weight": 30,
+        "details": "Found 5/5 required texts. All texts found!",
+        "description": "Required text content"
+      },
+      {
+        "type": "html_structure",
+        "score": 100,
+        "passed": true,
+        "weight": 20,
+        "details": "✓ meta: 2 (required: 2), ✓ title: 1 (required: 1), ✓ header: 1 (required: 1), ✓ h1: 1 (required: 1), ✓ p: 8 (required: 8), ✓ section: 4 (required: 4), ✓ h2: 4 (required: 4), ✓ article: 4 (required: 4), ✓ figure: 2 (required: 2), ✓ img: 2 (required: 2), ✓ figcaption: 2 (required: 2), ✓ ul: 1 (required: 1), ✓ li: 3 (required: 3), ✓ video: 1 (required: 1), ✓ source: 1 (required: 1), ✓ footer: 1 (required: 1), ✓ strong: 1 (required: 1), ✓ a: 5 (required: 5)",
+        "description": "Required HTML elements"
+      },
+      {
+        "type": "images",
+        "score": 100,
+        "passed": true,
+        "weight": 15,
+        "details": "Found 2/2 required images",
+        "description": "Required images"
+      }
+    ],
+    "feedback": "Overall Score: 100%\n\n✓ PASSED - Well done!\n\nRequirements:\n✓ Required text content: 100%\n   Found 5/5 required texts. All texts found!\n✓ Required HTML elements: 100%\n   ✓ meta: 2 (required: 2), ✓ title: 1 (required: 1), ✓ header: 1 (required: 1), ✓ h1: 1 (required: 1), ✓ p: 8 (required: 8), ✓ section: 4 (required: 4), ✓ h2: 4 (required: 4), ✓ article: 4 (required: 4), ✓ figure: 2 (required: 2), ✓ img: 2 (required: 2), ✓ figcaption: 2 (required: 2), ✓ ul: 1 (required: 1), ✓ li: 3 (required: 3), ✓ video: 1 (required: 1), ✓ source: 1 (required: 1), ✓ footer: 1 (required: 1), ✓ strong: 1 (required: 1), ✓ a: 5 (required: 5)\n✓ Required images: 100%\n   Found 2/2 required images\n",
+    "requirements": [
+      {
+        "type": "text_content",
+        "weight": 30,
+        "required": [
+          "falcons united - team page",
+          "falcons united",
+          "welcome to the official page of falcons united!",
+          "player profiles",
+          "john doe - forward | goals: 15 | assists: 7"
+        ],
+        "description": "Required text content"
+      },
+      {
+        "type": "html_structure",
+        "weight": 20,
+        "required": {
+          "a": 5,
+          "p": 8,
+          "h1": 1,
+          "h2": 4,
+          "li": 3,
+          "ul": 1,
+          "img": 2,
+          "meta": 2,
+          "title": 1,
+          "video": 1,
+          "figure": 2,
+          "footer": 1,
+          "header": 1,
+          "source": 1,
+          "strong": 1,
+          "article": 4,
+          "section": 4,
+          "figcaption": 2
+        },
+        "description": "Required HTML elements"
+      },
+      {
+        "type": "images",
+        "weight": 15,
+        "required": [
+          {
+            "alt": "John Doe - Forward",
+            "src": "player1.jpg"
+          },
+          {
+            "alt": "Mike Smith - Goalkeeper",
+            "src": "player2.jpg"
+          }
+        ],
+        "description": "Required images"
+      }
+    ]
+  },
+  "feedback": {
+    "technical": {
+      "visual": 100,
+      "behavior": 0,
+      "structure": {
+        "score": 63,
+        "foundRoles": 2.5,
+        "rolesFound": [
+          {
+            "role": "productImage",
+            "element": {
+              "tag": "img",
+              "text": "",
+              "classes": ""
+            },
+            "matches": {
+              "alt": "John Doe - Forward",
+              "src": "player1.jpg",
+              "tag": "img"
+            },
+            "confidence": "high"
+          }
+        ],
+        "totalRoles": 4,
+        "rolesMissing": [],
+        "rolesPartial": [
+          {
+            "role": "productTitle",
+            "element": {
+              "tag": "h1",
+              "text": "Falcons United",
+              "classes": ""
+            },
+            "confidence": "medium",
+            "suggestion": "Consider adding a class like \"title\""
+          },
+          {
+            "role": "productPrice",
+            "element": {
+              "tag": "p",
+              "text": "Welcome to the official page of Falcons United!",
+              "classes": ""
+            },
+            "confidence": "medium",
+            "suggestion": "Consider adding a class like \"price\""
+          },
+          {
+            "role": "productButton",
+            "element": {
+              "tag": "a",
+              "text": "info@falconsunited.com",
+              "classes": ""
+            },
+            "confidence": "medium",
+            "suggestion": "Consider adding a class like \"button\""
+          }
+        ]
+      }
+    },
+    "categories": {
+      "missing": [],
+      "matching": [
+        {
+          "icon": "✅",
+          "details": "Found as <img>",
+          "message": "Product Image detected successfully"
+        }
+      ],
+      "minorDifferences": [
+        {
+          "icon": "⚠️",
+          "message": "Product Title partially matches",
+          "suggestion": "Consider adding a class like \"title\""
+        },
+        {
+          "icon": "⚠️",
+          "message": "Product Price partially matches",
+          "suggestion": "Consider adding a class like \"price\""
+        },
+        {
+          "icon": "⚠️",
+          "message": "Product Button partially matches",
+          "suggestion": "Consider adding a class like \"button\""
+        }
+      ]
+    },
+    "improvements": [
+      "Refine your semantic HTML structure with more descriptive classes"
+    ],
+    "encouragement": [
+      "💪 Good effort! You've got the basics down.",
+      "With a few adjustments, your solution will be even better!"
+    ],
+    "contentValidation": "Overall Score: 100%\n\n✓ PASSED - Well done!\n\nRequirements:\n✓ Required text content: 100%\n   Found 5/5 required texts. All texts found!\n✓ Required HTML elements: 100%\n   ✓ meta: 2 (required: 2), ✓ title: 1 (required: 1), ✓ header: 1 (required: 1), ✓ h1: 1 (required: 1), ✓ p: 8 (required: 8), ✓ section: 4 (required: 4), ✓ h2: 4 (required: 4), ✓ article: 4 (required: 4), ✓ figure: 2 (required: 2), ✓ img: 2 (required: 2), ✓ figcaption: 2 (required: 2), ✓ ul: 1 (required: 1), ✓ li: 3 (required: 3), ✓ video: 1 (required: 1), ✓ source: 1 (required: 1), ✓ footer: 1 (required: 1), ✓ strong: 1 (required: 1), ✓ a: 5 (required: 5)\n✓ Required images: 100%\n   Found 2/2 required images\n"
+  },
+  "structure": {
+    "score": 63,
+    "passed": false,
+    "rolesFound": [
+      {
+        "role": "productImage",
+        "element": {
+          "tag": "img",
+          "text": "",
+          "classes": ""
+        },
+        "matches": {
+          "alt": "John Doe - Forward",
+          "src": "player1.jpg",
+          "tag": "img"
+        },
+        "confidence": "high"
+      }
+    ]
+  },
+  "timestamp": "2026-02-26T06:28:39.552Z",
+  "finalScore": 100,
+  "thresholds": {
+    "visual": 80,
+    "overall": 75,
+    "structure": 80
+  },
+  "visualScore": 100,
+  "contentScore": 100,
+  "submissionId": "553d1083-1271-46a6-be5a-6b9d61998c19",
+  "behaviorScore": 0,
+  "structureScore": 63
+}
