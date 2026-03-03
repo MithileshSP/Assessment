@@ -226,6 +226,7 @@ export default function AdminAssignment() {
     const [subFilters, setSubFilters] = useState({});
     const [subLoading, setSubLoading] = useState(false);
     const [selectedSubs, setSelectedSubs] = useState(new Set());
+    const [subFilterOptions, setSubFilterOptions] = useState({ courses: [], levels: [], statuses: [], faculty: [] });
 
     // ── Roster state ──
     const [rosterSearch, setRosterSearch] = useState('');
@@ -271,6 +272,15 @@ export default function AdminAssignment() {
             setDashLoading(false);
         }
     }, [showToast]);
+
+    const loadFilterOptions = useCallback(async () => {
+        try {
+            const res = await api.get('/admin/all-submissions/filter-options');
+            setSubFilterOptions(res.data);
+        } catch (e) {
+            console.error('Failed to load filter options', e);
+        }
+    }, []);
 
     const loadSubmissions = useCallback(async () => {
         try {
@@ -338,6 +348,10 @@ export default function AdminAssignment() {
     useEffect(() => {
         if (activeTab === 'submissions') loadSubmissions();
     }, [activeTab, loadSubmissions]);
+
+    useEffect(() => {
+        if (activeTab === 'submissions') loadFilterOptions();
+    }, [activeTab, loadFilterOptions]);
 
     useEffect(() => {
         if (activeTab === 'audit') loadAudit();
@@ -530,19 +544,19 @@ export default function AdminAssignment() {
         },
         {
             key: 'course_title', label: 'Course', sortable: true, filterable: true,
-            filterOptions: ['HTML / CSS - Level 1', 'JavaScript - Level 2', 'React - Level 3'],
+            filterOptions: subFilterOptions.courses,
             renderCell: (v) => <span className="font-medium text-slate-700 text-xs">{v || '—'}</span>
         },
         {
             key: 'level', label: 'Lvl', sortable: true, width: '50px', filterable: true,
-            filterOptions: [1, 2, 3],
+            filterOptions: subFilterOptions.levels,
             renderCell: (v) => (
                 <span className="inline-block px-1.5 py-0.5 bg-slate-100 rounded text-[10px] font-bold text-slate-500">{v ?? '-'}</span>
             )
         },
         {
             key: 'assignment_status', label: 'Status', sortable: true, filterable: true,
-            filterOptions: ['assigned', 'unassigned', 'in_progress', 'evaluated', 'pending', 'passed', 'failed', 'reallocated', 'reopened'],
+            filterOptions: subFilterOptions.statuses,
             renderCell: (v) => <StatusBadge value={v || 'unassigned'} />
         },
         {
@@ -567,7 +581,7 @@ export default function AdminAssignment() {
         },
         {
             key: 'faculty_name', label: 'Assigned To', sortable: true, filterable: true,
-            filterOptions: facultyLoad.map(f => f.full_name).filter(Boolean).sort(),
+            filterOptions: subFilterOptions.faculty.length > 0 ? subFilterOptions.faculty : facultyLoad.map(f => f.full_name).filter(Boolean).sort(),
             renderCell: (v, row) => v ? (
                 <button
                     onClick={(e) => {
@@ -605,7 +619,7 @@ export default function AdminAssignment() {
                 </button>
             )
         }
-    ], [navigate, facultyLoad, handleDeleteSubmission]);
+    ], [navigate, facultyLoad, handleDeleteSubmission, subFilterOptions]);
 
     const auditCols = useMemo(() => [
         {

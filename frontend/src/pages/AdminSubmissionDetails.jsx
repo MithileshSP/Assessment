@@ -427,19 +427,19 @@ export default function AdminSubmissionDetails() {
                           <div className="space-y-2">
                             <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider ml-1">Candidate</p>
                             <div className="aspect-video rounded border border-slate-100 overflow-hidden shadow-sm bg-slate-50 relative group">
-                              <img src={submission.user_screenshot || `/screenshots/${submission.id}-candidate.png`} className="absolute inset-0 w-full h-full object-contain group-hover:scale-105 transition-transform duration-500" alt="Candidate" onError={(e) => { e.target.onerror = null; e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><text x="10" y="50" fill="gray">No Image</text></svg>'; }} />
+                              <img src={submission.user_screenshot || `/fullstack/screenshots/${submission.id}-candidate.png`} className="absolute inset-0 w-full h-full object-contain group-hover:scale-105 transition-transform duration-500" alt="Candidate" onError={(e) => { e.target.onerror = null; e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><text x="10" y="50" fill="gray">No Image</text></svg>'; }} />
                             </div>
                           </div>
                           <div className="space-y-2">
                             <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider ml-1">Reference</p>
                             <div className="aspect-video rounded border border-slate-100 overflow-hidden shadow-sm bg-slate-50 relative group">
-                              <img src={submission.expected_screenshot || `/screenshots/${submission.id}-expected.png`} className="absolute inset-0 w-full h-full object-contain group-hover:scale-105 transition-transform duration-500" alt="Reference" onError={(e) => { e.target.onerror = null; e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><text x="10" y="50" fill="gray">No Image</text></svg>'; }} />
+                              <img src={submission.expected_screenshot || `/fullstack/screenshots/${submission.id}-expected.png`} className="absolute inset-0 w-full h-full object-contain group-hover:scale-105 transition-transform duration-500" alt="Reference" onError={(e) => { e.target.onerror = null; e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><text x="10" y="50" fill="gray">No Image</text></svg>'; }} />
                             </div>
                           </div>
                           <div className="space-y-2">
                             <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider ml-1">Difference</p>
                             <div className="aspect-video rounded border border-slate-900 overflow-hidden shadow-sm bg-slate-900 relative group">
-                              <img src={submission.diff_screenshot || `/screenshots/${submission.id}-diff.png`} className="absolute inset-0 w-full h-full object-contain opacity-80 group-hover:opacity-100 transition-opacity" alt="Diff" onError={(e) => { e.target.onerror = null; e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><text x="10" y="50" fill="gray">No Image</text></svg>'; }} />
+                              <img src={submission.diff_screenshot || `/fullstack/screenshots/${submission.id}-diff.png`} className="absolute inset-0 w-full h-full object-contain opacity-80 group-hover:opacity-100 transition-opacity" alt="Diff" onError={(e) => { e.target.onerror = null; e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><text x="10" y="50" fill="gray">No Image</text></svg>'; }} />
                             </div>
                           </div>
                         </div>
@@ -493,14 +493,14 @@ export default function AdminSubmissionDetails() {
                   <div className="flex-1 bg-slate-50 p-4 flex flex-col">
                     <h4 className="text-[9px] font-bold uppercase tracking-wider text-slate-400 mb-2">Candidate Output</h4>
                     <div className="flex-1 bg-white rounded border border-slate-200 shadow-sm overflow-hidden relative">
-                      <img src={submission.user_screenshot || `/screenshots/${submission.id}-candidate.png`} className="absolute inset-0 w-full h-full object-contain" alt="Candidate" onError={(e) => { e.target.onerror = null; e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><text x="10" y="50" fill="gray">No Image</text></svg>'; }} />
+                      <img src={submission.user_screenshot || `/fullstack/screenshots/${submission.id}-candidate.png`} className="absolute inset-0 w-full h-full object-contain" alt="Candidate" onError={(e) => { e.target.onerror = null; e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><text x="10" y="50" fill="gray">No Image</text></svg>'; }} />
                     </div>
                   </div>
                   <div className="w-px bg-slate-200" />
                   <div className="flex-1 bg-slate-50 p-4 flex flex-col">
                     <h4 className="text-[9px] font-bold uppercase tracking-wider text-slate-400 mb-2">Reference Output</h4>
                     <div className="flex-1 bg-white rounded border border-slate-200 shadow-sm overflow-hidden relative">
-                      <img src={submission.expected_screenshot || `/screenshots/${submission.id}-expected.png`} className="absolute inset-0 w-full h-full object-contain" alt="Expected" onError={(e) => { e.target.onerror = null; e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><text x="10" y="50" fill="gray">No Image</text></svg>'; }} />
+                      <img src={submission.expected_screenshot || `/fullstack/screenshots/${submission.id}-expected.png`} className="absolute inset-0 w-full h-full object-contain" alt="Expected" onError={(e) => { e.target.onerror = null; e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><text x="10" y="50" fill="gray">No Image</text></svg>'; }} />
                     </div>
                   </div>
                 </div>

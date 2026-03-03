@@ -208,7 +208,7 @@ export default function AdminFacultyDetail() {
 
             <div className="max-w-7xl mx-auto space-y-6 pb-20">
                 {/* Sticky Header / Top Bar */}
-                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sticky top-0 z-10">
+                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sticky top-0 z-20">
                     <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
                         {/* Profile Info */}
                         <div className="flex items-center gap-4">

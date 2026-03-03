@@ -341,7 +341,7 @@ const FacultyEvaluation = () => {
                                     <div className="flex-1 relative rounded-2xl overflow-hidden border border-slate-200 shadow-sm bg-white group transition-all hover:border-blue-200">
                                         {(submission.user_screenshot || submission.id) ? (
                                             <img
-                                                src={`${window.location.origin}/screenshots/${(submission.user_screenshot || `${submission.id}-candidate.png`).split('/').pop()}`}
+                                                src={`${window.location.origin}/fullstack/screenshots/${(submission.user_screenshot || `${submission.id}-candidate.png`).split('/').pop()}`}
                                                 alt="User Screenshot"
                                                 className="absolute inset-0 w-full h-full object-contain"
                                                 onError={(e) => {
@@ -366,7 +366,7 @@ const FacultyEvaluation = () => {
                                     <div className="flex-1 relative rounded-2xl overflow-hidden border border-slate-200 shadow-sm bg-white group transition-all hover:border-emerald-200">
                                         {(submission.expected_screenshot || submission.id) ? (
                                             <img
-                                                src={`${window.location.origin}/screenshots/${(submission.expected_screenshot || `${submission.id}-expected.png`).split('/').pop()}`}
+                                                src={`${window.location.origin}/fullstack/screenshots/${(submission.expected_screenshot || `${submission.id}-expected.png`).split('/').pop()}`}
                                                 alt="Expected Solution"
                                                 className="absolute inset-0 w-full h-full object-contain"
                                                 onError={(e) => {

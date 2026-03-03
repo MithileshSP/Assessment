@@ -253,8 +253,10 @@ class SubmissionModel {
       if (path.startsWith('http://') || path.startsWith('https://')) {
         return path;
       }
-      // Return path as-is (relative path) so frontend uses its own origin
-      // Nginx will derive the correct full URL
+      // Rewrite /screenshots/ to /fullstack/screenshots/ for reverse proxy compatibility
+      if (path.startsWith('/screenshots/')) {
+        return '/fullstack' + path;
+      }
       return path;
     };
 

@@ -79,7 +79,7 @@ const AdminAttendance = () => {
 
             const [unblockedRes, usersRes] = await Promise.all([
                 api.get('/attendance/unblocked-list'),
-                api.get('/users?role=student')
+                api.get('/users?role=student&limit=9999')
             ]);
 
             setUnblockedUsers(unblockedRes.data);
@@ -747,7 +747,7 @@ const AdminAttendance = () => {
                                             (u.roll_no || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
                                             (u.username || '').toLowerCase().includes(searchQuery.toLowerCase())
                                         )
-                                        .slice(0, 15)
+                                        .slice(0, 50)
                                         .map(user => (
                                             <div key={user.id} className="p-4 rounded-xl border border-slate-100 hover:border-blue-100 hover:bg-blue-50/20 flex items-center justify-between group transition-all">
                                                 <div className="flex items-center gap-4">

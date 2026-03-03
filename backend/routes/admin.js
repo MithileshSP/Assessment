@@ -1023,6 +1023,30 @@ router.post('/bulk-assign', verifyAdmin, async (req, res) => {
 });
 
 /**
+ * GET /api/admin/all-submissions/filter-options
+ * Returns distinct values for filter dropdowns (courses, levels, statuses, faculty names)
+ */
+router.get('/all-submissions/filter-options', verifyAdmin, async (req, res) => {
+  try {
+    const [courses, levels, statuses, faculty] = await Promise.all([
+      db.query("SELECT DISTINCT c.title FROM submissions s JOIN courses c ON s.course_id = c.id WHERE s.status != 'saved' AND c.title IS NOT NULL ORDER BY c.title"),
+      db.query("SELECT DISTINCT s.level FROM submissions s WHERE s.status != 'saved' AND s.level IS NOT NULL ORDER BY s.level"),
+      db.query("SELECT DISTINCT COALESCE(sa.status, 'unassigned') as status FROM submissions s LEFT JOIN submission_assignments sa ON s.id = sa.submission_id WHERE s.status != 'saved' ORDER BY status"),
+      db.query("SELECT DISTINCT f.full_name FROM submission_assignments sa JOIN users f ON sa.faculty_id = f.id WHERE f.full_name IS NOT NULL ORDER BY f.full_name")
+    ]);
+    res.json({
+      courses: courses.map(r => r.title),
+      levels: levels.map(r => r.level),
+      statuses: statuses.map(r => r.status),
+      faculty: faculty.map(r => r.full_name)
+    });
+  } catch (error) {
+    console.error('Error fetching filter options:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
  * GET /api/admin/all-submissions
  * Server-paginated list of all submissions with assignment status + faculty info.
  * Query params: page, limit, status, courseId, level, search, sortBy, sortDir
