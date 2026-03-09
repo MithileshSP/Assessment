@@ -1,0 +1,118 @@
+services:
+  portal_mysql:
+    image: gokulv456/assessment-mysql:v3.4.25
+    container_name: portal_mysql
+    restart: unless-stopped
+    command: --bind-address=0.0.0.0
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME}
+      TZ: Asia/Kolkata
+    volumes:
+      - portal_mysql_data:/var/lib/mysql
+    ports:
+      - "3307:3306"
+    networks:
+      - test-portal-network
+    healthcheck:
+      test: [ "CMD-SHELL", "mysqladmin ping -h 127.0.0.1 --silent" ]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+
+  portal_redis:
+    image: redis:latest
+    container_name: portal_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    networks:
+      - test-portal-network
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    image: gokulv456/assessment-backend:v3.4.27
+    restart: unless-stopped
+    depends_on:
+      portal_mysql:
+        condition: service_healthy
+      portal_redis:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 7000
+      DB_HOST: portal_mysql
+      DB_PORT: 3306
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+      REDIS_URL: redis://portal_redis:6379
+      USE_JSON: ${USE_JSON}
+      ASSETS_ROOT: /var/www/portal-assets
+      JWT_SECRET: ${JWT_SECRET}
+      GPU_API_URL: ${GPU_API_URL}
+      GPU_API_KEY: ${GPU_API_KEY}
+      AI_FACULTY_USERNAME: ${AI_FACULTY_USERNAME}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
+      TZ: Asia/Kolkata
+    volumes:
+      - portal_backend_screenshots:/app/screenshots
+      - portal_backend_data:/app/data
+      - portal_backend_assets:/var/www/portal-assets
+      - portal_backend_ref_images:/app/public/reference_images
+    deploy:
+      replicas: 3
+    networks:
+      - test-portal-network
+
+  worker:
+    image: gokulv456/assessment-backend:v3.4.27
+    container_name: portal_ai_worker
+    restart: unless-stopped
+    command: npm run worker
+    depends_on:
+      portal_mysql:
+        condition: service_healthy
+      portal_redis:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      DB_HOST: portal_mysql
+      DB_PORT: 3306
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+      REDIS_URL: redis://portal_redis:6379
+      GPU_API_URL: ${GPU_API_URL}
+      GPU_API_KEY: ${GPU_API_KEY}
+      TZ: Asia/Kolkata
+    networks:
+      - test-portal-network
+
+  frontend:
+    image: gokulv456/assessment-frontend:v3.4.27
+    container_name: portal_frontend
+    restart: unless-stopped
+    ports:
+      - "100:80"
+    depends_on:
+      - backend
+    networks:
+      - test-portal-network
+
+networks:
+  test-portal-network:
+    driver: bridge
+
+volumes:
+  portal_mysql_data:
+  portal_backend_screenshots:
+  portal_backend_data:
+  portal_backend_assets:
+  portal_backend_ref_images:
