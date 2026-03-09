@@ -24,7 +24,7 @@ import {
     Database,
     AlertTriangle
 } from 'lucide-react';
-import { clearAdminSession, getUserRole } from '../utils/session';
+import { useAuth } from '../context/AuthContext';
 
 const SaaSLayout = ({ children, fullWidth = false }) => {
     const [isSidebarOpen, setSidebarOpen] = useState(false);
@@ -32,21 +32,15 @@ const SaaSLayout = ({ children, fullWidth = false }) => {
     const isSidebarOpenEffectively = isSidebarOpen || isHovered;
     const navigate = useNavigate();
     const location = useLocation();
-    const role = getUserRole();
+    const { role, user: authUser } = useAuth();
     const userData = (() => {
-        try {
-            const adminUser = localStorage.getItem('adminUser');
-            const studentUser = localStorage.getItem('user');
-            if (adminUser) return JSON.parse(adminUser);
-            if (studentUser) return JSON.parse(studentUser);
-            return {
-                fullName: localStorage.getItem('fullName'),
-                username: localStorage.getItem('username'),
-                rollNo: localStorage.getItem('rollNo')
-            };
-        } catch (e) {
-            return { username: localStorage.getItem('username') };
-        }
+        if (authUser) return authUser;
+        // Fallback to non-sensitive localStorage display data
+        return {
+            fullName: localStorage.getItem('fullName'),
+            username: 'User',
+            rollNo: localStorage.getItem('rollNo')
+        };
     })();
 
     const handleLogout = () => {

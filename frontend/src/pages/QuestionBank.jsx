@@ -29,12 +29,12 @@ import { X } from 'lucide-react';
 import SaaSLayout from '../components/SaaSLayout';
 import * as api from '../services/api';
 import apiClient from '../services/api';
-import { getUserRole } from '../utils/session';
+import { useAuth } from '../context/AuthContext';
 
 const QuestionBank = () => {
     const { courseId } = useParams();
     const navigate = useNavigate();
-    const userRole = getUserRole();
+    const { role: userRole } = useAuth();
 
     const [course, setCourse] = useState(null);
     const [questionsByLevel, setQuestionsByLevel] = useState({});
