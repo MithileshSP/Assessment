@@ -7,13 +7,15 @@ import TerminalPanel from "../components/TerminalPanel";
 import PreviewFrame from "../components/PreviewFrame";
 import ResultsPanel from "../components/ResultsPanel";
 import api from "../services/api";
+import { useAuth } from "../context/AuthContext";
 
 export default function LevelChallenge() {
   const { levelId, courseId: oldCourseId, level: levelParam } = useParams();
   const courseId = levelId || oldCourseId;
   const level = levelParam || 1;
   const navigate = useNavigate();
-  const userId = localStorage.getItem("userId") || "default-user";
+  const { user: authUser, isAdmin } = useAuth();
+  const userId = authUser?.id || "default-user";
 
   const [assignedQuestions, setAssignedQuestions] = useState([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -183,8 +185,7 @@ export default function LevelChallenge() {
   }, [consoleOutput]);
 
   const checkAttendance = async () => {
-    const userRole = localStorage.getItem('userRole');
-    if (userRole === 'admin') {
+    if (isAdmin) {
       setAttendanceStatus('started');
       loadLevelQuestions(); // ADMIN FIX
       loadRestrictions();
@@ -836,7 +837,7 @@ export default function LevelChallenge() {
                   <div className="space-y-1">
                     <span className="text-[10px] font-semibold text-slate-400 uppercase">Fullname</span>
                     <p className="text-lg font-bold text-slate-900 leading-none">
-                      {studentInfo?.fullName || localStorage.getItem('fullName') || 'Unknown Candidate'}
+                      {studentInfo?.fullName || authUser?.fullName || localStorage.getItem('fullName') || 'Unknown Candidate'}
                     </p>
                   </div>
                   <div className="space-y-1">
@@ -883,7 +884,7 @@ export default function LevelChallenge() {
                 )}
 
                 {/* Checklist (Only show if approved/admin/started possibilities) */}
-                {(attendanceStatus === 'approved' || attendanceStatus === 'none' || localStorage.getItem('userRole') === 'admin') && (
+                {(attendanceStatus === 'approved' || attendanceStatus === 'none' || isAdmin) && (
                   <div className="space-y-4 mb-8">
                     {[
                       "I will not open developer tools",
@@ -910,7 +911,7 @@ export default function LevelChallenge() {
 
               {/* Action Button */}
               <div className="pt-6 border-t border-[#e5e7eb]">
-                {(attendanceStatus === 'approved' || attendanceStatus === 'none' || localStorage.getItem('userRole') === 'admin') ? (
+                {(attendanceStatus === 'approved' || attendanceStatus === 'none' || isAdmin) ? (
                   <>
                     <button
                       onClick={startTest}
@@ -1185,7 +1186,7 @@ export default function LevelChallenge() {
             </div>
           </div>
           {evaluating && <div className="p-4 bg-slate-900 text-white rounded-md animate-pulse flex items-center gap-3"><RefreshCw className="animate-spin" size={16} /> <span className="font-bold text-xs uppercase tracking-wider">Evaluating Submission...</span></div>}
-          {result && localStorage.getItem('userRole') === 'admin' && <div className="h-48 overflow-auto border rounded-md p-4 bg-white shadow-inner"><ResultsPanel result={result} /></div>}
+          {result && isAdmin && <div className="h-48 overflow-auto border rounded-md p-4 bg-white shadow-inner"><ResultsPanel result={result} /></div>}
         </div>
       </main>
 

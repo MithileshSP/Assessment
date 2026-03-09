@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import api, { getLevelQuestions, getUserSubmissions } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 export default function LevelResults() {
   const { courseId, level } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
-  const userId = localStorage.getItem('userId') || JSON.parse(localStorage.getItem('user'))?.id || 'default-user';
+  const { user: authUser } = useAuth();
+  const userId = authUser?.id || 'default-user';
 
   const [results, setResults] = useState([]);
   const [levelUnlocked, setLevelUnlocked] = useState(false);

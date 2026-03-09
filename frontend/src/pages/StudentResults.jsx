@@ -13,6 +13,7 @@ import {
     ArrowRight,
     Unlock
 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 const StudentResults = () => {
     const [submissions, setSubmissions] = useState([]);
@@ -20,7 +21,8 @@ const StudentResults = () => {
     const [search, setSearch] = useState('');
     const navigate = useNavigate();
 
-    const userId = localStorage.getItem('userId') || JSON.parse(localStorage.getItem('user'))?.id;
+    const { user: authUser } = useAuth();
+    const userId = authUser?.id;
 
     useEffect(() => {
         if (userId) {

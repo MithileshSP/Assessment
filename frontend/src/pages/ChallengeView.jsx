@@ -171,73 +171,14 @@ export default function ChallengeView() {
 
       const submissionId = submitResponse.data.submissionId;
 
-      // Start evaluation with real-time progress
-      setEvaluating(true);
-      setEvaluationStep('🚀 Starting evaluation...');
+      // Decoupled flow: submission is saved, evaluation happens asynchronously by Faculty/LLM
+      alert('✅ Submitted Successfully!\n\nYour solution has been saved and is awaiting Faculty evaluation.');
 
-      try {
-        // Show progress stages
-        setTimeout(() => setEvaluationStep('📸 Rendering screenshots...'), 500);
-        setTimeout(() => setEvaluationStep('🔍 Comparing DOM structure...'), 2000);
-        setTimeout(() => setEvaluationStep('🎨 Matching pixels...'), 4000);
-        setTimeout(() => setEvaluationStep('📊 Calculating final score...'), 6000);
-
-        // Call evaluation and WAIT for the result (same as admin panel)
-        const evalResponse = await evaluateSolution(submissionId);
-
-        // Evaluation complete - show result immediately
-        setEvaluationStep('✅ Complete!');
-        const evaluationResult = evalResponse.data.result;
-        setResult(evaluationResult);
-        setEvaluating(false);
-
-        // If passed, mark question as complete
-        if (evaluationResult.passed && challenge.courseId && challenge.level) {
-          try {
-            const userId = localStorage.getItem('userId') || 'default-user';
-            const completeResponse = await completeQuestion(userId, {
-              questionId: id,
-              courseId: challenge.courseId,
-              level: challenge.level,
-              score: evaluationResult.finalScore
-            });
-
-            // Show level completion message
-            if (completeResponse.data.levelComplete) {
-              setTimeout(() => {
-                const message = completeResponse.data.nextLevelUnlocked
-                  ? `🎉 Congratulations!\n\nYou completed ${completeResponse.data.completedQuestions}/${completeResponse.data.totalQuestions} questions!\n\n✅ Level ${challenge.level} Complete!\n🔓 Level ${completeResponse.data.nextLevel} Unlocked!\n\n📊 Points earned: ${completeResponse.data.points}\n🏆 Total points: ${completeResponse.data.totalPoints}`
-                  : `✅ Question Complete!\n\n📊 Score: ${evaluationResult.finalScore}%\n💰 Points: ${completeResponse.data.points}`;
-
-                alert(message);
-
-                // Navigate to course detail to see unlocked level
-                if (completeResponse.data.nextLevelUnlocked) {
-                  navigate(`/course/${challenge.courseId}`);
-                }
-              }, 1000);
-            }
-          } catch (progressError) {
-            console.error('Failed to update progress:', progressError);
-            // Don't show error to user, just log it
-          }
-        }
-
-      } catch (evalError) {
-        console.error('Evaluation failed:', evalError);
-        setEvaluating(false);
-        setEvaluationStep('');
-
-        const errorMsg = evalError.response?.data?.details || evalError.message;
-        alert(
-          `❌ Evaluation failed: ${errorMsg}\n\n` +
-          'Your submission was saved, but evaluation encountered an error.\n\n' +
-          'Solutions:\n' +
-          '1. Check the admin panel for your submission\n' +
-          '2. Ask admin to re-evaluate\n' +
-          '3. Check if backend server is running (port 5000)\n' +
-          '4. Check browser console for details'
-        );
+      // Navigate to course detail or home to see unlocked levels later
+      if (challenge.courseId) {
+        navigate(`/course/${challenge.courseId}`);
+      } else {
+        navigate('/');
       }
 
     } catch (error) {
@@ -580,36 +521,6 @@ export default function ChallengeView() {
               )}
             </div>
           </div>
-        </div>
-      )}
-
-      {/* Results */}
-      {(evaluating || result) && (
-        <div className="card">
-          <h2 className="text-lg font-bold mb-3">Evaluation Results</h2>
-          {evaluating ? (
-            <div className="text-center py-8">
-              <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
-              <p className="text-lg font-semibold text-gray-700 mb-2">{evaluationStep || 'Evaluating...'}</p>
-              <p className="text-sm text-gray-500 mb-4">
-                This may take 5-10 seconds
-              </p>
-              <div className="max-w-md mx-auto text-left bg-blue-50 p-4 rounded-lg">
-                <p className="text-xs font-semibold text-blue-900 mb-2 flex items-center gap-1"><RefreshCw size={12} /> Evaluation Process:</p>
-                <ul className="text-xs text-blue-800 space-y-1">
-                  <li>• Launching headless browser (Chrome)</li>
-                  <li>• Rendering your code as screenshot</li>
-                  <li>• Rendering expected solution</li>
-                  <li>• Comparing DOM structure (40%)</li>
-                  <li>• Comparing pixels (921,600 pixels - 60%)</li>
-                  <li>• Generating difference map</li>
-                  <li>• Calculating final score</li>
-                </ul>
-              </div>
-            </div>
-          ) : (
-            <ResultsPanel result={result} />
-          )}
         </div>
       )}
 
