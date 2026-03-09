@@ -14,11 +14,13 @@ import {
   AlertCircle,
   ChevronRight
 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 export default function LevelPage() {
   const { courseId } = useParams(); // LSP: No level param
   const level = 1; // LSP: Always Level 1
   const navigate = useNavigate();
+  const { user: authUser } = useAuth();
   const [course, setCourse] = useState(null);
   const [questions, setQuestions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -29,7 +31,7 @@ export default function LevelPage() {
 
   const loadLevelData = async () => {
     try {
-      const userId = localStorage.getItem('userId') || 'default-user';
+      const userId = authUser?.id || 'default-user';
       const [courseRes, questionsRes] = await Promise.all([
         getCourse(courseId),
         getLevelQuestions(courseId, level, userId)

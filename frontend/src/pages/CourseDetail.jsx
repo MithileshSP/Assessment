@@ -10,10 +10,12 @@ import {
   Layers,
   Star
 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 export default function CourseDetail() {
   const { courseId } = useParams();
   const navigate = useNavigate();
+  const { user: authUser } = useAuth();
   const [course, setCourse] = useState(null);
   const [currentLevel, setCurrentLevel] = useState(1);
   const [completedLevels, setCompletedLevels] = useState([]);
@@ -25,7 +27,7 @@ export default function CourseDetail() {
 
   const loadData = async () => {
     try {
-      const userId = localStorage.getItem('userId');
+      const userId = authUser?.id;
       const [courseRes, progressRes] = await Promise.all([
         getCourse(courseId),
         userId ? getUserProgress(userId) : { data: [] }

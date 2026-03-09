@@ -13,29 +13,26 @@ import {
   Lock,
   CheckCircle
 } from 'lucide-react';
-import {
-  isAdminSessionActive,
-} from '../utils/session';
+import { useAuth } from '../context/AuthContext';
 
 export default function CoursesHome() {
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(() => isAdminSessionActive());
+  const { role, user: authUser, isAdmin } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    const role = localStorage.getItem('userRole');
     if (role === 'faculty') {
       navigate('/faculty/dashboard');
       return;
     }
     loadCourses();
-  }, []);
+  }, [role]);
 
   const loadCourses = async () => {
     try {
       // Pass userId for prerequisite checking
-      const userId = localStorage.getItem('userId');
+      const userId = authUser?.id;
       const response = await getCourses(userId ? { userId } : {});
       setCourses(response.data);
     } catch (error) {
