@@ -126,6 +126,9 @@ export const deleteSubmission = (id) =>
 export const getUserSubmissions = (userId) =>
   api.get(`/submissions/user/${userId}`);
 
+export const importSubmissions = (submissions) =>
+  api.post('/submissions/import', { submissions });
+
 // Admin Level Reset
 export const resetLevel = (userId, courseId, level) =>
   api.post('/admin/reset-level', { userId, courseId, level });
