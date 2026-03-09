@@ -69,12 +69,12 @@ function FacultyPickerModal({ isOpen, onClose, faculty, onSelect, loading, title
                                 className="w-full flex items-center gap-3 px-3 py-2.5 rounded-md hover:bg-slate-50 text-left transition-colors disabled:opacity-40 disabled:cursor-not-allowed group"
                             >
                                 <div className="w-8 h-8 bg-slate-100 rounded-md flex items-center justify-center flex-shrink-0 text-xs font-bold text-slate-600 group-hover:bg-white group-hover:shadow-sm border border-transparent group-hover:border-slate-200 transition-all">
-                                    {(f.full_name || '?')[0].toUpperCase()}
+                                    {((f.full_name ? f.full_name : 'System')[0] || '?').toUpperCase()}
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <div className="flex justify-between items-center">
-                                        <p className="text-xs font-semibold text-slate-700 truncate">{f.full_name}</p>
-                                        <span className="text-[10px] text-slate-400">{f.email}</span>
+                                        <p className="text-xs font-semibold text-slate-700 truncate">{f.full_name || 'System Auto Evaluator'}</p>
+                                        <span className="text-[10px] text-slate-400">{f.email || 'system@local'}</span>
                                     </div>
                                     <CapacityBar current={f.current_load ?? f.pending ?? 0} max={f.max_capacity ?? 10} compact />
                                 </div>
@@ -165,6 +165,28 @@ export default function AdminFacultyDetail() {
         }
     };
 
+    const handleReEvaluate = async () => {
+        if (selectedSubs.size === 0) return;
+        if (!window.confirm(`Are you sure you want to send ${selectedSubs.size} submission(s) back for re-evaluation? This will clear their existing scores.`)) {
+            return;
+        }
+
+        setActionLoading(true);
+        try {
+            const res = await api.post('/admin/submissions/re-evaluate', {
+                submissionIds: [...selectedSubs]
+            });
+            const d = res.data;
+            showToast(d.message);
+            setSelectedSubs(new Set());
+            loadData();
+        } catch (err) {
+            showToast(err.response?.data?.error || 'Re-evaluation failed', 'error');
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
     const handleSaveCapacity = async () => {
         const val = parseInt(tempCapacity, 10);
         if (isNaN(val) || val < 1 || val > 100) {
@@ -220,12 +242,12 @@ export default function AdminFacultyDetail() {
                                 Back
                             </button>
                             <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center text-white text-xl font-black shadow-lg shadow-blue-500/20">
-                                {(faculty.full_name || '?')[0].toUpperCase()}
+                                {((faculty.full_name ? faculty.full_name : 'System')[0] || '?').toUpperCase()}
                             </div>
                             <div>
-                                <h1 className="text-2xl font-black text-slate-900">{faculty.full_name}</h1>
+                                <h1 className="text-2xl font-black text-slate-900">{faculty.full_name || 'System Auto Evaluator'}</h1>
                                 <div className="flex items-center gap-3 text-sm text-slate-500 mt-1">
-                                    <span className="flex items-center gap-1.5"><Mail size={14} /> {faculty.email}</span>
+                                    <span className="flex items-center gap-1.5"><Mail size={14} /> {faculty.email || 'system@local'}</span>
                                     <span className="hidden sm:flex items-center gap-1.5"><Briefcase size={14} /> Faculty</span>
                                 </div>
                             </div>
@@ -234,13 +256,23 @@ export default function AdminFacultyDetail() {
                         {/* Actions */}
                         <div className="flex items-center gap-3">
                             {selectedSubs.size > 0 && (
-                                <button
-                                    onClick={() => setReassignModalOpen(true)}
-                                    className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-lg text-sm font-semibold hover:bg-slate-800 transition-all shadow-sm"
-                                >
-                                    <ArrowRightLeft size={16} />
-                                    Reallocate ({selectedSubs.size})
-                                </button>
+                                <>
+                                    <button
+                                        onClick={handleReEvaluate}
+                                        disabled={actionLoading}
+                                        className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-semibold hover:bg-emerald-700 transition-all shadow-sm disabled:opacity-50"
+                                    >
+                                        <Shuffle size={16} />
+                                        Re-evaluate ({selectedSubs.size})
+                                    </button>
+                                    <button
+                                        onClick={() => setReassignModalOpen(true)}
+                                        className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-lg text-sm font-semibold hover:bg-slate-800 transition-all shadow-sm"
+                                    >
+                                        <ArrowRightLeft size={16} />
+                                        Reallocate ({selectedSubs.size})
+                                    </button>
+                                </>
                             )}
                             <button className="flex items-center gap-2 px-4 py-2 border border-slate-200 rounded-lg text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900 transition-all shadow-sm">
                                 <Shuffle size={16} />
@@ -344,10 +376,10 @@ export default function AdminFacultyDetail() {
                                 key: 'student_name', label: 'Student', filterable: true, renderCell: (v, r) => (
                                     <div className="flex items-center gap-3">
                                         <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-500">
-                                            {v[0]}
+                                            {(v || '?')[0].toUpperCase()}
                                         </div>
                                         <div>
-                                            <p className="font-semibold text-slate-900">{v}</p>
+                                            <p className="font-semibold text-slate-900">{v || 'Anonymous'}</p>
                                             <p className="text-xs text-slate-500">{r.student_email}</p>
                                         </div>
                                     </div>

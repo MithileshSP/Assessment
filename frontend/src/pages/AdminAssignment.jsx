@@ -6,7 +6,7 @@ import api from '../services/api';
 import {
     Users, RefreshCw, BarChart3, Clock, Package, Check, Search,
     Activity, Shield, ChevronRight, Download, UserPlus, Shuffle,
-    AlertTriangle, Zap, Settings, X, Eye, UserCheck, UserX,
+    AlertTriangle, Zap, Settings, X, Eye, UserCheck, UserX, Trash2,
     ChevronDown, FileText, TrendingUp, MoreHorizontal, ArrowRight,
     Filter
 } from 'lucide-react';
@@ -100,7 +100,7 @@ function FacultySubmissionsList({ facultyId }) {
     };
 
     const cols = [
-        { key: 'student_name', label: 'Student', renderCell: (v, r) => <div><p className="font-medium text-xs text-slate-900">{v}</p><p className="text-[10px] text-slate-500">{r.student_email}</p></div> },
+        { key: 'student_name', label: 'Student', renderCell: (v, r) => <div><p className="font-medium text-xs text-slate-900">{v || 'Anonymous'}</p><p className="text-[10px] text-slate-500">{r.student_email}</p></div> },
         { key: 'course_title', label: 'Course', renderCell: (v) => <span className="text-xs text-slate-600">{v}</span> },
         { key: 'level', label: 'Lvl', width: '50px', renderCell: (v) => <span className="px-1.5 py-0.5 bg-slate-100 rounded text-[10px] font-bold text-slate-600">{v}</span> },
         { key: 'assignment_status', label: 'Status', renderCell: (v) => <StatusBadge value={v} /> },
@@ -228,6 +228,11 @@ export default function AdminAssignment() {
     const [selectedSubs, setSelectedSubs] = useState(new Set());
     const [subFilterOptions, setSubFilterOptions] = useState({ courses: [], levels: [], statuses: [], faculty: [] });
 
+    // Reset page 1 on search or filter change
+    useEffect(() => {
+        setSubPage(1);
+    }, [subSearch, subFilters]);
+
     // ── Roster state ──
     const [rosterSearch, setRosterSearch] = useState('');
     const [rosterFilter, setRosterFilter] = useState('all');
@@ -293,16 +298,16 @@ export default function AdminAssignment() {
             });
             if (subSearch) params.set('search', subSearch);
             if (subFilters.assignment_status?.checked?.length) {
-                params.set('status', subFilters.assignment_status.checked[0]);
+                params.set('status', subFilters.assignment_status.checked.join(','));
             }
             if (subFilters.faculty_name?.checked?.length) {
-                params.set('facultyName', subFilters.faculty_name.checked[0]);
+                params.set('facultyName', subFilters.faculty_name.checked.join(','));
             }
             if (subFilters.course_title?.checked?.length) {
-                params.set('courseTitle', subFilters.course_title.checked[0]);
+                params.set('courseTitle', subFilters.course_title.checked.join(','));
             }
             if (subFilters.level?.checked?.length) {
-                params.set('level', subFilters.level.checked[0]);
+                params.set('level', subFilters.level.checked.join(','));
             }
             if (subFilters.student_name?.text) {
                 params.set('studentName', subFilters.student_name.text);
@@ -388,6 +393,50 @@ export default function AdminAssignment() {
             loadDashboard();
         } catch (err) { showToast(err.response?.data?.error || 'Bulk assign failed', 'error'); }
         finally { setActionLoading(null); }
+    };
+
+    const handleBulkDelete = async () => {
+        if (selectedSubs.size === 0) return;
+        const confirmDelete = window.confirm(`Are you sure you want to delete ${selectedSubs.size} submissions?\n\nThis will permanently delete all associated manual evaluations and logs. This action cannot be undone.`);
+        if (!confirmDelete) return;
+
+        setActionLoading('delete');
+        try {
+            const res = await api.post('/admin/bulk-delete', {
+                submissionIds: [...selectedSubs]
+            });
+            showToast(`${res.data.deleted || 0} submissions successfully deleted.`);
+            setSelectedSubs(new Set()); // clear selection
+            loadSubmissions();
+            loadDashboard(); // update unassigned, completed stats
+        } catch (err) {
+            showToast(err.response?.data?.error || 'Bulk delete failed', 'error');
+        } finally {
+            setActionLoading(null);
+        }
+    };
+
+    const handleReEvaluate = async () => {
+        if (selectedSubs.size === 0) return;
+        if (!window.confirm(`Are you sure you want to send ${selectedSubs.size} submission(s) back for re-evaluation? This will clear their existing scores.`)) {
+            return;
+        }
+
+        setActionLoading('reevaluate');
+        try {
+            const res = await api.post('/admin/submissions/re-evaluate', {
+                submissionIds: [...selectedSubs]
+            });
+            const d = res.data;
+            showToast(d.message);
+            setSelectedSubs(new Set());
+            loadSubmissions();
+            loadDashboard();
+        } catch (err) {
+            showToast(err.response?.data?.error || 'Re-evaluation failed', 'error');
+        } finally {
+            setActionLoading(null);
+        }
     };
 
     const toggleAvailability = async (fid, cur) => {
@@ -533,10 +582,10 @@ export default function AdminAssignment() {
             renderCell: (v, row) => (
                 <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-500">
-                        {(v || '?')[0]}
+                        {(v || '?')[0].toUpperCase()}
                     </div>
                     <div>
-                        <p className="font-semibold text-slate-900 text-xs">{v || 'Unknown'}</p>
+                        <p className="font-semibold text-slate-900 text-xs">{v || 'Anonymous'}</p>
                         <p className="text-[10px] text-slate-400">{row.student_email}</p>
                     </div>
                 </div>
@@ -789,12 +838,28 @@ export default function AdminAssignment() {
                                 <Download size={14} /> Export CSV
                             </button>
                             {selectedSubs.size > 0 && (
-                                <button
-                                    onClick={() => setBulkFacultyModal(true)}
-                                    className="flex items-center gap-2 px-3 py-2 bg-slate-900 text-white rounded-md text-xs font-semibold hover:bg-slate-800 shadow-sm"
-                                >
-                                    <UserPlus size={14} /> Assign ({selectedSubs.size})
-                                </button>
+                                <>
+                                    <button
+                                        onClick={handleReEvaluate}
+                                        disabled={actionLoading === 'reevaluate'}
+                                        className="flex items-center gap-2 px-3 py-2 bg-emerald-600 text-white rounded-md text-xs font-semibold hover:bg-emerald-700 shadow-sm disabled:opacity-50 transition-colors"
+                                    >
+                                        <Shuffle size={14} /> Re-evaluate ({selectedSubs.size})
+                                    </button>
+                                    <button
+                                        onClick={handleBulkDelete}
+                                        disabled={actionLoading === 'delete'}
+                                        className="flex items-center gap-2 px-3 py-2 bg-rose-50 text-rose-700 rounded-md text-xs font-semibold hover:bg-rose-100 border border-rose-200 shadow-sm disabled:opacity-50 transition-colors"
+                                    >
+                                        <Trash2 size={14} /> Delete ({selectedSubs.size})
+                                    </button>
+                                    <button
+                                        onClick={() => setBulkFacultyModal(true)}
+                                        className="flex items-center gap-2 px-3 py-2 bg-slate-900 text-white rounded-md text-xs font-semibold hover:bg-slate-800 shadow-sm transition-colors"
+                                    >
+                                        <UserPlus size={14} /> Assign ({selectedSubs.size})
+                                    </button>
+                                </>
                             )}
                         </div>
                     </div>

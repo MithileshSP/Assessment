@@ -154,11 +154,11 @@ function FacultyCard({ faculty, onClick }) {
                 <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600 font-bold text-sm border border-slate-200 group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors">
-                            {(faculty.full_name || '?')[0].toUpperCase()}
+                            {((faculty.full_name ? faculty.full_name : 'System')[0] || '?').toUpperCase()}
                         </div>
                         <div>
-                            <h3 className="font-bold text-slate-900 text-sm line-clamp-1" title={faculty.full_name}>{faculty.full_name}</h3>
-                            <p className="text-xs text-slate-500 line-clamp-1" title={faculty.email}>{faculty.email}</p>
+                            <h3 className="font-bold text-slate-900 text-sm line-clamp-1" title={faculty.full_name}>{faculty.full_name || 'System Auto Evaluator'}</h3>
+                            <p className="text-xs text-slate-500 line-clamp-1" title={faculty.email}>{faculty.email || 'system@local'}</p>
                         </div>
                     </div>
                 </div>
