@@ -19,7 +19,6 @@ const cookieParser = require("cookie-parser");
 // Import routes
 const challengesRouter = require("./routes/challenges");
 const submissionsRouter = require("./routes/submissions");
-const evaluationRouter = require("./routes/evaluation");
 const adminRouter = require("./routes/admin");
 const coursesRouter = require("./routes/courses");
 const usersRouter = require("./routes/users");
@@ -30,7 +29,6 @@ const attendanceRouter = require("./routes/attendance");
 const facultyRouter = require("./routes/faculty");
 const feedbackRouter = require("./routes/feedback");
 const { scheduleFallbackSync } = require("./services/submissionSync");
-const evaluationWorker = require("./services/EvaluationWorker");
 const sessionGuardian = require("./services/SessionGuardian");
 
 const app = express();
@@ -110,7 +108,7 @@ app.use("/api/", limiter);
 // Stricter rate limit for authentication endpoints (always IP based)
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 2000, // High enough to allow many students from one college IP
+  max: 50, // Strict limit to prevent brute-force attacks
   message: "Too many login attempts, please try again later.",
   standardHeaders: true,
 });
@@ -120,7 +118,6 @@ app.use("/api/auth/login", authLimiter);
 
 // CORS Configuration for production
 const defaultOrigins = [
-  "*",
   "http://localhost:3000",
   "http://localhost:5173",
   "http://localhost:80",
@@ -154,9 +151,7 @@ const corsOptions = {
       origin.startsWith("http://localhost") ||
       origin.startsWith("https://localhost") ||
       origin.startsWith("http://127.0.0.1") ||
-      origin.startsWith("https://127.0.0.1") ||
-      origin.startsWith("http://192.168") ||
-      origin.startsWith("http://10.");
+      origin.startsWith("https://127.0.0.1");
 
     const normalizedOrigin = origin.replace(/\/$/, "");
 
@@ -221,7 +216,6 @@ app.get("/health", async (req, res) => {
 app.use("/api/courses", coursesRouter);
 app.use("/api/challenges", challengesRouter);
 app.use("/api/submissions", submissionsRouter);
-app.use("/api/evaluate", evaluationRouter);
 app.use("/api/auth", usersRouter);
 app.use("/api/users", usersRouter);
 app.use("/api/admin", adminRouter);
@@ -324,8 +318,6 @@ app.listen(PORT, async () => {
     console.error("❌ Migration failed:", err.message);
   }
 
-  // Start Evaluation Queue Worker
-  evaluationWorker.start();
 
   // Start Session Guardian (runs every 60 seconds)
   sessionGuardian.start();
@@ -333,7 +325,6 @@ app.listen(PORT, async () => {
   console.log(`\n📁 API Endpoints:`);
   console.log(`   GET  /api/challenges`);
   console.log(`   POST /api/submissions`);
-  console.log(`   POST /api/evaluate`);
   console.log(`   POST /api/auth/login`);
   // Background sync to ensure JSON fallback submissions are persisted to MySQL when available
   // DISABLED FOR PRODUCTION - Comment out to enable demo data syncing
