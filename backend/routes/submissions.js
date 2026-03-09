@@ -10,6 +10,7 @@ const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 const SubmissionModel = require('../models/Submission');
 const { query } = require('../database/connection');
+const { verifyToken } = require('../middleware/auth');
 
 const submissionsPath = path.join(__dirname, '../data/submissions.json');
 
@@ -53,8 +54,10 @@ const saveSubmissions = (submissions) => {
  * Submit candidate solution
  * Body: { challengeId, candidateName, code: { html, css, js }, isAutoSave }
  */
-router.post("/", async (req, res) => {
-  const { challengeId, candidateName, code, userId, isAutoSave } = req.body;
+router.post("/", verifyToken, async (req, res) => {
+  const { challengeId, code, isAutoSave } = req.body;
+  const userId = req.user.id; // AUTHORITATIVE: Use verified ID from token, not body
+  const candidateNameFromBody = req.body.candidateName; // Keep for logging/fallback if DB is down
   console.log(`[SubmissionsAPI] Incoming ${isAutoSave ? 'Draft' : 'Final'} Submission:`, {
     challengeId, userId, codeKeys: Object.keys(code || {}), hasHTML: !!code?.html, sessionId: req.body.sessionId
   });
@@ -95,8 +98,8 @@ router.post("/", async (req, res) => {
       console.warn('Failed to get challenge info:', e.message);
     }
 
-    // Get user's real name if possible
-    let studentName = candidateName;
+    // Get user's real name if possible from DB (Authoritative)
+    let studentName = candidateNameFromBody || 'Anonymous';
     if (userId) {
       try {
         const userResult = await query("SELECT full_name FROM users WHERE id = ?", [userId]);
@@ -303,9 +306,10 @@ router.post("/", async (req, res) => {
  * Batch auto-save for multiple submissions
  * Body: { submissions: [{ challengeId, code, userId, candidateName }], courseId, level }
  */
-router.post('/batch', async (req, res) => {
+router.post('/batch', verifyToken, async (req, res) => {
   try {
     const { submissions, courseId, level, sessionId } = req.body;
+    const userId = req.user.id; // AUTHORITATIVE
 
     // AUTHORITATIVE TIMER CHECK
     if (sessionId) {
@@ -339,7 +343,7 @@ router.post('/batch', async (req, res) => {
         // Check for existing 'saved' draft
         const [existingDraft] = await connection.execute(
           "SELECT id FROM submissions WHERE user_id = ? AND challenge_id = ? AND status = 'saved' LIMIT 1",
-          [userId || 'user-demo-student', challengeId]
+          [userId, challengeId]
         );
 
         if (existingDraft.length > 0) {
@@ -365,7 +369,7 @@ router.post('/batch', async (req, res) => {
             `INSERT INTO submissions 
               (id, challenge_id, user_id, candidate_name, html_code, css_code, js_code, status, course_id, level, submitted_at, additional_files)
             VALUES (?, ?, ?, ?, ?, ?, ?, 'saved', ?, ?, CURRENT_TIMESTAMP, ?)`,
-            [draftId, challengeId, userId || 'user-demo-student', studentName,
+            [draftId, challengeId, userId, studentName,
               code.html || '', code.css || '', code.js || '', courseId, level, JSON.stringify(code.additionalFiles || {})]
           );
         }
@@ -572,6 +576,169 @@ router.delete('/:id', (req, res) => {
     res.json({ message: 'Submission deleted successfully' });
   } catch (error) {
     res.status(500).json({ error: 'Failed to delete submission' });
+  }
+});
+
+/**
+ * POST /api/submissions/import
+ * Bulk import submissions from CSV data (parsed client-side)
+ * Body: { submissions: [...] }
+ * CSV Fields: Student UID, Student Name, Email, Course, Level, courseId,
+ *             title, description, instructions, studentHtml, studentCss,
+ *             studentJs, studentScreenshot, expectedScreenshot, Submitted At
+ */
+router.post('/import', async (req, res) => {
+  try {
+    const { submissions } = req.body;
+
+    if (!Array.isArray(submissions) || submissions.length === 0) {
+      return res.status(400).json({ error: 'Submissions array is required and must not be empty' });
+    }
+
+    let addedCount = 0;
+    let skippedCount = 0;
+    const errors = [];
+
+    // Temporarily disable FK checks so imported rows with non-existent user_id/challenge_id are accepted
+    await query('SET FOREIGN_KEY_CHECKS = 0');
+
+    for (let i = 0; i < submissions.length; i++) {
+      const row = submissions[i];
+      try {
+        // Flexible field mapping — handle different CSV column naming conventions
+        const userId = row['Student UID'] || row['student_uid'] || row['userId'] || row['user_id'] || null;
+        const candidateName = row['Student Name'] || row['student_name'] || row['candidateName'] || row['candidate_name'] || 'Anonymous';
+        const email = row['Email'] || row['email'] || null;
+        const courseId = row['courseId'] || row['course_id'] || row['Course ID'] || null;
+        const level = parseInt(row['Level'] || row['level'] || 1);
+        const title = row['title'] || row['Title'] || '';
+        const htmlCode = row['studentHtml'] || row['student_html'] || row['html_code'] || '';
+        const cssCode = row['studentCss'] || row['student_css'] || row['css_code'] || '';
+        const jsCode = row['studentJs'] || row['student_js'] || row['js_code'] || '';
+        const studentScreenshot = row['studentScreenshot'] || row['student_screenshot'] || row['user_screenshot'] || null;
+        const expectedScreenshot = row['expectedScreenshot'] || row['expected_screenshot'] || null;
+        const submittedAt = row['Submitted At'] || row['submitted_at'] || row['submittedAt'] || new Date().toISOString();
+
+        // Validate minimum required fields
+        if (!userId && !email) {
+          errors.push(`Row ${i + 1}: Missing Student UID and Email — at least one is required`);
+          skippedCount++;
+          continue;
+        }
+
+        // Resolve user_id from email if UID not provided
+        let resolvedUserId = userId;
+        if (!resolvedUserId && email) {
+          try {
+            const userResult = await query("SELECT id FROM users WHERE email = ? LIMIT 1", [email]);
+            if (userResult.length > 0) {
+              resolvedUserId = userResult[0].id;
+            }
+          } catch (e) {
+            console.warn(`[Import] Email lookup failed for ${email}:`, e.message);
+          }
+        }
+        if (!resolvedUserId) {
+          resolvedUserId = `import-${email || 'unknown-' + i}`;
+        }
+
+        // Resolve challenge_id from courseId + level + title
+        let challengeId = null;
+        if (courseId && title) {
+          try {
+            const challengeResult = await query(
+              "SELECT id FROM challenges WHERE course_id = ? AND level = ? AND title = ? LIMIT 1",
+              [courseId, level, title]
+            );
+            if (challengeResult.length > 0) {
+              challengeId = challengeResult[0].id;
+            }
+          } catch (e) {
+            console.warn(`[Import] Challenge lookup failed:`, e.message);
+          }
+        }
+        // Fallback: try to use any challenge matching courseId + level
+        if (!challengeId && courseId) {
+          try {
+            const fallbackResult = await query(
+              "SELECT id FROM challenges WHERE course_id = ? AND level = ? LIMIT 1",
+              [courseId, level]
+            );
+            if (fallbackResult.length > 0) {
+              challengeId = fallbackResult[0].id;
+            }
+          } catch (e) { /* ignore */ }
+        }
+        if (!challengeId) {
+          challengeId = `import-${courseId || 'unknown'}-L${level}-${i}`;
+        }
+
+        // Format submitted_at for MySQL
+        let mysqlDate;
+        try {
+          const d = new Date(submittedAt);
+          if (isNaN(d.getTime())) {
+            mysqlDate = new Date().toISOString().slice(0, 19).replace('T', ' ');
+          } else {
+            mysqlDate = d.toISOString().slice(0, 19).replace('T', ' ');
+          }
+        } catch {
+          mysqlDate = new Date().toISOString().slice(0, 19).replace('T', ' ');
+        }
+
+        const id = uuidv4();
+
+        // Truncate screenshot paths to match DB limit (500 chars)
+        const truncate = (val, max = 500) => val && val.length > max ? val.substring(0, max) : val;
+
+        await query(
+          `INSERT INTO submissions
+            (id, challenge_id, user_id, course_id, level, candidate_name,
+             html_code, css_code, js_code, status, submitted_at,
+             user_screenshot, expected_screenshot)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            id,
+            challengeId,
+            resolvedUserId,
+            courseId || null,
+            level,
+            candidateName,
+            htmlCode,
+            cssCode,
+            jsCode,
+            'queued',
+            mysqlDate,
+            truncate(studentScreenshot),
+            truncate(expectedScreenshot)
+          ]
+        );
+
+        addedCount++;
+      } catch (err) {
+        console.error(`[Import] Row ${i + 1} error:`, err.message);
+        errors.push(`Row ${i + 1}: ${err.message}`);
+        skippedCount++;
+      }
+    }
+
+    console.log(`[Import] Bulk import complete: ${addedCount} added, ${skippedCount} skipped out of ${submissions.length}`);
+
+    // Re-enable FK checks
+    await query('SET FOREIGN_KEY_CHECKS = 1');
+
+    res.json({
+      message: 'Import completed',
+      added: addedCount,
+      skipped: skippedCount,
+      total: submissions.length,
+      errors: errors.length > 0 ? errors : undefined
+    });
+  } catch (error) {
+    // Re-enable FK checks even on failure
+    try { await query('SET FOREIGN_KEY_CHECKS = 1'); } catch (e) { /* ignore */ }
+    console.error('[Import] Bulk import error:', error);
+    res.status(500).json({ error: 'Failed to import submissions: ' + error.message });
   }
 });
 

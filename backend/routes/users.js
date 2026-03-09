@@ -155,7 +155,8 @@ router.post("/google", async (req, res) => {
       }
     }
 
-    const jwtSecret = process.env.JWT_SECRET || 'fallback_secret';
+    const jwtSecret = process.env.JWT_SECRET;
+    if (!jwtSecret) throw new Error('JWT_SECRET environment variable is required');
 
     // Generate unique session ID for single-session enforcement
     const sessionId = uuidv4();
@@ -199,8 +200,6 @@ router.post("/google", async (req, res) => {
         role: user.role,
         picture: user.picture || picture,
       },
-      // Keep token in response for backward compatibility during migration, but frontend should prioritize cookie
-      token: appToken,
     });
   } catch (error) {
     console.error("Google Sign-In Error:", error);
@@ -261,7 +260,8 @@ router.post("/login", async (req, res) => {
 
     // Generate unique session ID for single-session enforcement
     const sessionId = uuidv4();
-    const jwtSecret = process.env.JWT_SECRET || 'fallback_secret';
+    const jwtSecret = process.env.JWT_SECRET;
+    if (!jwtSecret) throw new Error('JWT_SECRET environment variable is required');
     const payloadForToken = {
       id: user.id,
       username: user.username,
@@ -305,7 +305,6 @@ router.post("/login", async (req, res) => {
     }
 
     res.json({
-      token, // Backward compatibility
       user: {
         id: user.id,
         username: user.username,
@@ -342,6 +341,27 @@ router.post("/logout", verifyToken, async (req, res) => {
   } catch (error) {
     console.error("Logout error:", error);
     res.status(500).json({ error: "Logout failed" });
+  }
+});
+
+// Get current authenticated user (session verification via cookie)
+router.get("/me", verifyToken, async (req, res) => {
+  try {
+    const user = await UserModel.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+    res.json({
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      fullName: user.fullName || user.full_name,
+      rollNo: user.rollNo || user.roll_no,
+      role: user.role,
+    });
+  } catch (error) {
+    console.error("Error in /me:", error);
+    res.status(500).json({ error: "Failed to verify session" });
   }
 });
 
@@ -458,7 +478,7 @@ router.get("/progress", verifyAdmin, async (req, res) => {
 });
 
 // Get single user
-router.get("/:userId", async (req, res) => {
+router.get("/:userId", verifyToken, async (req, res) => {
   try {
     const user = await UserModel.findById(req.params.userId);
 

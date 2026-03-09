@@ -36,7 +36,8 @@ const requireAdmin = (req, res, next) => {
       return res.status(401).json({ error: 'Missing token' });
     }
 
-    const jwtSecret = process.env.JWT_SECRET || 'fallback_secret';
+    const jwtSecret = process.env.JWT_SECRET;
+    if (!jwtSecret) return res.status(500).json({ error: 'Server configuration error' });
     const payload = jwt.verify(token, jwtSecret);
 
     if (payload.role !== 'admin') {
