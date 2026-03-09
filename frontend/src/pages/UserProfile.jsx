@@ -12,25 +12,18 @@ import {
     ChevronRight,
     Lock
 } from 'lucide-react';
-import { clearAdminSession } from '../utils/session';
+import { useAuth } from '../context/AuthContext';
 
 const UserProfile = () => {
     const navigate = useNavigate();
-    const userData = (() => {
-        try {
-            const stored = localStorage.getItem('user');
-            if (stored) return JSON.parse(stored);
-            return {
-                username: localStorage.getItem('username') || 'User',
-                fullName: localStorage.getItem('fullName') || 'Student',
-                rollNo: localStorage.getItem('rollNo'),
-                email: 'user@example.com',
-                role: 'student'
-            };
-        } catch (e) {
-            return { username: 'User', fullName: 'System User', role: 'student' };
-        }
-    })();
+    const { user: authUser, role } = useAuth();
+    const userData = authUser || {
+        username: 'User',
+        fullName: localStorage.getItem('fullName') || 'Student',
+        rollNo: localStorage.getItem('rollNo'),
+        email: 'user@example.com',
+        role: 'student'
+    };
 
     const handleLogout = () => {
         navigate('/logout');

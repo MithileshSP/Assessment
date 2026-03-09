@@ -2,10 +2,12 @@ import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LogOut } from 'lucide-react';
 import { clearAdminSession } from '../utils/session';
+import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 
 const Logout = () => {
     const navigate = useNavigate();
+    const { onLogout } = useAuth();
 
     useEffect(() => {
         const performLogout = async () => {
@@ -15,12 +17,10 @@ const Logout = () => {
             } catch (err) {
                 console.error('Logout error:', err);
             } finally {
-                // Cleanup local storage (even if API fails)
+                // Clear AuthContext state
+                onLogout();
+                // Cleanup all localStorage remnants
                 clearAdminSession();
-                localStorage.removeItem('userToken');
-                localStorage.removeItem('userRole');
-                localStorage.removeItem('user');
-                localStorage.removeItem('userId');
                 window.dispatchEvent(new Event('portal-session-change'));
                 navigate('/login');
             }
@@ -28,7 +28,7 @@ const Logout = () => {
 
         const timer = setTimeout(performLogout, 1500);
         return () => clearTimeout(timer);
-    }, [navigate]);
+    }, [navigate, onLogout]);
 
     return (
         <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">

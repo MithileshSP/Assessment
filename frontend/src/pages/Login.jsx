@@ -3,11 +3,13 @@ import { useNavigate } from "react-router-dom";
 import { GoogleLogin } from "@react-oauth/google";
 import { jwtDecode } from "jwt-decode";
 import { clearAdminSession, notifySessionChange } from "../utils/session";
+import { useAuth } from "../context/AuthContext";
 import api from "../services/api";
 import { RefreshCw } from "lucide-react";
 
 export default function Login({ isAdmin = false, onLogin }) {
   const navigate = useNavigate();
+  const { onLoginSuccess } = useAuth();
   const [credentials, setCredentials] = useState({
     username: "",
     password: "",
@@ -27,63 +29,48 @@ export default function Login({ isAdmin = false, onLogin }) {
 
     try {
       // Use API client to hit the centralized auth endpoint
+      // Backend sets HttpOnly cookie 'authToken' automatically
       const endpoint = "/auth/login";
       const response = await api.post(endpoint, credentials);
-
-      // Note: Backend now sets an HttpOnly cookie 'authToken'.
-      // API calls via 'api' service will automatically include this cookie.
 
       if (!response) {
         setError("Login failed. Please try again.");
         return;
       }
 
-      const { user, token } = response.data || {};
+      const { user } = response.data || {};
       const role = user?.role;
       const normalizedRole = typeof role === "string" ? role.toLowerCase() : "";
 
-
-
-      if (!user || !token || !normalizedRole) {
+      if (!user || !normalizedRole) {
         setError("Invalid response from server. Please try again.");
         return;
       }
 
-      localStorage.setItem("userRole", normalizedRole);
+      // Update AuthContext with server-verified user data
+      onLoginSuccess(user);
+
+      // Store only non-sensitive display data in localStorage
+      localStorage.setItem("fullName", user.fullName || user.full_name || "");
+      localStorage.setItem("rollNo", user.rollNo || user.roll_no || "");
+
+      notifySessionChange();
+
+      if (onLogin) {
+        onLogin({ role: normalizedRole, user });
+      }
 
       if (normalizedRole === "admin") {
-        localStorage.setItem("adminToken", token);
-        localStorage.setItem("adminUser", JSON.stringify(user));
-        localStorage.setItem("userToken", token);
-        localStorage.setItem("userId", user.id);
-        localStorage.setItem("username", user.username);
-        notifySessionChange();
-
-
-
-        if (onLogin) {
-          onLogin({ role: normalizedRole, user, token });
-        }
-
         setTimeout(() => {
           navigate("/admin/dashboard", { replace: true });
         }, 100);
-        return;
+      } else if (normalizedRole === "faculty") {
+        navigate("/faculty/dashboard");
+      } else {
+        navigate("/");
       }
-
-      clearAdminSession();
-      localStorage.setItem("userId", user.id);
-      localStorage.setItem("username", user.username);
-      localStorage.setItem("user", JSON.stringify(user));
-      localStorage.setItem("fullName", user.fullName || user.full_name);
-      localStorage.setItem("rollNo", user.rollNo || user.roll_no);
-      localStorage.setItem("userToken", token);
-      notifySessionChange();
-
-      navigate("/");
     } catch (err) {
       console.error("Login error:", err);
-      console.error("Error response:", err.response);
 
       if (err.response) {
         setError(
@@ -211,46 +198,39 @@ export default function Login({ isAdmin = false, onLogin }) {
 
                       const decoded = jwtDecode(googleToken);
 
-
+                      // Backend sets HttpOnly cookie automatically
                       const res = await api.post("/auth/google", {
                         token: googleToken,
                       });
 
-                      // Note: Backend now sets an HttpOnly cookie 'authToken'.
+                      const { user } = res.data;
 
-                      const { user, token } = res.data;
-
-                      if (!user || !token) {
+                      if (!user) {
                         setError("Invalid Google sign-in response.");
                         return;
                       }
 
-                      // Save to localStorage
-                      localStorage.setItem("userToken", token);
-                      localStorage.setItem("username", user.username);
-                      localStorage.setItem("userId", user.id);
-                      localStorage.setItem("userRole", user.role);
-                      localStorage.setItem("user", JSON.stringify(user));
-                      localStorage.setItem("fullName", user.fullName || user.full_name);
-                      localStorage.setItem("rollNo", user.rollNo || user.roll_no);
+                      // Update AuthContext with server-verified user data
+                      onLoginSuccess(user);
 
+                      // Store only non-sensitive display data
+                      localStorage.setItem("fullName", user.fullName || user.full_name || "");
+                      localStorage.setItem("rollNo", user.rollNo || user.roll_no || "");
 
                       const normalizedRole =
                         user.role?.toLowerCase?.() || user.role;
 
+                      notifySessionChange();
+
+                      if (onLogin) {
+                        onLogin({ role: normalizedRole, user });
+                      }
+
                       if (normalizedRole === "admin") {
-                        localStorage.setItem("adminToken", token);
-                        localStorage.setItem("adminUser", JSON.stringify(user));
-                        notifySessionChange();
-                        if (onLogin) {
-                          onLogin({ role: normalizedRole, user, token });
-                        }
                         navigate("/admin/dashboard", { replace: true });
+                      } else if (normalizedRole === "faculty") {
+                        navigate("/faculty/dashboard");
                       } else {
-                        clearAdminSession();
-                        if (onLogin) {
-                          onLogin({ role: normalizedRole, user, token });
-                        }
                         navigate("/");
                       }
                     } catch (err) {
