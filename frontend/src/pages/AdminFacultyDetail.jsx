@@ -101,6 +101,13 @@ export default function AdminFacultyDetail() {
     const [isEditingCapacity, setIsEditingCapacity] = useState(false);
     const [tempCapacity, setTempCapacity] = useState('');
 
+    // DataTable State
+    const [filters, setFilters] = useState({});
+    const [page, setPage] = useState(1);
+    const [pageSize, setPageSize] = useState(10);
+    const [sortBy, setSortBy] = useState('submitted_at');
+    const [sortDir, setSortDir] = useState('desc');
+
     // Add states for reallocation
     const [selectedSubs, setSelectedSubs] = useState(new Set());
     const [reassignModalOpen, setReassignModalOpen] = useState(false);
@@ -211,11 +218,76 @@ export default function AdminFacultyDetail() {
 
     // Filter Submissions based on Tab
     const filteredSubmissions = submissions.filter(s => {
-        if (activeTab === 'assigned') return true;
-        if (activeTab === 'pending') return !['passed', 'failed'].includes(s.assignment_status);
-        if (activeTab === 'history') return ['passed', 'failed'].includes(s.assignment_status);
+        if (activeTab === 'assigned' && ['passed', 'failed'].includes(s.assignment_status)) return false;
+        if (activeTab === 'pending' && ['passed', 'failed'].includes(s.assignment_status)) return false;
+        if (activeTab === 'history' && !['passed', 'failed'].includes(s.assignment_status)) return false;
         return true;
     });
+
+    // Apply Filters from DataTable (Client-side)
+    let processedSubmissions = [...filteredSubmissions];
+
+    Object.entries(filters || {}).forEach(([key, filter]) => {
+        if (!filter) return;
+
+        if (filter.checked && filter.checked.length > 0) {
+            processedSubmissions = processedSubmissions.filter(s => {
+                const val = String(s[key] || '');
+                return filter.checked.includes(val);
+            });
+        }
+
+        if (filter.text) {
+            processedSubmissions = processedSubmissions.filter(s => {
+                const val = String(s[key] || '').toLowerCase();
+                const searchStr = filter.text.toLowerCase();
+                if (filter.textMode === 'equals') return val === searchStr;
+                if (filter.textMode === 'starts') return val.startsWith(searchStr);
+                return val.includes(searchStr);
+            });
+        }
+
+        // Date range 
+        if (filter.startDate || filter.endDate) {
+            processedSubmissions = processedSubmissions.filter(s => {
+                if (!s[key]) return false;
+                const rowDate = new Date(s[key]);
+                if (isNaN(rowDate)) return false;
+
+                if (filter.startDate) {
+                    const sd = new Date(filter.startDate);
+                    sd.setHours(0, 0, 0, 0);
+                    if (rowDate < sd) return false;
+                }
+                if (filter.endDate) {
+                    const ed = new Date(filter.endDate);
+                    ed.setHours(23, 59, 59, 999);
+                    if (rowDate > ed) return false;
+                }
+                return true;
+            });
+        }
+    });
+
+    // Apply Sorting (Client-side)
+    if (sortBy) {
+        processedSubmissions.sort((a, b) => {
+            let valA = a[sortBy] || '';
+            let valB = b[sortBy] || '';
+
+            if (typeof valA === 'string') valA = valA.toLowerCase();
+            if (typeof valB === 'string') valB = valB.toLowerCase();
+
+            if (valA < valB) return sortDir === 'asc' ? -1 : 1;
+            if (valA > valB) return sortDir === 'asc' ? 1 : -1;
+            return 0;
+        });
+    }
+
+    // Pagination (Client-side)
+    const totalItems = processedSubmissions.length;
+    const startIndex = (page - 1) * pageSize;
+    const paginatedSubmissions = processedSubmissions.slice(startIndex, startIndex + pageSize);
 
     return (
         <SaaSLayout>
@@ -373,7 +445,7 @@ export default function AdminFacultyDetail() {
                     <DataTable
                         columns={[
                             {
-                                key: 'student_name', label: 'Student', filterable: true, renderCell: (v, r) => (
+                                key: 'student_name', label: 'Student', filterable: true, sortable: true, renderCell: (v, r) => (
                                     <div className="flex items-center gap-3">
                                         <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-500">
                                             {(v || '?')[0].toUpperCase()}
@@ -386,16 +458,16 @@ export default function AdminFacultyDetail() {
                                 )
                             },
                             {
-                                key: 'course_title', label: 'Course', filterable: true,
+                                key: 'course_title', label: 'Course', filterable: true, sortable: true,
                                 filterOptions: [...new Set(submissions.map(s => s.course_title).filter(Boolean))],
                                 renderCell: (v) => <span className="font-medium text-slate-700">{v}</span>
                             },
                             {
-                                key: 'level', label: 'Level', width: '80px', filterable: true,
+                                key: 'level', label: 'Level', width: '80px', filterable: true, sortable: true,
                                 filterOptions: [...new Set(submissions.map(s => s.level).filter(Boolean))],
                                 renderCell: (v) => <span className="px-2 py-1 bg-slate-100 rounded text-xs font-bold text-slate-600">Lvl {v}</span>
                             },
-                            { key: 'submitted_at', label: 'Submitted', renderCell: (v) => <span className="text-slate-500 text-sm">{v ? formatIST(v) : '-'}</span> },
+                            { key: 'submitted_at', label: 'Submitted', filterable: true, filterType: 'date-range', sortable: true, renderCell: (v) => <span className="text-slate-500 text-sm">{v ? formatIST(v) : '-'}</span> },
                             {
                                 key: 'assignment_status', label: 'Status', filterable: true,
                                 filterOptions: [...new Set(submissions.map(s => s.assignment_status).filter(Boolean))],
@@ -409,7 +481,18 @@ export default function AdminFacultyDetail() {
                                 )
                             }
                         ]}
-                        data={filteredSubmissions}
+                        data={paginatedSubmissions}
+                        filterData={submissions}
+                        totalItems={totalItems}
+                        page={page}
+                        pageSize={pageSize}
+                        onPageChange={setPage}
+                        onPageSizeChange={setPageSize}
+                        sortBy={sortBy}
+                        sortDir={sortDir}
+                        onSort={(k, d) => { setSortBy(k); setSortDir(d); }}
+                        filters={filters}
+                        onFilterChange={(k, v) => { setFilters(prev => ({ ...prev, [k]: v })); setPage(1); }}
                         loading={loading}
                         selectable={true}
                         checkable

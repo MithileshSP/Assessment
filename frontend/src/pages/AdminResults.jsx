@@ -3,11 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import SaaSLayout from '../components/SaaSLayout';
 import api from '../services/api';
 import { Trophy, Search, Filter, Download, ExternalLink, User, BookOpen, Calendar, Trash2, Upload, X, FileText, CheckCircle, AlertTriangle } from 'lucide-react';
-import DataTable from '../components/DataTable';
+import DataTable, { StatusBadge } from '../components/DataTable';
+import SummaryAnalytics from '../components/SummaryAnalytics';
 
 export default function AdminResults() {
     const navigate = useNavigate();
     const [results, setResults] = useState([]);
+    const [stats, setStats] = useState(null);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [fromDate, setFromDate] = useState('');
@@ -35,7 +37,8 @@ export default function AdminResults() {
     const loadResults = async () => {
         try {
             const response = await api.get('/admin/results');
-            setResults(response.data);
+            setResults(response.data.data || []);
+            setStats(response.data.summary || null);
         } catch (error) {
             console.error('Failed to load results:', error);
         } finally {
@@ -192,23 +195,14 @@ export default function AdminResults() {
 
     // Client-side filtering, sorting, and pagination
     let processed = results.filter(r => {
-        const cName = String(r.candidate_name || '').toLowerCase();
-        const cTitle = String(r.course_title || '').toLowerCase();
-        const s = search.toLowerCase();
-        if (search && !cName.includes(s) && !cTitle.includes(s)) return false;
-
-        if (fromDate || toDate) {
-            const rowDate = new Date(r.submitted_at);
-            if (fromDate) {
-                const from = new Date(fromDate);
-                from.setHours(0, 0, 0, 0);
-                if (rowDate < from) return false;
-            }
-            if (toDate) {
-                const to = new Date(toDate);
-                to.setHours(23, 59, 59, 999);
-                if (rowDate > to) return false;
-            }
+        const s = (search || '').trim().toLowerCase();
+        if (s) {
+            const cName = String(r.candidate_name || '').toLowerCase();
+            const cTitle = String(r.course_title || '').toLowerCase();
+            const eName = String(r.evaluator_name || '').toLowerCase();
+            const uId = String(r.user_id || '').toLowerCase();
+            const rollNo = String(r.roll_no || '').toLowerCase();
+            if (!cName.includes(s) && !cTitle.includes(s) && !eName.includes(s) && !uId.includes(s) && !rollNo.includes(s)) return false;
         }
         return true;
     });
@@ -230,6 +224,34 @@ export default function AdminResults() {
                 if (filter.textMode === 'starts') return val.startsWith(searchStr);
                 return val.includes(searchStr);
             });
+        } else if (filter.startDate || filter.endDate) {
+            processed = processed.filter(r => {
+                if (!r[key] && !r.submitted_at) return false;
+                const rowDate = new Date(r[key] || r.submitted_at);
+                if (isNaN(rowDate)) return false;
+
+                if (filter.startDate) {
+                    const sd = new Date(filter.startDate);
+                    sd.setHours(0, 0, 0, 0);
+                    if (rowDate < sd) return false;
+                }
+                if (filter.endDate) {
+                    const ed = new Date(filter.endDate);
+                    ed.setHours(23, 59, 59, 999);
+                    if (rowDate > ed) return false;
+                }
+                return true;
+            });
+        } else if (filter.startTime || filter.endTime) {
+            processed = processed.filter(r => {
+                if (!r.submitted_at) return false;
+                const rowDate = new Date(r.submitted_at);
+                const rowTime = rowDate.getHours().toString().padStart(2, '0') + ':' + rowDate.getMinutes().toString().padStart(2, '0');
+
+                if (filter.startTime && rowTime < filter.startTime) return false;
+                if (filter.endTime && rowTime > filter.endTime) return false;
+                return true;
+            });
         }
     });
 
@@ -247,6 +269,14 @@ export default function AdminResults() {
     const totalItems = processed.length;
     const startIndex = (page - 1) * pageSize;
     const paginatedResults = processed.slice(startIndex, startIndex + pageSize);
+
+    // Calculate dynamic stats for the summary cards
+    const dynamicStats = {
+        total: processed.length,
+        passed: processed.filter(r => r.final_status === 'passed').length,
+        failed: processed.filter(r => r.final_status === 'failed').length,
+        autoEvaluated: processed.filter(r => r.auto_score !== null && (r.manual_score === null || r.manual_score === 0)).length
+    };
 
     // Reset to page 1 if filtered results are less than current page offset
     useEffect(() => {
@@ -271,8 +301,8 @@ export default function AdminResults() {
             filterable: true,
             renderCell: (val, row) => (
                 <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center text-slate-500 font-bold">
-                        <User size={18} />
+                    <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center text-slate-500 font-bold uppercase">
+                        {(row.candidate_name || 'A').charAt(0)}
                     </div>
                     <div>
                         <p className="font-bold text-slate-900">{row.candidate_name || 'Anonymous'}</p>
@@ -290,14 +320,16 @@ export default function AdminResults() {
             label: 'Final Status',
             sortable: true,
             filterable: true,
+            filterOptions: [
+                { label: 'PASSED', value: 'passed' },
+                { label: 'FAILED', value: 'failed' },
+                { label: 'EVALUATING', value: 'evaluating' },
+                { label: 'REOPENED', value: 'reopened' },
+                { label: 'UNASSIGNED', value: 'unassigned' }
+            ],
             renderCell: (val, row) => (
                 <div className="flex justify-center">
-                    <span className={`px-2.5 py-1 rounded-lg font-bold text-[10px] uppercase tracking-wider border ${row.final_status === 'passed' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-                        row.final_status === 'failed' ? 'bg-rose-50 text-rose-600 border-rose-100' :
-                            'bg-amber-50 text-amber-600 border-amber-100'
-                        }`}>
-                        {row.final_status || 'PENDING'}
-                    </span>
+                    <StatusBadge value={row.final_status} />
                 </div>
             )
         },
@@ -351,6 +383,32 @@ export default function AdminResults() {
                     ) : '-'}
                 </div>
             )
+        },
+        {
+            key: 'submitted_at',
+            label: 'Date',
+            sortable: true,
+            filterable: true,
+            filterType: 'date-range',
+            renderCell: (val, row) => (
+                <div className="text-slate-600 font-medium text-xs">
+                    {row.submitted_at ? new Date(row.submitted_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
+                </div>
+            )
+        },
+        {
+            key: 'submitted_at_time',
+            label: 'Time',
+            sortable: false,
+            filterable: true,
+            filterType: 'time-range',
+            renderCell: (_, row) => {
+                if (!row.submitted_at) return <span className="text-xs text-slate-400 font-medium">—</span>;
+                const d = new Date(row.submitted_at);
+                return <span className="text-xs text-slate-500 font-medium">
+                    {d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}
+                </span>;
+            }
         },
         {
             key: 'action',
@@ -412,49 +470,19 @@ export default function AdminResults() {
                     </div>
                 </div>
 
-                {/* Filters & Search */}
-                <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row gap-4 items-center">
-                    <div className="relative flex-1 w-full">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                        <input
-                            type="text"
-                            placeholder="Search by candidate name or course..."
-                            className="w-full pl-12 pr-4 py-3 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-blue-500 text-sm"
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                        />
+                {/* Live Stats */}
+                {!loading && (
+                    <div className="mb-6">
+                        <SummaryAnalytics metrics={dynamicStats} type="results" />
                     </div>
-                    <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-2 bg-slate-50 px-3 py-2 rounded-xl">
-                            <Calendar size={16} className="text-slate-400" />
-                            <input
-                                type="date"
-                                value={fromDate}
-                                onChange={(e) => setFromDate(e.target.value)}
-                                className="bg-transparent border-none text-sm font-medium text-slate-600 focus:outline-none"
-                                placeholder="From"
-                            />
-                        </div>
-                        <span className="text-slate-300 font-bold">to</span>
-                        <div className="flex items-center gap-2 bg-slate-50 px-3 py-2 rounded-xl">
-                            <Calendar size={16} className="text-slate-400" />
-                            <input
-                                type="date"
-                                value={toDate}
-                                onChange={(e) => setToDate(e.target.value)}
-                                className="bg-transparent border-none text-sm font-medium text-slate-600 focus:outline-none"
-                                placeholder="To"
-                            />
-                        </div>
-                    </div>
-                </div>
+                )}
 
                 {/* Results Table */}
                 <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden text-sm">
                     <DataTable
                         columns={columns}
                         data={paginatedResults}
-                        filterData={processed} // Pass full filtered dataset for unique column values
+                        filterData={results} // Use full dataset for generating unique filter values
                         loading={loading}
                         totalItems={totalItems}
                         page={page}
@@ -466,7 +494,9 @@ export default function AdminResults() {
                         onSort={(col, dir) => { setSortBy(col); setSortDir(dir); }}
                         filters={filters}
                         onFilterChange={handleFilterChange}
-                        emptyMessage="No results found matching your search."
+                        onSearch={setSearch}
+                        searchValue={search}
+                        emptyMessage="No results found matching your filters."
                     />
                 </div>
             </div>

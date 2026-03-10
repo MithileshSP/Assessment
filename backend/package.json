@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "nodemon server.js",
     "start": "node server.js",
+    "worker": "node worker.js",
     "migrate": "node database/migrate.js"
   },
   "keywords": [
@@ -19,6 +20,7 @@
   "license": "MIT",
   "dependencies": {
     "bcryptjs": "^3.0.3",
+    "bullmq": "^5.70.1",
     "compression": "^1.8.1",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
@@ -29,6 +31,7 @@
     "express-rate-limit": "^8.2.1",
     "google-auth-library": "^10.5.0",
     "helmet": "^8.1.0",
+    "ioredis": "^5.10.0",
     "jsdom": "^23.0.0",
     "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.1",
@@ -36,7 +39,6 @@
     "mysql2": "^3.15.3",
     "pixelmatch": "^5.3.0",
     "pngjs": "^7.0.0",
-    "puppeteer": "^21.5.0",
     "uuid": "^9.0.1"
   },
   "devDependencies": {

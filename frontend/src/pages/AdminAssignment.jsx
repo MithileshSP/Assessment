@@ -11,6 +11,7 @@ import {
     Filter
 } from 'lucide-react';
 import { formatIST } from '../utils/date';
+import SummaryAnalytics from '../components/SummaryAnalytics';
 
 // ─── TAB CONFIG ─────────────────────────────────────────────
 const TABS = [
@@ -67,7 +68,8 @@ function CapacityBar({ current, max, compact = false }) {
 function FacultySubmissionsList({ facultyId }) {
     const [data, setData] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [stats, setStats] = useState({ total: 0, pending: 0, completed: 0 });
+    const [stats, setStats] = useState(null);
+    const [assignedStats, setAssignedStats] = useState({ total: 0, pending: 0, completed: 0 });
 
     useEffect(() => {
         loadData();
@@ -87,7 +89,7 @@ function FacultySubmissionsList({ facultyId }) {
             const facultySubs = allSubs.filter(s => s.faculty_id === facultyId);
 
             setData(facultySubs);
-            setStats({
+            setAssignedStats({
                 total: facultySubs.length,
                 pending: facultySubs.filter(s => !['passed', 'failed'].includes(s.assignment_status)).length,
                 completed: facultySubs.filter(s => ['passed', 'failed'].includes(s.assignment_status)).length
@@ -113,9 +115,9 @@ function FacultySubmissionsList({ facultyId }) {
     return (
         <div className="mt-2 border border-slate-100 rounded-md overflow-hidden">
             <div className="bg-slate-50/50 px-3 py-2 border-b border-slate-100 flex gap-4 text-[10px] uppercase font-bold text-slate-500">
-                <span>Total: {stats.total}</span>
-                <span className="text-blue-600">Pending: {stats.pending}</span>
-                <span className="text-emerald-600">Completed: {stats.completed}</span>
+                <span>Total: {assignedStats.total}</span>
+                <span className="text-blue-600">Pending: {assignedStats.pending}</span>
+                <span className="text-emerald-600">Completed: {assignedStats.completed}</span>
             </div>
             <table className="w-full text-left text-xs">
                 <thead className="bg-slate-50 text-slate-500 border-b border-slate-100">
@@ -217,6 +219,7 @@ export default function AdminAssignment() {
 
     // ── Submissions tab state ──
     const [subData, setSubData] = useState([]);
+    const [subStats, setSubStats] = useState(null);
     const [subTotal, setSubTotal] = useState(0);
     const [subPage, setSubPage] = useState(1);
     const [subPageSize, setSubPageSize] = useState(25);
@@ -296,7 +299,7 @@ export default function AdminAssignment() {
                 sortBy: subSortBy,
                 sortDir: subSortDir,
             });
-            if (subSearch) params.set('search', subSearch);
+            if (subSearch && subSearch.trim()) params.set('search', subSearch.trim());
             if (subFilters.assignment_status?.checked?.length) {
                 params.set('status', subFilters.assignment_status.checked.join(','));
             }
@@ -312,9 +315,22 @@ export default function AdminAssignment() {
             if (subFilters.student_name?.text) {
                 params.set('studentName', subFilters.student_name.text);
             }
+            if (subFilters.submitted_at_date?.startDate) {
+                params.set('fromDate', subFilters.submitted_at_date.startDate);
+            }
+            if (subFilters.submitted_at_date?.endDate) {
+                params.set('toDate', subFilters.submitted_at_date.endDate);
+            }
+            if (subFilters.submitted_at_time?.startTime) {
+                params.set('startTime', subFilters.submitted_at_time.startTime);
+            }
+            if (subFilters.submitted_at_time?.endTime) {
+                params.set('endTime', subFilters.submitted_at_time.endTime);
+            }
 
             const res = await api.get(`/admin/all-submissions?${params}`);
             setSubData(res.data.data || []);
+            setSubStats(res.data.summary || null);
             setSubTotal(res.data.pagination?.total || 0);
         } catch (e) {
             showToast('Failed to load submissions', 'error');
@@ -609,7 +625,7 @@ export default function AdminAssignment() {
             renderCell: (v) => <StatusBadge value={v || 'unassigned'} />
         },
         {
-            key: 'submitted_at_date', label: 'Date', sortable: true,
+            key: 'submitted_at_date', label: 'Date', sortable: true, filterable: true, filterType: 'date-range',
             renderCell: (_, row) => {
                 if (!row.submitted_at) return <span className="text-xs text-slate-500 font-medium">—</span>;
                 const d = new Date(row.submitted_at);
@@ -619,7 +635,7 @@ export default function AdminAssignment() {
             }
         },
         {
-            key: 'submitted_at_time', label: 'Time', sortable: false,
+            key: 'submitted_at_time', label: 'Time', sortable: false, filterable: true, filterType: 'time-range',
             renderCell: (_, row) => {
                 if (!row.submitted_at) return <span className="text-xs text-slate-500 font-medium">—</span>;
                 const d = new Date(row.submitted_at);
@@ -818,51 +834,12 @@ export default function AdminAssignment() {
             {/* ═══════════ ALL SUBMISSIONS TAB ═══════════ */}
             {activeTab === 'submissions' && (
                 <div className="space-y-4">
-                    {/* Controls */}
-                    <div className="flex flex-col sm:flex-row gap-4 justify-between bg-white p-4 rounded-md border border-slate-200 shadow-sm">
-                        <div className="relative flex-1 max-w-sm">
-                            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                            <input
-                                type="text"
-                                placeholder="Search submissions..."
-                                className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-md text-xs focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                                value={subSearch}
-                                onChange={e => setSubSearch(e.target.value)}
-                            />
+                    {/* Analytics Header */}
+                    {!subLoading && subStats && (
+                        <div className="mb-2">
+                            <SummaryAnalytics metrics={subStats} type="submissions" />
                         </div>
-                        <div className="flex items-center gap-2">
-                            <button
-                                onClick={handleExportCSV}
-                                className="flex items-center gap-2 px-3 py-2 border border-slate-200 rounded-md text-xs font-semibold text-slate-600 hover:bg-slate-50"
-                            >
-                                <Download size={14} /> Export CSV
-                            </button>
-                            {selectedSubs.size > 0 && (
-                                <>
-                                    <button
-                                        onClick={handleReEvaluate}
-                                        disabled={actionLoading === 'reevaluate'}
-                                        className="flex items-center gap-2 px-3 py-2 bg-emerald-600 text-white rounded-md text-xs font-semibold hover:bg-emerald-700 shadow-sm disabled:opacity-50 transition-colors"
-                                    >
-                                        <Shuffle size={14} /> Re-evaluate ({selectedSubs.size})
-                                    </button>
-                                    <button
-                                        onClick={handleBulkDelete}
-                                        disabled={actionLoading === 'delete'}
-                                        className="flex items-center gap-2 px-3 py-2 bg-rose-50 text-rose-700 rounded-md text-xs font-semibold hover:bg-rose-100 border border-rose-200 shadow-sm disabled:opacity-50 transition-colors"
-                                    >
-                                        <Trash2 size={14} /> Delete ({selectedSubs.size})
-                                    </button>
-                                    <button
-                                        onClick={() => setBulkFacultyModal(true)}
-                                        className="flex items-center gap-2 px-3 py-2 bg-slate-900 text-white rounded-md text-xs font-semibold hover:bg-slate-800 shadow-sm transition-colors"
-                                    >
-                                        <UserPlus size={14} /> Assign ({selectedSubs.size})
-                                    </button>
-                                </>
-                            )}
-                        </div>
-                    </div>
+                    )}
 
                     <div className="bg-white rounded-md border border-slate-200 shadow-sm overflow-hidden min-h-[400px]">
                         <DataTable
@@ -877,12 +854,45 @@ export default function AdminAssignment() {
                             sortBy={subSortBy}
                             sortDir={subSortDir}
                             onSort={(col, dir) => { setSubSortBy(col); setSubSortDir(dir); }}
+                            onSearch={setSubSearch}
+                            searchValue={subSearch}
                             selectable={true}
                             selectedIds={selectedSubs}
                             onSelectionChange={setSelectedSubs}
                             filters={subFilters}
-                            onFilterChange={setSubFilters}
+                            onFilterChange={(key, val) => {
+                                setSubFilters(prev => ({ ...prev, [key]: val }));
+                                setSubPage(1);
+                            }}
                             emptyMessage="No submissions found matching criteria."
+                            bulkActions={(
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={handleReEvaluate}
+                                        className="flex items-center gap-2 px-3 py-1.5 bg-emerald-700 text-white rounded-md text-xs font-bold hover:bg-emerald-800 transition-colors"
+                                    >
+                                        <Shuffle size={14} /> Re-evaluate
+                                    </button>
+                                    <button
+                                        onClick={handleBulkDelete}
+                                        className="flex items-center gap-2 px-3 py-1.5 bg-rose-700 text-white rounded-md text-xs font-bold hover:bg-rose-800 transition-colors"
+                                    >
+                                        <Trash2 size={14} /> Delete
+                                    </button>
+                                    <button
+                                        onClick={() => setBulkFacultyModal(true)}
+                                        className="flex items-center gap-2 px-3 py-1.5 bg-slate-800 text-white rounded-md text-xs font-bold hover:bg-slate-900 transition-colors"
+                                    >
+                                        <UserPlus size={14} /> Assign
+                                    </button>
+                                    <button
+                                        onClick={handleExportCSV}
+                                        className="flex items-center gap-2 px-3 py-1.5 bg-white text-slate-700 border border-slate-200 rounded-md text-xs font-bold hover:bg-slate-50 transition-colors"
+                                    >
+                                        <Download size={14} /> Export
+                                    </button>
+                                </div>
+                            )}
                         />
                     </div>
                 </div>

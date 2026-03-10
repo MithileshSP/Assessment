@@ -47,22 +47,42 @@ const SaaSLayout = ({ children, fullWidth = false }) => {
         navigate('/logout');
     };
 
+    const adminItems = [
+        { id: 'dashboard', label: 'Dashboard', icon: <Layout size={20} />, path: '/admin/dashboard' },
+        { id: 'users', label: 'Users', icon: <Users size={20} />, path: '/admin/users' },
+        { id: 'courses', label: 'Courses', icon: <BookOpen size={20} />, path: '/admin/courses' },
+        { id: 'attendance', label: 'Attendance', icon: <Calendar size={20} />, path: '/admin/attendance' },
+        { id: 'schedule', label: 'Schedule', icon: <Clock size={20} />, path: '/admin/schedule' },
+        { id: 'faculty', label: 'Faculty', icon: <Briefcase size={20} />, path: '/admin/assignment' },
+        { id: 'results', label: 'Results', icon: <Trophy size={20} />, path: '/admin/results' },
+        { id: 'restrictions', label: 'Restrictions', icon: <Shield size={20} />, path: '/admin/restrictions' },
+        { id: 'reset', label: 'Reset Level', icon: <RefreshCw size={20} />, path: '/admin/reset-level' },
+        { id: 'tracker', label: 'Evaluation Tracker', icon: <Activity size={20} />, path: '/admin/evaluation-tracker' },
+        { id: 'assets', label: 'Assets', icon: <ImageIcon size={20} />, path: '/admin/assets' },
+        { id: 'bulk-completion', label: 'Bulk Unlock', icon: <Database size={20} />, path: '/admin/bulk-completion' },
+        { id: 'violations', label: 'Violations', icon: <AlertTriangle size={20} />, path: '/admin/violations' },
+    ];
+
+    // Access Control only for Master Admin
+    if (userData.is_master || userData.isMaster) {
+        adminItems.push({ id: 'access-control', label: 'Access Control', icon: <Shield size={20} />, path: '/admin/access-control' });
+    }
+
     const menuItems = {
-        admin: [
-            { id: 'dashboard', label: 'Dashboard', icon: <Layout size={20} />, path: '/admin/dashboard' },
-            { id: 'users', label: 'Users', icon: <Users size={20} />, path: '/admin/users' },
-            { id: 'courses', label: 'Courses', icon: <BookOpen size={20} />, path: '/admin/courses' },
-            { id: 'attendance', label: 'Attendance', icon: <Calendar size={20} />, path: '/admin/attendance' },
-            { id: 'schedule', label: 'Schedule', icon: <Clock size={20} />, path: '/admin/schedule' },
-            { id: 'faculty', label: 'Faculty', icon: <Briefcase size={20} />, path: '/admin/assignment' },
-            { id: 'results', label: 'Results', icon: <Trophy size={20} />, path: '/admin/results' },
-            { id: 'restrictions', label: 'Restrictions', icon: <Shield size={20} />, path: '/admin/restrictions' },
-            { id: 'reset', label: 'Reset Level', icon: <RefreshCw size={20} />, path: '/admin/reset-level' },
-            { id: 'tracker', label: 'Evaluation Tracker', icon: <Activity size={20} />, path: '/admin/evaluation-tracker' },
-            { id: 'assets', label: 'Assets', icon: <ImageIcon size={20} />, path: '/admin/assets' },
-            { id: 'bulk-completion', label: 'Bulk Unlock', icon: <Database size={20} />, path: '/admin/bulk-completion' },
-            { id: 'violations', label: 'Violations', icon: <AlertTriangle size={20} />, path: '/admin/violations' },
-        ],
+        admin: adminItems.filter(item => {
+            if (item.id === 'dashboard' || item.id === 'access-control') return true;
+            if (userData.is_master || userData.isMaster) return true;
+
+            // Check permissions array
+            let perms = userData.permissions;
+            if (typeof perms === 'string') {
+                try { perms = JSON.parse(perms); } catch (e) { perms = null; }
+            }
+            // If perms is fundamentally null or undefined, fallback to old behavior (show all)
+            if (!Array.isArray(perms)) return true;
+            // Otherwise, strictly enforce the array (even if empty)
+            return perms.includes(item.id);
+        }),
         faculty: [
             { id: 'dashboard', label: 'Dashboard', icon: <Layout size={20} />, path: '/faculty/dashboard' },
             { id: 'questions', label: 'Questions', icon: <BookOpen size={20} />, path: '/faculty/questions' },

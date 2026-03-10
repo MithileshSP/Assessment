@@ -32,6 +32,7 @@ const AdminAttendance = () => {
     const [loading, setLoading] = useState(true);
     const [isPolling, setIsPolling] = useState(false);
     const [showManualModal, setShowManualModal] = useState(false);
+    const [totalUsers, setTotalUsers] = useState(0);
     const [users, setUsers] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [submitting, setSubmitting] = useState(false);
@@ -77,13 +78,15 @@ const AdminAttendance = () => {
             if (showLoading) setLoading(true);
             setIsPolling(true);
 
-            const [unblockedRes, usersRes] = await Promise.all([
+            const [unblockedRes, statsRes] = await Promise.all([
                 api.get('/attendance/unblocked-list'),
-                api.get('/users?role=student&limit=9999')
+                api.get('/users?role=student&limit=1') // Just to get the total count quickly
             ]);
 
             setUnblockedUsers(unblockedRes.data);
-            setUsers(usersRes.data.users || []);
+            if (statsRes.data?.pagination?.total) {
+                setTotalUsers(statsRes.data.pagination.total);
+            }
             fetchActiveSessions();
             if (selectedSession) {
                 fetchScheduledStudents(selectedSession.id);
@@ -105,6 +108,36 @@ const AdminAttendance = () => {
         }, 5000);
         return () => clearInterval(interval);
     }, []);
+
+    // Debounced search for Grant Access modal
+    useEffect(() => {
+        const fetchRegistryUsers = async () => {
+            try {
+                const response = await api.get('/users', {
+                    params: {
+                        role: 'student',
+                        limit: 50,
+                        search: searchQuery
+                    }
+                });
+
+                if (response.data && response.data.users) {
+                    setUsers(response.data.users);
+                } else if (Array.isArray(response.data)) {
+                    // Fallback for older API format
+                    setUsers(response.data.slice(0, 50));
+                }
+            } catch (err) {
+                console.error("Failed to fetch registry users:", err);
+            }
+        };
+
+        const timer = setTimeout(() => {
+            fetchRegistryUsers();
+        }, 400); // 400ms debounce
+
+        return () => clearTimeout(timer);
+    }, [searchQuery]);
 
     // Fetch scheduled students when session is selected
     useEffect(() => {
@@ -375,7 +408,7 @@ const AdminAttendance = () => {
                             {/* Footer Stats - Compact */}
                             <div className="mt-12 grid grid-cols-3 gap-6">
                                 {[
-                                    { label: 'Registered Capacity', value: users.length, icon: Users },
+                                    { label: 'Registered Capacity', value: totalUsers, icon: Users },
                                     { label: 'Monitoring Policy', value: 'Active', icon: Shield },
                                     { label: 'Uptime', value: '100.0%', icon: Activity }
                                 ].map((stat, i) => (
@@ -740,43 +773,40 @@ const AdminAttendance = () => {
                                 </div>
 
                                 <div className="overflow-y-auto space-y-2 pr-2 custom-scrollbar flex-1 min-h-[250px]">
-                                    {safeUsers
-                                        .filter(u =>
-                                            (u.full_name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-                                            (u.email || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-                                            (u.roll_no || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-                                            (u.username || '').toLowerCase().includes(searchQuery.toLowerCase())
-                                        )
-                                        .slice(0, 50)
-                                        .map(user => (
-                                            <div key={user.id} className="p-4 rounded-xl border border-slate-100 hover:border-blue-100 hover:bg-blue-50/20 flex items-center justify-between group transition-all">
-                                                <div className="flex items-center gap-4">
-                                                    <div className="w-10 h-10 rounded-lg bg-slate-50 border border-slate-200/50 flex items-center justify-center text-slate-700 font-bold text-sm">
-                                                        {user.full_name?.charAt(0) || user.username?.charAt(0) || 'U'}
+                                    {safeUsers.length > 0 ? (
+                                        safeUsers.map(user => {
+                                            const displayName = user.fullName || user.full_name || user.username;
+                                            const displayId = user.rollNo || user.roll_no || 'No ID';
+                                            return (
+                                                <div key={user.id} className="p-4 rounded-xl border border-slate-100 hover:border-blue-100 hover:bg-blue-50/20 flex items-center justify-between group transition-all">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="w-10 h-10 rounded-lg bg-slate-50 border border-slate-200/50 flex items-center justify-center text-slate-700 font-bold text-sm">
+                                                            {displayName?.charAt(0) || 'U'}
+                                                        </div>
+                                                        <div>
+                                                            <p className="font-bold text-slate-900 text-sm leading-tight">{displayName}</p>
+                                                            <div className="flex items-center gap-2 mt-0.5">
+                                                                <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded tracking-wide">{displayId}</span>
+                                                                <p className="text-[11px] text-slate-400 tracking-tight">{user.email || 'No email'}</p>
+                                                            </div>
+                                                        </div>
                                                     </div>
-                                                    <div>
-                                                        <p className="font-bold text-slate-900 text-sm leading-tight">{user.full_name || user.username}</p>
-                                                        <p className="text-[11px] text-slate-400 mt-0.5 tracking-tight">{user.email || 'No email'}</p>
-                                                    </div>
+                                                    <button
+                                                        onClick={() => handleToggleBlock(user.id, true)}
+                                                        className="px-4 py-2 bg-slate-900 text-white hover:bg-blue-600 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all shadow-sm"
+                                                    >
+                                                        Grant Access
+                                                    </button>
                                                 </div>
-                                                <button
-                                                    onClick={() => handleToggleBlock(user.id, true)}
-                                                    className="px-4 py-2 bg-slate-900 text-white hover:bg-blue-600 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all"
-                                                >
-                                                    Manual Unblock
-                                                </button>
-                                            </div>
-                                        ))}
-                                    {searchQuery && !safeUsers.some(u =>
-                                        (u.full_name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-                                        (u.email || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-                                        (u.roll_no || '').toLowerCase().includes(searchQuery.toLowerCase())
-                                    ) && (
-                                            <div className="py-20 text-center">
-                                                <Search size={32} className="mx-auto mb-4 text-slate-100" />
-                                                <p className="text-slate-400 text-sm font-medium">No students found matching your search.</p>
-                                            </div>
-                                        )}
+                                            )
+                                        })
+                                    ) : (
+                                        <div className="py-20 text-center">
+                                            <Search size={32} className="mx-auto mb-4 text-slate-200" />
+                                            <p className="text-slate-500 font-bold text-sm">No students found matching your search.</p>
+                                            <p className="text-slate-400 text-xs mt-1">Try searching by email or roll number</p>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>

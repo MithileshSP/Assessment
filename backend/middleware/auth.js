@@ -17,7 +17,11 @@ const verifyToken = async (req, res, next) => {
         return res.status(401).json({ error: 'Access denied. No session token provided.' });
     }
 
-    const jwtSecret = process.env.JWT_SECRET || 'fallback_secret';
+    const jwtSecret = process.env.JWT_SECRET;
+    if (!jwtSecret) {
+        console.error('[Auth] FATAL: JWT_SECRET environment variable is not set');
+        return res.status(500).json({ error: 'Server configuration error' });
+    }
 
     try {
         const decoded = jwt.verify(token, jwtSecret);

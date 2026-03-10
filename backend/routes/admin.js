@@ -3,6 +3,7 @@ const router = express.Router();
 const db = require('../database/connection');
 const { verifyAdmin } = require('../middleware/auth');
 const GlobalSession = require('../models/GlobalSession');
+const { addSubmissionToAiQueue } = require('../services/aiQueueService');
 
 // Helper: Log assignment action for audit trail
 async function logAssignment(conn, { submissionId, actionType, fromFacultyId, toFacultyId, adminId, notes }) {
@@ -194,6 +195,15 @@ router.post('/assign/smart', verifyAdmin, async (req, res) => {
 
         loadTracker[bestFaculty.id] = (loadTracker[bestFaculty.id] || 0) + 1;
         assignedCount++;
+
+        // Enterprise AI Queue Integration
+        if (bestFaculty.username === process.env.AI_FACULTY_USERNAME || bestFaculty.username === 'ai_evaluator') {
+          const newAssignment = await conn.execute('SELECT id FROM submission_assignments WHERE submission_id = ?', [sub.id]);
+          const assignmentRow = Array.isArray(newAssignment[0]) ? newAssignment[0][0] : newAssignment[0];
+          if (assignmentRow) {
+            await addSubmissionToAiQueue(sub.id, assignmentRow.id);
+          }
+        }
       }
     });
 
@@ -274,6 +284,15 @@ router.post('/assign/manual', verifyAdmin, async (req, res) => {
         notes: 'Manual assignment by admin'
       });
     });
+
+    // Enterprise AI Queue Integration
+    const facultyUser = await db.queryOne('SELECT username FROM users WHERE id = ?', [facultyId]);
+    if (facultyUser && facultyUser.username === process.env.AI_FACULTY_USERNAME || facultyUser.username === 'ai_evaluator') {
+      const newAssignment = await db.queryOne('SELECT id FROM submission_assignments WHERE submission_id = ?', [submissionId]);
+      if (newAssignment) {
+        await addSubmissionToAiQueue(submissionId, newAssignment.id);
+      }
+    }
 
     res.json({ message: 'Submission assigned successfully', submissionId, facultyId });
   } catch (error) {
@@ -487,7 +506,7 @@ router.get('/results', verifyAdmin, async (req, res) => {
     // Better to just show course/level from submission table if available (it is).
     const simplerQuery = `
             SELECT 
-                s.id, u.full_name as candidate_name, s.submitted_at, s.status as final_status,
+                s.id, u.full_name as candidate_name, u.id as user_id, u.roll_no, s.submitted_at, s.status as final_status,
                 s.final_score as auto_score,
                 (me.code_quality_score + me.requirements_score + me.expected_output_score) as manual_score,
                 me.code_quality_score, me.requirements_score, me.expected_output_score,
@@ -495,7 +514,7 @@ router.get('/results', verifyAdmin, async (req, res) => {
                 c.title as course_title,
                 s.level
             FROM submissions s
-            JOIN users u ON s.user_id = u.id
+            LEFT JOIN users u ON s.user_id = u.id
             LEFT JOIN manual_evaluations me ON s.id = me.submission_id
             LEFT JOIN users ue ON me.faculty_id = ue.id
             LEFT JOIN courses c ON s.course_id = c.id
@@ -504,7 +523,21 @@ router.get('/results', verifyAdmin, async (req, res) => {
         `;
 
     const results = await db.query(simplerQuery);
-    res.json(results);
+
+    // Summary Statistics for Results
+    const summary = {
+      total: results.length,
+      evaluated: results.filter(r => r.final_status === 'passed' || r.final_status === 'failed').length,
+      passed: results.filter(r => r.final_status === 'passed').length,
+      failed: results.filter(r => r.final_status === 'failed').length,
+      autoEvaluated: results.filter(r => r.auto_score !== null && r.manual_score === null).length,
+      manuallyEvaluated: results.filter(r => r.manual_score !== null).length
+    };
+
+    res.json({
+      data: results,
+      summary
+    });
   } catch (error) {
     console.error("Error fetching results:", error);
     res.status(500).json({ error: error.message });
@@ -520,7 +553,7 @@ router.get('/results/export', verifyAdmin, async (req, res) => {
     const { fromDate, toDate } = req.query;
 
     // Build WHERE conditions
-    let whereConditions = ['s.exported_at IS NULL'];
+    let whereConditions = ['1=1'];
     const queryParams = [];
 
     if (fromDate) {
@@ -1009,6 +1042,17 @@ router.post('/bulk-assign', verifyAdmin, async (req, res) => {
       );
     });
 
+    // Enterprise AI Queue Integration
+    const facultyUser = await db.queryOne('SELECT username FROM users WHERE id = ?', [facultyId]);
+    if (facultyUser && (facultyUser.username === process.env.AI_FACULTY_USERNAME || facultyUser.username === 'ai_evaluator')) {
+      for (const subId of assigned) {
+        const newAssignment = await db.queryOne('SELECT id FROM submission_assignments WHERE submission_id = ?', [subId]);
+        if (newAssignment) {
+          await addSubmissionToAiQueue(subId, newAssignment.id);
+        }
+      }
+    }
+
     const statusCode = errors.length > 0 && assigned.length > 0 ? 207 : 200;
     res.status(statusCode).json({
       assigned: assigned.length,
@@ -1018,6 +1062,151 @@ router.post('/bulk-assign', verifyAdmin, async (req, res) => {
     });
   } catch (error) {
     console.error("Bulk assign error:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * POST /api/admin/submissions/re-evaluate
+ * Reset evaluated submissions to pending so they can be re-evaluated by the same faculty.
+ * Also re-adds to AI Queue if assigned to the AI evaluator.
+ */
+router.post('/submissions/re-evaluate', verifyAdmin, async (req, res) => {
+  try {
+    const { submissionIds } = req.body;
+    const adminId = req.user?.id;
+
+    if (!Array.isArray(submissionIds) || submissionIds.length === 0) {
+      return res.status(400).json({ error: 'submissionIds array is required' });
+    }
+
+    const processed = [];
+    const errors = [];
+    let aiQueued = 0;
+
+    // Get the AI evaluator user details
+    const aiUser = await db.queryOne('SELECT id, username FROM users WHERE username = ? OR username = ?', [process.env.AI_FACULTY_USERNAME || 'ai_evaluator', 'ai_evaluator']);
+
+    await db.transaction(async (conn) => {
+      // 1. Lock existing submission assignment rows
+      const existingAssignments = await conn.execute(
+        `SELECT sa.submission_id, sa.id, sa.faculty_id, sa.version, sa.status, u.username as faculty_username
+         FROM submission_assignments sa
+         JOIN users u ON sa.faculty_id = u.id
+         WHERE sa.submission_id IN (${submissionIds.map(() => '?').join(',')}) FOR UPDATE`,
+        submissionIds
+      );
+
+      const existingMap = {};
+      const existArr = Array.isArray(existingAssignments[0]) ? existingAssignments[0] : (existingAssignments || []);
+      existArr.forEach(row => { existingMap[row.submission_id] = row; });
+
+      // 2. Process each submission
+      for (const subId of submissionIds) {
+        const existing = existingMap[subId];
+
+        if (!existing) {
+          errors.push({ id: subId, reason: 'Assignment not found' });
+          continue;
+        }
+
+        if (existing.status !== 'evaluated') {
+          errors.push({ id: subId, reason: 'Only evaluated submissions can be re-evaluated' });
+          continue;
+        }
+
+        // 3. Reset to pending with optimistic lock
+        const [updateResult] = await conn.execute(
+          `UPDATE submission_assignments
+           SET status = 'pending', version = version + 1,
+               locked_by = NULL, locked_at = NULL
+           WHERE id = ? AND version = ?`,
+          [existing.id, existing.version]
+        );
+
+        if ((updateResult.affectedRows || updateResult) === 0) {
+          errors.push({ id: subId, reason: 'Version conflict — modified by another user' });
+          continue;
+        }
+
+        // 4. Update the main submissions table to reflect pending manual status
+        await conn.execute(
+          `UPDATE submissions SET status = 'pending', evaluated_at = NULL WHERE id = ?`,
+          [subId]
+        );
+
+        // 5. Delete existing manual evaluations so they don't break the new scoring
+        await conn.execute(
+          `DELETE FROM manual_evaluations WHERE submission_id = ?`,
+          [subId]
+        );
+
+        // 6. Audit log
+        await logAssignment(conn, {
+          submissionId: subId,
+          actionType: 'reopen', // reusing existing ENUM or adding new
+          fromFacultyId: existing.faculty_id,
+          toFacultyId: existing.faculty_id,
+          adminId,
+          notes: 'Admin triggered re-evaluation'
+        });
+
+        // 7. Check if we need to push to AI queue
+        if (aiUser && existing.faculty_id === aiUser.id) {
+          await addSubmissionToAiQueue(subId, existing.id);
+          aiQueued++;
+        }
+
+        processed.push(subId);
+      }
+    });
+
+    res.json({
+      message: `Re-evaluation triggered for ${processed.length} submissions. ${aiQueued} queued for AI.`,
+      processed: processed.length,
+      aiQueued,
+      skipped: errors.length,
+      errors: errors.slice(0, 10)
+    });
+  } catch (error) {
+    console.error("Re-evaluation error:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+
+/**
+ * POST /api/admin/bulk-delete
+ * Deletes selected submissions and their associated data (assignments, evaluations, logs)
+ */
+router.post('/bulk-delete', verifyAdmin, async (req, res) => {
+  try {
+    const { submissionIds } = req.body;
+    if (!submissionIds || !Array.isArray(submissionIds) || submissionIds.length === 0) {
+      return res.status(400).json({ error: 'No submissions provided for deletion' });
+    }
+
+    const idPlaceholders = submissionIds.map(() => '?').join(',');
+
+    let deletedCount = 0;
+    await db.transaction(async (conn) => {
+      // 1. Delete associated assignment logs
+      await conn.execute(`DELETE FROM assignment_logs WHERE submission_id IN (${idPlaceholders})`, submissionIds);
+
+      // 2. Delete manual evaluations
+      await conn.execute(`DELETE FROM manual_evaluations WHERE submission_id IN (${idPlaceholders})`, submissionIds);
+
+      // 3. Delete submission assignments
+      await conn.execute(`DELETE FROM submission_assignments WHERE submission_id IN (${idPlaceholders})`, submissionIds);
+
+      // 4. Finally delete the submissions themselves
+      const [result] = await conn.execute(`DELETE FROM submissions WHERE id IN (${idPlaceholders})`, submissionIds);
+      deletedCount = result.affectedRows;
+    });
+
+    res.json({ success: true, deleted: deletedCount, message: `Successfully deleted ${deletedCount} submissions` });
+  } catch (error) {
+    console.error("Bulk delete error:", error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -1056,40 +1245,63 @@ router.get('/all-submissions', verifyAdmin, async (req, res) => {
     const page = Math.max(1, parseInt(req.query.page) || 1);
     const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 25));
     const offset = (page - 1) * limit;
-    const { status, courseId, level, search, sortBy, sortDir } = req.query;
+    const { status, courseId, level, search, sortBy, sortDir, fromDate, toDate, startTime, endTime } = req.query;
 
     // Build WHERE
     const conditions = ["s.status != 'saved'"];
     const params = [];
 
+    if (fromDate) {
+      conditions.push('DATE(s.submitted_at) >= ?');
+      params.push(fromDate);
+    }
+    if (toDate) {
+      conditions.push('DATE(s.submitted_at) <= ?');
+      params.push(toDate);
+    }
+    if (startTime) {
+      conditions.push('TIME(s.submitted_at) >= ?');
+      params.push(startTime);
+    }
+    if (endTime) {
+      conditions.push('TIME(s.submitted_at) <= ?');
+      params.push(endTime);
+    }
+
     if (status) {
-      conditions.push('sa.status = ?');
-      params.push(status);
+      const statusArr = status.split(',');
+      conditions.push(`sa.status IN (${statusArr.map(() => '?').join(',')})`);
+      params.push(...statusArr);
     }
     if (courseId) {
-      conditions.push('s.course_id = ?');
-      params.push(courseId);
+      const courseArr = courseId.toString().split(',');
+      conditions.push(`s.course_id IN (${courseArr.map(() => '?').join(',')})`);
+      params.push(...courseArr);
     }
     if (level) {
-      conditions.push('s.level = ?');
-      params.push(parseInt(level));
+      const levelArr = level.toString().split(',');
+      conditions.push(`s.level IN (${levelArr.map(() => '?').join(',')})`);
+      params.push(...levelArr.map(Number));
     }
     if (req.query.facultyName) {
-      conditions.push('f.full_name = ?');
-      params.push(req.query.facultyName);
+      const facArr = req.query.facultyName.split(',');
+      conditions.push(`f.full_name IN (${facArr.map(() => '?').join(',')})`);
+      params.push(...facArr);
     }
     if (req.query.courseTitle) {
-      conditions.push('c.title = ?');
-      params.push(req.query.courseTitle);
+      const courseTitleArr = req.query.courseTitle.split(',');
+      conditions.push(`c.title IN (${courseTitleArr.map(() => '?').join(',')})`);
+      params.push(...courseTitleArr);
     }
     if (req.query.studentName) {
       conditions.push('u.full_name LIKE ?');
       params.push(`%${req.query.studentName}%`);
     }
-    if (search) {
-      conditions.push('(u.full_name LIKE ? OR u.email LIKE ? OR s.id LIKE ?)');
-      const searchTerm = `%${search}%`;
-      params.push(searchTerm, searchTerm, searchTerm);
+    if (search && search.trim()) {
+      const trimmedSearch = search.trim();
+      conditions.push('(u.full_name LIKE ? OR u.email LIKE ? OR u.id LIKE ? OR u.username LIKE ? OR u.roll_no LIKE ? OR s.id LIKE ? OR s.user_id LIKE ?)');
+      const searchTerm = `%${trimmedSearch}%`;
+      params.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
     }
 
     const whereClause = conditions.join(' AND ');
@@ -1143,8 +1355,24 @@ router.get('/all-submissions', verifyAdmin, async (req, res) => {
 
     const rows = await db.query(dataQuery, [...params, limit, offset]);
 
+    // Summary Analytics Query (respects filters but ignores pagination)
+    const summaryQuery = `
+      SELECT 
+        COUNT(*) as total,
+        SUM(CASE WHEN sa.status = 'pending' OR sa.status IS NULL THEN 1 ELSE 0 END) as pending,
+        SUM(CASE WHEN sa.locked_by IS NOT NULL AND sa.status = 'pending' THEN 1 ELSE 0 END) as evaluating,
+        SUM(CASE WHEN sa.status = 'evaluated' THEN 1 ELSE 0 END) as completed
+      FROM submissions s
+      LEFT JOIN submission_assignments sa ON s.id = sa.submission_id
+      LEFT JOIN users u ON s.user_id = u.id
+      LEFT JOIN courses c ON s.course_id = c.id
+      WHERE ${whereClause}
+    `;
+    const [summaryResult] = await db.query(summaryQuery, params);
+
     res.json({
       data: rows,
+      summary: summaryResult || { total: 0, pending: 0, evaluating: 0, completed: 0 },
       pagination: {
         page,
         limit,
@@ -1268,6 +1496,77 @@ router.delete('/submissions/:id', verifyAdmin, async (req, res) => {
     console.error("Manual submission delete error:", error);
     res.status(500).json({ error: "Failed to delete submission" });
   }
+});
+
+
+/**
+ * GET /api/admin/users/:id/permissions
+ * Fetch permissions for a specific admin user
+ */
+router.get('/users/:id/permissions', verifyAdmin, async (req, res) => {
+  try {
+    const UserModel = require('../models/User');
+    const user = await UserModel.findById(req.params.id);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    if (user.role !== 'admin') return res.status(400).json({ error: 'User is not an admin' });
+
+    // Parse permissions (stored as JSON string in DB)
+    let perms = user.permissions;
+    if (typeof perms === 'string') perms = JSON.parse(perms);
+
+    res.json({ permissions: perms || [], isMaster: !!user.is_master });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * PATCH /api/admin/users/:id/permissions
+ * Update permissions for a specific admin user (Master Admin only)
+ */
+router.patch('/users/:id/permissions', verifyAdmin, async (req, res) => {
+  try {
+    const UserModel = require('../models/User');
+    const adminUser = await UserModel.findById(req.user.id);
+
+    if (!adminUser.is_master) {
+      return res.status(403).json({ error: 'Only Master Admin can manage permissions' });
+    }
+
+    const { permissions } = req.body;
+    if (!Array.isArray(permissions)) {
+      return res.status(400).json({ error: 'Permissions must be an array' });
+    }
+
+    await UserModel.updatePermissions(req.params.id, permissions);
+    res.json({ message: 'Permissions updated successfully' });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * GET /api/admin/menu-items
+ * Get all available admin sidebar menu items for the Access Control UI
+ */
+router.get('/menu-items', verifyAdmin, async (req, res) => {
+  // Static list for now, matching SaaSLayout admin menuItems
+  const items = [
+    { id: 'dashboard', label: 'Dashboard' },
+    { id: 'users', label: 'Users' },
+    { id: 'courses', label: 'Courses' },
+    { id: 'attendance', label: 'Attendance' },
+    { id: 'schedule', label: 'Schedule' },
+    { id: 'faculty', label: 'Faculty' },
+    { id: 'results', label: 'Results' },
+    { id: 'restrictions', label: 'Restrictions' },
+    { id: 'reset', label: 'Reset Level' },
+    { id: 'tracker', label: 'Evaluation Tracker' },
+    { id: 'assets', label: 'Assets' },
+    { id: 'bulk-completion', label: 'Bulk Unlock' },
+    { id: 'violations', label: 'Violations' },
+  ];
+  res.json(items);
 });
 
 module.exports = router;

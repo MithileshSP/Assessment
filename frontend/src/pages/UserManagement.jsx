@@ -80,7 +80,7 @@ export default function UserManagement() {
         params: {
           page: pagination.page,
           limit: pagination.limit,
-          search: search,
+          search: search.trim(),
           role: roleFilter,
           ...colFilters
         }
@@ -163,7 +163,7 @@ export default function UserManagement() {
   };
 
   const handleColFilterChange = (key, value) => {
-    setColFilters(prev => ({ ...prev, [key]: value }));
+    setColFilters(prev => ({ ...prev, [key]: typeof value === 'string' ? value.trim() : value }));
   };
 
   const toggleFilter = (key) => {

@@ -30,7 +30,7 @@ const formatDate = (date) => {
 async function migrateUsers() {
   console.log('📤 Migrating users...');
   const users = readJSON('users.json');
-  
+
   for (const user of users) {
     await query(
       `INSERT INTO users (id, username, password, email, full_name, role, created_at, last_login)
@@ -59,11 +59,11 @@ async function migrateUsers() {
 async function migrateCourses() {
   console.log('📤 Migrating courses...');
   const courses = readJSON('courses.json');
-  
+
   for (const course of courses) {
     await query(
-      `INSERT INTO courses (id, title, description, thumbnail, icon, color, total_levels, estimated_time, difficulty, tags, is_locked, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `INSERT INTO courses (id, title, description, thumbnail, total_levels, estimated_time, tags, is_locked, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON DUPLICATE KEY UPDATE
        title = VALUES(title),
        description = VALUES(description),
@@ -74,14 +74,7 @@ async function migrateCourses() {
         course.title,
         course.description,
         course.thumbnail || null,
-        course.icon || '📚',
-        course.color || '#3B82F6',
         course.totalLevels || 1,
-        course.estimatedTime || '1 hour',
-        course.difficulty || 'Beginner',
-        JSON.stringify(course.tags || []),
-        course.isLocked || false,
-        formatDate(course.createdAt) || formatDate(new Date())
       ]
     );
   }
@@ -92,7 +85,7 @@ async function migrateCourses() {
 async function migrateChallenges() {
   console.log('📤 Migrating challenges...');
   const challenges = readJSON('challenges.json');
-  
+
   for (const challenge of challenges) {
     await query(
       `INSERT INTO challenges (id, title, difficulty, description, instructions, tags, time_limit, passing_threshold, expected_html, expected_css, expected_js, expected_screenshot_url, course_id, level, created_at, updated_at)
@@ -128,13 +121,13 @@ async function migrateChallenges() {
 async function migrateSubmissions() {
   console.log('📤 Migrating submissions...');
   const submissions = readJSON('submissions.json');
-  
+
   let count = 0;
   for (const submission of submissions) {
     // Check if user and challenge exist
     const userExists = await query('SELECT id FROM users WHERE id = ?', [submission.userId || 'user-demo-student']);
     const challengeExists = await query('SELECT id FROM challenges WHERE id = ?', [submission.challengeId]);
-    
+
     if (userExists.length === 0 || challengeExists.length === 0) {
       continue; // Skip if references don't exist
     }
@@ -173,14 +166,14 @@ async function migrateSubmissions() {
 async function migrateUserProgress() {
   console.log('📤 Migrating user progress...');
   const progressFile = path.join(__dirname, '../data/user-progress.json');
-  
+
   if (!fs.existsSync(progressFile)) {
     console.log('⚠️  No user progress data found');
     return;
   }
 
   const progressData = JSON.parse(fs.readFileSync(progressFile, 'utf8'));
-  
+
   let count = 0;
   for (const userProgress of progressData) {
     // Check if user exists
@@ -223,25 +216,25 @@ async function migrateUserProgress() {
 async function migrateUserAssignments() {
   console.log('📤 Migrating user assignments...');
   const assignmentsFile = path.join(__dirname, '../data/user-assignments.json');
-  
+
   if (!fs.existsSync(assignmentsFile)) {
     console.log('⚠️  No user assignments data found');
     return;
   }
 
   const assignments = JSON.parse(fs.readFileSync(assignmentsFile, 'utf8'));
-  
+
   let count = 0;
   for (const assignment of assignments) {
     // Check if user and course exist
     const userExists = await query('SELECT id FROM users WHERE id = ?', [assignment.userId]);
     const courseExists = await query('SELECT id FROM courses WHERE id = ?', [assignment.courseId]);
-    
+
     if (userExists.length === 0) {
       console.log(`⚠️  Skipping assignment for non-existent user: ${assignment.userId}`);
       continue;
     }
-    
+
     if (courseExists.length === 0) {
       console.log(`⚠️  Skipping assignment for non-existent course: ${assignment.courseId}`);
       continue;
@@ -250,7 +243,7 @@ async function migrateUserAssignments() {
     // Insert each assigned question as a separate row
     for (const questionId of assignment.assignedQuestions || []) {
       const challengeExists = await query('SELECT id FROM challenges WHERE id = ?', [questionId]);
-      
+
       if (challengeExists.length === 0) {
         console.log(`⚠️  Skipping assignment for non-existent challenge: ${questionId}`);
         continue;
@@ -279,14 +272,14 @@ async function migrateUserAssignments() {
 async function migrateAssets() {
   console.log('📤 Migrating assets...');
   const assetsFile = path.join(__dirname, '../data/assets-metadata.json');
-  
+
   if (!fs.existsSync(assetsFile)) {
     console.log('⚠️  No assets metadata found');
     return;
   }
 
   const assets = JSON.parse(fs.readFileSync(assetsFile, 'utf8'));
-  
+
   for (const asset of assets) {
     await query(
       `INSERT INTO assets (filename, original_name, path, url, type, size, category, uploaded_at)
@@ -312,7 +305,7 @@ async function migrateAssets() {
 // Main migration function
 async function runMigration() {
   console.log('\n🚀 Starting data migration from JSON to MySQL...\n');
-  
+
   try {
     await migrateUsers();
     await migrateCourses();
@@ -321,7 +314,7 @@ async function runMigration() {
     await migrateUserProgress();
     await migrateUserAssignments();
     await migrateAssets();
-    
+
     console.log('\n✅ Migration completed successfully!\n');
     process.exit(0);
   } catch (error) {

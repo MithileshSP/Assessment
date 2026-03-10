@@ -1,6 +1,6 @@
 services:
   portal_mysql:
-    image: gokulv456/assessment-mysql:v3.4.25
+    image: gokulv456/assessment-mysql:v3.4.28
     build:
       context: ./mysql-init
       dockerfile: Dockerfile
@@ -24,14 +24,30 @@ services:
       retries: 30
       start_period: 60s
 
+  portal_redis:
+    image: redis:latest
+    container_name: portal_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    networks:
+      - test-portal-network
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   backend:
-    image: gokulv456/assessment-backend:v3.4.26
+    image: gokulv456/assessment-backend:v3.4.28
     build:
       context: ./backend
       dockerfile: Dockerfile
     restart: unless-stopped
     depends_on:
       portal_mysql:
+        condition: service_healthy
+      portal_redis:
         condition: service_healthy
     environment:
       NODE_ENV: production
@@ -41,9 +57,13 @@ services:
       DB_USER: ${DB_USER}
       DB_PASSWORD: ${DB_PASSWORD}
       DB_NAME: ${DB_NAME}
+      REDIS_URL: redis://portal_redis:6379
       USE_JSON: ${USE_JSON}
       ASSETS_ROOT: /var/www/portal-assets
       JWT_SECRET: ${JWT_SECRET}
+      GPU_API_URL: ${GPU_API_URL}
+      GPU_API_KEY: ${GPU_API_KEY}
+      AI_FACULTY_USERNAME: ${AI_FACULTY_USERNAME}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
       TZ: Asia/Kolkata
@@ -58,6 +78,33 @@ services:
     networks:
       - test-portal-network
 
+  worker:
+    image: gokulv456/assessment-backend:v3.4.28
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: portal_ai_worker
+    restart: unless-stopped
+    command: npm run worker
+    depends_on:
+      portal_mysql:
+        condition: service_healthy
+      portal_redis:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      DB_HOST: portal_mysql
+      DB_PORT: 3306
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME}
+      REDIS_URL: redis://portal_redis:6379
+      GPU_API_URL: ${GPU_API_URL}
+      GPU_API_KEY: ${GPU_API_KEY}
+      TZ: Asia/Kolkata
+    networks:
+      - test-portal-network
+
   frontend:
     build:
       context: ./frontend
@@ -65,7 +112,7 @@ services:
       args:
         VITE_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
         VITE_API_URL: /fullstack/api
-    image: gokulv456/assessment-frontend:v3.4.26
+    image: gokulv456/assessment-frontend:v3.4.28
     container_name: portal_frontend
     restart: unless-stopped
     ports:

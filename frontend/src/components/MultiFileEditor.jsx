@@ -311,6 +311,7 @@ const MultiFileEditor = ({
             <div className="flex-1 overflow-hidden">
                 <Editor
                     height="100%"
+                    path={activeFile}
                     language={activeFileInfo.language}
                     value={files[activeFile] || ''}
                     onChange={handleEditorChange}

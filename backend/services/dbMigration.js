@@ -362,6 +362,11 @@ async function applyMigrations() {
     await addColumn("ALTER TABLE users ADD COLUMN current_session_id VARCHAR(100) NULL AFTER picture");
     await addColumn("ALTER TABLE users ADD COLUMN password_version ENUM('sha256', 'bcrypt') DEFAULT 'sha256' AFTER password");
     await addColumn("ALTER TABLE users ADD COLUMN last_login TIMESTAMP NULL AFTER created_at");
+    await addColumn("ALTER TABLE users ADD COLUMN is_master BOOLEAN DEFAULT FALSE");
+    await addColumn("ALTER TABLE users ADD COLUMN permissions JSON NULL");
+
+    // Ensure first admin is master
+    await queryWithRetry("UPDATE users SET is_master = TRUE WHERE id = 'user-admin-1'");
 
     // 6. Seeding
     console.log('🌱 Seeding initial data (idempotent)...');
@@ -473,7 +478,30 @@ async function applyMigrations() {
     // Fix for action_type truncation (v3.5.1)
     await addColumn("ALTER TABLE assignment_logs MODIFY COLUMN action_type VARCHAR(50) NOT NULL");
 
-    console.log('✅ Full migrations applied successfully (v3.5.0)');
+    // v4.0.0: Enterprise AI Evaluation Tracking
+    await addColumn("ALTER TABLE manual_evaluations ADD COLUMN best_practices_score INT NOT NULL DEFAULT 0");
+    await addColumn("ALTER TABLE manual_evaluations ADD COLUMN final_score INT NOT NULL DEFAULT 0");
+    await addColumn("ALTER TABLE manual_evaluations ADD COLUMN major_issues JSON NULL");
+
+    await addColumn("ALTER TABLE submission_assignments ADD COLUMN ai_processing_started_at TIMESTAMP NULL");
+    await addColumn("ALTER TABLE submission_assignments ADD COLUMN ai_completed_at TIMESTAMP NULL");
+    await addColumn("ALTER TABLE submission_assignments ADD COLUMN error_message TEXT NULL");
+
+    // Expand enum to include ai_error
+    try {
+      // First alter to varchar to ensure no data truncation errors before enum if it has extra stuff, but simple ENUM expansion is usually safe
+      await queryWithRetry("ALTER TABLE submission_assignments MODIFY COLUMN status ENUM('pending', 'evaluated', 'unassigned','assigned','in_progress','reallocated','reopened','ai_error') DEFAULT 'assigned'");
+    } catch (e) {
+      console.log('ℹ️ Status column modify skipped or already applied');
+    }
+
+    // Seed AI Evaluator user
+    await queryWithRetry(`
+      INSERT IGNORE INTO users (id, username, email, full_name, role, is_available, max_capacity) 
+      VALUES ('user-ai-evaluator', 'ai_evaluator', 'ai@system.local', 'AI Evaluator', 'faculty', TRUE, 1000)
+    `);
+
+    console.log('✅ Full migrations applied successfully (v4.0.0)');
   } catch (error) {
     console.error('❌ Migration failed:', error.message);
     throw error;

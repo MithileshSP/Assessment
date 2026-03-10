@@ -1,0 +1,105 @@
+import React from 'react';
+import {
+    Layout,
+    CheckCircle,
+    Clock,
+    AlertCircle,
+    TrendingUp,
+    Zap,
+    FileText,
+    Activity,
+    Shield
+} from 'lucide-react';
+
+const MetricCard = ({ icon: Icon, label, value, color = 'blue', delay = 0 }) => {
+    const colors = {
+        blue: {
+            bg: 'bg-blue-50',
+            text: 'text-blue-600',
+            border: 'border-blue-100',
+            iconBg: 'bg-blue-600',
+            shadow: 'shadow-blue-100/50'
+        },
+        emerald: {
+            bg: 'bg-emerald-50',
+            text: 'text-emerald-600',
+            border: 'border-emerald-100',
+            iconBg: 'bg-emerald-600',
+            shadow: 'shadow-emerald-100/50'
+        },
+        amber: {
+            bg: 'bg-amber-50',
+            text: 'text-amber-600',
+            border: 'border-amber-100',
+            iconBg: 'bg-amber-600',
+            shadow: 'shadow-amber-100/50'
+        },
+        rose: {
+            bg: 'bg-rose-50',
+            text: 'text-rose-600',
+            border: 'border-rose-100',
+            iconBg: 'bg-rose-600',
+            shadow: 'shadow-rose-100/50'
+        },
+        purple: {
+            bg: 'bg-purple-50',
+            text: 'text-purple-600',
+            border: 'border-purple-100',
+            iconBg: 'bg-purple-600',
+            shadow: 'shadow-purple-100/50'
+        },
+        slate: {
+            bg: 'bg-slate-50',
+            text: 'text-slate-600',
+            border: 'border-slate-100',
+            iconBg: 'bg-slate-600',
+            shadow: 'shadow-slate-100/50'
+        }
+    };
+
+    const c = colors[color] || colors.blue;
+
+    return (
+        <div
+            className={`group flex items-center gap-4 bg-white px-5 py-5 rounded-lg border ${c.border} shadow-sm transition-all duration-200 hover:shadow-md`}
+        >
+            <div className={`w-12 h-12 rounded-lg ${c.bg} flex items-center justify-center ${c.text} transition-colors`}>
+                <Icon size={24} />
+            </div>
+            <div>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">{label}</p>
+                <p className={`text-2xl font-black ${c.text} tabular-nums leading-none`}>
+                    {value !== undefined ? value : '0'}
+                </p>
+            </div>
+        </div>
+    );
+};
+
+export default function SummaryAnalytics({ metrics, type = 'submissions' }) {
+    if (!metrics) return null;
+
+    if (type === 'submissions') {
+        return (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full">
+                <MetricCard icon={FileText} label="Total Submissions" value={metrics.total} color="slate" delay={0} />
+                <MetricCard icon={Clock} label="Pending Reviews" value={metrics.pending} color="amber" delay={100} />
+                <MetricCard icon={Activity} label="Evaluating" value={metrics.evaluating} color="blue" delay={200} />
+                <MetricCard icon={CheckCircle} label="Completed" value={metrics.completed} color="emerald" delay={300} />
+            </div>
+        );
+    }
+
+    if (type === 'results') {
+        return (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full">
+                <MetricCard icon={FileText} label="Total Results" value={metrics.total} color="slate" delay={0} />
+                <MetricCard icon={CheckCircle} label="Cleared/Pass" value={metrics.passed} color="emerald" delay={100} />
+                <MetricCard icon={AlertCircle} label="Failed" value={metrics.failed} color="rose" delay={200} />
+                <MetricCard icon={Zap} label="Auto-Evaluated" value={metrics.autoEvaluated} color="purple" delay={300} />
+            </div>
+        );
+    }
+
+    return null;
+}

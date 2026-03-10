@@ -37,14 +37,15 @@ class UserModel {
   static async findAll(options = {}) {
     const { limit, offset, search, role, username, email, fullName, rollNo, isBlocked } = options;
 
-    let queryStr = 'SELECT * FROM users';
+    let queryStr = 'SELECT id, username, email, full_name, roll_no, role, is_blocked, is_master, permissions, created_at, last_login FROM users';
     const params = [];
     const whereClauses = [];
 
-    if (search) {
-      whereClauses.push('(username LIKE ? OR email LIKE ? OR full_name LIKE ? OR roll_no LIKE ?)');
-      const searchParam = `%${search}%`;
-      params.push(searchParam, searchParam, searchParam, searchParam);
+    if (search && search.trim()) {
+      const trimmedSearch = search.trim();
+      whereClauses.push('(id LIKE ? OR username LIKE ? OR email LIKE ? OR full_name LIKE ? OR roll_no LIKE ?)');
+      const searchParam = `%${trimmedSearch}%`;
+      params.push(searchParam, searchParam, searchParam, searchParam, searchParam);
     }
 
     if (role && role !== 'all') {
@@ -95,10 +96,11 @@ class UserModel {
     const params = [];
     const whereClauses = [];
 
-    if (search) {
-      whereClauses.push('(username LIKE ? OR email LIKE ? OR full_name LIKE ? OR roll_no LIKE ?)');
-      const searchParam = `%${search}%`;
-      params.push(searchParam, searchParam, searchParam, searchParam);
+    if (search && search.trim()) {
+      const trimmedSearch = search.trim();
+      whereClauses.push('(id LIKE ? OR username LIKE ? OR email LIKE ? OR full_name LIKE ? OR roll_no LIKE ?)');
+      const searchParam = `%${trimmedSearch}%`;
+      params.push(searchParam, searchParam, searchParam, searchParam, searchParam);
     }
 
     if (role && role !== 'all') {
@@ -138,7 +140,12 @@ class UserModel {
 
   // Get user by ID
   static async findById(id) {
-    return await queryOne('SELECT * FROM users WHERE id = ?', [id]);
+    return await queryOne('SELECT id, username, email, full_name, roll_no, role, is_blocked, is_master, permissions, created_at FROM users WHERE id = ?', [id]);
+  }
+
+  // Update user permissions
+  static async updatePermissions(id, permissions) {
+    return await query('UPDATE users SET permissions = ? WHERE id = ?', [JSON.stringify(permissions), id]);
   }
 
   // Get user by username

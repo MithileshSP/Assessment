@@ -199,6 +199,8 @@ router.post("/google", async (req, res) => {
         rollNo: user.rollNo || user.roll_no,
         role: user.role,
         picture: user.picture || picture,
+        isMaster: !!user.is_master,
+        permissions: user.permissions
       },
     });
   } catch (error) {
@@ -312,6 +314,8 @@ router.post("/login", async (req, res) => {
         fullName: user.fullName || user.full_name,
         rollNo: user.rollNo || user.roll_no,
         role: user.role,
+        isMaster: !!user.is_master,
+        permissions: user.permissions
       },
     });
   } catch (error) {
@@ -358,6 +362,8 @@ router.get("/me", verifyToken, async (req, res) => {
       fullName: user.fullName || user.full_name,
       rollNo: user.rollNo || user.roll_no,
       role: user.role,
+      isMaster: !!user.is_master,
+      permissions: user.permissions
     });
   } catch (error) {
     console.error("Error in /me:", error);
@@ -395,9 +401,11 @@ router.get("/", verifyAdmin, async (req, res) => {
       if (search) {
         const lowerSearch = search.toLowerCase();
         filtered = filtered.filter(u =>
+          (u.id && u.id.toLowerCase().includes(lowerSearch)) ||
           (u.username && u.username.toLowerCase().includes(lowerSearch)) ||
           (u.email && u.email.toLowerCase().includes(lowerSearch)) ||
-          (u.full_name && u.full_name.toLowerCase().includes(lowerSearch))
+          (u.full_name && u.full_name.toLowerCase().includes(lowerSearch)) ||
+          (u.roll_no && u.roll_no.toLowerCase().includes(lowerSearch))
         );
       }
 
