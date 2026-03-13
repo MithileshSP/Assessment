@@ -131,7 +131,7 @@ export default function AdminLevelReset() {
                         </div>
 
                         {message && (
-                            <div className={`flex items-start md:items-center gap-3 px-5 py-4 w-full md:w-auto rounded-2xl shadow-sm border animate-in slide-in-from-top-4 duration-300 ${message.type === 'success'
+                            <div className={`flex items-start md:items-center gap-3 px-5 py-4 w-full md:w-auto rounded-lg shadow-sm border animate-in slide-in-from-top-4 duration-300 ${message.type === 'success'
                                 ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
                                 : 'bg-rose-50 border-rose-200 text-rose-800'
                                 }`}>
@@ -149,10 +149,10 @@ export default function AdminLevelReset() {
                     {/* Main Grid */}
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                         {/* Column 1: Student */}
-                        <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm flex flex-col h-[550px] overflow-hidden transition-all hover:shadow-lg group">
+                        <div className="bg-white rounded-lg border border-slate-200 shadow-sm flex flex-col h-[550px] overflow-hidden transition-all hover:shadow-md group">
                             <div className="p-6 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
                                 <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center shadow-inner group-hover:scale-105 transition-transform duration-300">
+                                    <div className="w-10 h-10 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center shadow-inner group-hover:scale-105 transition-transform duration-300">
                                         <User size={20} />
                                     </div>
                                     <div>
@@ -171,7 +171,7 @@ export default function AdminLevelReset() {
                                         placeholder="Search by name or email..."
                                         value={searchTerm}
                                         onChange={(e) => setSearchTerm(e.target.value)}
-                                        className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold placeholder:font-medium placeholder:text-slate-400 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none"
+                                        className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-md text-sm font-bold placeholder:font-medium placeholder:text-slate-400 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none"
                                     />
                                 </div>
 
@@ -186,8 +186,8 @@ export default function AdminLevelReset() {
                                         <button
                                             key={user.id}
                                             onClick={() => setSelectedUser(user)}
-                                            className={`w-full p-4 rounded-2xl text-left border transition-all duration-200 ${selectedUser?.id === user.id
-                                                ? 'bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-500/30 ring-2 ring-blue-600 ring-offset-2'
+                                            className={`w-full p-4 rounded-lg text-left border transition-all duration-200 ${selectedUser?.id === user.id
+                                                ? 'bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-500/30'
                                                 : 'bg-white border-slate-100 hover:border-blue-200 hover:bg-blue-50 text-slate-700'
                                                 }`}
                                         >
@@ -207,7 +207,7 @@ export default function AdminLevelReset() {
                                         </button>
                                     ))}
                                     {!searching && currentUsers.length === 0 && (
-                                        <div className="text-center py-10 border border-dashed border-slate-200 rounded-2xl bg-slate-50/50">
+                                        <div className="text-center py-10 border border-dashed border-slate-200 rounded-lg bg-slate-50/50">
                                             <p className="text-sm font-bold text-slate-400">No students found.</p>
                                         </div>
                                     )}
@@ -216,10 +216,10 @@ export default function AdminLevelReset() {
                         </div>
 
                         {/* Column 2: Course */}
-                        <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm flex flex-col h-[550px] overflow-hidden transition-all hover:shadow-lg group">
+                        <div className="bg-white rounded-lg border border-slate-200 shadow-sm flex flex-col h-[550px] overflow-hidden transition-all hover:shadow-md group">
                             <div className="p-6 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
                                 <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 bg-violet-100 text-violet-600 rounded-xl flex items-center justify-center shadow-inner group-hover:scale-105 transition-transform duration-300">
+                                    <div className="w-10 h-10 bg-violet-100 text-violet-600 rounded-lg flex items-center justify-center shadow-inner group-hover:scale-105 transition-transform duration-300">
                                         <BookOpen size={20} />
                                     </div>
                                     <div>
@@ -235,8 +235,8 @@ export default function AdminLevelReset() {
                                     <button
                                         key={course.id}
                                         onClick={() => setSelectedCourse(course)}
-                                        className={`w-full p-5 rounded-2xl text-left border transition-all duration-200 ${selectedCourse?.id === course.id
-                                            ? 'bg-violet-600 border-violet-600 text-white shadow-md shadow-violet-500/30 ring-2 ring-violet-600 ring-offset-2'
+                                        className={`w-full p-5 rounded-lg text-left border transition-all duration-200 ${selectedCourse?.id === course.id
+                                            ? 'bg-violet-600 border-violet-600 text-white shadow-md shadow-violet-500/30'
                                             : 'bg-white border-slate-100 hover:border-violet-200 hover:bg-violet-50 text-slate-700'
                                             }`}
                                     >
@@ -248,7 +248,7 @@ export default function AdminLevelReset() {
                                     </button>
                                 ))}
                                 {courses.length === 0 && (
-                                    <div className="text-center py-10 border border-dashed border-slate-200 rounded-2xl bg-slate-50/50">
+                                    <div className="text-center py-10 border border-dashed border-slate-200 rounded-lg bg-slate-50/50">
                                         <p className="text-sm font-bold text-slate-400">No courses available.</p>
                                     </div>
                                 )}
@@ -256,10 +256,10 @@ export default function AdminLevelReset() {
                         </div>
 
                         {/* Column 3: Level */}
-                        <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm flex flex-col h-[550px] overflow-hidden transition-all hover:shadow-lg group">
+                        <div className="bg-white rounded-lg border border-slate-200 shadow-sm flex flex-col h-[550px] overflow-hidden transition-all hover:shadow-md group">
                             <div className="p-6 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
                                 <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 bg-amber-100 text-amber-600 rounded-xl flex items-center justify-center shadow-inner group-hover:scale-105 transition-transform duration-300">
+                                    <div className="w-10 h-10 bg-amber-100 text-amber-600 rounded-lg flex items-center justify-center shadow-inner group-hover:scale-105 transition-transform duration-300">
                                         <Layers size={20} />
                                     </div>
                                     <div>
@@ -277,7 +277,7 @@ export default function AdminLevelReset() {
                                             <button
                                                 key={lv}
                                                 onClick={() => setSelectedLevel(lv)}
-                                                className={`aspect-square flex flex-col items-center justify-center rounded-2xl font-black transition-all duration-200 border ${selectedLevel === lv
+                                                className={`aspect-square flex flex-col items-center justify-center rounded-lg font-black transition-all duration-200 border ${selectedLevel === lv
                                                     ? 'bg-amber-500 border-amber-500 text-white shadow-md shadow-amber-500/30 scale-[1.05]'
                                                     : 'bg-white border-slate-200 hover:border-amber-300 hover:bg-amber-50 text-slate-600 hover:scale-100'
                                                     }`}
@@ -288,7 +288,7 @@ export default function AdminLevelReset() {
                                         ))}
                                     </div>
                                 ) : (
-                                    <div className="h-full flex flex-col items-center justify-center text-center p-6 text-slate-400 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
+                                    <div className="h-full flex flex-col items-center justify-center text-center p-6 text-slate-400 bg-slate-50/50 rounded-lg border border-dashed border-slate-200">
                                         <Layers className="opacity-20 mb-4" size={40} />
                                         <p className="text-sm font-bold">Select a course in Step 02 to view available levels.</p>
                                     </div>
@@ -298,7 +298,7 @@ export default function AdminLevelReset() {
                     </div>
 
                     {/* Action Footer Bar */}
-                    <div className="bg-slate-900 border border-slate-800 rounded-[2rem] p-6 shadow-2xl flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden">
+                    <div className="bg-slate-900 border border-slate-800 rounded-lg p-6 shadow-2xl flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden">
                         {/* Soft Ambient Background Elements */}
                         <div className="absolute top-0 right-0 w-80 h-80 bg-rose-500/10 rounded-full blur-[100px] pointer-events-none" />
                         <div className="absolute bottom-0 left-0 w-80 h-80 bg-blue-500/10 rounded-full blur-[100px] pointer-events-none" />
@@ -350,7 +350,7 @@ export default function AdminLevelReset() {
                         <button
                             onClick={handleReset}
                             disabled={!selectedUser || !selectedCourse || resetting}
-                            className={`relative z-10 w-full md:w-auto px-8 py-4 rounded-xl font-black text-sm uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-3 ${!selectedUser || !selectedCourse || resetting
+                            className={`relative z-10 w-full md:w-auto px-8 py-3.5 rounded-md font-black text-sm uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-3 ${!selectedUser || !selectedCourse || resetting
                                 ? 'bg-slate-800 text-slate-500 cursor-not-allowed shadow-none'
                                 : 'bg-rose-600 hover:bg-rose-500 text-white shadow-lg shadow-rose-600/20 hover:-translate-y-0.5 active:translate-y-0'
                                 }`}

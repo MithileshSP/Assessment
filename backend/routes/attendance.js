@@ -607,7 +607,8 @@ router.get('/scheduled/:sessionId', verifyAdmin, async (req, res) => {
     try {
         const scheduledStudents = await query(
             `SELECT ta.id, ta.user_id, ta.scheduled_status, ta.requested_at,
-            u.username, u.email, u.full_name, u.roll_no, u.is_blocked
+                    ta.attempt_started_at, ta.attempt_submitted_at, ta.is_used,
+                    u.username, u.email, u.full_name, u.roll_no, u.is_blocked
              FROM test_attendance ta
              JOIN users u ON ta.user_id = u.id
              WHERE ta.session_id = ? AND ta.scheduled_status IN('scheduled', 'activated')

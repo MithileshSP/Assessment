@@ -308,7 +308,7 @@ const MultiFileEditor = ({
             {dropdownMenu}
 
             {/* Monaco Editor */}
-            <div className="flex-1 overflow-hidden">
+            <div className="flex-1 overflow-hidden relative z-0">
                 <Editor
                     height="100%"
                     path={activeFile}
@@ -336,6 +336,7 @@ const MultiFileEditor = ({
                         acceptSuggestionOnEnter: 'on',
                         tabCompletion: 'on',
                         wordBasedSuggestions: true,
+                        fixedOverflowWidgets: true,
                     }}
                     onMount={(editor, monaco) => {
                         // Ensure HTML language service is configured

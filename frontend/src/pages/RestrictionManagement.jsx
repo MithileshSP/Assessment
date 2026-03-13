@@ -114,10 +114,10 @@ const RestrictionManagement = () => {
 
                     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                         {/* Column 1: Course Selection */}
-                        <div className="lg:col-span-4 bg-white rounded-[2rem] border border-slate-200 shadow-sm flex flex-col h-[700px] overflow-hidden transition-all hover:shadow-lg group">
+                        <div className="lg:col-span-4 bg-white rounded-lg border border-slate-200 shadow-sm flex flex-col h-[700px] overflow-hidden transition-all hover:shadow-md group">
                             <div className="p-6 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
                                 <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 bg-violet-100 text-violet-600 rounded-xl flex items-center justify-center shadow-inner group-hover:scale-105 transition-transform duration-300">
+                                    <div className="w-10 h-10 bg-violet-100 text-violet-600 rounded-lg flex items-center justify-center shadow-inner group-hover:scale-105 transition-transform duration-300">
                                         <BookOpen size={20} />
                                     </div>
                                     <div>
@@ -136,7 +136,7 @@ const RestrictionManagement = () => {
                                         placeholder="Search courses..."
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
-                                        className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold placeholder:font-medium placeholder:text-slate-400 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none"
+                                        className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-md text-sm font-bold placeholder:font-medium placeholder:text-slate-400 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none"
                                     />
                                 </div>
 
@@ -152,13 +152,13 @@ const RestrictionManagement = () => {
                                                 <button
                                                     key={course.id}
                                                     onClick={() => handleSelectCourse(course)}
-                                                    className={`w-full p-4 rounded-2xl text-left border transition-all duration-200 ${selectedCourse?.id === course.id
-                                                        ? 'bg-violet-600 border-violet-600 text-white shadow-md shadow-violet-500/30 ring-2 ring-violet-600 ring-offset-2'
+                                                    className={`w-full p-4 rounded-lg text-left border transition-all duration-200 ${selectedCourse?.id === course.id
+                                                        ? 'bg-violet-600 border-violet-600 text-white shadow-md shadow-violet-500/30'
                                                         : 'bg-white border-slate-100 hover:border-violet-200 hover:bg-violet-50 text-slate-700'
                                                         }`}
                                                 >
                                                     <div className="flex items-center gap-3">
-                                                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0 ${selectedCourse?.id === course.id ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'
+                                                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-lg shrink-0 ${selectedCourse?.id === course.id ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'
                                                             }`}>
                                                             {course.icon || '📚'}
                                                         </div>
@@ -173,7 +173,7 @@ const RestrictionManagement = () => {
                                                 </button>
                                             ))}
                                             {filteredCourses.length === 0 && (
-                                                <div className="text-center py-10 border border-dashed border-slate-200 rounded-2xl bg-slate-50/50">
+                                                <div className="text-center py-10 border border-dashed border-slate-200 rounded-lg bg-slate-50/50">
                                                     <p className="text-sm font-bold text-slate-400">No courses match search.</p>
                                                 </div>
                                             )}
@@ -186,11 +186,11 @@ const RestrictionManagement = () => {
                         {/* Column 2: Configuration */}
                         <div className="lg:col-span-8">
                             {selectedCourse ? (
-                                <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm flex flex-col h-[700px] transition-all hover:shadow-lg relative overflow-hidden">
+                                <div className="bg-white rounded-lg border border-slate-200 shadow-sm flex flex-col h-[700px] transition-all hover:shadow-lg relative overflow-hidden">
                                     {/* Action Header */}
                                     <div className="p-6 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between relative z-10">
                                         <div className="flex items-center gap-4">
-                                            <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center text-2xl shadow-sm border border-slate-100">
+                                            <div className="w-12 h-12 bg-white rounded-lg flex items-center justify-center text-2xl shadow-sm border border-slate-100">
                                                 {selectedCourse.icon || '🛡️'}
                                             </div>
                                             <div>
@@ -208,9 +208,9 @@ const RestrictionManagement = () => {
                                         <button
                                             onClick={handleSave}
                                             disabled={saving}
-                                            className={`relative z-10 px-6 py-3 rounded-xl font-black text-xs uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-2 ${saving
+                                            className={`relative z-10 px-6 py-2.5 rounded-md font-black text-xs uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-2 ${saving
                                                 ? 'bg-slate-100 text-slate-400 cursor-not-allowed shadow-none'
-                                                : 'bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-600/20 hover:-translate-y-0.5 active:translate-y-0'
+                                                : 'bg-blue-600 hover:bg-blue-700 text-white shadow-sm hover:-translate-y-0.5 active:translate-y-0'
                                                 }`}
                                         >
                                             {saving ? (
@@ -232,14 +232,14 @@ const RestrictionManagement = () => {
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                                             {/* Block Copy */}
                                             <div
-                                                className={`p-6 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between ${restrictions.blockCopy
+                                                className={`p-6 rounded-lg border-2 transition-all cursor-pointer flex flex-col justify-between ${restrictions.blockCopy
                                                     ? 'bg-blue-50/50 border-blue-200 shadow-sm'
                                                     : 'bg-white border-slate-100 hover:border-blue-100'
                                                     }`}
                                                 onClick={() => toggleRestriction('blockCopy')}
                                             >
                                                 <div className="flex items-center justify-between mb-4">
-                                                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all ${restrictions.blockCopy ? 'bg-blue-600 text-white shadow-md' : 'bg-slate-100 text-slate-500'
+                                                    <div className={`w-12 h-12 rounded-lg flex items-center justify-center transition-all ${restrictions.blockCopy ? 'bg-blue-600 text-white shadow-sm' : 'bg-slate-100 text-slate-500'
                                                         }`}>
                                                         <Copy size={20} />
                                                     </div>
@@ -258,14 +258,14 @@ const RestrictionManagement = () => {
 
                                             {/* Block Paste */}
                                             <div
-                                                className={`p-6 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between ${restrictions.blockPaste
+                                                className={`p-6 rounded-lg border-2 transition-all cursor-pointer flex flex-col justify-between ${restrictions.blockPaste
                                                     ? 'bg-blue-50/50 border-blue-200 shadow-sm'
                                                     : 'bg-white border-slate-100 hover:border-blue-100'
                                                     }`}
                                                 onClick={() => toggleRestriction('blockPaste')}
                                             >
                                                 <div className="flex items-center justify-between mb-4">
-                                                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all ${restrictions.blockPaste ? 'bg-blue-600 text-white shadow-md' : 'bg-slate-100 text-slate-500'
+                                                    <div className={`w-12 h-12 rounded-md flex items-center justify-center transition-all ${restrictions.blockPaste ? 'bg-blue-600 text-white shadow-sm' : 'bg-slate-100 text-slate-500'
                                                         }`}>
                                                         <Clipboard size={20} />
                                                     </div>
@@ -283,14 +283,14 @@ const RestrictionManagement = () => {
 
                                             {/* Advanced Tracking */}
                                             <div
-                                                className={`p-6 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between md:col-span-2 ${restrictions.forceFullscreen
+                                                className={`p-6 rounded-lg border-2 transition-all cursor-pointer flex flex-col justify-between md:col-span-2 ${restrictions.forceFullscreen
                                                     ? 'bg-indigo-50/80 border-indigo-200 shadow-sm'
                                                     : 'bg-white border-slate-100 hover:border-indigo-100'
                                                     }`}
                                                 onClick={() => toggleRestriction('forceFullscreen')}
                                             >
                                                 <div className="flex items-center justify-between mb-4">
-                                                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-all ${restrictions.forceFullscreen ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-100 text-slate-500'
+                                                    <div className={`w-12 h-12 rounded-md flex items-center justify-center transition-all ${restrictions.forceFullscreen ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-100 text-slate-500'
                                                         }`}>
                                                         <Maximize size={20} />
                                                     </div>
@@ -310,7 +310,7 @@ const RestrictionManagement = () => {
                                         </div>
 
                                         {/* Quantitative Configurations */}
-                                        <div className="bg-slate-900 rounded-2xl p-6 shadow-xl relative overflow-hidden">
+                                        <div className="bg-slate-900 rounded-lg p-6 shadow-xl relative overflow-hidden">
                                             {/* Decorative glows */}
                                             <div className="absolute top-0 right-0 w-64 h-64 bg-rose-500/10 rounded-full blur-[80px] pointer-events-none" />
                                             <div className="absolute bottom-0 left-0 w-64 h-64 bg-blue-500/10 rounded-full blur-[80px] pointer-events-none" />
@@ -341,7 +341,7 @@ const RestrictionManagement = () => {
                                                             type="number"
                                                             value={restrictions.timeLimit}
                                                             onChange={(e) => setRestrictions(prev => ({ ...prev, timeLimit: parseInt(e.target.value) }))}
-                                                            className="w-full bg-slate-800 border border-slate-700 focus:border-blue-500 rounded-xl px-4 py-3 text-white text-lg font-black outline-none transition-all pr-16"
+                                                            className="w-full bg-slate-800 border border-slate-700 focus:border-blue-500 rounded-md px-4 py-3 text-white text-lg font-black outline-none transition-all pr-16"
                                                         />
                                                         <span className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold text-xs uppercase">Mins</span>
                                                     </div>
@@ -352,8 +352,8 @@ const RestrictionManagement = () => {
                                     </div>
                                 </div>
                             ) : (
-                                <div className="h-[700px] flex flex-col items-center justify-center bg-white rounded-[2rem] border border-slate-200 border-dashed shadow-sm">
-                                    <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-300 mb-6">
+                                <div className="h-[700px] flex flex-col items-center justify-center bg-white rounded-lg border border-slate-200 border-dashed shadow-sm">
+                                    <div className="w-16 h-16 bg-slate-50 rounded-lg flex items-center justify-center text-slate-300 mb-6">
                                         <BookOpen size={28} />
                                     </div>
                                     <h3 className="text-lg font-black text-slate-400">No Course Selected</h3>

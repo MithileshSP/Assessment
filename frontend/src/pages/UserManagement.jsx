@@ -211,21 +211,21 @@ export default function UserManagement() {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-4xl font-black text-slate-900 tracking-tight">User Management</h1>
-            <p className="text-slate-500 mt-1 text-lg">Directly manage accounts for Students, Faculty, and Admins.</p>
+            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">User Management</h1>
+            <p className="text-slate-500 mt-1 text-sm font-medium">Directly manage accounts for Students, Faculty, and Admins.</p>
           </div>
           <div className="flex items-center gap-3">
             <button
               onClick={() => setShowUploadModal(true)}
-              className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 rounded-2xl text-sm font-bold text-slate-700 hover:bg-slate-50 transition-colors shadow-sm"
+              className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded-md text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors shadow-sm"
             >
-              <Upload size={16} /> Bulk Import
+              <Upload size={14} /> Bulk Import
             </button>
             <button
               onClick={() => setShowAddModal(true)}
-              className="flex items-center gap-2 px-8 py-2.5 bg-slate-900 text-white rounded-2xl text-sm font-bold hover:bg-blue-600 transition-all shadow-lg shadow-slate-900/10"
+              className="flex items-center gap-2 px-5 py-1.5 bg-slate-900 text-white rounded-md text-xs font-bold hover:bg-slate-800 transition-all shadow-sm"
             >
-              <UserPlus size={16} /> Create User
+              <UserPlus size={14} /> Create User
             </button>
           </div>
         </div>
@@ -234,11 +234,11 @@ export default function UserManagement() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 animate-fade-in-up delay-100">
           <div className="md:col-span-1 lg:col-span-2 xl:col-span-3 flex items-center gap-4">
             <div className="relative flex-1 group">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={18} />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-slate-600 transition-colors" size={14} />
               <input
                 type="text"
-                placeholder="Search by name, email or username..."
-                className="w-full pl-12 pr-4 py-4 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none text-sm shadow-sm transition-all"
+                placeholder="Search..."
+                className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-md focus:ring-2 focus:ring-slate-100 focus:border-slate-400 outline-none text-xs shadow-sm transition-all"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
@@ -248,39 +248,39 @@ export default function UserManagement() {
               <select
                 value={roleFilter}
                 onChange={(e) => setRoleFilter(e.target.value)}
-                className="appearance-none pl-6 pr-12 py-4 bg-white border border-slate-200 rounded-2xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none text-sm font-bold text-slate-700 shadow-sm transition-all cursor-pointer min-w-[160px]"
+                className="appearance-none pl-4 pr-10 py-2 bg-white border border-slate-200 rounded-md focus:ring-2 focus:ring-slate-100 focus:border-slate-400 outline-none text-xs font-bold text-slate-700 shadow-sm transition-all cursor-pointer min-w-[140px]"
               >
                 <option value="all">All Roles</option>
                 <option value="student">Students</option>
                 <option value="faculty">Faculty</option>
                 <option value="admin">Admins</option>
               </select>
-              <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 group-hover:text-blue-500 transition-colors">
-                <Users size={16} />
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                <Users size={14} />
               </div>
             </div>
           </div>
 
-          <div className="bg-gradient-to-br from-blue-600 to-blue-500 rounded-2xl p-5 text-white flex items-center justify-between shadow-xl shadow-blue-600/20 hover:scale-[1.02] transition-transform">
+          <div className="bg-slate-900 rounded-md p-4 text-white flex items-center justify-between shadow-md">
             <div>
-              <p className="text-[10px] font-black opacity-70 uppercase tracking-[0.2em] text-left">Active Base</p>
-              <p className="text-3xl font-black text-left mt-1">
+              <p className="text-[9px] font-bold opacity-70 uppercase tracking-widest text-left">Active Base</p>
+              <p className="text-2xl font-bold text-left mt-0.5">
                 {pagination.total}
-                <span className="text-xs ml-1 opacity-50 font-medium">Results</span>
+                <span className="text-[10px] ml-1 opacity-50 font-medium">Results</span>
               </p>
             </div>
-            <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center backdrop-blur-sm">
-              <Activity size={24} className="opacity-80" />
+            <div className="w-10 h-10 rounded-md bg-white/10 flex items-center justify-center backdrop-blur-sm">
+              <Activity size={20} className="opacity-80" />
             </div>
           </div>
         </div>
 
         {/* Users Table */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden text-sm">
+        <div className="bg-white rounded-md border border-slate-200 shadow-sm overflow-hidden text-sm">
           <div className="overflow-x-auto">
             <table className="w-full text-left">
-              <thead className="bg-slate-50/50 text-slate-500 font-bold text-[11px] uppercase tracking-widest border-b border-slate-100">
-                <tr>
+              <thead className="bg-slate-50 sticky top-0 z-10 border-b border-slate-200 shadow-[0_1px_0_0_rgba(0,0,0,0.05)] text-slate-500 font-bold text-[10px] uppercase tracking-widest leading-none">
+                <tr className="h-10">
                   <th className="px-6 py-4">
                     <div className="flex flex-col gap-2">
                       <div className="flex items-center justify-between gap-2">
@@ -399,51 +399,51 @@ export default function UserManagement() {
                   <tr><td colSpan="6" className="p-20 text-center text-slate-400">No users match your criteria.</td></tr>
                 ) : (
                   displayUsers.map((user) => (
-                    <tr key={user.id} className="hover:bg-slate-50/50 transition-colors group">
-                      <td className="px-6 py-4">
+                    <tr key={user.id} className="hover:bg-slate-50 transition-colors group even:bg-slate-50/20">
+                      <td className="px-6 py-2">
                         <div className="flex items-center gap-3">
-                          <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-xs ${getRoleStyles(user.role)}`}>
+                          <div className={`w-7 h-7 rounded-md flex items-center justify-center font-bold text-[10px] border border-black/5 ${getRoleStyles(user.role)}`}>
                             {user.fullName?.charAt(0) || user.username.charAt(0).toUpperCase()}
                           </div>
                           <div>
-                            <p className="font-bold text-slate-900">{user.fullName || 'No Name Set'}</p>
-                            <p className="text-[11px] text-slate-400 font-medium">@{user.username}</p>
+                            <p className="font-bold text-slate-900 leading-tight">{user.fullName || 'No Name Set'}</p>
+                            <p className="text-[10px] text-slate-400 font-medium">@{user.username}</p>
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-4">
-                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 text-slate-700 font-mono text-xs">
-                          <Hash size={12} className="text-slate-400" />
+                      <td className="px-6 py-2">
+                        <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-50 text-slate-700 font-mono text-[10px] border border-slate-200">
+                          <Hash size={10} className="text-slate-400" />
                           {user.rollNo || '—'}
                         </div>
                       </td>
-                      <td className="px-6 py-4 font-medium text-slate-500">
+                      <td className="px-6 py-2 font-medium text-slate-500 text-xs">
                         {user.email || '—'}
                       </td>
-                      <td className="px-6 py-4">
-                        <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border font-bold text-[10px] uppercase tracking-wider ${getRoleStyles(user.role)}`}>
+                      <td className="px-6 py-2">
+                        <div className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md border font-bold text-[9px] uppercase tracking-wider ${getRoleStyles(user.role)}`}>
                           {getRoleIcon(user.role)}
                           {user.role}
                         </div>
                       </td>
-                      <td className="px-6 py-4">
-                        <button
-                          onClick={() => handleToggleBlock(user.id)}
-                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 ${user.isBlocked
-                            ? 'bg-rose-500 focus:ring-rose-500'
-                            : 'bg-emerald-500 focus:ring-emerald-500'
-                            }`}
-                          title={user.isBlocked ? 'Click to unblock' : 'Click to block'}
-                        >
-                          <span
-                            className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-lg transition-transform ${user.isBlocked ? 'translate-x-1' : 'translate-x-6'
+                      <td className="px-6 py-2">
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleToggleBlock(user.id)}
+                            className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors focus:outline-none ${user.isBlocked
+                              ? 'bg-rose-500'
+                              : 'bg-emerald-500'
                               }`}
-                          />
-                        </button>
-                        <span className={`ml-2 text-xs font-bold ${user.isBlocked ? 'text-rose-600' : 'text-emerald-600'}`}>
-                          {user.isBlocked ? <Lock size={12} className="inline" /> : <Unlock size={12} className="inline" />}
-                          {user.isBlocked ? ' Blocked' : ' Active'}
-                        </span>
+                          >
+                            <span
+                              className={`inline-block h-2.5 w-2.5 transform rounded-full bg-white shadow-sm transition-transform ${user.isBlocked ? 'translate-x-0.5' : 'translate-x-4'
+                                }`}
+                            />
+                          </button>
+                          <span className={`text-[10px] font-bold ${user.isBlocked ? 'text-rose-600' : 'text-emerald-600'}`}>
+                            {user.isBlocked ? 'Blocked' : 'Active'}
+                          </span>
+                        </div>
                       </td>
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -459,15 +459,15 @@ export default function UserManagement() {
                                 role: user.role || 'student'
                               });
                             }}
-                            className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            className="p-1.5 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-md transition-colors"
                           >
-                            <Edit2 size={16} />
+                            <Edit2 size={14} />
                           </button>
                           <button
                             onClick={() => handleDeleteUser(user.id)}
-                            className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-colors"
                           >
-                            <Trash2 size={16} />
+                            <Trash2 size={14} />
                           </button>
                         </div>
                       </td>
@@ -503,97 +503,106 @@ export default function UserManagement() {
         </div>
 
         {/* Modals are kept similar but styled to match */}
+        {/* Modals - Enterprise Redesign */}
         {(showAddModal || editingUser) && (
           <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden animate-fade-in border border-slate-100">
-              <div className="p-8">
+            <div className="bg-white rounded-lg shadow-sm max-w-md w-full overflow-hidden animate-fade-in border border-slate-200">
+              <div className="p-6">
                 <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-2xl font-bold text-slate-900">
+                  <h2 className="text-xl font-bold text-slate-900">
                     {editingUser ? 'Update Profile' : 'Create New Identity'}
                   </h2>
-                  <button onClick={() => { setShowAddModal(false); setEditingUser(null); }} className="p-2 hover:bg-slate-100 rounded-full text-slate-400">
-                    <X size={20} />
+                  <button onClick={() => { setShowAddModal(false); setEditingUser(null); }} className="p-2 hover:bg-slate-100 rounded-md text-slate-400 transition-colors">
+                    <X size={18} />
                   </button>
                 </div>
 
-                <form onSubmit={editingUser ? handleUpdateUser : handleAddUser} className="space-y-5">
+                <form onSubmit={editingUser ? handleUpdateUser : handleAddUser} className="space-y-4">
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2">Username</label>
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Username</label>
                     <input
                       type="text"
                       value={formData.username}
                       onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                      className="w-full px-4 py-3 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-500 text-sm font-medium"
+                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-md focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none text-sm font-medium transition-all"
                       required
                       disabled={!!editingUser}
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2">
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">
                       Password {editingUser && '(optional)'}
                     </label>
                     <input
                       type="password"
                       value={formData.password}
                       onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                      className="w-full px-4 py-3 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-500 text-sm font-medium"
+                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-md focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none text-sm font-medium transition-all"
                       required={!editingUser}
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4 uppercase tracking-widest">
-                    <div className="col-span-2">
-                      <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2">Full Name</label>
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Full Name</label>
+                    <input
+                      type="text"
+                      value={formData.fullName}
+                      onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-md focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none text-sm font-medium transition-all"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Roll No</label>
                       <input
                         type="text"
-                        value={formData.fullName}
-                        onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                        className="w-full px-4 py-3 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-500 text-sm font-medium"
+                        value={formData.rollNo}
+                        onChange={(e) => setFormData({ ...formData, rollNo: e.target.value })}
+                        placeholder="e.g., 737624..."
+                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-md focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none text-sm font-mono transition-all"
                       />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Access Role</label>
+                      <select
+                        value={formData.role}
+                        onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-md focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none text-sm font-bold text-slate-700 transition-all appearance-none cursor-pointer"
+                      >
+                        <option value="student">Student</option>
+                        <option value="faculty">Faculty</option>
+                        <option value="admin">Admin</option>
+                      </select>
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2">Roll No</label>
-                    <input
-                      type="text"
-                      value={formData.rollNo}
-                      onChange={(e) => setFormData({ ...formData, rollNo: e.target.value })}
-                      placeholder="e.g., 7376242AD165"
-                      className="w-full px-4 py-3 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-500 text-sm font-medium font-mono"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2">Email Address</label>
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Email Address</label>
                     <input
                       type="email"
                       value={formData.email}
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      className="w-full px-4 py-3 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-500 text-sm font-medium"
+                      className="w-full px-3 py-2 bg-white border border-slate-200 rounded-md focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 outline-none text-sm font-medium transition-all"
                     />
                   </div>
 
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2">Access Role</label>
-                    <select
-                      value={formData.role}
-                      onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                      className="w-full px-4 py-3 bg-slate-50 border-none rounded-2xl focus:ring-2 focus:ring-blue-500 text-sm font-bold text-slate-700"
+                  <div className="flex gap-3 mt-6">
+                    <button
+                      type="button"
+                      onClick={() => { setShowAddModal(false); setEditingUser(null); }}
+                      className="flex-1 py-2.5 border border-slate-200 text-slate-600 rounded-md font-bold text-xs uppercase tracking-widest hover:bg-slate-50 transition-all active:scale-[0.98]"
                     >
-                      <option value="student">Student Account</option>
-                      <option value="faculty">Faculty Member</option>
-                      <option value="admin">System Admin</option>
-                    </select>
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="flex-1 py-2.5 bg-blue-600 text-white rounded-md font-bold text-xs uppercase tracking-widest hover:bg-blue-700 transition-all active:scale-[0.98] shadow-sm"
+                    >
+                      {editingUser ? 'Save Changes' : 'Create User'}
+                    </button>
                   </div>
-
-                  <button
-                    type="submit"
-                    className="w-full py-4 bg-blue-600 text-white rounded-2xl font-bold hover:bg-blue-700 transition-all shadow-xl shadow-blue-600/20 mt-4"
-                  >
-                    {editingUser ? 'Save Changes' : 'Generate Account'}
-                  </button>
                 </form>
               </div>
             </div>
@@ -601,30 +610,34 @@ export default function UserManagement() {
         )}
 
         {/* CSV Modal - Simplified for brevity in this tool call, but conceptually identical styling */}
+        {/* CSV Modal - Enterprise Redesign */}
         {showUploadModal && (
-          <div className="fixed inset-0 bg-slate-900/4 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full p-8 overflow-hidden animate-fade-in border border-slate-100 uppercase tracking-widest font-bold">
+          <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg shadow-sm max-w-2xl w-full p-8 overflow-hidden animate-fade-in border border-slate-200">
               <div className="flex justify-between items-center mb-8">
-                <h2 className="text-2xl font-bold text-slate-900 normal-case tracking-normal">Bulk Import Hub</h2>
-                <button onClick={() => setShowUploadModal(false)} className="p-2 hover:bg-slate-100 rounded-full text-slate-400">
-                  <X size={20} />
+                <div>
+                  <h2 className="text-xl font-bold text-slate-900">Bulk Import Hub</h2>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Registry Management Assistant</p>
+                </div>
+                <button onClick={() => setShowUploadModal(false)} className="p-2 hover:bg-slate-100 rounded-md text-slate-400 transition-colors">
+                  <X size={18} />
                 </button>
               </div>
 
               <div className="space-y-6">
-                <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
-                  <h3 className="text-xs font-bold text-blue-600 uppercase tracking-widest mb-4 flex items-center gap-2">
+                <div className="bg-slate-50 p-5 rounded-md border border-slate-200">
+                  <h3 className="text-[10px] font-bold text-blue-600 uppercase tracking-[0.2em] mb-3 flex items-center gap-2">
                     <AlertCircle size={14} /> Format Guidelines
                   </h3>
-                  <div className="bg-[#1e293b] p-4 rounded-xl text-blue-300 font-mono text-[10px] mb-4">
+                  <div className="bg-slate-900 p-3 rounded-md text-blue-300 font-mono text-[10px] mb-3 border border-white/5">
                     email,fullName,rollNo,username,password,role
                   </div>
-                  <p className="text-xs text-slate-400 normal-case tracking-normal font-medium leading-relaxed">
-                    <strong>Auto-Mapping:</strong> Users uploaded via CSV will be automatically linked to their Google account if the email matches during login. Username and Password are optional if email is provided.
+                  <p className="text-[11px] text-slate-500 font-medium leading-relaxed">
+                    <strong className="text-slate-700">Auto-Mapping:</strong> Users uploaded via CSV will be automatically linked to their Google account if the email matches during login.
                   </p>
                 </div>
 
-                <div className="border-2 border-dashed border-slate-200 rounded-2xl p-12 text-center group hover:border-blue-400 transition-colors">
+                <div className="border border-dashed border-slate-200 rounded-md p-10 text-center group hover:border-blue-300 transition-all bg-slate-50/30">
                   <Upload className="mx-auto text-slate-300 group-hover:text-blue-500 transition-colors mb-4" size={32} />
                   <input
                     type="file"
@@ -633,31 +646,33 @@ export default function UserManagement() {
                     className="hidden"
                     id="csv-upload"
                   />
-                  <label htmlFor="csv-upload" className="cursor-pointer text-blue-600 hover:text-blue-700 font-bold text-sm underline normal-case tracking-normal">
-                    {csvFile ? csvFile.name : 'Select a CSV file from your computer'}
+                  <label htmlFor="csv-upload" className="cursor-pointer text-blue-600 hover:text-blue-700 font-bold text-xs uppercase tracking-widest transition-colors block">
+                    {csvFile ? csvFile.name : 'Select CSV Registry File'}
                   </label>
+                  {!csvFile && <p className="text-[9px] text-slate-400 font-bold mt-2 uppercase tracking-wide">Max size: 10MB • Format: CSV</p>}
                 </div>
 
                 <div className="flex gap-4">
                   <button
                     onClick={handleCsvUpload}
                     disabled={!csvFile}
-                    className="flex-1 py-4 bg-blue-600 text-white rounded-2xl font-bold hover:bg-blue-700 disabled:opacity-30 shadow-xl shadow-blue-600/20"
+                    className="flex-1 py-3 bg-blue-600 text-white rounded-md font-bold text-xs uppercase tracking-widest hover:bg-blue-700 disabled:opacity-30 shadow-sm transition-all active:scale-[0.98]"
                   >
                     Execute Import
                   </button>
                   <button
                     onClick={() => window.open(`${BASE_URL}/users/sample-csv`, '_blank')}
-                    className="px-6 py-4 bg-white border border-slate-200 text-slate-600 rounded-2xl font-bold hover:bg-slate-50 transition-colors"
+                    className="px-5 py-3 bg-white border border-slate-200 text-slate-600 rounded-md font-bold text-xs uppercase tracking-widest hover:bg-slate-50 transition-all"
+                    title="Download Template"
                   >
-                    <Download size={20} />
+                    <Download size={18} />
                   </button>
                 </div>
 
                 {uploadResult && (
-                  <div className="p-4 bg-emerald-50 rounded-xl flex items-center gap-3 text-emerald-700 text-xs font-bold">
+                  <div className="p-3 bg-emerald-50 border border-emerald-100 rounded-md flex items-center gap-3 text-emerald-700 text-[10px] font-bold uppercase tracking-widest">
                     <CheckCircle size={16} />
-                    Success: Added {uploadResult.added}, Skipped {uploadResult.skipped}
+                    Import Results: {uploadResult.added} processed • {uploadResult.skipped} skipped
                   </div>
                 )}
               </div>

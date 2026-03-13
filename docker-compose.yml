@@ -1,6 +1,6 @@
 services:
   portal_mysql:
-    image: gokulv456/assessment-mysql:v3.4.28
+    image: gokulv456/assessment-mysql:v3.4.31
     build:
       context: ./mysql-init
       dockerfile: Dockerfile
@@ -39,7 +39,7 @@ services:
       retries: 5
 
   backend:
-    image: gokulv456/assessment-backend:v3.4.28
+    image: gokulv456/assessment-backend:v3.4.31
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -79,7 +79,7 @@ services:
       - test-portal-network
 
   worker:
-    image: gokulv456/assessment-backend:v3.4.28
+    image: gokulv456/assessment-backend:v3.4.31
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -112,7 +112,7 @@ services:
       args:
         VITE_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
         VITE_API_URL: /fullstack/api
-    image: gokulv456/assessment-frontend:v3.4.28
+    image: gokulv456/assessment-frontend:v3.4.31
     container_name: portal_frontend
     restart: unless-stopped
     ports:

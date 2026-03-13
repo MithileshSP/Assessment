@@ -53,7 +53,7 @@ router.get('/history', verifyAdmin, async (req, res) => {
                 COUNT(*) as attempts,
                 SUM(CASE WHEN status = 'passed' THEN 1 ELSE 0 END) as cleared
             FROM submissions
-            WHERE submitted_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
+            WHERE submitted_at >= DATE_SUB(NOW(), INTERVAL 365 DAY)
             GROUP BY DATE(submitted_at)
             ORDER BY DATE(submitted_at) ASC
         `;

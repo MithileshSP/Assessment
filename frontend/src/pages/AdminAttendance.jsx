@@ -43,6 +43,7 @@ const AdminAttendance = () => {
     const [scheduledStudents, setScheduledStudents] = useState([]);
     const [studentListTab, setStudentListTab] = useState('active');
     const [isBulkExpanded, setIsBulkExpanded] = useState(false);
+    const [sessionSearchQuery, setSessionSearchQuery] = useState('');
     const fileInputRef = useRef(null);
 
     const addToast = (message, type = 'info') => {
@@ -307,7 +308,7 @@ const AdminAttendance = () => {
                                         >
                                             <span className="relative z-10">{tab}</span>
                                             {filterTab === tab && (
-                                                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 rounded-t-full shadow-[0_-2px_8px_rgba(37,99,235,0.2)]" />
+                                                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 rounded-t-sm" />
                                             )}
                                         </button>
                                     ))}
@@ -319,7 +320,7 @@ const AdminAttendance = () => {
                             </div>
 
                             {/* Session Table - Refined */}
-                            <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+                            <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
                                 <table className="w-full border-collapse">
                                     <thead>
                                         <tr className="bg-slate-50/40 border-b border-slate-200/80">
@@ -375,16 +376,16 @@ const AdminAttendance = () => {
                                                     </div>
                                                 </td>
                                                 <td className="px-8 py-6">
-                                                    <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${session.status === 'live' ? 'bg-emerald-50 border-emerald-100 text-emerald-700' :
+                                                    <div className={`inline-flex items-center gap-2 px-3 py-1 rounded text-[10px] font-bold uppercase tracking-wider border ${session.status === 'live' ? 'bg-emerald-50 border-emerald-100 text-emerald-700' :
                                                         session.status === 'upcoming' ? 'bg-amber-50 border-amber-100 text-amber-700' : 'bg-slate-50 border-slate-100 text-slate-400'
                                                         }`}>
                                                         {session.status}
                                                     </div>
                                                 </td>
                                                 <td className="px-8 py-6 text-right">
-                                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all ${session.status === 'ended'
+                                                    <div className={`w-10 h-10 rounded-md flex items-center justify-center transition-all ${session.status === 'ended'
                                                         ? 'text-slate-200'
-                                                        : 'bg-white border border-slate-200 text-slate-400 group-hover:bg-blue-600 group-hover:border-blue-600 group-hover:text-white group-hover:shadow-md'
+                                                        : 'bg-white border border-slate-200 text-slate-400 group-hover:bg-blue-600 group-hover:border-blue-600 group-hover:text-white group-hover:shadow-sm'
                                                         }`}>
                                                         <ChevronRight size={18} />
                                                     </div>
@@ -396,7 +397,7 @@ const AdminAttendance = () => {
 
                                 {filteredSessions.length === 0 && (
                                     <div className="py-24 text-center">
-                                        <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center mx-auto mb-6 text-slate-200">
+                                        <div className="w-16 h-16 bg-slate-50 rounded-lg flex items-center justify-center mx-auto mb-6 text-slate-200">
                                             <Activity size={32} />
                                         </div>
                                         <p className="text-slate-900 font-bold text-lg mb-1">No sessions found</p>
@@ -412,9 +413,9 @@ const AdminAttendance = () => {
                                     { label: 'Monitoring Policy', value: 'Active', icon: Shield },
                                     { label: 'Uptime', value: '100.0%', icon: Activity }
                                 ].map((stat, i) => (
-                                    <div key={i} className="p-6 bg-white border border-slate-100 rounded-2xl shadow-sm">
+                                    <div key={i} className="p-6 bg-white border border-slate-200 rounded-lg shadow-sm">
                                         <div className="flex items-center gap-4">
-                                            <div className="w-12 h-12 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 border border-slate-100">
+                                            <div className="w-12 h-12 rounded-md bg-slate-50 flex items-center justify-center text-slate-400 border border-slate-100">
                                                 <stat.icon size={20} />
                                             </div>
                                             <div>
@@ -448,9 +449,9 @@ const AdminAttendance = () => {
                         <div className="flex items-center gap-8">
                             <button
                                 onClick={() => setSelectedSession(null)}
-                                className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center text-white hover:bg-white hover:text-slate-900 transition-all active:scale-95 group border border-white/10"
+                                className="w-10 h-10 rounded-md bg-white/10 flex items-center justify-center text-white hover:bg-white hover:text-slate-900 transition-all active:scale-95 group border border-white/10"
                             >
-                                <ArrowLeft size={24} className="group-hover:-translate-x-1 transition-transform" />
+                                <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
                             </button>
                             <div>
                                 <div className="flex items-center gap-3 mb-1.5">
@@ -471,16 +472,16 @@ const AdminAttendance = () => {
                         </div>
 
                         <div className="flex items-center gap-4">
-                            <div className="flex bg-white/5 border border-white/10 p-1 rounded-xl shadow-inner mr-2">
+                            <div className="flex bg-white/5 border border-white/10 p-1 rounded-lg mr-2">
                                 <button
                                     onClick={handleDownloadTemplate}
-                                    className="px-4 py-2 text-[10px] font-bold text-slate-400 hover:text-white uppercase tracking-widest transition-all rounded-lg hover:bg-white/5"
+                                    className="px-4 py-2 text-[10px] font-bold text-slate-400 hover:text-white uppercase tracking-widest transition-all rounded-md hover:bg-white/5"
                                 >
                                     Template
                                 </button>
                                 <button
                                     onClick={() => fileInputRef.current.click()}
-                                    className="px-4 py-2 text-[10px] font-black text-blue-400 hover:text-blue-300 uppercase tracking-widest transition-all rounded-lg hover:bg-blue-500/5 flex items-center gap-2"
+                                    className="px-4 py-2 text-[10px] font-black text-white bg-blue-600 hover:bg-blue-700 uppercase tracking-widest transition-all rounded-md flex items-center gap-2 shadow-sm animate-pulse"
                                 >
                                     <Upload size={12} /> CSV Upload
                                 </button>
@@ -490,7 +491,7 @@ const AdminAttendance = () => {
 
                             <button
                                 onClick={() => setShowManualModal(true)}
-                                className="px-8 py-3 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all hover:bg-blue-500 shadow-lg shadow-blue-600/20 flex items-center gap-2 active:scale-95"
+                                className="px-6 py-2.5 bg-blue-600 text-white rounded-md text-[10px] font-black uppercase tracking-widest transition-all hover:bg-blue-700 shadow-sm flex items-center gap-2 active:scale-95"
                             >
                                 <Plus size={16} /> Manual Unblock
                             </button>
@@ -503,7 +504,7 @@ const AdminAttendance = () => {
                         {/* Sidebar - Refined */}
                         <div className="lg:col-span-1 space-y-6">
                             {/* Collapsible Bulk Provisioning */}
-                            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden transition-all duration-300">
+                            <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden transition-all duration-300">
                                 <button
                                     onClick={() => setIsBulkExpanded(!isBulkExpanded)}
                                     className="w-full p-6 flex items-center justify-between hover:bg-slate-50/50 transition-colors"
@@ -526,12 +527,12 @@ const AdminAttendance = () => {
                                             onChange={(e) => setBulkEmails(e.target.value)}
                                             rows={8}
                                             placeholder="Student emails (one per line)..."
-                                            className="w-full p-4 bg-slate-50 border border-slate-100 rounded-xl text-xs font-medium focus:outline-none focus:bg-white focus:border-blue-600 transition-all resize-none mb-4 placeholder:text-slate-300"
+                                            className="w-full p-4 bg-slate-50 border border-slate-100 rounded-md text-xs font-medium focus:outline-none focus:bg-white focus:border-blue-600 transition-all resize-none mb-4 placeholder:text-slate-300"
                                         />
                                         <button
                                             onClick={handleBulkUnblock}
                                             disabled={submitting || !bulkEmails.trim()}
-                                            className="w-full py-4 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 transition-all disabled:opacity-50 active:scale-95 shadow-sm"
+                                            className="w-full py-3 bg-slate-900 text-white rounded-md text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 transition-all disabled:opacity-50 active:scale-95 shadow-sm"
                                         >
                                             {submitting ? 'Processing...' : 'Sync Registry'}
                                         </button>
@@ -540,7 +541,7 @@ const AdminAttendance = () => {
                             </div>
 
                             {/* Refined Metrics */}
-                            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                            <div className="bg-white p-6 rounded-lg border border-slate-200 shadow-sm">
                                 <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-6">Terminal Stats</h3>
                                 <div className="space-y-6">
                                     <div className="flex items-center justify-between">
@@ -561,6 +562,28 @@ const AdminAttendance = () => {
                                         <span className="text-3xl font-bold text-slate-900">{scheduledStudents.filter(s => s.scheduled_status === 'scheduled').length}</span>
                                     </div>
 
+                                    <div className="h-px bg-slate-100" />
+
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <p className="text-[9px] font-bold text-blue-500 uppercase tracking-widest mb-0.5">In Progress</p>
+                                            <p className="text-[10px] text-slate-400 font-medium">currently writing</p>
+                                        </div>
+                                        <span className="text-3xl font-bold text-slate-900">
+                                            {unblockedUsers.filter(u => u.attempt_started_at && !u.attempt_submitted_at && !u.is_used).length}
+                                        </span>
+                                    </div>
+
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <p className="text-[9px] font-bold text-emerald-500 uppercase tracking-widest mb-0.5">Completed</p>
+                                            <p className="text-[10px] text-slate-400 font-medium">hand-ins received</p>
+                                        </div>
+                                        <span className="text-3xl font-bold text-slate-900">
+                                            {unblockedUsers.filter(u => u.is_used || u.attempt_submitted_at).length}
+                                        </span>
+                                    </div>
+
                                     <div className="pt-4 border-t border-slate-50 flex items-center justify-between">
                                         <div className="flex items-center gap-2 text-slate-400">
                                             <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />
@@ -574,13 +597,13 @@ const AdminAttendance = () => {
 
                         {/* Workspace - Student Tables */}
                         <div className="lg:col-span-3 space-y-8">
-                            <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden min-h-[600px] flex flex-col shadow-sm">
+                            <div className="bg-white rounded-lg border border-slate-200 overflow-hidden min-h-[600px] flex flex-col shadow-sm">
                                 {/* Professional Tab System */}
-                                <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between bg-slate-50/30">
+                                <div className="px-6 py-4 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between bg-slate-50/30 gap-4">
                                     <div className="flex items-center gap-1">
                                         <button
                                             onClick={() => setStudentListTab('active')}
-                                            className={`px-6 py-3 text-[11px] font-bold uppercase tracking-widest rounded-lg transition-all flex items-center gap-2 ${studentListTab === 'active'
+                                            className={`px-6 py-3 text-[11px] font-bold uppercase tracking-widest rounded-md transition-all flex items-center gap-2 ${studentListTab === 'active'
                                                 ? 'bg-white text-emerald-600 shadow-sm border border-emerald-100'
                                                 : 'text-slate-400 hover:text-slate-600'
                                                 }`}
@@ -590,7 +613,7 @@ const AdminAttendance = () => {
                                         </button>
                                         <button
                                             onClick={() => setStudentListTab('scheduled')}
-                                            className={`px-6 py-3 text-[11px] font-bold uppercase tracking-widest rounded-lg transition-all flex items-center gap-2 ${studentListTab === 'scheduled'
+                                            className={`px-6 py-3 text-[11px] font-bold uppercase tracking-widest rounded-md transition-all flex items-center gap-2 ${studentListTab === 'scheduled'
                                                 ? 'bg-white text-amber-600 shadow-sm border border-amber-100'
                                                 : 'text-slate-400 hover:text-slate-600'
                                                 }`}
@@ -599,12 +622,22 @@ const AdminAttendance = () => {
                                             Scheduled
                                         </button>
                                     </div>
-                                    <div className="pr-4 flex items-center gap-3">
+                                    <div className="flex items-center gap-4">
+                                        <div className="relative">
+                                            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                                            <input
+                                                type="text"
+                                                placeholder="Search student..."
+                                                value={sessionSearchQuery}
+                                                onChange={(e) => setSessionSearchQuery(e.target.value)}
+                                                className="pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-md text-[11px] font-medium focus:outline-none focus:border-blue-500 transition-all w-64 shadow-xs"
+                                            />
+                                        </div>
                                         {isPolling && (
                                             <div className="flex items-center gap-1.5">
-                                                <div className="h-1 w-1 bg-blue-400 rounded-full" />
-                                                <div className="h-1 w-1 bg-blue-400 rounded-full" />
-                                                <div className="h-1 w-1 bg-blue-400 rounded-full" />
+                                                <div className="h-1 w-1 bg-blue-400 rounded-full animate-bounce" />
+                                                <div className="h-1 w-1 bg-blue-400 rounded-full animate-bounce [animation-delay:0.2s]" />
+                                                <div className="h-1 w-1 bg-blue-400 rounded-full animate-bounce [animation-delay:0.4s]" />
                                             </div>
                                         )}
                                     </div>
@@ -628,51 +661,83 @@ const AdminAttendance = () => {
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-slate-50">
-                                                {unblockedUsers.map(user => (
-                                                    <tr key={user.id} className="hover:bg-slate-50/50 transition-all group">
-                                                        <td className="px-8 py-5">
-                                                            <div className="flex items-center gap-4">
-                                                                <div className="w-10 h-10 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-700 font-bold text-sm">
-                                                                    {user.full_name?.charAt(0) || user.username?.charAt(0) || 'U'}
+                                                {unblockedUsers
+                                                    .filter(u =>
+                                                        u.full_name?.toLowerCase().includes(sessionSearchQuery.toLowerCase()) ||
+                                                        u.email?.toLowerCase().includes(sessionSearchQuery.toLowerCase()) ||
+                                                        u.roll_no?.toLowerCase().includes(sessionSearchQuery.toLowerCase())
+                                                    )
+                                                    .map(user => {
+                                                        const isWriting = user.attempt_started_at && !user.attempt_submitted_at && !user.is_used;
+                                                        const isSubmitted = user.is_used || user.attempt_submitted_at;
+
+                                                        return (
+                                                            <tr key={user.id} className="hover:bg-slate-50/50 transition-all group">
+                                                                <td className="px-8 py-5">
+                                                                    <div className="flex items-center gap-4">
+                                                                        <div className="w-10 h-10 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-700 font-bold text-sm">
+                                                                            {user.full_name?.charAt(0) || user.username?.charAt(0) || 'U'}
+                                                                        </div>
+                                                                        <div>
+                                                                            <p className="font-bold text-slate-900 text-sm leading-tight">{user.full_name || user.username}</p>
+                                                                            <div className="flex items-center gap-2 mt-1">
+                                                                                <p className="text-[10px] text-slate-400 font-medium tracking-tight">ID: {user.roll_no || user.username}</p>
+                                                                                {isWriting && (
+                                                                                    <span className="px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded text-[9px] font-black uppercase tracking-wider animate-pulse border border-blue-100">Writing</span>
+                                                                                )}
+                                                                                {isSubmitted && (
+                                                                                    <span className="px-1.5 py-0.5 bg-emerald-50 text-emerald-600 rounded text-[9px] font-black uppercase tracking-wider border border-emerald-100">Submitted</span>
+                                                                                )}
+                                                                                {!isWriting && !isSubmitted && (
+                                                                                    <span className="px-1.5 py-0.5 bg-slate-100 text-slate-400 rounded text-[9px] font-black uppercase tracking-wider border border-slate-200">Waiting</span>
+                                                                                )}
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </td>
+                                                                <td className="px-8 py-5">
+                                                                    <span className="text-sm text-slate-500 font-medium">{user.email || '-'}</span>
+                                                                </td>
+                                                                <td className="px-8 py-5">
+                                                                    <div className="flex items-center gap-2 text-slate-400">
+                                                                        <Monitor size={12} />
+                                                                        <span className="text-[11px] font-medium">
+                                                                            {user.attempt_submitted_at ? `Sub: ${formatIST(user.attempt_submitted_at)}` :
+                                                                                user.attempt_started_at ? `Start: ${formatIST(user.attempt_started_at)}` :
+                                                                                    (user.updated_at ? formatIST(user.updated_at) : 'Online')}
+                                                                        </span>
+                                                                    </div>
+                                                                </td>
+                                                                <td className="px-8 py-5 text-right">
+                                                                    <button
+                                                                        onClick={() => handleToggleBlock(user.id, false)}
+                                                                        className="px-4 py-2 text-[10px] font-bold text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-md uppercase tracking-wider transition-all border border-transparent hover:border-rose-100"
+                                                                    >
+                                                                        Revoke
+                                                                    </button>
+                                                                </td>
+                                                            </tr>
+                                                        )
+                                                    })}
+                                                {unblockedUsers.filter(u =>
+                                                    u.full_name?.toLowerCase().includes(sessionSearchQuery.toLowerCase()) ||
+                                                    u.email?.toLowerCase().includes(sessionSearchQuery.toLowerCase()) ||
+                                                    u.roll_no?.toLowerCase().includes(sessionSearchQuery.toLowerCase())
+                                                ).length === 0 && (
+                                                        <tr>
+                                                            <td colSpan="4" className="py-32 text-center">
+                                                                <div className="max-w-xs mx-auto">
+                                                                    <Search size={32} className="mx-auto mb-4 text-slate-200" />
+                                                                    <h4 className="text-slate-900 font-bold text-base mb-1">
+                                                                        {sessionSearchQuery ? 'No match found' : 'Access Restricted'}
+                                                                    </h4>
+                                                                    <p className="text-slate-400 text-sm">
+                                                                        {sessionSearchQuery ? `No results for "${sessionSearchQuery}" in active pool.` : 'No students currently have active access for this assessment session.'}
+                                                                    </p>
                                                                 </div>
-                                                                <div>
-                                                                    <p className="font-bold text-slate-900 text-sm leading-tight">{user.full_name || user.username}</p>
-                                                                    <p className="text-[10px] text-slate-400 mt-0.5 font-medium tracking-tight">ID: {user.roll_no || user.username}</p>
-                                                                </div>
-                                                            </div>
-                                                        </td>
-                                                        <td className="px-8 py-5">
-                                                            <span className="text-sm text-slate-500 font-medium">{user.email || '-'}</span>
-                                                        </td>
-                                                        <td className="px-8 py-5">
-                                                            <div className="flex items-center gap-2 text-slate-400">
-                                                                <Monitor size={12} />
-                                                                <span className="text-[11px] font-medium">
-                                                                    {user.updated_at ? formatIST(user.updated_at) : 'Online'}
-                                                                </span>
-                                                            </div>
-                                                        </td>
-                                                        <td className="px-8 py-5 text-right">
-                                                            <button
-                                                                onClick={() => handleToggleBlock(user.id, false)}
-                                                                className="px-4 py-2 text-[10px] font-bold text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg uppercase tracking-wider transition-all"
-                                                            >
-                                                                Revoke
-                                                            </button>
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                                {unblockedUsers.length === 0 && (
-                                                    <tr>
-                                                        <td colSpan="4" className="py-32 text-center">
-                                                            <div className="max-w-xs mx-auto">
-                                                                <Shield size={32} className="mx-auto mb-4 text-slate-200" />
-                                                                <h4 className="text-slate-900 font-bold text-base mb-1">Access Restricted</h4>
-                                                                <p className="text-slate-400 text-sm">No students currently have active access for this assessment session.</p>
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                )}
+                                                            </td>
+                                                        </tr>
+                                                    )}
                                             </tbody>
                                         </table>
                                     ) : (
@@ -687,51 +752,66 @@ const AdminAttendance = () => {
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-amber-50/50">
-                                                {scheduledStudents.filter(s => s.scheduled_status === 'scheduled').map(student => (
-                                                    <tr key={student.user_id} className="hover:bg-amber-50/10 transition-all group">
-                                                        <td className="px-8 py-5">
-                                                            <div className="flex items-center gap-4">
-                                                                <div className="w-10 h-10 rounded-lg bg-amber-50/50 border border-amber-100 flex items-center justify-center text-amber-600 font-bold text-sm">
-                                                                    {student.full_name?.charAt(0) || student.username?.charAt(0) || 'U'}
-                                                                </div>
-                                                                <div>
-                                                                    <p className="font-bold text-slate-900 text-sm leading-tight">{student.full_name || student.username}</p>
-                                                                    <div className="flex items-center gap-1.5 mt-0.5">
-                                                                        <div className="w-1 h-1 rounded-full bg-amber-500" />
-                                                                        <span className="text-[10px] font-bold text-amber-600 uppercase tracking-wider">Pre-authorized</span>
+                                                {scheduledStudents
+                                                    .filter(s => s.scheduled_status === 'scheduled')
+                                                    .filter(u =>
+                                                        u.full_name?.toLowerCase().includes(sessionSearchQuery.toLowerCase()) ||
+                                                        u.email?.toLowerCase().includes(sessionSearchQuery.toLowerCase()) ||
+                                                        u.roll_no?.toLowerCase().includes(sessionSearchQuery.toLowerCase())
+                                                    )
+                                                    .map(student => (
+                                                        <tr key={student.user_id} className="hover:bg-amber-50/10 transition-all group">
+                                                            <td className="px-8 py-5">
+                                                                <div className="flex items-center gap-4">
+                                                                    <div className="w-10 h-10 rounded-lg bg-amber-50/50 border border-amber-100 flex items-center justify-center text-amber-600 font-bold text-sm">
+                                                                        {student.full_name?.charAt(0) || student.username?.charAt(0) || 'U'}
+                                                                    </div>
+                                                                    <div>
+                                                                        <p className="font-bold text-slate-900 text-sm leading-tight">{student.full_name || student.username}</p>
+                                                                        <div className="flex items-center gap-1.5 mt-0.5">
+                                                                            <div className="w-1 h-1 rounded-full bg-amber-500" />
+                                                                            <span className="text-[10px] font-bold text-amber-600 uppercase tracking-wider">Pre-authorized</span>
+                                                                        </div>
                                                                     </div>
                                                                 </div>
-                                                            </div>
-                                                        </td>
-                                                        <td className="px-8 py-5">
-                                                            <span className="text-sm text-slate-500 font-medium">{student.email || '-'}</span>
-                                                        </td>
-                                                        <td className="px-8 py-5">
-                                                            <span className="text-[11px] text-slate-500 font-medium lowercase">
-                                                                {student.requested_at ? formatFullIST(student.requested_at) : 'Queued'}
-                                                            </span>
-                                                        </td>
-                                                        <td className="px-8 py-5 text-right">
-                                                            <button
-                                                                onClick={() => handleToggleBlock(student.user_id, true)}
-                                                                className="px-4 py-2 text-[10px] font-bold text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg uppercase tracking-wider transition-all"
-                                                            >
-                                                                Cancel
-                                                            </button>
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                                {scheduledStudents.filter(s => s.scheduled_status === 'scheduled').length === 0 && (
-                                                    <tr>
-                                                        <td colSpan="4" className="py-32 text-center">
-                                                            <div className="max-w-xs mx-auto">
-                                                                <Clock size={32} className="mx-auto mb-4 text-amber-200" />
-                                                                <h4 className="text-slate-900 font-bold text-base mb-1">Queue Empty</h4>
-                                                                <p className="text-slate-400 text-sm">No students are currently scheduled for future session activation.</p>
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                )}
+                                                            </td>
+                                                            <td className="px-8 py-5">
+                                                                <span className="text-sm text-slate-500 font-medium">{student.email || '-'}</span>
+                                                            </td>
+                                                            <td className="px-8 py-5">
+                                                                <span className="text-[11px] text-slate-500 font-medium lowercase">
+                                                                    {student.requested_at ? formatFullIST(student.requested_at) : 'Queued'}
+                                                                </span>
+                                                            </td>
+                                                            <td className="px-8 py-5 text-right">
+                                                                <button
+                                                                    onClick={() => handleToggleBlock(student.user_id, true)}
+                                                                    className="px-4 py-2 text-[10px] font-bold text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-md uppercase tracking-wider transition-all border border-transparent hover:border-rose-100"
+                                                                >
+                                                                    Cancel
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                {scheduledStudents.filter(s => s.scheduled_status === 'scheduled').filter(u =>
+                                                    u.full_name?.toLowerCase().includes(sessionSearchQuery.toLowerCase()) ||
+                                                    u.email?.toLowerCase().includes(sessionSearchQuery.toLowerCase()) ||
+                                                    u.roll_no?.toLowerCase().includes(sessionSearchQuery.toLowerCase())
+                                                ).length === 0 && (
+                                                        <tr>
+                                                            <td colSpan="4" className="py-32 text-center">
+                                                                <div className="max-w-xs mx-auto">
+                                                                    <Search size={32} className="mx-auto mb-4 text-amber-200" />
+                                                                    <h4 className="text-slate-900 font-bold text-base mb-1">
+                                                                        {sessionSearchQuery ? 'No match found' : 'Queue Empty'}
+                                                                    </h4>
+                                                                    <p className="text-slate-400 text-sm">
+                                                                        {sessionSearchQuery ? `No results for "${sessionSearchQuery}" in scheduled list.` : 'No students are currently scheduled for future session activation.'}
+                                                                    </p>
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    )}
                                             </tbody>
                                         </table>
                                     )}
@@ -741,34 +821,34 @@ const AdminAttendance = () => {
                     </div>
                 </div>
 
-                {/* Manual Unblock Modal - Professional Redesign */}
+                {/* Manual Unblock Modal - Enterprise Redesign */}
                 {showManualModal && (
                     <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
-                        <div className="bg-white w-full max-w-xl rounded-2xl shadow-2xl border border-slate-100 overflow-hidden text-left flex flex-col max-h-[85vh]">
+                        <div className="bg-white w-full max-w-xl rounded-lg shadow-sm border border-slate-200 overflow-hidden text-left flex flex-col max-h-[85vh] animate-in zoom-in-95 duration-200">
                             <div className="p-8 relative flex flex-col h-full">
                                 <div className="flex items-center justify-between mb-8">
                                     <div>
-                                        <h3 className="text-2xl font-bold text-slate-900 tracking-tight">Grant Access</h3>
-                                        <p className="text-slate-500 font-medium text-sm mt-1">Search student registry for manual authorization.</p>
+                                        <h3 className="text-xl font-bold text-slate-900 tracking-tight">Grant Access</h3>
+                                        <p className="text-slate-500 font-medium text-[11px] mt-1">Search student registry for manual authorization.</p>
                                     </div>
                                     <button
                                         onClick={() => setShowManualModal(false)}
-                                        className="w-10 h-10 rounded-xl hover:bg-slate-50 text-slate-400 hover:text-slate-900 transition-all flex items-center justify-center"
+                                        className="w-9 h-9 rounded-md hover:bg-slate-50 text-slate-400 hover:text-slate-900 transition-all flex items-center justify-center border border-transparent hover:border-slate-100"
                                     >
-                                        <X size={20} />
+                                        <X size={18} />
                                     </button>
                                 </div>
 
                                 <div className="relative mb-8">
-                                    <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300">
-                                        <Search size={20} />
+                                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300">
+                                        <Search size={18} />
                                     </div>
                                     <input
                                         type="text"
                                         placeholder="Search by name, email or ID..."
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
-                                        className="w-full pl-12 pr-6 py-4 bg-slate-50 border border-slate-200 rounded-xl font-black focus:outline-none focus:bg-white focus:border-blue-600 transition-all placeholder:text-slate-300"
+                                        className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-md font-medium text-sm focus:outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/5 transition-all placeholder:text-slate-300"
                                     />
                                 </div>
 
@@ -778,33 +858,33 @@ const AdminAttendance = () => {
                                             const displayName = user.fullName || user.full_name || user.username;
                                             const displayId = user.rollNo || user.roll_no || 'No ID';
                                             return (
-                                                <div key={user.id} className="p-4 rounded-xl border border-slate-100 hover:border-blue-100 hover:bg-blue-50/20 flex items-center justify-between group transition-all">
+                                                <div key={user.id} className="p-4 rounded-md border border-slate-100 hover:border-blue-100 hover:bg-blue-50/30 flex items-center justify-between group transition-all">
                                                     <div className="flex items-center gap-4">
-                                                        <div className="w-10 h-10 rounded-lg bg-slate-50 border border-slate-200/50 flex items-center justify-center text-slate-700 font-bold text-sm">
+                                                        <div className="w-10 h-10 rounded-md bg-white border border-slate-200 flex items-center justify-center text-slate-700 font-bold text-xs shadow-sm">
                                                             {displayName?.charAt(0) || 'U'}
                                                         </div>
                                                         <div>
                                                             <p className="font-bold text-slate-900 text-sm leading-tight">{displayName}</p>
                                                             <div className="flex items-center gap-2 mt-0.5">
-                                                                <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded tracking-wide">{displayId}</span>
-                                                                <p className="text-[11px] text-slate-400 tracking-tight">{user.email || 'No email'}</p>
+                                                                <span className="text-[9px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded uppercase tracking-wider border border-blue-100/50">{displayId}</span>
+                                                                <p className="text-[11px] text-slate-400 font-medium tracking-tight">{user.email || 'No registry email'}</p>
                                                             </div>
                                                         </div>
                                                     </div>
                                                     <button
                                                         onClick={() => handleToggleBlock(user.id, true)}
-                                                        className="px-4 py-2 bg-slate-900 text-white hover:bg-blue-600 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all shadow-sm"
+                                                        className="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-md text-[10px] font-bold uppercase tracking-widest transition-all shadow-sm active:scale-[0.98]"
                                                     >
-                                                        Grant Access
+                                                        Authorize
                                                     </button>
                                                 </div>
                                             )
                                         })
                                     ) : (
                                         <div className="py-20 text-center">
-                                            <Search size={32} className="mx-auto mb-4 text-slate-200" />
-                                            <p className="text-slate-500 font-bold text-sm">No students found matching your search.</p>
-                                            <p className="text-slate-400 text-xs mt-1">Try searching by email or roll number</p>
+                                            <Search size={32} className="mx-auto mb-4 text-slate-100" />
+                                            <p className="text-slate-500 font-bold text-sm uppercase tracking-widest">No matching records</p>
+                                            <p className="text-slate-400 text-[10px] mt-2 font-medium">Verify credentials and try again.</p>
                                         </div>
                                     )}
                                 </div>

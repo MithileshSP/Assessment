@@ -48,6 +48,13 @@ export default function AdminResults() {
 
     const handleFilterChange = (key, value) => {
         setFilters(prev => ({ ...prev, [key]: value }));
+
+        // Sync global date state for Export/Bulk actions
+        if (key === 'submitted_at') {
+            setFromDate(value?.startDate || '');
+            setToDate(value?.endDate || '');
+        }
+
         setPage(1); // Reset to page 1 on filter change
     };
 
@@ -62,6 +69,20 @@ export default function AdminResults() {
             const params = new URLSearchParams();
             if (fromDate) params.append('fromDate', fromDate);
             if (toDate) params.append('toDate', toDate);
+            if (search) params.append('search', search);
+
+            // Map table filters to query params
+            Object.entries(filters).forEach(([key, filter]) => {
+                if (!filter) return;
+                if (filter.checked && filter.checked.length > 0) {
+                    params.append(key, filter.checked.join(','));
+                } else if (filter.text) {
+                    params.append(key, filter.text);
+                }
+            });
+
+            // Always allow re-exporting of visible results
+            params.append('all', 'true');
 
             const response = await api.get(`/admin/results/export?${params.toString()}`, {
                 responseType: 'blob'
@@ -301,15 +322,15 @@ export default function AdminResults() {
             filterable: true,
             renderCell: (val, row) => (
                 <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center text-slate-500 font-bold uppercase">
+                    <div className="w-8 h-8 rounded-md bg-slate-100 flex items-center justify-center text-slate-500 font-bold uppercase border border-slate-200">
                         {(row.candidate_name || 'A').charAt(0)}
                     </div>
                     <div>
-                        <p className="font-bold text-slate-900">{row.candidate_name || 'Anonymous'}</p>
-                        <div className="flex items-center gap-2 text-[11px] text-slate-400 mt-0.5">
-                            <BookOpen size={10} className="text-blue-500" />
+                        <p className="font-bold text-slate-900 leading-tight">{row.candidate_name || 'Anonymous'}</p>
+                        <div className="flex items-center gap-2 text-[10px] text-slate-400 mt-0.5">
+                            <BookOpen size={10} className="text-slate-500" />
                             <span className="font-bold">{row.course_title}</span>
-                            <span className="bg-slate-100 px-1.5 rounded text-[9px] uppercase">Level {row.level}</span>
+                            <span className="bg-slate-100 px-1 rounded text-[9px] uppercase border border-slate-200">Level {row.level}</span>
                         </div>
                     </div>
                 </div>
@@ -355,9 +376,9 @@ export default function AdminResults() {
                         <div className="flex flex-col items-center">
                             <span className="text-blue-600 font-bold text-base">{row.manual_score}</span>
                             <div className="flex gap-1 mt-1">
-                                <div className="w-1.5 h-1.5 rounded-full bg-slate-200" title={`Q: ${row.code_quality_score}`} />
-                                <div className="w-1.5 h-1.5 rounded-full bg-slate-200" title={`R: ${row.requirements_score}`} />
-                                <div className="w-1.5 h-1.5 rounded-full bg-slate-200" title={`O: ${row.expected_output_score}`} />
+                                <div className="w-1 h-1 rounded-full bg-slate-300" title={`Q: ${row.code_quality_score}`} />
+                                <div className="w-1 h-1 rounded-full bg-slate-300" title={`R: ${row.requirements_score}`} />
+                                <div className="w-1 h-1 rounded-full bg-slate-300" title={`O: ${row.expected_output_score}`} />
                             </div>
                         </div>
                     ) : (
@@ -375,7 +396,7 @@ export default function AdminResults() {
                 <div className="font-medium text-slate-500 text-xs text-left">
                     {row.evaluator_name ? (
                         <div className="flex items-center gap-2">
-                            <div className="w-6 h-6 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-[10px] font-black border border-blue-100">
+                            <div className="w-5 h-5 rounded-md bg-slate-100 text-slate-600 flex items-center justify-center text-[9px] font-bold border border-slate-200">
                                 {(row.evaluator_name || '?').charAt(0).toUpperCase()}
                             </div>
                             {row.evaluator_name}
@@ -419,9 +440,9 @@ export default function AdminResults() {
                 <div className="text-right flex justify-end">
                     <button
                         onClick={() => navigate(`/admin/submission/${row.id}`)}
-                        className="p-2 text-slate-300 hover:text-blue-600 transition-colors bg-transparent hover:bg-blue-50 rounded-lg"
+                        className="p-1.5 text-slate-400 hover:text-slate-900 transition-colors bg-transparent hover:bg-slate-100 rounded-md"
                     >
-                        <ExternalLink size={18} />
+                        <ExternalLink size={16} />
                     </button>
                 </div>
             )
@@ -434,8 +455,8 @@ export default function AdminResults() {
                 {/* Header */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
-                        <h1 className="text-4xl font-black text-slate-900 tracking-tight text-left">Master Results</h1>
-                        <p className="text-slate-500 mt-1 text-left text-lg">Aggregated view of automated and manual evaluations.</p>
+                        <h1 className="text-3xl font-bold text-slate-900 tracking-tight text-left">Master Results</h1>
+                        <p className="text-slate-500 mt-1 text-left text-sm font-medium">Aggregated view of automated and manual evaluations.</p>
                     </div>
                     <div className="flex items-center gap-3">
                         <input
@@ -447,25 +468,25 @@ export default function AdminResults() {
                         />
                         <button
                             onClick={() => fileInputRef.current?.click()}
-                            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white border border-blue-700 rounded-xl text-sm font-bold hover:bg-blue-700 transition-colors shadow-sm"
+                            className="flex items-center gap-2 px-3 py-1.5 bg-slate-900 text-white border border-slate-950 rounded-md text-xs font-bold hover:bg-slate-800 transition-colors shadow-sm"
                         >
-                            <Upload size={16} /> Import CSV
+                            <Upload size={14} /> Import CSV
                         </button>
                         <button
                             onClick={handleExportCSV}
-                            className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-bold text-slate-700 hover:bg-slate-50 transition-colors shadow-sm"
+                            className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded-md text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors shadow-sm"
                         >
-                            <Download size={16} /> Export CSV
+                            <Download size={14} /> Export CSV
                         </button>
                         <button
                             onClick={handleBulkDelete}
                             disabled={!fromDate && !toDate}
-                            className={`flex items-center gap-2 px-4 py-2 border rounded-xl text-sm font-bold transition-colors shadow-sm ${(!fromDate && !toDate)
-                                ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed'
+                            className={`flex items-center gap-2 px-3 py-1.5 border rounded-md text-xs font-bold transition-colors shadow-sm ${(!fromDate && !toDate)
+                                ? 'bg-slate-50 border-slate-200 text-slate-300 cursor-not-allowed'
                                 : 'bg-white border-rose-200 text-rose-600 hover:bg-rose-50 hover:border-rose-300'}`}
                             title={(!fromDate && !toDate) ? "Select a date range to enable" : "Bulk Delete"}
                         >
-                            <Trash2 size={16} /> Delete
+                            <Trash2 size={14} /> Delete
                         </button>
                     </div>
                 </div>
@@ -478,7 +499,7 @@ export default function AdminResults() {
                 )}
 
                 {/* Results Table */}
-                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden text-sm">
+                <div className="bg-white rounded-md border border-slate-200 shadow-sm overflow-hidden text-sm">
                     <DataTable
                         columns={columns}
                         data={paginatedResults}
@@ -501,65 +522,66 @@ export default function AdminResults() {
                 </div>
             </div>
 
-            {/* Import Modal */}
+            {/* Import Modal - Enterprise Redesign */}
             {importModalOpen && (
-                <div className="fixed inset-0 z-[200] bg-black/50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[80vh] flex flex-col overflow-hidden">
+                <div className="fixed inset-0 z-[200] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+                    <div className="bg-white rounded-lg shadow-sm max-w-lg w-full max-h-[85vh] flex flex-col overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-200">
                         {/* Modal Header */}
-                        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
-                                    <FileText size={20} className="text-blue-600" />
+                        <div className="flex items-center justify-between px-8 py-6 border-b border-slate-100">
+                            <div className="flex items-center gap-4">
+                                <div className="w-10 h-10 rounded-md bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600 shadow-sm">
+                                    <FileText size={20} />
                                 </div>
                                 <div>
-                                    <h3 className="text-lg font-bold text-slate-900">Import Submissions</h3>
-                                    <p className="text-xs text-slate-400">{parsedRows.length} row{parsedRows.length !== 1 ? 's' : ''} parsed from CSV</p>
+                                    <h3 className="text-xl font-bold text-slate-900 tracking-tight">Import Submissions</h3>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+                                        {parsedRows.length} registry entries detected
+                                    </p>
                                 </div>
                             </div>
                             <button
                                 onClick={() => { setImportModalOpen(false); setImportResult(null); }}
-                                className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+                                className="p-2 hover:bg-slate-100 rounded-md text-slate-400 hover:text-slate-900 transition-all border border-transparent hover:border-slate-100"
                             >
-                                <X size={18} className="text-slate-400" />
+                                <X size={18} />
                             </button>
                         </div>
 
                         {/* Modal Body */}
-                        <div className="px-6 py-4 overflow-y-auto flex-1 space-y-4">
-                            {/* Show import result if available */}
+                        <div className="px-8 py-6 overflow-y-auto flex-1 space-y-6 custom-scrollbar">
                             {importResult ? (
-                                <div className="space-y-4">
-                                    <div className={`p-4 rounded-xl border ${importResult.added > 0 ? 'bg-emerald-50 border-emerald-200' : 'bg-rose-50 border-rose-200'}`}>
-                                        <div className="flex items-center gap-2 mb-2">
+                                <div className="space-y-6">
+                                    <div className={`p-5 rounded-md border ${importResult.added > 0 ? 'bg-emerald-50 border-emerald-100' : 'bg-rose-50 border-rose-100'}`}>
+                                        <div className="flex items-center gap-2 mb-4">
                                             {importResult.added > 0 ? (
-                                                <CheckCircle size={18} className="text-emerald-600" />
+                                                <CheckCircle size={18} className="text-emerald-500" />
                                             ) : (
-                                                <AlertTriangle size={18} className="text-rose-600" />
+                                                <AlertTriangle size={18} className="text-rose-500" />
                                             )}
-                                            <span className="font-bold text-sm">{importResult.message}</span>
+                                            <span className="font-bold text-xs uppercase tracking-widest text-slate-700">{importResult.message}</span>
                                         </div>
-                                        <div className="grid grid-cols-3 gap-3 mt-3">
-                                            <div className="text-center p-2 bg-white/60 rounded-lg">
-                                                <p className="text-2xl font-black text-emerald-600">{importResult.added}</p>
-                                                <p className="text-[10px] font-bold text-slate-400 uppercase">Added</p>
+                                        <div className="grid grid-cols-3 gap-4">
+                                            <div className="text-center p-3 bg-white/80 rounded-md border border-slate-100 shadow-sm">
+                                                <p className="text-2xl font-black text-emerald-600 leading-none">{importResult.added}</p>
+                                                <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">Processed</p>
                                             </div>
-                                            <div className="text-center p-2 bg-white/60 rounded-lg">
-                                                <p className="text-2xl font-black text-amber-600">{importResult.skipped}</p>
-                                                <p className="text-[10px] font-bold text-slate-400 uppercase">Skipped</p>
+                                            <div className="text-center p-3 bg-white/80 rounded-md border border-slate-100 shadow-sm">
+                                                <p className="text-2xl font-black text-amber-600 leading-none">{importResult.skipped}</p>
+                                                <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">Ignored</p>
                                             </div>
-                                            <div className="text-center p-2 bg-white/60 rounded-lg">
-                                                <p className="text-2xl font-black text-slate-600">{importResult.total}</p>
-                                                <p className="text-[10px] font-bold text-slate-400 uppercase">Total</p>
+                                            <div className="text-center p-3 bg-white/80 rounded-md border border-slate-100 shadow-sm">
+                                                <p className="text-2xl font-black text-slate-600 leading-none">{importResult.total}</p>
+                                                <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">Total</p>
                                             </div>
                                         </div>
                                     </div>
 
                                     {importResult.errors && importResult.errors.length > 0 && (
-                                        <div className="bg-rose-50 border border-rose-200 rounded-xl p-4">
-                                            <p className="text-xs font-bold text-rose-700 mb-2">Errors ({importResult.errors.length})</p>
-                                            <div className="max-h-32 overflow-y-auto space-y-1">
+                                        <div className="bg-rose-50 border border-rose-100 rounded-md p-5">
+                                            <p className="text-[10px] font-bold text-rose-600 uppercase tracking-[0.2em] mb-3">Validation Errors ({importResult.errors.length})</p>
+                                            <div className="max-h-32 overflow-y-auto space-y-2 pr-2 custom-scrollbar">
                                                 {importResult.errors.map((err, idx) => (
-                                                    <p key={idx} className="text-[11px] text-rose-600 font-mono">{err}</p>
+                                                    <p key={idx} className="text-[11px] text-rose-500 font-mono leading-tight bg-white/50 p-2 rounded border border-rose-100/50">{err}</p>
                                                 ))}
                                             </div>
                                         </div>
@@ -567,16 +589,18 @@ export default function AdminResults() {
                                 </div>
                             ) : (
                                 <>
-                                    {/* Field mapping preview */}
                                     <div>
-                                        <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Detected Columns</p>
-                                        <div className="flex flex-wrap gap-1.5">
+                                        <div className="flex items-center justify-between mb-3">
+                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Detected Schema</p>
+                                            <span className="text-[9px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-100/50 uppercase">Auto-Mapped</span>
+                                        </div>
+                                        <div className="flex flex-wrap gap-2">
                                             {parsedFields.map(field => (
                                                 <span
                                                     key={field}
-                                                    className={`px-2 py-0.5 rounded text-[10px] font-bold border ${EXPECTED_FIELDS.includes(field)
-                                                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                                                        : 'bg-slate-50 text-slate-500 border-slate-200'
+                                                    className={`px-2.5 py-1 rounded-md text-[10px] font-bold border transition-all ${EXPECTED_FIELDS.includes(field)
+                                                        ? 'bg-emerald-50 text-emerald-700 border-emerald-100 shadow-sm'
+                                                        : 'bg-slate-50 text-slate-400 border-slate-200 opacity-60'
                                                         }`}
                                                 >
                                                     {field}
@@ -585,32 +609,37 @@ export default function AdminResults() {
                                         </div>
                                     </div>
 
-                                    {/* Sample data preview */}
                                     <div>
-                                        <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Preview (first 3 rows)</p>
-                                        <div className="border border-slate-200 rounded-xl overflow-hidden">
-                                            <div className="overflow-x-auto">
-                                                <table className="w-full text-[11px]">
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Data Preview (Registry Snapshot)</p>
+                                        <div className="border border-slate-200 rounded-lg overflow-hidden shadow-sm">
+                                            <div className="overflow-x-auto custom-scrollbar">
+                                                <table className="w-full text-left">
                                                     <thead>
                                                         <tr className="bg-slate-50 border-b border-slate-200">
-                                                            {parsedFields.slice(0, 6).map(f => (
-                                                                <th key={f} className="px-3 py-2 text-left font-bold text-slate-500 uppercase whitespace-nowrap">{f}</th>
+                                                            {parsedFields.slice(0, 4).map(f => (
+                                                                <th key={f} className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">{f}</th>
                                                             ))}
-                                                            {parsedFields.length > 6 && <th className="px-3 py-2 text-slate-400">+{parsedFields.length - 6} more</th>}
+                                                            {parsedFields.length > 4 && <th className="px-4 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">...</th>}
                                                         </tr>
                                                     </thead>
-                                                    <tbody>
+                                                    <tbody className="divide-y divide-slate-100">
                                                         {parsedRows.slice(0, 3).map((row, i) => (
-                                                            <tr key={i} className="border-b border-slate-100 last:border-0">
-                                                                {parsedFields.slice(0, 6).map(f => (
-                                                                    <td key={f} className="px-3 py-2 text-slate-600 whitespace-nowrap max-w-[120px] truncate">{row[f] || '-'}</td>
+                                                            <tr key={i} className="hover:bg-slate-50/50 transition-colors">
+                                                                {parsedFields.slice(0, 4).map(f => (
+                                                                    <td key={f} className="px-4 py-3 text-[11px] text-slate-600 font-medium whitespace-nowrap max-w-[150px] truncate">{row[f] || '—'}</td>
                                                                 ))}
-                                                                {parsedFields.length > 6 && <td className="px-3 py-2 text-slate-300">…</td>}
+                                                                {parsedFields.length > 4 && <td className="px-4 py-3 text-slate-300 font-mono">...</td>}
                                                             </tr>
                                                         ))}
                                                     </tbody>
                                                 </table>
                                             </div>
+                                        </div>
+                                        <div className="mt-4 p-4 bg-blue-50/50 border border-blue-100 rounded-md flex gap-3">
+                                            <AlertTriangle size={16} className="text-blue-500 shrink-0" />
+                                            <p className="text-[11px] text-blue-700 font-medium leading-relaxed">
+                                                All imports will be automatically synchronized with existing candidate profiles where IDs match.
+                                            </p>
                                         </div>
                                     </div>
                                 </>
@@ -618,36 +647,36 @@ export default function AdminResults() {
                         </div>
 
                         {/* Modal Footer */}
-                        <div className="px-6 py-4 border-t border-slate-100 flex justify-end gap-3">
+                        <div className="px-8 py-6 border-t border-slate-100 flex justify-end gap-3 bg-slate-50/30">
                             {importResult ? (
                                 <button
                                     onClick={() => { setImportModalOpen(false); setImportResult(null); }}
-                                    className="px-5 py-2.5 bg-slate-900 text-white rounded-xl text-sm font-bold hover:bg-slate-800 transition-colors"
+                                    className="px-6 py-2.5 bg-slate-900 text-white rounded-md text-xs font-bold uppercase tracking-widest hover:bg-slate-800 transition-all active:scale-[0.98] shadow-sm"
                                 >
-                                    Done
+                                    Dismiss
                                 </button>
                             ) : (
                                 <>
                                     <button
                                         onClick={() => setImportModalOpen(false)}
-                                        className="px-5 py-2.5 bg-slate-100 text-slate-600 rounded-xl text-sm font-bold hover:bg-slate-200 transition-colors"
+                                        className="px-6 py-2.5 border border-slate-200 bg-white text-slate-600 rounded-md text-xs font-bold uppercase tracking-widest hover:bg-slate-50 transition-all active:scale-[0.98]"
                                     >
                                         Cancel
                                     </button>
                                     <button
                                         onClick={handleImportConfirm}
                                         disabled={importing}
-                                        className="px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+                                        className="px-6 py-2.5 bg-blue-600 text-white rounded-md text-xs font-bold uppercase tracking-widest hover:bg-blue-700 transition-all disabled:opacity-50 flex items-center gap-2 active:scale-[0.98] shadow-sm shadow-blue-500/10"
                                     >
                                         {importing ? (
                                             <>
-                                                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                                Importing...
+                                                <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                                Syncing...
                                             </>
                                         ) : (
                                             <>
-                                                <Upload size={16} />
-                                                Import {parsedRows.length} Rows
+                                                <Upload size={14} />
+                                                Commit {parsedRows.length} Entries
                                             </>
                                         )}
                                     </button>

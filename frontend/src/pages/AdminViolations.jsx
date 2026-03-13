@@ -86,19 +86,19 @@ const AdminViolations = () => {
                             </div>
                             <span className="text-xs font-black uppercase tracking-widest">Security Protocol</span>
                         </div>
-                        <h1 className="text-4xl font-display font-bold text-slate-900 tracking-tight">
+                        <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
                             Active Violations
                         </h1>
-                        <p className="text-slate-500 font-medium mt-1">Manage frozen tests and security exceptions</p>
+                        <p className="text-slate-500 font-medium mt-1 text-sm">Manage frozen tests and security exceptions</p>
                     </div>
 
                     <div className="flex items-center gap-3">
                         <button
                             onClick={fetchViolations}
-                            className="btn-secondary h-12 px-6 flex items-center gap-2 group"
+                            className="bg-slate-900 text-white h-10 px-4 rounded-md flex items-center gap-2 group text-xs font-bold hover:bg-slate-800 transition-colors shadow-sm"
                             disabled={loading}
                         >
-                            <RefreshCw size={18} className={loading ? 'animate-spin' : 'group-hover:rotate-180 transition-transform duration-500'} />
+                            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
                             Refresh List
                         </button>
                     </div>
@@ -106,48 +106,48 @@ const AdminViolations = () => {
 
                 {/* Stats Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="card p-6 border-l-4 border-rose-500">
-                        <div className="flex items-center justify-between mb-4">
-                            <div className="p-3 bg-rose-50 rounded-2xl text-rose-600">
-                                <AlertTriangle size={24} />
+                    <div className="bg-white rounded-md border border-slate-200 p-4 border-l-4 border-rose-500 shadow-sm">
+                        <div className="flex items-center justify-between mb-2">
+                            <div className="p-2 bg-rose-50 rounded-md text-rose-600">
+                                <AlertTriangle size={20} />
                             </div>
-                            <span className="text-sm font-black text-rose-600 bg-rose-50 px-3 py-1 rounded-full uppercase tracking-widest">Urgent</span>
+                            <span className="text-[9px] font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded border border-rose-100 uppercase tracking-widest">Urgent</span>
                         </div>
-                        <h3 className="text-slate-500 text-sm font-bold uppercase tracking-wider mb-1">Frozen Tests</h3>
-                        <p className="text-3xl font-display font-bold text-slate-900">{violations.length}</p>
+                        <h3 className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-1">Frozen Tests</h3>
+                        <p className="text-2xl font-bold text-slate-900 leading-none">{violations.length}</p>
                     </div>
 
-                    <div className="card p-6 border-l-4 border-amber-500">
-                        <div className="flex items-center justify-between mb-4">
-                            <div className="p-3 bg-amber-50 rounded-2xl text-amber-600">
-                                <Hash size={24} />
+                    <div className="bg-white rounded-md border border-slate-200 p-4 border-l-4 border-amber-500 shadow-sm">
+                        <div className="flex items-center justify-between mb-2">
+                            <div className="p-2 bg-amber-50 rounded-md text-amber-600">
+                                <Hash size={20} />
                             </div>
                         </div>
-                        <h3 className="text-slate-500 text-sm font-bold uppercase tracking-wider mb-1">Total Deviations</h3>
-                        <p className="text-3xl font-display font-bold text-slate-900">
+                        <h3 className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-1">Total Deviations</h3>
+                        <p className="text-2xl font-bold text-slate-900 leading-none">
                             {violations.reduce((acc, v) => acc + (v.violation_count || 0), 0)}
                         </p>
                     </div>
 
-                    <div className="card p-6 border-l-4 border-blue-500">
-                        <div className="flex items-center justify-between mb-4">
-                            <div className="p-3 bg-blue-50 rounded-2xl text-blue-600">
-                                <Clock size={24} />
+                    <div className="bg-white rounded-md border border-slate-200 p-4 border-l-4 border-slate-400 shadow-sm">
+                        <div className="flex items-center justify-between mb-2">
+                            <div className="p-2 bg-slate-50 rounded-md text-slate-600">
+                                <Clock size={20} />
                             </div>
                         </div>
-                        <h3 className="text-slate-500 text-sm font-bold uppercase tracking-wider mb-1">Avg. Response Time</h3>
-                        <p className="text-3xl font-display font-bold text-slate-900">Live</p>
+                        <h3 className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-1">Monitoring Status</h3>
+                        <p className="text-2xl font-bold text-slate-900 leading-none">Live</p>
                     </div>
                 </div>
 
                 {/* Search and Filters */}
-                <div className="card p-4">
-                    <div className="relative">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+                <div className="bg-white rounded-md border border-slate-200 p-3 shadow-sm">
+                    <div className="relative group">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-slate-600 transition-colors" size={16} />
                         <input
                             type="text"
-                            placeholder="Search by name, roll number, or username..."
-                            className="w-full pl-12 pr-4 py-3 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-primary-500 transition-all font-medium"
+                            placeholder="Quick search active security alerts..."
+                            className="w-full pl-10 pr-4 py-2 bg-slate-50 border-none rounded-md focus:ring-2 focus:ring-slate-100 transition-all font-medium text-xs"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
@@ -155,15 +155,15 @@ const AdminViolations = () => {
                 </div>
 
                 {/* Violations Table */}
-                <div className="card overflow-hidden">
+                <div className="bg-white rounded-md border border-slate-200 shadow-sm overflow-hidden flex flex-col">
                     <div className="overflow-x-auto">
                         <table className="w-full text-left border-collapse">
-                            <thead>
-                                <tr className="bg-slate-50/50 border-b border-slate-100">
-                                    <th className="px-6 py-5 text-xs font-black text-slate-400 uppercase tracking-widest">Student Details</th>
-                                    <th className="px-6 py-5 text-xs font-black text-slate-400 uppercase tracking-widest text-center">Violations</th>
-                                    <th className="px-6 py-5 text-xs font-black text-slate-400 uppercase tracking-widest">Reason & Time</th>
-                                    <th className="px-6 py-5 text-xs font-black text-slate-400 uppercase tracking-widest text-right">Actions</th>
+                            <thead className="bg-slate-50 sticky top-0 z-10 border-b border-slate-200 shadow-[0_1px_0_0_rgba(0,0,0,0.05)] text-slate-500 font-bold text-[10px] uppercase tracking-widest leading-none">
+                                <tr className="h-10">
+                                    <th className="px-6 py-4">Student Identity</th>
+                                    <th className="px-6 py-4 text-center">Alert Count</th>
+                                    <th className="px-6 py-4">Security Context</th>
+                                    <th className="px-6 py-4 text-right">Verification</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-50">
@@ -186,45 +186,45 @@ const AdminViolations = () => {
                                     </tr>
                                 ) : (
                                     filteredViolations.map((v) => (
-                                        <tr key={v.id} className="hover:bg-slate-50/50 transition-colors group">
-                                            <td className="px-6 py-6">
-                                                <div className="flex items-center gap-4">
-                                                    <div className="w-12 h-12 rounded-2xl bg-slate-900 flex items-center justify-center text-white font-display font-bold text-lg shadow-lg group-hover:scale-110 transition-transform">
+                                        <tr key={v.id} className="hover:bg-slate-50 transition-colors group border-b border-slate-50 last:border-0 even:bg-slate-50/20">
+                                            <td className="px-6 py-2">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-8 h-8 rounded-md bg-slate-900 flex items-center justify-center text-white font-bold text-xs border border-white shadow-sm">
                                                         {(v.full_name || v.username || 'U').charAt(0).toUpperCase()}
                                                     </div>
                                                     <div>
-                                                        <p className="font-bold text-slate-900 leading-none mb-1.5">{v.full_name || v.username}</p>
-                                                        <div className="flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-wider">
-                                                            <User size={12} />
-                                                            {v.roll_no || 'No Roll No'}
+                                                        <p className="font-bold text-slate-900 leading-tight">{v.full_name || v.username}</p>
+                                                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                                                            <User size={10} />
+                                                            {v.roll_no || 'N/A'}
                                                         </div>
                                                     </div>
                                                 </div>
                                             </td>
-                                            <td className="px-6 py-6 text-center">
-                                                <span className={`inline-flex items-center justify-center w-10 h-10 rounded-full font-display font-bold text-lg ${v.violation_count > 3 ? 'bg-rose-50 text-rose-600' : 'bg-amber-50 text-amber-600'
+                                            <td className="px-6 py-2 text-center">
+                                                <span className={`inline-flex items-center justify-center min-w-[32px] h-6 px-2 rounded-md font-bold text-xs ${v.violation_count > 3 ? 'bg-rose-50 text-rose-600 border border-rose-100' : 'bg-amber-50 text-amber-600 border border-amber-100'
                                                     }`}>
-                                                    {v.violation_count}
+                                                    {v.violation_count} Hit{v.violation_count !== 1 ? 's' : ''}
                                                 </span>
                                             </td>
-                                            <td className="px-6 py-6">
-                                                <div>
-                                                    <p className="text-sm font-bold text-slate-700 mb-1 flex items-center gap-2">
-                                                        <AlertTriangle size={14} className="text-rose-500" />
+                                            <td className="px-6 py-2">
+                                                <div className="leading-tight">
+                                                    <p className="text-xs font-bold text-slate-700 mb-0.5 flex items-center gap-2">
+                                                        <AlertTriangle size={12} className="text-rose-500" />
                                                         {v.locked_reason}
                                                     </p>
-                                                    <p className="text-xs font-medium text-slate-400 flex items-center gap-1.5">
-                                                        <Clock size={12} />
-                                                        {new Date(v.locked_at).toLocaleString()}
+                                                    <p className="text-[10px] font-medium text-slate-400 flex items-center gap-1.5">
+                                                        <Clock size={10} />
+                                                        {new Date(v.locked_at).toLocaleString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true })}
                                                     </p>
                                                 </div>
                                             </td>
-                                            <td className="px-6 py-6 text-right">
+                                            <td className="px-6 py-2 text-right">
                                                 <button
                                                     onClick={() => setSelectedViolation(v)}
-                                                    className="h-10 px-6 bg-blue-600 text-white rounded-xl text-xs font-black uppercase tracking-widest flex items-center gap-2 hover:bg-blue-700 transition-all active:scale-95 shadow-lg shadow-blue-600/20"
+                                                    className="h-8 px-4 bg-slate-900 text-white rounded-md text-[10px] font-bold uppercase tracking-widest flex items-center gap-2 hover:bg-slate-800 transition-all shadow-sm"
                                                 >
-                                                    Review
+                                                    Review Alert
                                                 </button>
                                             </td>
                                         </tr>
@@ -238,8 +238,8 @@ const AdminViolations = () => {
 
             {/* Violation Review Modal */}
             {selectedViolation && (
-                <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-md animate-fade-in">
-                    <div className="bg-white w-full max-w-xl rounded-2xl shadow-2xl overflow-hidden animate-scale-in border border-slate-100">
+                <div className="fixed inset-0 z-[110] flex items-center justify-center p-6 bg-slate-950/40 backdrop-blur-sm animate-fade-in">
+                    <div className="bg-white w-full max-w-lg rounded-md shadow-2xl overflow-hidden animate-scale-in border border-slate-200">
                         <div className="h-1.5 bg-rose-500 w-full" />
 
                         <div className="p-8">

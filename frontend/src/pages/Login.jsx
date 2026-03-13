@@ -98,29 +98,29 @@ export default function Login({ isAdmin = false, onLogin }) {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-6 bg-slate-50 relative overflow-hidden">
-      {/* Decorative Elements */}
-      <div className="absolute -top-24 -left-24 w-96 h-96 bg-blue-100/50 rounded-full blur-3xl" />
-      <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-blue-200/30 rounded-full blur-3xl" />
+      {/* Decorative Elements - Subtle professional gradients */}
+      <div className="absolute -top-24 -left-24 w-96 h-96 bg-slate-100 rounded-full blur-3xl opacity-50" />
+      <div className="absolute -bottom-24 -right-24 w-96 h-96 bg-slate-200/50 rounded-full blur-3xl opacity-30" />
 
       <div className="max-w-lg w-full relative z-10">
         {/* Logo/Header */}
-        <div className="text-center mb-12 animate-fade-in-up">
-          <div className="w-20 h-20 bg-blue-600 rounded-3xl mx-auto mb-6 flex items-center justify-center text-white font-display font-black text-3xl shadow-xl shadow-blue-600/20 rotate-3">
-            P
+        <div className="text-center mb-10 animate-fade-in-up">
+          <div className="w-16 h-16 bg-blue-600 rounded-md mx-auto mb-6 flex items-center justify-center text-white font-bold text-2xl shadow-lg border border-blue-700">
+            F
           </div>
-          <h1 className="text-4xl font-display font-bold mb-3 text-slate-900 tracking-tight">
-            Portal Assessment
+          <h1 className="text-3xl font-bold mb-2 text-slate-900 tracking-tight">
+            Fullstack Test Portal
           </h1>
-          <p className="text-slate-500 font-medium text-lg">Sign in to continue your professional journey</p>
+          <p className="text-slate-500 font-medium text-base">Advanced Assessment & Evaluation Platform</p>
         </div>
 
-        <div className="bg-white rounded-[2.5rem] shadow-xl border border-slate-100 p-10 animate-fade-in-up delay-100">
-          <h2 className="text-2xl font-display font-bold text-slate-900 mb-8">Authentication</h2>
+        <div className="bg-white rounded-md shadow-lg border border-slate-200 p-8 md:p-10 animate-fade-in-up delay-100">
+          <h2 className="text-xl font-bold text-slate-900 mb-6 uppercase tracking-widest text-[10px]">Security Authentication</h2>
 
           {error && (
-            <div className="mb-8 p-4 bg-rose-50 border border-rose-100 rounded-2xl animate-pulse">
-              <p className="text-rose-600 text-sm font-semibold flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-rose-600" />
+            <div className="mb-6 p-4 bg-rose-50 border border-rose-100 rounded-md">
+              <p className="text-rose-600 text-xs font-bold flex items-center gap-2">
+                <span className="w-1 h-1 rounded-full bg-rose-600" />
                 {error}
               </p>
             </div>
@@ -164,7 +164,7 @@ export default function Login({ isAdmin = false, onLogin }) {
             <button
               onClick={handleSubmit}
               disabled={loading}
-              className="w-full mt-4 btn-primary h-14"
+              className="w-full mt-2 btn-primary h-10"
             >
               {loading ? (
                 <span className="flex items-center gap-2">
@@ -177,14 +177,14 @@ export default function Login({ isAdmin = false, onLogin }) {
             </button>
 
             {/* Google Sign-In Button */}
-            <div className="mt-8 pt-8 border-t border-slate-100 flex flex-col items-center">
-              <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-6">Or continue with</p>
-              <div className="w-full flex justify-center scale-110">
+            <div className="mt-6 pt-6 border-t border-slate-100 flex flex-col items-center">
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Or sign in with</p>
+              <div className="w-full flex justify-center">
                 <GoogleLogin
                   theme="outline"
                   size="large"
                   text="signin_with"
-                  shape="pill"
+                  shape="rectangular"
                   onSuccess={async (credentialResponse) => {
                     try {
                       const googleToken = credentialResponse?.credential;
@@ -247,7 +247,7 @@ export default function Login({ isAdmin = false, onLogin }) {
 
         <div className="mt-10 text-center animate-fade-in-up delay-200">
           <p className="text-sm font-medium text-slate-500">
-            Don't have an account? <span className="text-blue-600 font-bold cursor-pointer hover:underline">Contact Administrator</span>
+            Don't have an account? <span className="text-slate-900 font-bold cursor-pointer hover:underline">Contact System Administrator</span>
           </p>
         </div>
       </div>

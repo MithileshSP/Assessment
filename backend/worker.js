@@ -55,6 +55,29 @@ const worker = new Worker('ai_grading_queue', async (job) => {
             throw new Error("Submission data not found");
         }
 
+        const isHtmlCssCourse = submission.course_id === 'course-html-css' || (submission.challenge_title && submission.challenge_title.toLowerCase().includes('html'));
+
+        let rubric = '';
+        if (isHtmlCssCourse) {
+            rubric = `
+SCORING RUBRIC (TOTAL = 100)
+1. HTML Structure (0-50)
+Evaluate the use of semantic HTML, tags, and overall structure. Be generous: if they attempted to structure the page correctly, award at least 40/50. 
+2. CSS Styling (0-50)
+Evaluate the styling, layout, and visual fidelity. Be generous: ignore minor color differences or pixel-perfect deviations. If it looks "mostly similar", award 40-45/50.
+`;
+        } else {
+            rubric = `
+SCORING RUBRIC (TOTAL = 100)
+1. Code Quality (0-40)
+Generously reward structure and effort. Ignore minor formatting issues. (Typically 35-40 for genuine attempts, 0-10 for trivial snippets).
+2. Key Requirements (0-25)
+Check if they attempted basic instructions. (Typically 20-25 if they tried).
+3. Output (0-35)
+Functionality works or shows logical intent. (Typically 25-35 if there is any intended output).
+`;
+        }
+
         const hasJS = submission.js_code && submission.js_code.trim().length > 0;
         const hasUI = (submission.html_code && submission.html_code.trim().length > 0) ||
             (submission.css_code && submission.css_code.trim().length > 0);
@@ -65,17 +88,20 @@ const worker = new Worker('ai_grading_queue', async (job) => {
         else focusArea = "Full Stack Frontend (HTML/CSS/JS)";
 
         const prompt = `
-You are a supportive but practical programming instructor reviewing a beginner student's web development submission. Your goal is to encourage the student by giving partial credit for genuine effort, while ensuring they actually attempted the core requirements.
+You are a friendly and encouraging faculty evaluator. Your goal is to provide a "faculty-like" evaluation: 
+- **Be forgiving**: Students are beginners. Do not penalize for minor syntax errors or small visual differences.
+- **Reward effort**: If a student has made a genuine attempt with many lines of code, they should easily pass (Score 80+).
+- **Correct but helpful**: Point out major logical flaws, but do it constructively. 
+- **Not over-strict**: Do not use "strong" or "harsh" evaluation logic. If the page "looks and works" mostly as expected, give top marks.
 
 Focus Area: ${focusArea}
+Course Context: ${isHtmlCssCourse ? "Focus primarily on the balance between HTML structure and CSS styling." : "General programming evaluation."}
 
-**CRITICAL GRADING INSTRUCTIONS:**
-1. **Meaningful Effort Required**: If the submission is completely blank, contains only boilerplate (e.g., just an empty HTML skeleton), or only consists of 2-3 lines of trivial code that do not address the challenge, **the score MUST be below 50**. Do not pass students who have not made a meaningful attempt.
-2. **Be Liberal for Genuine Attempts**: If the student has written a reasonable amount of code attempting to solve the problem, be very forgiving. Minor syntax issues, bad formatting, or small UI differences should NOT reduce marks significantly.
-3. If the solution is completely perfect: Score **100**.
-4. If the solution mostly works but has minor bugs: Score generously between **90-95**.
-5. If the solution has major bugs but shows good effort with a substantial amount of code: Score generously between **80-89**.
-6. If the code is just a few lines or boilerplate: Score **below 50**.
+**GRADING PRINCIPLES:**
+1. If the submission shows genuine effort and addresses most requirements: Score **85-100**.
+2. If the submission is incomplete but shows good initial progress: Score **80-84**.
+3. Only fail (Score < 80) if the submission is nearly blank, completely unrelated, or contains only trivial boilerplate.
+4. Aim to match a human faculty's grading style which values understanding and effort over perfection.
 
 ---
 
@@ -87,97 +113,72 @@ Instructions: ${submission.challenge_instructions}
 ---
 
 STUDENT CODE
-
-HTML
-${submission.html_code || 'No HTML provided'}
-
-CSS
-${submission.css_code || 'No CSS provided'}
-
-JavaScript
-${submission.js_code || 'No JS provided'}
+HTML: ${submission.html_code || 'No HTML provided'}
+CSS: ${submission.css_code || 'No CSS provided'}
+JavaScript: ${submission.js_code || 'No JS provided'}
 
 ---
 
 EXPECTED LOGIC
-
 HTML: ${submission.expected_html || 'N/A'}
 CSS: ${submission.expected_css || 'N/A'}
 JS: ${submission.expected_js || 'N/A'}
 
 ---
 
-SCORING RUBRIC (TOTAL = 100)
-
-Code Quality (0-40)
-Generously reward structure and effort IF there is a meaningful amount of code. Ignore minor formatting issues. (Typically 35-40 for genuine attempts, 0-10 for 2-3 lines of code).
-
-Key Requirements (0-25)
-Check if they attempted basic instructions. (Typically 20-25 if they tried, 0-5 if missing).
-
-Output (0-35)
-Functionality works, mostly works, or shows logical intent. (Typically 25-35 if there is any intended output, 0 if blank/boilerplate).
+${rubric}
 
 Passing Score: **80**
-
-Score Guidelines:
-
-* Perfect: 95–100
-* Good/Almost There: 85–94
-* Moderate Effort but buggy: 80–84
-* Insufficient Effort (e.g., 2-3 lines, blank, boilerplate): below 50
-
-Give maximum partial credit ONLY when a genuine attempt is made.
 
 ---
 
 RESPONSE FORMAT
-
 Return ONLY a valid JSON object:
-
 {
-"code_quality": number,
-"key_requirements": number,
-"output": number,
+"code_quality": number, // Map HTML Structure here if HTML/CSS course
+"key_requirements": number, // Map CSS Styling here if HTML/CSS course
+"output": number, // Use 0 if rubric is 50/50, or use for logic if applicable
 "output_correctness": 0,
 "best_practices": 0,
-"final_score": number,
+"final_score": number, // Sum of the above
 "major_issues": ["issue1","issue2"],
-"feedback": "Short encouraging feedback pointing out what they did well or what core piece is missing (max 2 sentences)."
+"feedback": "Encouraging faculty feedback (max 2 sentences). Start with something positive."
 }
 
 Rules:
-
 * final_score = code_quality + key_requirements + output
-* Keep feedback highly encouraging and constructive.
+* If HTML/CSS course, distribute the 100 points as 50 (code_quality/HTML) and 50 (key_requirements/CSS).
 `;
-
-        // Make secure HTTP request to GPU API
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 60000); // 60s timeout
 
         console.log(`[AI Worker] Sending ${submissionId} to GPU API...`);
         console.log("Sending GPU request with key:", GPU_API_KEY);
 
-        // We import node-fetch dynamically if runng in native node < 18, but Node 18+ has fetch.
         const response = await fetch(GPU_API_URL, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'x-api-key': GPU_API_KEY || ''
             },
-            body: JSON.stringify({ prompt }),
-            signal: controller.signal
+            body: JSON.stringify({ prompt })
         });
-
-        clearTimeout(timeout);
 
         if (!response.ok) {
             let errorText = await response.text();
             throw new Error(`GPU API HTTP Error ${response.status}: ${errorText}`);
         }
 
-        const aiResult = await response.json();
+        const rawResponse = await response.json();
+        let aiResult;
+
+        try {
+            // Robust JSON extraction
+            const text = rawResponse.response || rawResponse.text || JSON.stringify(rawResponse);
+            const jsonMatch = text.match(/\{[\s\S]*\}/);
+            aiResult = jsonMatch ? JSON.parse(jsonMatch[0]) : rawResponse;
+        } catch (e) {
+            console.error("[AI Worker] JSON Parse Error. Raw text:", rawResponse);
+            throw new Error("Failed to parse AI response as JSON");
+        }
 
         // Verify format
         if (typeof aiResult.final_score !== 'number') {

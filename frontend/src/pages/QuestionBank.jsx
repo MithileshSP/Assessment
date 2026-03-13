@@ -342,26 +342,26 @@ const QuestionBank = () => {
                     <div className="flex items-center gap-4">
                         <button
                             onClick={() => navigate(userRole === 'admin' ? '/admin/courses' : '/faculty/dashboard')}
-                            className="p-2.5 bg-white rounded-2xl border border-slate-200 text-slate-500 hover:bg-slate-50 transition-all shadow-sm"
+                            className="p-2 bg-white rounded-md border border-slate-200 text-slate-500 hover:bg-slate-50 transition-all shadow-sm"
                         >
-                            <ArrowLeft size={20} />
+                            <ArrowLeft size={18} />
                         </button>
                         <div className="text-left">
-                            <div className="flex items-center gap-2 text-[10px] font-black text-blue-500 uppercase tracking-[0.2em] mb-1">
+                            <div className="flex items-center gap-2 text-[10px] font-bold text-blue-600 uppercase tracking-wider mb-1">
                                 <BookOpen size={10} />
                                 <span>Level Management</span>
                             </div>
-                            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">
+                            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
                                 {course?.title || 'Loading...'}
                             </h1>
-                            <p className="text-slate-500 text-sm mt-1">Manage question repository and settings.</p>
+                            <p className="text-slate-500 text-sm mt-0.5">Manage question repository and settings.</p>
                         </div>
                     </div>
 
                     <div className="flex items-center gap-3">
                         <button
                             onClick={() => navigate(`/admin/course/${courseId}/question/add`)}
-                            className="flex items-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-2xl font-bold shadow-xl shadow-slate-200 hover:bg-black transition-all active:scale-95 text-sm"
+                            className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md font-bold hover:bg-blue-700 transition-all shadow-sm text-sm"
                         >
                             <Plus size={18} />
                             Add Question
@@ -372,60 +372,60 @@ const QuestionBank = () => {
                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
                     {/* Stats & Search Sidebar */}
                     <div className="lg:col-span-1 space-y-6">
-                        <div className="bg-white p-6 rounded-[2.5rem] border border-slate-200 shadow-sm space-y-6">
+                        <div className="bg-white p-6 rounded-lg border border-slate-200 shadow-sm space-y-6">
                             <div className="text-left">
-                                <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-3">Search Database</label>
+                                <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Search Database</label>
                                 <div className="relative group">
-                                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-blue-500 transition-colors" size={16} />
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={14} />
                                     <input
                                         type="text"
                                         placeholder="Find questions..."
                                         value={searchTerm}
                                         onChange={(e) => setSearchTerm(e.target.value)}
-                                        className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-medium focus:ring-4 focus:ring-blue-500/5 focus:bg-white transition-all outline-none"
+                                        className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-md text-xs font-medium focus:ring-4 focus:ring-blue-500/5 focus:bg-white transition-all outline-none"
                                     />
                                 </div>
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
-                                <div className="bg-slate-50 p-4 rounded-3xl border border-slate-100 text-left">
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Total Items</p>
-                                    <p className="text-2xl font-black text-slate-900 mt-2">{totals.questions}</p>
+                                <div className="bg-slate-50 p-4 rounded-md border border-slate-100 text-left">
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider leading-none">Total Items</p>
+                                    <p className="text-xl font-bold text-slate-900 mt-2">{totals.questions}</p>
                                 </div>
-                                <div className="bg-blue-50 p-4 rounded-3xl border border-blue-100 text-left">
-                                    <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest leading-none">Levels</p>
-                                    <p className="text-2xl font-black text-blue-600 mt-2">1</p>
+                                <div className="bg-blue-50 p-4 rounded-md border border-blue-100 text-left">
+                                    <p className="text-[10px] font-bold text-blue-500 uppercase tracking-wider leading-none">Levels</p>
+                                    <p className="text-xl font-bold text-blue-600 mt-2">1</p>
                                 </div>
                             </div>
 
                             <div className="pt-4 border-t border-slate-100">
                                 <button
                                     onClick={handleExportCsv}
-                                    className="w-full flex items-center justify-center gap-2 px-4 py-3 border border-slate-200 rounded-2xl text-sm font-bold text-slate-600 hover:bg-slate-50 transition-all"
+                                    className="w-full flex items-center justify-center gap-2 px-4 py-2 border border-slate-200 rounded-md text-xs font-bold text-slate-600 hover:bg-slate-50 transition-all shadow-sm"
                                 >
-                                    <Download size={16} />
+                                    <Download size={14} />
                                     Export Full Bank
                                 </button>
                             </div>
                         </div>
 
                         {/* Quick Actions */}
-                        <div className="bg-gradient-to-br from-blue-600 to-violet-700 p-6 rounded-[2.5rem] text-white shadow-xl shadow-blue-200 text-left">
-                            <h3 className="font-black text-lg mb-4 flex items-center gap-2">
-                                <Zap size={20} className="text-amber-400" />
+                        <div className="bg-white p-6 rounded-lg border border-slate-200 shadow-sm text-left relative overflow-hidden">
+                            <h3 className="font-bold text-sm mb-4 flex items-center gap-2 text-slate-900">
+                                <Zap size={16} className="text-blue-500" />
                                 Bulk Operations
                             </h3>
                             <div className="space-y-3">
-                                <div className="w-full bg-white/10 p-4 rounded-2xl border border-white/10 transition-all text-left group">
-                                    <p className="font-bold text-xs uppercase tracking-widest text-blue-100 mb-3">Download Templates</p>
+                                <div className="w-full bg-slate-50 p-4 rounded-md border border-slate-100 transition-all text-left">
+                                    <p className="font-bold text-[10px] uppercase tracking-wider text-slate-400 mb-3">Download Templates</p>
                                     <div className="flex gap-2">
                                         <a
                                             href={`${api.BASE_URL}/courses/sample/csv?courseId=${courseId}`}
                                             download="questions_template.csv"
-                                            className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-white/10 hover:bg-white/20 rounded-xl border border-white/10 transition-all"
+                                            className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-white hover:bg-slate-50 rounded-md border border-slate-200 transition-all shadow-sm"
                                         >
-                                            <FileText size={14} className="text-white" />
-                                            <span className="text-[10px] font-black text-white uppercase">CSV</span>
+                                            <FileText size={14} className="text-slate-600" />
+                                            <span className="text-[10px] font-bold text-slate-600 uppercase">CSV</span>
                                         </a>
                                         <button
                                             onClick={() => {
@@ -447,38 +447,38 @@ const QuestionBank = () => {
                                                 a.download = 'template.json';
                                                 a.click();
                                             }}
-                                            className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-white/10 hover:bg-white/20 rounded-xl border border-white/10 transition-all"
+                                            className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-white hover:bg-slate-50 rounded-md border border-slate-200 transition-all shadow-sm"
                                         >
-                                            <FileCode size={14} className="text-white" />
-                                            <span className="text-[10px] font-black text-white uppercase">JSON</span>
+                                            <FileCode size={14} className="text-slate-600" />
+                                            <span className="text-[10px] font-bold text-slate-600 uppercase">JSON</span>
                                         </button>
                                     </div>
                                 </div>
-                                <button onClick={() => setShowImportModal(true)} className="w-full bg-white/10 hover:bg-white/20 p-4 rounded-2xl border border-white/10 transition-all text-left flex items-center justify-between group">
-                                    <span className="font-bold text-sm">Import Questions</span>
-                                    <Upload size={16} className="text-white/50 group-hover:text-white" />
+                                <button onClick={() => setShowImportModal(true)} className="w-full bg-slate-50 hover:bg-slate-100 p-3 rounded-md border border-slate-100 transition-all text-left flex items-center justify-between group">
+                                    <span className="font-bold text-xs text-slate-700">Import Questions</span>
+                                    <Upload size={14} className="text-slate-400 group-hover:text-blue-500" />
                                 </button>
                                 {selectedQuestions.length > 0 && (
                                     <button
                                         onClick={handleBulkDelete}
                                         disabled={deleting}
-                                        className="w-full bg-rose-500/90 hover:bg-rose-600 p-4 rounded-2xl border border-rose-400/30 transition-all text-left flex items-center justify-between group"
+                                        className="w-full bg-rose-50 hover:bg-rose-100 p-3 rounded-md border border-rose-100 transition-all text-left flex items-center justify-between group"
                                     >
-                                        <span className="font-bold text-sm">
+                                        <span className="font-bold text-xs text-rose-600">
                                             {deleting ? 'Deleting...' : `Delete Selected (${selectedQuestions.length})`}
                                         </span>
-                                        <Trash2 size={16} className="text-white/70 group-hover:text-white" />
+                                        <Trash2 size={14} className="text-rose-400 group-hover:text-rose-600" />
                                     </button>
                                 )}
                                 <button
                                     onClick={handleFixAssets}
                                     disabled={fixingAssets}
-                                    className="w-full bg-white/10 hover:bg-white/20 p-4 rounded-2xl border border-white/10 transition-all text-left flex items-center justify-between group"
+                                    className="w-full bg-slate-50 hover:bg-slate-100 p-3 rounded-md border border-slate-100 transition-all text-left flex items-center justify-between group"
                                 >
-                                    <span className="font-bold text-sm">
+                                    <span className="font-bold text-xs text-slate-700">
                                         {fixingAssets ? 'Fixing...' : 'Fix Assets'}
                                     </span>
-                                    <Wrench size={16} className="text-white/50 group-hover:text-white" />
+                                    <Wrench size={14} className="text-slate-400 group-hover:text-blue-500" />
                                 </button>
                             </div>
                         </div>
@@ -497,18 +497,18 @@ const QuestionBank = () => {
                             if (searchTerm && filtered.length === 0 && questions.length > 0) return null;
 
                             return (
-                                <div key={lv} className="bg-white rounded-[2rem] border border-slate-200 shadow-sm overflow-hidden">
+                                <div key={lv} className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
                                     <div
                                         onClick={() => toggleLevel(lv)}
                                         className="px-8 py-5 flex items-center justify-between cursor-pointer hover:bg-slate-50/50 transition-colors border-b border-slate-50"
                                     >
                                         <div className="flex items-center gap-4">
-                                            <div className={`w-10 h-10 ${questions.length > 0 ? 'bg-blue-50 text-blue-600' : 'bg-slate-100 text-slate-400'} rounded-xl flex items-center justify-center font-black shadow-sm`}>
+                                            <div className={`w-8 h-8 ${questions.length > 0 ? 'bg-blue-50 text-blue-600' : 'bg-slate-100 text-slate-400'} rounded-md flex items-center justify-center font-bold text-sm border border-blue-100/50`}>
                                                 {lv}
                                             </div>
                                             <div className="text-left">
-                                                <h3 className={`font-black ${questions.length > 0 ? 'text-slate-800' : 'text-slate-400'}`}>Level {lv} Questions</h3>
-                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5">
+                                                <h3 className={`font-bold text-sm ${questions.length > 0 ? 'text-slate-800' : 'text-slate-400'}`}>Level {lv} Questions</h3>
+                                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">
                                                     {questions.length > 0 ? `${questions.length} Questions Configured` : 'No questions yet'}
                                                 </p>
                                             </div>
@@ -522,20 +522,20 @@ const QuestionBank = () => {
                                         <div className="p-4 space-y-3 bg-slate-50/30">
                                             {/* Select All header */}
                                             {questions.length > 0 && (
-                                                <div className="flex items-center justify-between px-4 py-2 bg-white/50 rounded-xl border border-slate-100">
+                                                <div className="flex items-center justify-between px-4 py-2 bg-slate-50 border border-slate-200 rounded-md">
                                                     <label className="flex items-center gap-3 cursor-pointer">
                                                         <input
                                                             type="checkbox"
                                                             checked={questions.length > 0 && questions.every(q => selectedQuestions.includes(q.id))}
                                                             onChange={() => toggleSelectAllInLevel(lv)}
-                                                            className="w-5 h-5 rounded-lg border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                                                            className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
                                                         />
-                                                        <span className="text-sm font-bold text-slate-600">
+                                                        <span className="text-xs font-bold text-slate-600">
                                                             Select All ({questions.length})
                                                         </span>
                                                     </label>
                                                     {questions.filter(q => selectedQuestions.includes(q.id)).length > 0 && (
-                                                        <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-lg">
+                                                        <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
                                                             {questions.filter(q => selectedQuestions.includes(q.id)).length} selected
                                                         </span>
                                                     )}
@@ -544,35 +544,35 @@ const QuestionBank = () => {
                                             {filtered.length > 0 ? filtered.map((q) => (
                                                 <div
                                                     key={q.id}
-                                                    className={`bg-white p-6 rounded-3xl border ${selectedQuestions.includes(q.id) ? 'border-blue-400 bg-blue-50/30' : 'border-slate-200'} hover:border-blue-300 transition-all group flex items-start justify-between gap-6 shadow-sm`}
+                                                    className={`bg-white p-6 rounded-md border ${selectedQuestions.includes(q.id) ? 'border-blue-400 bg-blue-50/20' : 'border-slate-200'} hover:border-blue-200 transition-all group flex items-start justify-between gap-6 shadow-sm`}
                                                 >
                                                     <div className="flex items-start gap-4 flex-1">
                                                         <input
                                                             type="checkbox"
                                                             checked={selectedQuestions.includes(q.id)}
                                                             onChange={() => toggleSelectQuestion(q.id)}
-                                                            className="mt-1.5 w-5 h-5 rounded-lg border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                                                            className="mt-1.5 w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
                                                         />
                                                         <div className="flex-1 space-y-3 text-left">
                                                             <div className="flex items-center gap-3">
-                                                                <span className="bg-blue-50 text-blue-600 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">
-                                                                    Q{q.questionNumber || 'X'}
+                                                                <span className="bg-blue-50 text-blue-600 px-2 py-0.5 rounded border border-blue-100 text-[10px] font-bold uppercase tracking-wider">
+                                                                    QX
                                                                 </span>
-                                                                <h4 className="font-bold text-slate-900">{q.title}</h4>
-                                                                {q.isLocked && <Lock size={14} className="text-amber-500" />}
+                                                                <h4 className="font-bold text-sm text-slate-800">{q.title}</h4>
+                                                                {q.isLocked && <Lock size={12} className="text-amber-500" />}
                                                             </div>
-                                                            <p className="text-sm text-slate-500 line-clamp-2 leading-relaxed">
+                                                            <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">
                                                                 {q.description}
                                                             </p>
                                                             <div className="flex items-center gap-2 mt-1">
-                                                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Added by:</span>
-                                                                <span className="text-[10px] font-black text-blue-500 bg-blue-50 px-2 py-0.5 rounded-md uppercase tracking-widest border border-blue-100/50">
+                                                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Added by:</span>
+                                                                <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100 uppercase tracking-wider">
                                                                     {q.creatorName || 'System'}
                                                                 </span>
                                                             </div>
                                                             <div className="flex flex-wrap gap-2">
                                                                 {(Array.isArray(q.tags) ? q.tags : []).map(tag => (
-                                                                    <span key={tag} className="px-2.5 py-1 bg-slate-50 text-slate-400 rounded-lg text-[10px] font-black uppercase tracking-widest border border-slate-100">
+                                                                    <span key={tag} className="px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded border border-slate-200 text-[8px] font-bold uppercase tracking-wider">
                                                                         {tag}
                                                                     </span>
                                                                 ))}
@@ -583,16 +583,16 @@ const QuestionBank = () => {
                                                     <div className="flex flex-col gap-2">
                                                         <button
                                                             onClick={() => handleEdit(q)}
-                                                            className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-xl hover:bg-blue-600 hover:text-white transition-all font-bold text-xs"
+                                                            className="flex items-center justify-center gap-2 px-3 py-1.5 bg-blue-50 text-blue-600 rounded-md border border-blue-100 hover:bg-blue-600 hover:text-white transition-all font-bold text-[10px] uppercase tracking-wider"
                                                         >
-                                                            <Edit3 size={14} />
+                                                            <Edit3 size={12} />
                                                             Edit
                                                         </button>
                                                         <button
                                                             onClick={() => handleDelete(q.id)}
-                                                            className="flex items-center gap-2 px-4 py-2 bg-rose-50 text-rose-600 rounded-xl hover:bg-rose-600 hover:text-white transition-all font-bold text-xs"
+                                                            className="flex items-center justify-center gap-2 px-4 py-1.5 bg-rose-50 text-rose-600 rounded-md border border-rose-100 hover:bg-rose-600 hover:text-white transition-all font-bold text-[10px] uppercase tracking-wider"
                                                         >
-                                                            <Trash2 size={14} />
+                                                            <Trash2 size={12} />
                                                             Remove
                                                         </button>
                                                     </div>
@@ -612,18 +612,22 @@ const QuestionBank = () => {
                     </div>
                 </div>
 
-                {/* Import Modal - Portal to document.body */}
+                {/* Import Modal - Enterprise Redesign */}
                 {showImportModal && createPortal(
-                    <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
-                        <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full p-8 space-y-6">
-                            <div className="flex justify-between items-center">
-                                <h2 className="text-2xl font-black text-slate-900">Import Questions</h2>
-                                <button onClick={() => setShowImportModal(false)} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
-                                    <X size={20} />
+                    <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
+                        <div className="bg-white rounded-lg shadow-sm max-w-lg w-full p-8 border border-slate-200 animate-fade-in">
+                            <div className="flex justify-between items-center mb-6">
+                                <div>
+                                    <h2 className="text-xl font-bold text-slate-900">Import Questions</h2>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Repository Synchronization</p>
+                                </div>
+                                <button onClick={() => setShowImportModal(false)} className="p-2 hover:bg-slate-100 rounded-md transition-colors text-slate-400">
+                                    <X size={18} />
                                 </button>
                             </div>
-                            <div className="border-2 border-dashed border-slate-200 rounded-2xl p-10 text-center hover:border-blue-400 transition-colors">
-                                <Upload className="mx-auto text-slate-300 mb-4" size={40} />
+
+                            <div className="border border-dashed border-slate-200 rounded-md p-10 text-center hover:border-blue-300 transition-all bg-slate-50/30 group">
+                                <Upload className="mx-auto text-slate-300 mb-4 group-hover:text-blue-500 transition-colors" size={32} />
                                 <input
                                     type="file"
                                     accept=".csv,.json"
@@ -631,26 +635,29 @@ const QuestionBank = () => {
                                     className="hidden"
                                     id="import-file"
                                 />
-                                <label htmlFor="import-file" className="cursor-pointer text-blue-600 hover:text-blue-700 font-bold text-sm underline">
-                                    {importFile ? importFile.name : 'Select a CSV or JSON file'}
+                                <label htmlFor="import-file" className="cursor-pointer text-blue-600 hover:text-blue-700 font-bold text-xs uppercase tracking-widest block transition-colors">
+                                    {importFile ? importFile.name : 'Select CSV or JSON Registry'}
                                 </label>
+                                {!importFile && <p className="text-[9px] text-slate-400 font-bold mt-2 uppercase tracking-wide">Standardized Q-Bank Format</p>}
                             </div>
-                            <div className="bg-slate-50 p-4 rounded-xl text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                                Supported formats: CSV, JSON
+
+                            <div className="bg-slate-50 p-4 rounded-md border border-slate-100 text-[9px] font-bold text-slate-400 uppercase tracking-widest text-center">
+                                Automated Validation Engine Active
                             </div>
-                            <div className="flex gap-4">
+
+                            <div className="flex gap-4 mt-2">
                                 <button
                                     onClick={() => setShowImportModal(false)}
-                                    className="flex-1 py-3 border border-slate-200 text-slate-600 rounded-2xl font-bold hover:bg-slate-50"
+                                    className="flex-1 py-3 border border-slate-200 text-slate-600 rounded-md font-bold text-xs uppercase tracking-widest hover:bg-slate-50 transition-all active:scale-[0.98]"
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     onClick={handleImport}
                                     disabled={!importFile || importing}
-                                    className="flex-1 py-3 bg-blue-600 text-white rounded-2xl font-bold hover:bg-blue-700 disabled:opacity-50"
+                                    className="flex-1 py-3 bg-blue-600 text-white rounded-md font-bold text-xs uppercase tracking-widest hover:bg-blue-700 disabled:opacity-50 transition-all active:scale-[0.98] shadow-sm"
                                 >
-                                    {importing ? 'Importing...' : 'Import'}
+                                    {importing ? 'Syncing...' : 'Execute Import'}
                                 </button>
                             </div>
                         </div>
@@ -665,14 +672,14 @@ const QuestionBank = () => {
 };
 
 const RestrictionToggle = ({ title, description, icon, enabled, onChange }) => (
-    <div className="p-8 bg-white rounded-[2.5rem] border border-slate-200 shadow-sm flex items-center justify-between hover:border-blue-300 transition-all group">
+    <div className="p-6 bg-white rounded-lg border border-slate-200 shadow-sm flex items-center justify-between hover:border-blue-200 transition-all group">
         <div className="flex items-center gap-5 text-left">
-            <div className="w-14 h-14 bg-slate-50 group-hover:bg-blue-50 rounded-2xl flex items-center justify-center text-slate-400 group-hover:text-blue-500 transition-colors">
+            <div className="w-12 h-12 bg-slate-50 group-hover:bg-blue-50 rounded-md flex items-center justify-center text-slate-400 group-hover:text-blue-500 transition-colors border border-slate-100">
                 {icon}
             </div>
             <div className="text-left">
-                <p className="font-black text-slate-900 text-sm tracking-tight">{title}</p>
-                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">{description}</p>
+                <p className="font-bold text-slate-800 text-sm tracking-tight">{title}</p>
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">{description}</p>
             </div>
         </div>
         <label className="relative inline-flex items-center cursor-pointer">

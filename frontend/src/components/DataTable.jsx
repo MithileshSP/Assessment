@@ -54,8 +54,8 @@ export function StatusBadge({ value, customMap }) {
     const style = map[value] || map.unassigned;
     const label = value ? value.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : 'N/A';
     return (
-        <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide ${style.bg} ${style.text}`}>
-            <span className={`w-1.5 h-1.5 rounded-full ${style.dot}`} />
+        <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[9px] font-bold uppercase tracking-wider ${style.bg} ${style.text} border border-black/5`}>
+            <span className={`w-1 h-1 rounded-full ${style.dot}`} />
             {label}
         </span>
     );
@@ -112,15 +112,15 @@ function FilterPopover({ column, value, onChange, onClose, allValues }) {
     const uniqueValues = column.filterOptions || [...new Set(allValues || [])].filter(Boolean).sort();
 
     return (
-        <div ref={ref} className="absolute top-full left-0 mt-1 w-64 bg-white border border-slate-200 rounded-xl shadow-xl z-50 overflow-hidden animate-fade-in-up" onClick={e => e.stopPropagation()}>
+        <div ref={ref} className="absolute top-full left-0 mt-1 w-64 bg-white border border-slate-200 rounded-md shadow-lg z-50 overflow-hidden animate-fade-in-up" onClick={e => e.stopPropagation()}>
             {/* Tabs */}
             <div className="flex border-b border-slate-100 bg-slate-50/50">
                 {(isDate ? ['date'] : isTime ? ['time'] : ['values', 'text']).map(t => (
                     <button
                         key={t}
                         onClick={(e) => { e.stopPropagation(); setTab(t); }}
-                        className={`flex-1 px-3 py-2.5 text-[10px] font-black uppercase tracking-wider transition-colors
-              ${tab === t ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50/50' : 'text-slate-400 hover:text-slate-700 hover:bg-slate-100'}`}
+                        className={`flex-1 px-3 py-2 text-[9px] font-bold uppercase tracking-wider transition-colors
+              ${tab === t ? 'text-slate-900 border-b-2 border-slate-900 bg-slate-50' : 'text-slate-400 hover:text-slate-700 hover:bg-slate-100'}`}
                     >
                         {t === 'values' ? 'Values' : t === 'text' ? 'Text' : t === 'date' ? 'Date Range' : 'Time Range'}
                     </button>
@@ -357,7 +357,7 @@ export default function DataTable({
     ].filter(col => !hiddenColumns.has(col.key));
 
     const colCount = extendedColumns.length + (selectable ? 1 : 0) + (expandable ? 1 : 0);
-    const paddingClass = density === 'compact' ? 'px-4 py-2' : 'px-4 py-3.5';
+    const paddingClass = density === 'compact' ? 'px-3 py-1.5' : 'px-3 py-2';
 
     // Active filters logic
     const activeFiltersCount = Object.keys(filters).filter(k => filters[k]).length;
@@ -372,7 +372,7 @@ export default function DataTable({
     };
 
     return (
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
+        <div className="bg-white rounded-md border border-slate-200 shadow-sm overflow-hidden flex flex-col">
             {/* ── Top Bar (Search & View Options) ─────────────────────────────────── */}
             <div className="px-5 py-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white">
                 {onSearch && (
@@ -382,8 +382,8 @@ export default function DataTable({
                             type="text"
                             value={searchValue}
                             onChange={e => onSearch(e.target.value)}
-                            placeholder="Search in table..."
-                            className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 hover:border-blue-300 rounded-xl text-sm font-medium text-slate-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white outline-none transition-all shadow-sm"
+                            placeholder="Search..."
+                            className="w-full pl-9 pr-4 py-1.5 bg-slate-50 border border-slate-200 hover:border-slate-300 rounded-md text-xs font-medium text-slate-700 focus:ring-2 focus:ring-slate-200 focus:border-slate-400 focus:bg-white outline-none transition-all"
                         />
                     </div>
                 )}
@@ -393,8 +393,8 @@ export default function DataTable({
                     <div className="relative" ref={viewOptionsRef}>
                         <button
                             onClick={() => setViewOptionsOpen(!viewOptionsOpen)}
-                            className={`flex items-center gap-2 px-3 py-2 border rounded-xl text-xs font-bold transition-all shadow-sm
-                                ${viewOptionsOpen ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`}
+                            className={`flex items-center gap-2 px-3 py-1.5 border rounded-md text-xs font-bold transition-all
+                                ${viewOptionsOpen ? 'bg-slate-100 border-slate-300 text-slate-900' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}
                         >
                             <LayoutList size={14} /> View
                         </button>
@@ -527,7 +527,7 @@ export default function DataTable({
             {/* ── Desktop Table ──────────────────────────────── */}
             <div className="hidden md:block overflow-x-auto flex-1">
                 <table className="w-full text-left">
-                    <thead className="bg-slate-50/80 border-b border-slate-200">
+                    <thead className="bg-slate-50 sticky top-0 z-10 border-b border-slate-200 shadow-[0_1px_0_0_rgba(0,0,0,0.05)]">
                         <tr>
                             {selectable && (
                                 <th className={`${paddingClass} w-12 border-r border-slate-100/50`}>
@@ -585,7 +585,7 @@ export default function DataTable({
                             ))}
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100 bg-white">
+                    <tbody className="divide-y divide-slate-100 bg-white even:bg-slate-50/30">
                         {loading ? (
                             Array.from({ length: pageSize > 5 ? 5 : pageSize }).map((_, i) => (
                                 <SkeletonRow key={i} cols={colCount} paddingClass={paddingClass} />
@@ -610,7 +610,7 @@ export default function DataTable({
                         ) : (
                             data.map((row, rowIndex) => (
                                 <React.Fragment key={row[idKey]}>
-                                    <tr className={`hover:bg-slate-50/80 transition-colors ${selectedIds.has(row[idKey]) ? 'bg-blue-50/40 hover:bg-blue-50/60' : ''}`}>
+                                    <tr className={`hover:bg-slate-50 transition-colors group ${selectedIds.has(row[idKey]) ? 'bg-slate-100/50' : ''} even:bg-slate-50/20`}>
                                         {selectable && (
                                             <td className={`${paddingClass}`}>
                                                 <input
@@ -760,9 +760,9 @@ export default function DataTable({
                                     <button
                                         key={i}
                                         onClick={() => onPageChange?.(i)}
-                                        className={`w-8 h-8 rounded-lg text-xs font-bold transition-all ${i === page
-                                            ? 'bg-blue-600 text-white shadow-md shadow-blue-500/30'
-                                            : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                                        className={`w-7 h-7 rounded text-[11px] font-bold transition-all ${i === page
+                                            ? 'bg-slate-900 text-white shadow-sm'
+                                            : 'text-slate-600 hover:bg-slate-100'
                                             }`}
                                     >
                                         {i}

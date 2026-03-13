@@ -14,11 +14,11 @@ import {
 const MetricCard = ({ icon: Icon, label, value, color = 'blue', delay = 0 }) => {
     const colors = {
         blue: {
-            bg: 'bg-blue-50',
-            text: 'text-blue-600',
-            border: 'border-blue-100',
-            iconBg: 'bg-blue-600',
-            shadow: 'shadow-blue-100/50'
+            bg: 'bg-slate-50',
+            text: 'text-slate-900',
+            border: 'border-slate-200',
+            iconBg: 'bg-slate-900',
+            shadow: 'shadow-slate-100/50'
         },
         emerald: {
             bg: 'bg-emerald-50',
@@ -61,14 +61,14 @@ const MetricCard = ({ icon: Icon, label, value, color = 'blue', delay = 0 }) => 
 
     return (
         <div
-            className={`group flex items-center gap-4 bg-white px-5 py-5 rounded-lg border ${c.border} shadow-sm transition-all duration-200 hover:shadow-md`}
+            className={`group flex items-center gap-3 bg-white px-4 py-3 rounded-md border ${c.border} shadow-sm transition-all duration-200 hover:shadow-md`}
         >
-            <div className={`w-12 h-12 rounded-lg ${c.bg} flex items-center justify-center ${c.text} transition-colors`}>
-                <Icon size={24} />
+            <div className={`w-10 h-10 rounded-md ${c.bg} flex items-center justify-center ${c.text} transition-colors border border-black/5`}>
+                <Icon size={20} />
             </div>
             <div>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">{label}</p>
-                <p className={`text-2xl font-black ${c.text} tabular-nums leading-none`}>
+                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-1">{label}</p>
+                <p className={`text-xl font-bold ${c.text} tabular-nums leading-none`}>
                     {value !== undefined ? value : '0'}
                 </p>
             </div>

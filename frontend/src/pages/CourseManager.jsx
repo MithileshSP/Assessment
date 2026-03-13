@@ -116,15 +116,15 @@ export default function CourseManager() {
     <SaaSLayout>
       <div className="space-y-8 text-left">
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 pb-6">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Level Management</h1>
-            <p className="text-slate-500 mt-1">Design skill path levels and manage question banks.</p>
+            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Level Management</h1>
+            <p className="text-slate-500 text-sm mt-1">Design and oversee your skill path curriculum.</p>
           </div>
           <div className="flex items-center gap-3">
             <button
               onClick={() => setShowCreateModal(true)}
-              className="flex items-center gap-2 px-6 py-2 bg-slate-900 text-white rounded-xl text-sm font-bold hover:bg-blue-600 transition-all shadow-lg shadow-slate-900/10"
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-bold hover:bg-blue-700 transition-all shadow-sm"
             >
               <Plus size={16} /> Create New Level
             </button>
@@ -134,13 +134,13 @@ export default function CourseManager() {
         {/* Courses Grid */}
         <div className="grid grid-cols-1 gap-8">
           {loading ? (
-            <div className="flex flex-col items-center justify-center py-20 bg-white rounded-3xl border border-slate-100 italic text-slate-400">
-              <Database size={48} className="animate-bounce mb-4 opacity-10" />
-              Querying level registry...
+            <div className="flex flex-col items-center justify-center py-20 bg-white rounded-lg border border-slate-200 italic text-slate-400">
+              <Database size={48} className="animate-pulse mb-4 opacity-10" />
+              Fetching course registry...
             </div>
           ) : (
             courses.map((course, index) => (
-              <div key={course.id} className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden group hover:shadow-xl transition-all duration-300">
+              <div key={course.id} className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden group hover:border-blue-200 transition-all duration-300">
                 <div className="flex flex-col lg:flex-row">
                   {/* Visual Side */}
                   <div
@@ -159,11 +159,11 @@ export default function CourseManager() {
                     )}
 
                     {course.isHidden && (
-                      <div className="absolute top-4 left-4 bg-amber-400 text-amber-900 text-[10px] font-bold px-3 py-1.5 rounded-xl flex items-center gap-1 shadow-lg z-20">
+                      <div className="absolute top-4 left-4 bg-amber-100 text-amber-700 text-[10px] font-bold px-3 py-1 rounded-md flex items-center gap-1 border border-amber-200 z-20">
                         <EyeOff size={12} /> PRIVATE
                       </div>
                     )}
-                    <div className="absolute bottom-4 left-4 bg-white/80 backdrop-blur-sm text-slate-500 text-[8px] font-bold px-2 py-1 rounded-lg z-20 border border-slate-200 uppercase tracking-widest">
+                    <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm text-slate-500 text-[9px] font-bold px-2 py-1 rounded border border-slate-200 uppercase tracking-widest z-20">
                       ID: {course.id}
                     </div>
                   </div>
@@ -174,30 +174,30 @@ export default function CourseManager() {
                       <div className="flex justify-between items-start mb-4">
                         <div>
                           <div className="flex items-center gap-2 mb-1 h-4" />
-                          <h2 className="text-2xl font-bold text-slate-900 group-hover:text-blue-600 transition-colors">{course.title}</h2>
-                          <p className="text-slate-500 text-sm mt-2 max-w-2xl leading-relaxed">{course.description}</p>
+                          <h2 className="text-xl font-bold text-slate-900 group-hover:text-blue-600 transition-colors">{course.title}</h2>
+                          <p className="text-slate-500 text-sm mt-1 max-w-2xl leading-relaxed">{course.description}</p>
                         </div>
                         <div className="flex gap-2">
                           <button
                             onClick={() => handleToggleHidden(course)}
-                            className={`p-2 rounded-xl transition-colors ${course.isHidden ? 'bg-amber-50 text-amber-600' : 'bg-slate-50 text-slate-400 hover:text-blue-600'}`}
+                            className={`p-1.5 rounded-md transition-colors ${course.isHidden ? 'bg-amber-50 text-amber-600' : 'bg-slate-50 text-slate-400 hover:text-blue-600'}`}
                             title={course.isHidden ? "Unhide Course" : "Hide Course"}
                           >
-                            {course.isHidden ? <EyeOff size={18} /> : <Eye size={18} />}
+                            {course.isHidden ? <EyeOff size={16} /> : <Eye size={16} />}
                           </button>
                           <button
                             onClick={() => setEditingCourse(course)}
-                            className="p-2 bg-slate-50 text-slate-400 hover:text-blue-600 rounded-xl transition-colors"
+                            className="p-1.5 bg-slate-50 text-slate-400 hover:text-blue-600 rounded-md transition-colors"
                             title="Edit Level"
                           >
-                            <Edit size={18} />
+                            <Edit size={16} />
                           </button>
                           <button
                             onClick={() => handleDeleteCourse(course.id, course.title)}
-                            className="p-2 bg-slate-50 text-slate-400 hover:text-rose-600 rounded-xl transition-colors"
+                            className="p-1.5 bg-slate-50 text-slate-400 hover:text-rose-600 rounded-md transition-colors"
                             title="Delete Level"
                           >
-                            <Trash2 size={18} />
+                            <Trash2 size={16} />
                           </button>
                         </div>
                       </div>
@@ -238,21 +238,21 @@ export default function CourseManager() {
                     <div className="flex items-center justify-between mt-8 pt-6 border-t border-slate-50">
                       <div className="flex flex-wrap gap-2">
                         {course.tags && course.tags.map((tag, idx) => (
-                          <span key={idx} className="px-2.5 py-1 bg-slate-100 text-slate-500 text-[10px] font-bold uppercase tracking-wider rounded-lg">
+                          <span key={idx} className="px-2 py-0.5 bg-slate-100 text-slate-600 text-[10px] font-bold uppercase tracking-wider rounded border border-slate-200">
                             {tag}
                           </span>
                         ))}
                       </div>
                       <div className="flex gap-3">
                         <button
-                          onClick={() => navigate(`/admin/course/${course.id}/questions`)} // Updated onClick to navigate
-                          className="flex items-center gap-2 px-5 py-2.5 bg-blue-50 text-blue-600 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-blue-600 hover:text-white transition-all shadow-sm" // Updated styling
+                          onClick={() => navigate(`/admin/course/${course.id}/questions`)}
+                          className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-md text-xs font-bold hover:bg-slate-50 transition-all shadow-sm"
                         >
-                          <Briefcase size={14} /> Manage Question Bank {/* Updated icon */}
+                          <Briefcase size={14} /> Manage Questions
                         </button>
                         <button
                           onClick={() => navigate(`/course/${course.id}`)}
-                          className="flex items-center gap-2 px-5 py-2.5 bg-slate-900 text-white rounded-xl text-xs font-bold hover:bg-blue-600 transition-all shadow-lg shadow-slate-900/10"
+                          className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-md text-xs font-bold hover:bg-slate-800 transition-all shadow-sm"
                         >
                           <ExternalLink size={14} /> Preview
                         </button>
@@ -266,19 +266,22 @@ export default function CourseManager() {
         </div>
 
         {/* Info Zone */}
-        <div className="bg-blue-600 rounded-3xl p-8 text-white relative overflow-hidden shadow-xl shadow-blue-600/20">
-          <div className="absolute top-0 right-0 p-8 opacity-10">
-            <Settings size={120} />
+        <div className="bg-white border border-blue-100 rounded-lg p-6 shadow-sm relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-4 text-blue-50">
+            <Settings size={80} />
           </div>
-          <div className="relative z-10 max-w-2xl">
-            <h3 className="text-xl font-black mb-4 uppercase tracking-wider">Core Architecture Tips</h3>
-            <p className="text-blue-100 text-sm leading-relaxed mb-6 font-bold">
-              Courses are defined by their levels and assessment banks. Changes made here propagate immediately to the student experience.
-              Use the **Private** toggle to work on courses in draft mode before releasing them to the public.
+          <div className="relative z-10">
+            <div className="flex items-center gap-2 mb-3">
+              <HelpCircle size={18} className="text-blue-500" />
+              <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Management Console</h3>
+            </div>
+            <p className="text-slate-600 text-sm leading-relaxed mb-4 max-w-3xl">
+              Levels encompass specific curricula and their associated assessment banks. Updates made here are live and immediately visible to students.
+              Use the <span className="font-bold text-amber-600">Private</span> status for draft content.
             </p>
-            <div className="flex gap-4">
-              <button className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-xl text-xs font-bold transition-colors">Documentation</button>
-              <button className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-xl text-xs font-bold transition-colors">Asset Library</button>
+            <div className="flex gap-3">
+              <button className="px-3 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-md text-xs font-bold transition-colors">Documentation</button>
+              <button className="px-3 py-1.5 bg-slate-50 text-slate-600 hover:bg-slate-100 rounded-md text-xs font-bold transition-colors">Asset Library</button>
             </div>
           </div>
         </div>

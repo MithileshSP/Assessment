@@ -550,7 +550,7 @@ router.get('/results', verifyAdmin, async (req, res) => {
  */
 router.get('/results/export', verifyAdmin, async (req, res) => {
   try {
-    const { fromDate, toDate } = req.query;
+    const { fromDate, toDate, search, final_status, evaluator_name, course_title, level, all } = req.query;
 
     // Build WHERE conditions
     let whereConditions = ['1=1'];
@@ -563,6 +563,40 @@ router.get('/results/export', verifyAdmin, async (req, res) => {
     if (toDate) {
       whereConditions.push('DATE(s.submitted_at) <= ?');
       queryParams.push(toDate);
+    }
+
+    if (search) {
+      whereConditions.push('(u.full_name LIKE ? OR u.email LIKE ? OR u.roll_no LIKE ? OR c.title LIKE ?)');
+      const s = `%${search}%`;
+      queryParams.push(s, s, s, s);
+    }
+
+    if (final_status) {
+      const statuses = final_status.split(',');
+      whereConditions.push(`s.status IN (?)`);
+      queryParams.push(statuses);
+    }
+
+    if (evaluator_name) {
+      whereConditions.push('ue.username LIKE ?');
+      queryParams.push(`%${evaluator_name}%`);
+    }
+
+    if (course_title) {
+      whereConditions.push('c.title LIKE ?');
+      queryParams.push(`%${course_title}%`);
+    }
+
+    if (level) {
+      whereConditions.push('s.level = ?');
+      queryParams.push(level);
+    }
+
+    // Default to NOT exported if 'all' is not specified? 
+    // Actually user says "at any time", so let's default to everything visible.
+    // However, to keep "new submissions" logic possible, we treat absence of 'all' as new only.
+    if (all !== 'true') {
+      // whereConditions.push('s.exported_at IS NULL'); // Not adding this yet to avoid breaking current flow if they want everything
     }
 
     // Query unexported submissions with all required fields
@@ -581,9 +615,10 @@ router.get('/results/export', verifyAdmin, async (req, res) => {
         me.comments as faculty_feedback,
         s.submitted_at as test_date
       FROM submissions s
-      JOIN users u ON s.user_id = u.id
+      LEFT JOIN users u ON s.user_id = u.id
       LEFT JOIN courses c ON s.course_id = c.id
       LEFT JOIN manual_evaluations me ON s.id = me.submission_id
+      LEFT JOIN users ue ON me.faculty_id = ue.id
       WHERE ${whereConditions.join(' AND ')}
       ORDER BY s.submitted_at DESC
     `;
