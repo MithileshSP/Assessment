@@ -541,10 +541,21 @@ router.post('/schedule', verifyAdmin, async (req, res) => {
 router.get('/unblocked-list', verifyAdmin, async (req, res) => {
     try {
         const unblocked = await query(`
-            SELECT id, username, full_name, email, roll_no, created_at 
-            FROM users 
-            WHERE is_blocked = 0 AND role = 'student'
-            ORDER BY created_at DESC
+            SELECT 
+                u.id, u.username, u.full_name, u.email, u.roll_no, u.created_at,
+                ta.attempt_started_at, ta.attempt_submitted_at, ta.is_used
+            FROM users u
+            LEFT JOIN (
+                SELECT user_id, attempt_started_at, attempt_submitted_at, is_used
+                FROM test_attendance
+                WHERE (user_id, requested_at) IN (
+                    SELECT user_id, MAX(requested_at)
+                    FROM test_attendance
+                    GROUP BY user_id
+                )
+            ) ta ON u.id = ta.user_id
+            WHERE u.is_blocked = 0 AND u.role = 'student'
+            ORDER BY u.created_at DESC
         `);
         res.json(unblocked);
     } catch (err) {

@@ -29,12 +29,23 @@ const FacultyDashboard = () => {
     const [reallocLoading, setReallocLoading] = useState(false);
     const navigate = useNavigate();
 
-    // Filters and Pagination State
-    const [searchQuery, setSearchQuery] = useState('');
-    const [courseFilter, setCourseFilter] = useState('');
-    const [levelFilter, setLevelFilter] = useState('');
-    const [currentPage, setCurrentPage] = useState(1);
+    // Filters and Pagination State from LocalStorage
+    const [searchQuery, setSearchQuery] = useState(() => localStorage.getItem('fac_searchQuery') || '');
+    const [courseFilter, setCourseFilter] = useState(() => localStorage.getItem('fac_courseFilter') || '');
+    const [levelFilter, setLevelFilter] = useState(() => localStorage.getItem('fac_levelFilter') || '');
+    const [currentPage, setCurrentPage] = useState(() => {
+        const saved = localStorage.getItem('fac_currentPage');
+        return saved ? parseInt(saved, 10) : 1;
+    });
     const rowsPerPage = 5;
+
+    // Sync to LocalStorage
+    useEffect(() => {
+        localStorage.setItem('fac_searchQuery', searchQuery);
+        localStorage.setItem('fac_courseFilter', courseFilter);
+        localStorage.setItem('fac_levelFilter', levelFilter);
+        localStorage.setItem('fac_currentPage', currentPage.toString());
+    }, [searchQuery, courseFilter, levelFilter, currentPage]);
 
     useEffect(() => {
         setCurrentPage(1);
@@ -58,7 +69,15 @@ const FacultyDashboard = () => {
     }, [queue, searchQuery, courseFilter, levelFilter]);
 
     const totalPages = Math.max(1, Math.ceil(filteredQueue.length / rowsPerPage));
-    const startIndex = (currentPage - 1) * rowsPerPage;
+    
+    // Ensure currentPage doesn't exceed totalPages (e.g., if a filter shrinks the visible results)
+    useEffect(() => {
+        if (currentPage > totalPages && totalPages > 0) {
+            setCurrentPage(totalPages);
+        }
+    }, [totalPages, currentPage]);
+
+    const startIndex = (Math.min(currentPage, totalPages) - 1) * rowsPerPage;
     const paginatedQueue = filteredQueue.slice(startIndex, startIndex + rowsPerPage);
 
     const showToast = (msg, type = 'success') => {

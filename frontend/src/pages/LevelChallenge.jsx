@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { AlertTriangle, Clock, CheckCircle, ArrowLeft, ChevronLeft, ChevronRight, RefreshCw, Check, Layout, Star, ChevronUp, ChevronDown, Eye, Maximize2, X, Shield } from "lucide-react";
+import { AlertTriangle, Clock, CheckCircle, ArrowLeft, ChevronLeft, ChevronRight, RefreshCw, Check, Layout, Star, ChevronUp, ChevronDown, Eye, Maximize2, X, Shield, Cloud } from "lucide-react";
 import ToastContainer from "../components/Toast";
 import MultiFileEditor from "../components/MultiFileEditor";
 import TerminalPanel from "../components/TerminalPanel";
@@ -38,6 +38,8 @@ export default function LevelChallenge() {
   const [finishingLevel, setFinishingLevel] = useState(false);
   const [stdin, setStdin] = useState("");
   const [metrics, setMetrics] = useState(null);
+  const [isAutoRun, setIsAutoRun] = useState(false);
+  const [executionStatus, setExecutionStatus] = useState('Idle');
 
   // Restrictions and Timer State
   const expectedResultCode = useMemo(() => ({
@@ -789,18 +791,29 @@ export default function LevelChallenge() {
   };
 
   const handleRunCode = async () => {
+    if (evaluating) return;
     setConsoleOutput([]); // Clear previous output
+    setExecutionStatus('Running');
+    addToast("Execution started", "info");
     const isNodeJS = challenge?.challengeType === 'nodejs';
     if (isNodeJS) {
       setEvaluating(true); setPreviewTab("terminal");
       try {
         const r = await api.executeCode(code.js, code.additionalFiles || {}, 'nodejs', stdin);
         setConsoleOutput((r.data.output || '').split('\n').map(l => ({ type: 'log', content: l })));
-      } catch (e) { setConsoleOutput([{ type: 'error', content: e.message }]); }
+        setExecutionStatus('Execution finished');
+        addToast("Execution finished", "success");
+      } catch (e) {
+        setConsoleOutput([{ type: 'error', content: e.message }]);
+        setExecutionStatus('Runtime error');
+        addToast("Runtime error", "error");
+      }
       finally { setEvaluating(false); }
     } else {
       // For Web challenges, stay on current tab (Live Preview) but update it
       previewRef.current?.updatePreview(code);
+      setExecutionStatus('Execution finished');
+      addToast("Execution finished", "success");
     }
   };
 
@@ -988,14 +1001,29 @@ export default function LevelChallenge() {
 
         <div className="flex items-center gap-4">
           {timeRemaining !== null && (
-            <div className={`px-4 py-1.5 rounded-xl border font-black text-sm flex items-center gap-2 transition-all ${timeRemaining <= 300 ? "bg-rose-50 border-rose-200 text-rose-600 animate-pulse" : "bg-blue-600 text-white border-blue-500 shadow-lg shadow-blue-600/20"}`}>
+            <div className={`px-4 py-1.5 rounded-lg border font-black text-sm flex items-center gap-2 transition-all ${timeRemaining <= 300 ? "bg-rose-50 border-rose-200 text-rose-600 animate-pulse" : "bg-blue-600 text-white border-blue-500 shadow-lg shadow-blue-600/20"}`}>
               <Clock size={16} /> <span>{formatTime(timeRemaining)}</span>
             </div>
           )}
 
-          <div className="flex items-center gap-2 px-3 py-1.5 bg-white border rounded-md text-[9px] font-bold uppercase tracking-wider">
-            <div className={`w-1.5 h-1.5 rounded-full ${saveStatus === 'saved' ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'}`} />
-            <span className="text-slate-500">{saveStatus === 'saving' ? 'Syncing' : 'Saved'}</span>
+          <div className="flex flex-col items-end justify-center bg-slate-100/60 px-4 py-1.5 rounded-lg border border-slate-200/60 hidden md:flex">
+            <span className="text-xs font-bold text-slate-500 uppercase tracking-widest leading-tight mb-0.5">
+              {studentInfo?.rollNo || authUser?.rollNo || 'ROLL NO'}
+            </span>
+            <span className="text-[13px] font-black text-slate-900 uppercase tracking-tight leading-tight">
+              {studentInfo?.fullName || authUser?.fullName || localStorage.getItem('fullName') || 'STUDENT'}
+            </span>
+          </div>
+
+          <div 
+            title={saveStatus === 'saving' ? 'Syncing...' : 'Saved'}
+            className="flex items-center justify-center translate-y-[1px]"
+          >
+            {saveStatus === 'saving' ? (
+              <RefreshCw size={14} className="text-amber-500 animate-spin" />
+            ) : (
+              <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_0_2px_rgba(16,185,129,0.2)]" />
+            )}
           </div>
 
           <div className="h-6 w-px bg-slate-200" />
@@ -1008,18 +1036,34 @@ export default function LevelChallenge() {
           )}
 
           <div className="flex items-center gap-2">
-            <button onClick={handleRunCode} className="px-4 py-1.5 bg-white border border-slate-200 rounded-md hover:bg-slate-50 font-black text-[11px] uppercase tracking-wider flex items-center gap-2 shadow-sm transition-all">
-              <RefreshCw size={14} /> Run
+            {executionStatus !== 'Idle' && (
+              <div className="flex items-center gap-2 mr-2">
+                <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded bg-slate-100 ${executionStatus === 'Running' ? 'text-blue-500 animate-pulse' : executionStatus === 'Execution finished' ? 'text-emerald-500' : executionStatus === 'Runtime error' ? 'text-rose-500' : 'text-slate-400'}`}>
+                  {executionStatus}
+                </span>
+              </div>
+            )}
+
+            <div className="flex items-center gap-2 mr-2" title="Auto Run automatically updates the preview when code changes. Turn OFF to run manually.">
+              <span className="text-[10px] font-bold text-slate-500 uppercase">Auto Run</span>
+              <button onClick={() => setIsAutoRun(!isAutoRun)} className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${isAutoRun ? 'bg-blue-600' : 'bg-slate-300'}`}>
+                <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${isAutoRun ? 'translate-x-3.5' : 'translate-x-0.5'}`} />
+              </button>
+            </div>
+
+            <button onClick={handleRunCode} disabled={evaluating} className={`px-4 py-1.5 ${!isAutoRun ? 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 shadow-sm shadow-blue-500/10' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'} border rounded font-black text-[11px] uppercase tracking-wider flex items-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed`}>
+              <RefreshCw size={14} className={evaluating ? "animate-spin" : ""} /> Run
             </button>
-            <button onClick={handleSubmit} disabled={submitting} className="px-5 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-black text-[11px] uppercase tracking-widest shadow-lg shadow-blue-600/20 transition-all active:scale-95">
+            <button onClick={handleSubmit} disabled={submitting} className="px-5 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 font-black text-[11px] uppercase tracking-widest shadow-lg shadow-blue-600/20 transition-all active:scale-95">
               Submit
             </button>
             {assignedQuestions.every(q => userAnswers[q.id]?.submitted) && (
-              <button onClick={() => handleFinishLevel({ reason: "manual" })} className="px-5 py-1.5 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 font-black text-[11px] uppercase tracking-widest flex items-center gap-2 shadow-lg shadow-emerald-500/20 transition-all active:scale-95 animate-in slide-in-from-right duration-500">
+              <button onClick={() => handleFinishLevel({ reason: "manual" })} className="px-5 py-1.5 bg-emerald-600 text-white rounded hover:bg-emerald-700 font-black text-[11px] uppercase tracking-widest flex items-center gap-2 shadow-lg shadow-emerald-500/20 transition-all active:scale-95 animate-in slide-in-from-right duration-500">
                 <CheckCircle size={14} /> Finish Test
               </button>
             )}
           </div>
+
         </div>
       </header>
 
@@ -1058,7 +1102,7 @@ export default function LevelChallenge() {
                     <div className="mt-4 pt-4 border-t border-slate-100">
                       <h3 className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-2">Asset Paths</h3>
                       <div className="bg-slate-50 rounded-md p-3 border border-slate-200">
-                        <p className="text-[10px] text-slate-500 mb-2">To use images or assets in your code, use these paths:</p>
+                        <p className="text-[10px] text-slate-500 mb-2">To use images or assets in your code, use these paths. Local file paths from your computer are not accessible.</p>
                         {assetList.map((assetItem, idx) => {
                           const pathStr = typeof assetItem === 'string' ? assetItem : (assetItem?.path || '');
                           if (!pathStr) return null;
@@ -1070,6 +1114,41 @@ export default function LevelChallenge() {
                     </div>
                   );
                 })()}
+
+                {/* Execution Environment & Supported Features */}
+                <div className="mt-4 pt-4 border-t border-slate-100">
+                  <h3 className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-2">Execution Environment</h3>
+                  <div className="bg-slate-50 rounded-md p-3 border border-slate-200 text-xs text-slate-600 space-y-2 leading-relaxed">
+                    <p>• Code runs in a secure sandboxed environment.</p>
+                    <p>• Behavior may differ from desktop IDEs.</p>
+                    <p>• Programs requiring input must use the Input (STDIN) panel.</p>
+                    <p>• Interactive browser dialogs (prompt, alert, confirm) are not supported.</p>
+                    <p>• Local file paths from the student computer are not accessible.</p>
+                    <p>• Server-hosted assets should be used for images and files.</p>
+                    <p>• External resources must be publicly accessible via HTTPS.</p>
+                  </div>
+                </div>
+
+                <div className="mt-4 pt-4 border-t border-slate-100">
+                  <h3 className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-2">Supported Features</h3>
+                  <div className="grid grid-cols-1 gap-2 text-xs">
+                    <div className="bg-emerald-50 rounded-md p-3 border border-emerald-100 text-emerald-800 space-y-1">
+                      <span className="font-bold block mb-1">SUPPORTED:</span>
+                      <p>• Standard HTML, CSS, and JavaScript</p>
+                      <p>• Server-hosted images and assets</p>
+                      <p>• Public HTTPS resources</p>
+                      <p>• Console output and STDIN input</p>
+                    </div>
+                    <div className="bg-rose-50 rounded-md p-3 border border-rose-100 text-rose-800 space-y-1">
+                      <span className="font-bold block mb-1">NOT SUPPORTED:</span>
+                      <p>• Local computer file access</p>
+                      <p>• Interactive browser prompts</p>
+                      <p>• Direct system or device access</p>
+                      <p>• Features requiring special browser permissions</p>
+                    </div>
+                  </div>
+                </div>
+
               </div>
             </div>
           )}
@@ -1133,6 +1212,7 @@ export default function LevelChallenge() {
                   ref={previewRef}
                   code={code}
                   isNodeJS={challenge?.challengeType === 'nodejs'}
+                  autoRun={isAutoRun}
                   onConsoleLog={setConsoleOutput}
                   onHistoryChange={setPreviewHistory}
                   stdin={stdin}

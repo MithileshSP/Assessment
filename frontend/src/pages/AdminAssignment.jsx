@@ -208,7 +208,7 @@ function FacultyPickerModal({ isOpen, onClose, faculty, onSelect, loading, title
 // MAIN COMPONENT
 // ═════════════════════════════════════════════════════════════
 export default function AdminAssignment() {
-    const [activeTab, setActiveTab] = useState('dashboard');
+    const [activeTab, setActiveTab] = useState(() => localStorage.getItem('aa_activeTab') || 'dashboard');
     const [toast, setToast] = useState(null);
     const [actionLoading, setActionLoading] = useState(null);
 
@@ -221,15 +221,35 @@ export default function AdminAssignment() {
     const [subData, setSubData] = useState([]);
     const [subStats, setSubStats] = useState(null);
     const [subTotal, setSubTotal] = useState(0);
-    const [subPage, setSubPage] = useState(1);
-    const [subPageSize, setSubPageSize] = useState(25);
-    const [subSearch, setSubSearch] = useState('');
-    const [subSortBy, setSubSortBy] = useState('submitted_at');
-    const [subSortDir, setSubSortDir] = useState('desc');
-    const [subFilters, setSubFilters] = useState({});
+    const [subPage, setSubPage] = useState(() => {
+        const saved = localStorage.getItem('aa_subPage');
+        return saved ? parseInt(saved, 10) : 1;
+    });
+    const [subPageSize, setSubPageSize] = useState(() => {
+        const saved = localStorage.getItem('aa_subPageSize');
+        return saved ? parseInt(saved, 10) : 25;
+    });
+    const [subSearch, setSubSearch] = useState(() => localStorage.getItem('aa_subSearch') || '');
+    const [subSortBy, setSubSortBy] = useState(() => localStorage.getItem('aa_subSortBy') || 'submitted_at');
+    const [subSortDir, setSubSortDir] = useState(() => localStorage.getItem('aa_subSortDir') || 'desc');
+    const [subFilters, setSubFilters] = useState(() => {
+        const saved = localStorage.getItem('aa_subFilters');
+        return saved ? JSON.parse(saved) : {};
+    });
     const [subLoading, setSubLoading] = useState(false);
     const [selectedSubs, setSelectedSubs] = useState(new Set());
     const [subFilterOptions, setSubFilterOptions] = useState({ courses: [], levels: [], statuses: [], faculty: [] });
+
+    // Sync to LocalStorage
+    useEffect(() => {
+        localStorage.setItem('aa_activeTab', activeTab);
+        localStorage.setItem('aa_subPage', subPage.toString());
+        localStorage.setItem('aa_subPageSize', subPageSize.toString());
+        localStorage.setItem('aa_subSearch', subSearch);
+        localStorage.setItem('aa_subSortBy', subSortBy);
+        localStorage.setItem('aa_subSortDir', subSortDir);
+        localStorage.setItem('aa_subFilters', JSON.stringify(subFilters));
+    }, [activeTab, subPage, subPageSize, subSearch, subSortBy, subSortDir, subFilters]);
 
     // Reset page 1 on search or filter change
     useEffect(() => {

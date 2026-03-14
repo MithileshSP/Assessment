@@ -35,10 +35,10 @@ export default function TerminalPanel({
                     {output.length > 0 && (
                         <button
                             onClick={onClear}
-                            className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-all"
+                            className="px-3 py-1 text-[10px] font-bold tracking-widest uppercase text-gray-500 hover:text-red-600 hover:bg-red-50 rounded transition-all"
                             title="Clear output"
                         >
-                            <Trash2 size={13} />
+                            CLEAR CONSOLE
                         </button>
                     )}
                     <button
@@ -55,7 +55,7 @@ export default function TerminalPanel({
                     {/* STDIN Section */}
                     <div className="flex flex-col border-b border-gray-100">
                         <div className="px-4 py-2 bg-gray-50/50 flex items-center justify-between">
-                            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">STDIN</label>
+                            <label className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Input (STDIN) — used for programs requiring input.</label>
                             <span className="text-[9px] text-gray-400 italic font-medium">( Optional input for the program )</span>
                         </div>
                         <textarea
@@ -103,9 +103,11 @@ export default function TerminalPanel({
                                                 ? 'text-red-500 font-medium'
                                                 : line.type === 'warn'
                                                     ? 'text-amber-500'
-                                                    : line.type === 'info'
-                                                        ? 'text-blue-500 italic'
-                                                        : 'text-gray-700'
+                                                    : line.type === 'system'
+                                                        ? 'text-purple-500 italic opacity-80'
+                                                        : line.type === 'info'
+                                                            ? 'text-blue-500 italic'
+                                                            : 'text-gray-700'
                                                 }`}
                                         >
                                             {line.content}

@@ -95,13 +95,17 @@ const PreviewFrame = forwardRef(({ code, isRestricted = false, onConsoleLog, isN
       '  if (window._node_env_setup) return;',
       '  const _vfs = {',
       '    readFileSync: function(p) {',
-      '      if (p === 0 || p === "0") return window.__STDIN__ || "";',
+      '      if (p === 0 || p === "0") {',
+      '        if (!window.__STDIN__ || window.__STDIN__.trim() === "") throw new Error("Program requested input but no input was provided.");',
+      '        return window.__STDIN__;',
+      '      }',
       '      const sp = String(p);',
       '      const cp = sp.startsWith("./") ? sp.slice(2) : sp;',
       '      const res = window.__STUDENT_FILES__[cp];',
       '      if (res === undefined) throw new Error("File not found: " + p);',
       '      return res;',
       '    },',
+
       '    readFile: function(p, opts, cb) {',
       '      if (typeof opts === "function") { cb = opts; opts = null; }',
       '      try {',
@@ -302,7 +306,7 @@ const PreviewFrame = forwardRef(({ code, isRestricted = false, onConsoleLog, isN
     >
       <div className="flex-1 relative overflow-auto">
         {/* Removed key prop to stop flickering */}
-        <iframe ref={iframeRef} sandbox="allow-scripts allow-modals allow-forms" className="w-full h-full" title="Preview" />
+        <iframe ref={iframeRef} sandbox="allow-scripts allow-forms" className="w-full h-full bg-white" title="Preview" />
       </div>
     </div>
   );

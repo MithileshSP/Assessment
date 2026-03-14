@@ -92,11 +92,10 @@ export default function SummaryAnalytics({ metrics, type = 'submissions' }) {
 
     if (type === 'results') {
         return (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 w-full">
                 <MetricCard icon={FileText} label="Total Results" value={metrics.total} color="slate" delay={0} />
                 <MetricCard icon={CheckCircle} label="Cleared/Pass" value={metrics.passed} color="emerald" delay={100} />
                 <MetricCard icon={AlertCircle} label="Failed" value={metrics.failed} color="rose" delay={200} />
-                <MetricCard icon={Zap} label="Auto-Evaluated" value={metrics.autoEvaluated} color="purple" delay={300} />
             </div>
         );
     }

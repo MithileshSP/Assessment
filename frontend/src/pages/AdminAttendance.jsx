@@ -586,10 +586,14 @@ const AdminAttendance = () => {
 
                                     <div className="pt-4 border-t border-slate-50 flex items-center justify-between">
                                         <div className="flex items-center gap-2 text-slate-400">
-                                            <div className="w-1.5 h-1.5 rounded-full bg-blue-400" />
+                                            <div className={`w-1.5 h-1.5 rounded-full ${isPolling ? 'bg-blue-400 animate-pulse' : 'bg-emerald-400'}`} />
                                             <span className="text-[9px] font-bold uppercase tracking-widest">Active Sync</span>
                                         </div>
-                                        <span className="text-[9px] font-bold text-blue-600 uppercase tracking-wider px-1.5 py-0.5 bg-blue-50 rounded">v3.6.1</span>
+                                        {isPolling ? (
+                                            <span className="text-[9px] font-bold text-blue-600 uppercase tracking-wider px-1.5 py-0.5 bg-blue-50 rounded animate-pulse">Syncing...</span>
+                                        ) : (
+                                            <span className="text-[9px] font-bold text-emerald-600 uppercase tracking-wider px-1.5 py-0.5 bg-emerald-50 rounded">Live</span>
+                                        )}
                                     </div>
                                 </div>
                             </div>

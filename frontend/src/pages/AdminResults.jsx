@@ -11,16 +11,26 @@ export default function AdminResults() {
     const [results, setResults] = useState([]);
     const [stats, setStats] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [search, setSearch] = useState('');
-    const [fromDate, setFromDate] = useState('');
-    const [toDate, setToDate] = useState('');
+    // Initialize state from localStorage or defaults
+    const [search, setSearch] = useState(() => localStorage.getItem('ar_search') || '');
+    const [fromDate, setFromDate] = useState(() => localStorage.getItem('ar_fromDate') || '');
+    const [toDate, setToDate] = useState(() => localStorage.getItem('ar_toDate') || '');
 
     // DataTable state
-    const [page, setPage] = useState(1);
-    const [pageSize, setPageSize] = useState(25);
-    const [sortBy, setSortBy] = useState('');
-    const [sortDir, setSortDir] = useState('asc');
-    const [filters, setFilters] = useState({});
+    const [page, setPage] = useState(() => {
+        const saved = localStorage.getItem('ar_page');
+        return saved ? parseInt(saved, 10) : 1;
+    });
+    const [pageSize, setPageSize] = useState(() => {
+        const saved = localStorage.getItem('ar_pageSize');
+        return saved ? parseInt(saved, 10) : 25;
+    });
+    const [sortBy, setSortBy] = useState(() => localStorage.getItem('ar_sortBy') || '');
+    const [sortDir, setSortDir] = useState(() => localStorage.getItem('ar_sortDir') || 'asc');
+    const [filters, setFilters] = useState(() => {
+        const saved = localStorage.getItem('ar_filters');
+        return saved ? JSON.parse(saved) : {};
+    });
 
     // Import state
     const fileInputRef = useRef(null);
@@ -30,19 +40,39 @@ export default function AdminResults() {
     const [importing, setImporting] = useState(false);
     const [importResult, setImportResult] = useState(null);
 
+    // Persist state to localStorage
+    useEffect(() => {
+        localStorage.setItem('ar_search', search);
+        localStorage.setItem('ar_fromDate', fromDate);
+        localStorage.setItem('ar_toDate', toDate);
+        localStorage.setItem('ar_page', page.toString());
+        localStorage.setItem('ar_pageSize', pageSize.toString());
+        localStorage.setItem('ar_sortBy', sortBy);
+        localStorage.setItem('ar_sortDir', sortDir);
+        localStorage.setItem('ar_filters', JSON.stringify(filters));
+    }, [search, fromDate, toDate, page, pageSize, sortBy, sortDir, filters]);
+
     useEffect(() => {
         loadResults();
+
+        // Auto-refresh polling every 10 seconds
+        const intervalId = setInterval(() => {
+            loadResults(true); // pass true to indicate background refresh
+        }, 10000);
+
+        return () => clearInterval(intervalId);
     }, []);
 
-    const loadResults = async () => {
+    const loadResults = async (isBackground = false) => {
         try {
+            if (!isBackground) setLoading(true);
             const response = await api.get('/admin/results');
             setResults(response.data.data || []);
             setStats(response.data.summary || null);
         } catch (error) {
             console.error('Failed to load results:', error);
         } finally {
-            setLoading(false);
+            if (!isBackground) setLoading(false);
         }
     };
 
@@ -295,8 +325,7 @@ export default function AdminResults() {
     const dynamicStats = {
         total: processed.length,
         passed: processed.filter(r => r.final_status === 'passed').length,
-        failed: processed.filter(r => r.final_status === 'failed').length,
-        autoEvaluated: processed.filter(r => r.auto_score !== null && (r.manual_score === null || r.manual_score === 0)).length
+        failed: processed.filter(r => r.final_status === 'failed').length
     };
 
     // Reset to page 1 if filtered results are less than current page offset
@@ -351,17 +380,6 @@ export default function AdminResults() {
             renderCell: (val, row) => (
                 <div className="flex justify-center">
                     <StatusBadge value={row.final_status} />
-                </div>
-            )
-        },
-        {
-            key: 'auto_score',
-            label: 'Auto Score',
-            sortable: true,
-            filterable: false,
-            renderCell: (val, row) => (
-                <div className="text-center font-mono font-bold text-slate-600">
-                    {row.auto_score !== null ? `${row.auto_score}%` : '-'}
                 </div>
             )
         },

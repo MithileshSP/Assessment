@@ -290,10 +290,6 @@ export default function AdminSubmissionDetails() {
               </div>
 
               <div className="flex items-center gap-4 shrink-0 border-l border-slate-100 pl-4 ml-2">
-                <div className="text-right">
-                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider leading-none mb-1">Auto</p>
-                  <p className="text-sm font-bold text-slate-900 tabular-nums">{Math.round(autoScore)}%</p>
-                </div>
                 {manualScore !== null && (
                   <div className="text-right">
                     <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider leading-none mb-1">Grade</p>
@@ -330,39 +326,7 @@ export default function AdminSubmissionDetails() {
               {activeTab === 'audit' ? (
                 <div className="flex-1 overflow-y-auto p-6 bg-slate-50/50">
                   <div className="max-w-5xl mx-auto space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {/* Automated Diagnostic */}
-                      <div className="bg-white rounded-md p-5 border border-slate-200 shadow-sm relative overflow-hidden group hover:border-slate-300 transition-colors">
-                        <div className="flex items-center justify-between mb-6">
-                          <div className="flex items-center gap-3">
-                            <div className="p-1.5 bg-blue-50 rounded">
-                              <Cpu size={16} className="text-blue-600" />
-                            </div>
-                            <h3 className="text-[10px] font-bold uppercase tracking-wider text-slate-600">Automated Diagnostic</h3>
-                          </div>
-                        </div>
-                        <div className="space-y-6">
-                          <div>
-                            <div className="flex justify-between items-end mb-2">
-                              <p className="text-[9px] font-bold uppercase text-slate-400 tracking-wider">AI Reliability</p>
-                              <p className="text-2xl font-bold text-slate-900">{Math.round(autoScore)}%</p>
-                            </div>
-                            <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                              <div className="h-full bg-blue-500 rounded-full transition-all duration-1000" style={{ width: `${autoScore}%` }} />
-                            </div>
-                          </div>
-
-                          <div className="p-4 bg-slate-50 rounded border border-slate-100">
-                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-2">Narrative</p>
-                            <p className="text-slate-600 text-xs italic leading-relaxed">
-                              {submission.result ? (
-                                typeof submission.result === 'string' ? submission.result : (submission.result.feedback || submission.result.message || 'Technical evaluation complete.')
-                              ) : 'No automated feedback available.'}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-
+                    <div className="grid grid-cols-1 gap-6">
                       {/* Faculty Review */}
                       <div className="bg-white rounded-md p-5 border border-slate-200 shadow-sm relative overflow-hidden group hover:border-slate-300 transition-colors">
                         <div className="flex items-center justify-between mb-6">
@@ -415,36 +379,6 @@ export default function AdminSubmissionDetails() {
                         )}
                       </div>
                     </div>
-
-                    {/* Visual Deltas */}
-                    {(submission.user_screenshot || submission.expected_screenshot || submission.id) && (
-                      <div className="bg-white rounded-md p-5 border border-slate-200 shadow-sm">
-                        <h3 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-6 flex items-center gap-2">
-                          <Monitor size={14} />
-                          Visual Delta Analysis
-                        </h3>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                          <div className="space-y-2">
-                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider ml-1">Candidate</p>
-                            <div className="aspect-video rounded border border-slate-100 overflow-hidden shadow-sm bg-slate-50 relative group">
-                              <img src={submission.user_screenshot || `/fullstack/screenshots/${submission.id}-candidate.png`} className="absolute inset-0 w-full h-full object-contain group-hover:scale-105 transition-transform duration-500" alt="Candidate" onError={(e) => { e.target.onerror = null; e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><text x="10" y="50" fill="gray">No Image</text></svg>'; }} />
-                            </div>
-                          </div>
-                          <div className="space-y-2">
-                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider ml-1">Reference</p>
-                            <div className="aspect-video rounded border border-slate-100 overflow-hidden shadow-sm bg-slate-50 relative group">
-                              <img src={submission.expected_screenshot || `/fullstack/screenshots/${submission.id}-expected.png`} className="absolute inset-0 w-full h-full object-contain group-hover:scale-105 transition-transform duration-500" alt="Reference" onError={(e) => { e.target.onerror = null; e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><text x="10" y="50" fill="gray">No Image</text></svg>'; }} />
-                            </div>
-                          </div>
-                          <div className="space-y-2">
-                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider ml-1">Difference</p>
-                            <div className="aspect-video rounded border border-slate-900 overflow-hidden shadow-sm bg-slate-900 relative group">
-                              <img src={submission.diff_screenshot || `/fullstack/screenshots/${submission.id}-diff.png`} className="absolute inset-0 w-full h-full object-contain opacity-80 group-hover:opacity-100 transition-opacity" alt="Diff" onError={(e) => { e.target.onerror = null; e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><text x="10" y="50" fill="gray">No Image</text></svg>'; }} />
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    )}
                   </div>
                 </div>
               ) : activeTab === 'html' || activeTab === 'css' || activeTab === 'js' ? (

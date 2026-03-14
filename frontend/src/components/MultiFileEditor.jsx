@@ -337,6 +337,7 @@ const MultiFileEditor = ({
                         tabCompletion: 'on',
                         wordBasedSuggestions: true,
                         fixedOverflowWidgets: true,
+                        colorDecorators: true,
                     }}
                     onMount={(editor, monaco) => {
                         // Ensure HTML language service is configured
