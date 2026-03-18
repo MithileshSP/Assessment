@@ -2,17 +2,27 @@ const fs = require("fs");
 const path = require("path");
 const SubmissionModel = require("../models/Submission");
 
-const submissionsPath = path.join(__dirname, "../data/submissions.json");
+const dataDir = path.join(__dirname, "../data");
 
-function loadFallbackSubmissions() {
+// Helper to find all submissions_*.json files
+function getFallbackFilePaths() {
   try {
-    if (!fs.existsSync(submissionsPath)) {
-      return [];
-    }
-    const data = fs.readFileSync(submissionsPath, "utf8");
+    if (!fs.existsSync(dataDir)) return [];
+    return fs.readdirSync(dataDir)
+      .filter(file => file.startsWith("submissions_") && file.endsWith(".json"))
+      .map(file => path.join(dataDir, file));
+  } catch (err) {
+    console.error("Error scanning data directory:", err.message);
+    return [];
+  }
+}
+
+function loadFallbackSubmissions(filePath) {
+  try {
+    const data = fs.readFileSync(filePath, "utf8");
     return JSON.parse(data || "[]");
   } catch (error) {
-    console.warn("Unable to read fallback submissions JSON:", error.message);
+    console.warn(`Unable to read fallback submissions from ${filePath}:`, error.message);
     return [];
   }
 }
@@ -58,53 +68,61 @@ async function upsertSubmissionIntoDb(submission) {
 }
 
 async function syncFallbackSubmissions() {
-  const fallbackSubmissions = loadFallbackSubmissions();
-  if (!fallbackSubmissions.length) {
-    return true;
-  }
+  const filePaths = getFallbackFilePaths();
+  if (!filePaths.length) return true;
 
-  let syncedCount = 0;
-  for (const fallback of fallbackSubmissions) {
-    try {
-      const synced = await upsertSubmissionIntoDb(fallback);
-      if (synced) {
-        syncedCount += 1;
-      }
-    } catch (error) {
-      // Skip submissions with missing references (challenge_id, user_id don't exist)
-      if (error.code === 'ER_NO_REFERENCED_ROW_2' || error.code === 'ER_NO_REFERENCED_ROW') {
-        console.log(`⚠️  Skipping submission ${fallback?.id} - referenced data not found`);
+  console.log(`♻️ Found ${filePaths.length} fallback file(s). Starting reconciliation...`);
+
+  for (const filePath of filePaths) {
+    const fallbackSubmissions = loadFallbackSubmissions(filePath);
+    if (!fallbackSubmissions.length) {
+        // Delete empty or invalid files
+        fs.unlinkSync(filePath);
         continue;
-      }
-      console.error(
-        `Failed to sync fallback submission ${fallback?.id}:`,
-        error.message
-      );
     }
-  }
 
-  if (syncedCount > 0) {
-    console.log(`🔁 Synced ${syncedCount} fallback submission(s) into MySQL.`);
+    let syncedCount = 0;
+    for (const fallback of fallbackSubmissions) {
+      try {
+        const synced = await upsertSubmissionIntoDb(fallback);
+        if (synced) syncedCount += 1;
+      } catch (error) {
+        if (error.code === 'ER_NO_REFERENCED_ROW_2' || error.code === 'ER_NO_REFERENCED_ROW') {
+          continue; // Skip if referential integrity is missing
+        }
+        console.error(`Failed to sync submission ${fallback?.id}:`, error.message);
+      }
+    }
+
+    if (syncedCount > 0) {
+      console.log(`✅ Synced ${syncedCount} submissions from ${path.basename(filePath)} into MySQL.`);
+      // Safely archive or remove the file after successful processing
+      try {
+          fs.unlinkSync(filePath); 
+      } catch (e) {
+          console.warn(`Failed to delete synced file ${filePath}:`, e.message);
+      }
+    }
   }
 
   return true;
 }
 
-function scheduleFallbackSync(intervalMs = 30000) {
+function scheduleFallbackSync(intervalMs = 60000) {
   const attemptSync = async () => {
     try {
       await syncFallbackSubmissions();
     } catch (error) {
-      console.error("Fallback submission sync error:", error.message);
+      console.error("Fallback sync service error:", error.message);
     }
   };
 
-  attemptSync();
+  // Run first attempt after a short delay (allow DB to stabilize)
+  setTimeout(attemptSync, 10000);
   setInterval(attemptSync, intervalMs).unref();
 }
 
 module.exports = {
-  loadFallbackSubmissions,
   syncFallbackSubmissions,
   scheduleFallbackSync,
 };

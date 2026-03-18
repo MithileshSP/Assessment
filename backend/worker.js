@@ -285,8 +285,105 @@ Rules:
     concurrency: 1 // Enterprise scale constraint for GPU predictability
 });
 
-worker.on('failed', (job, err) => {
-    console.log(`[Worker Events] Job ${job.id} failed: ${err.message}`);
+// ... (existing AI worker code above)
+
+/**
+ * Submission Database Worker
+ * Handles persistent storage, faculty assignment, and session linking
+ */
+const { v4: uuidv4 } = require('uuid');
+const SubmissionModel = require('./models/Submission');
+
+const submissionWorker = new Worker('submission_db_queue', async (job) => {
+    const data = job.data;
+    const { id, challengeId, userId, candidateName, courseId, level, code, status, submittedAt } = data;
+    
+    console.log(`[DB Worker] Persistence: User=${userId}, Challenge=${challengeId}`);
+
+    try {
+        await db.transaction(async (connection) => {
+            // SET TIMEOUT FOR THIS TRANSACTION (5s)
+            await connection.execute('SET innodb_lock_wait_timeout = 5');
+
+            // 1. Double-check for existing draft status to sync correctly
+            const [existing] = await connection.execute(
+                "SELECT id FROM submissions WHERE user_id = ? AND challenge_id = ? AND status = 'saved' LIMIT 1",
+                [userId, challengeId]
+            );
+
+            let finalSubmissionId = id;
+            const mysqlSubmittedAt = submittedAt ? submittedAt.replace('T', ' ').replace(/\..*$/, '').replace('Z', '') : new Date().toISOString().replace('T', ' ').replace(/\..*$/, '').replace('Z', '');
+            
+            if (existing.length > 0) {
+                // Upgrade draft
+                await connection.execute(
+                    `UPDATE submissions SET 
+                      html_code = ?, css_code = ?, js_code = ?, additional_files = ?,
+                      status = ?, submitted_at = ? 
+                    WHERE id = ?`,
+                    [code?.html || '', code?.css || '', code?.js || '', JSON.stringify(code?.additionalFiles || {}), status || 'received', mysqlSubmittedAt, existing[0].id]
+                );
+                finalSubmissionId = existing[0].id;
+            } else {
+                // New submission
+                await connection.execute(
+                    `INSERT INTO submissions 
+                      (id, challenge_id, user_id, candidate_name, html_code, css_code, js_code, status, course_id, level, submitted_at, additional_files)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                    [id || null, challengeId || null, userId || null, candidateName || 'Anonymous', code?.html || '', code?.css || '', code?.js || '', status || 'received', courseId || null, level || null, mysqlSubmittedAt, JSON.stringify(code?.additionalFiles || {})]
+                );
+            }
+
+            // 2. Auto-assign Faculty
+            if (courseId) {
+                const [faculty] = await connection.execute(
+                    `SELECT u.id FROM users u
+                     INNER JOIN faculty_course_assignments fca ON u.id = fca.faculty_id
+                     WHERE fca.course_id = ? AND u.role = 'faculty' AND u.is_available = TRUE
+                     ORDER BY (SELECT COUNT(*) FROM submission_assignments sa WHERE sa.faculty_id = u.id AND sa.status = 'pending') ASC LIMIT 1`,
+                    [courseId]
+                );
+
+                if (faculty.length > 0) {
+                    await connection.execute(
+                        `INSERT INTO submission_assignments (submission_id, faculty_id, assigned_at, status) 
+                         VALUES (?, ?, NOW(), 'pending')
+                         ON DUPLICATE KEY UPDATE faculty_id = VALUES(faculty_id), assigned_at = NOW()`,
+                        [finalSubmissionId, faculty[0].id]
+                    );
+                }
+            }
+        });
+        console.log(`[DB Worker] ✅ Successfully persisted submission ${id}`);
+    } catch (error) {
+        // IDEMPOTENCY: Ignore duplicate entry errors
+        if (error.code === 'ER_DUP_ENTRY' || error.errno === 1062) {
+            console.warn(`[DB Worker] Duplicate submission detected for User ${userId}. Skipping.`);
+            return { success: true, reason: 'duplicate_idempotent' };
+        }
+        throw error; // Let BullMQ retry other errors
+    }
+
+    return { success: true, submissionId: id };
+
+}, {
+    connection,
+    concurrency: 10 // Ryzen 7 can easily handle 10 concurrent I/O-bound DB writes
 });
 
-console.log("🚀 AI Evaluation Worker started. Listening for jobs...");
+// GRACEFUL SHUTDOWN
+const gracefulShutdown = async (signal) => {
+    console.log(`\n[Worker] Received ${signal}. Shutting down gracefully...`);
+    await worker.close();
+    await submissionWorker.close();
+    process.exit(0);
+};
+
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+
+submissionWorker.on('failed', (job, err) => {
+    console.error(`[DB Worker Events] Job ${job.id} failed: ${err.message}`);
+});
+
+console.log("🚀 AI & DB Workers started. Listening for jobs...");

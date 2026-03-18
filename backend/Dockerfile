@@ -60,7 +60,7 @@ ENV PUPPETEER_EXECUTABLE_PATH=/app/node_modules/puppeteer/.local-chromium/linux-
 COPY --from=builder /app .
 
 # Create uploads directory and set permissions
-RUN mkdir -p /app/uploads /app/public/reference_images /app/screenshots && \
+RUN mkdir -p /app/uploads /app/public/reference_images && \
     chown -R node:node /app
 
 USER node

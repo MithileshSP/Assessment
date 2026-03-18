@@ -114,8 +114,7 @@ async function applyMigrations() {
         html LONGTEXT,
         css LONGTEXT,
         js LONGTEXT,
-        expected_screenshot_url VARCHAR(255),
-        expected_screenshot_data MEDIUMBLOB,
+
         challenge_type ENUM('web', 'nodejs') DEFAULT 'web',
         expected_output TEXT,
         course_id VARCHAR(100),
@@ -134,7 +133,7 @@ async function applyMigrations() {
     `);
 
     // Individual column additions for challenges (safety for older DBs)
-    await addColumn("ALTER TABLE challenges ADD COLUMN expected_screenshot_data MEDIUMBLOB");
+
     await addColumn("ALTER TABLE challenges ADD COLUMN challenge_type ENUM('web', 'nodejs') DEFAULT 'web'");
     await addColumn("ALTER TABLE challenges ADD COLUMN expected_output TEXT");
     await addColumn("ALTER TABLE challenges ADD COLUMN additional_files JSON");
@@ -156,17 +155,12 @@ async function applyMigrations() {
         submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         evaluated_at TIMESTAMP NULL,
         structure_score INT DEFAULT 0,
-        visual_score INT DEFAULT 0,
+
         content_score INT DEFAULT 0,
         final_score INT DEFAULT 0,
         passed BOOLEAN DEFAULT FALSE,
         evaluation_result JSON,
-        user_screenshot VARCHAR(500),
-        user_screenshot_data MEDIUMBLOB,
-        expected_screenshot VARCHAR(500),
-        expected_screenshot_data MEDIUMBLOB,
-        diff_screenshot VARCHAR(500),
-        diff_screenshot_data MEDIUMBLOB,
+
         user_feedback TEXT,
         admin_override_status ENUM('passed', 'failed', 'none') DEFAULT 'none',
         admin_override_reason TEXT,
@@ -185,13 +179,26 @@ async function applyMigrations() {
     await addColumn("ALTER TABLE submissions ADD COLUMN course_id VARCHAR(100) AFTER user_id");
     await addColumn("ALTER TABLE submissions ADD COLUMN level INT AFTER course_id");
     await addColumn("ALTER TABLE submissions ADD COLUMN session_id VARCHAR(100) AFTER level");
-    await addColumn("ALTER TABLE submissions ADD COLUMN user_feedback TEXT NULL AFTER expected_screenshot");
-    await addColumn("ALTER TABLE submissions ADD COLUMN diff_screenshot VARCHAR(500) AFTER user_screenshot");
+    await addColumn("ALTER TABLE submissions ADD COLUMN user_feedback TEXT NULL AFTER js_code");
     await addColumn("ALTER TABLE submissions ADD COLUMN admin_override_status ENUM('passed', 'failed', 'none') DEFAULT 'none'");
     await addColumn("ALTER TABLE submissions ADD COLUMN admin_override_reason TEXT");
-    await addColumn("ALTER TABLE submissions ADD COLUMN user_screenshot_data MEDIUMBLOB");
-    await addColumn("ALTER TABLE submissions ADD COLUMN expected_screenshot_data MEDIUMBLOB");
-    await addColumn("ALTER TABLE submissions ADD COLUMN diff_screenshot_data MEDIUMBLOB");
+
+    // v4.1.0: Enforce Idempotency on Submissions
+    // 1. Cleanup legacy duplicate submissions (keep latest)
+    await queryWithRetry(`
+      DELETE s1 FROM submissions s1
+      INNER JOIN submissions s2 
+      WHERE s1.submitted_at < s2.submitted_at 
+      AND s1.user_id = s2.user_id 
+      AND s1.challenge_id = s2.challenge_id
+    `);
+
+    // 2. Add Unique Constraint
+    try {
+      await queryWithRetry("ALTER TABLE submissions DROP INDEX idx_user_challenge");
+    } catch (e) { }
+    await addColumn("ALTER TABLE submissions ADD UNIQUE KEY idx_user_challenge_unique (user_id, challenge_id)");
+
     await addColumn("ALTER TABLE submissions ADD COLUMN exported_at TIMESTAMP NULL");
     await addColumn("ALTER TABLE submissions ADD INDEX idx_submissions_session (session_id, status)");
 
