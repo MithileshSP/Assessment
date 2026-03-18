@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS question_bank (
     expected_html TEXT,
     expected_css TEXT,
     expected_js TEXT,
-    expected_screenshot_url VARCHAR(500),
+
     points INT DEFAULT 100,
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

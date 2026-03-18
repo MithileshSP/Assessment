@@ -17,4 +17,4 @@ CREATE TABLE IF NOT EXISTS test_sessions (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Add user_feedback column to submissions if not exists
-ALTER TABLE submissions ADD COLUMN user_feedback TEXT NULL AFTER expected_screenshot;
+ALTER TABLE submissions ADD COLUMN user_feedback TEXT NULL AFTER js_code;
