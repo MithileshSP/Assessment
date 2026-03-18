@@ -70,7 +70,7 @@ async function fixSchema() {
 
         // 4. Ensure user_feedback exists in submissions
         try {
-            await query('ALTER TABLE submissions ADD COLUMN user_feedback TEXT NULL AFTER expected_screenshot');
+            await query('ALTER TABLE submissions ADD COLUMN user_feedback TEXT NULL AFTER js_code');
             console.log('✅ Column user_feedback added to submissions.');
         } catch (e) {
             if (e.code === 'ER_DUP_FIELDNAME') {

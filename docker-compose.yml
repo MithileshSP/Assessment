@@ -1,6 +1,6 @@
 services:
   portal_mysql:
-    image: gokulv456/assessment-mysql:v3.4.31
+    image: gokulv456/assessment-mysql:v3.6.0
     build:
       context: ./mysql-init
       dockerfile: Dockerfile
@@ -28,6 +28,7 @@ services:
     image: redis:latest
     container_name: portal_redis
     restart: unless-stopped
+    command: redis-server --appendonly yes --appendfsync everysec
     ports:
       - "6379:6379"
     networks:
@@ -39,7 +40,7 @@ services:
       retries: 5
 
   backend:
-    image: gokulv456/assessment-backend:v3.4.31
+    image: gokulv456/assessment-backend:v3.6.0
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -66,10 +67,12 @@ services:
       AI_FACULTY_USERNAME: ${AI_FACULTY_USERNAME}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS}
+      ALLOW_STRESS_TEST: "false"
+      STRESS_TEST_SECRET: k6-stress-secret-2026
       TZ: Asia/Kolkata
     volumes:
       # Persist generated files
-      - ./backend/screenshots:/app/screenshots
+
       - ./backend/data:/app/data
       - ./backend/assets:/var/www/portal-assets
       - ./backend/public/reference_images:/app/public/reference_images
@@ -79,7 +82,7 @@ services:
       - test-portal-network
 
   worker:
-    image: gokulv456/assessment-backend:v3.4.31
+    image: gokulv456/assessment-backend:v3.6.0
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -112,7 +115,7 @@ services:
       args:
         VITE_GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
         VITE_API_URL: /fullstack/api
-    image: gokulv456/assessment-frontend:v3.4.31
+    image: gokulv456/assessment-frontend:v3.6.0
     container_name: portal_frontend
     restart: unless-stopped
     ports:
