@@ -57,10 +57,10 @@ const SaaSLayout = ({ children, fullWidth = false }) => {
         { id: 'results', label: 'Results', icon: <Trophy size={20} />, path: '/admin/results' },
         { id: 'restrictions', label: 'Restrictions', icon: <Shield size={20} />, path: '/admin/restrictions' },
         { id: 'reset', label: 'Reset Level', icon: <RefreshCw size={20} />, path: '/admin/reset-level' },
-        { id: 'tracker', label: 'Evaluation Tracker', icon: <Activity size={20} />, path: '/admin/evaluation-tracker' },
         { id: 'assets', label: 'Assets', icon: <ImageIcon size={20} />, path: '/admin/assets' },
         { id: 'bulk-completion', label: 'Bulk Unlock', icon: <Database size={20} />, path: '/admin/bulk-completion' },
         { id: 'violations', label: 'Violations', icon: <AlertTriangle size={20} />, path: '/admin/violations' },
+        { id: 'backup', label: 'Backup', icon: <Database size={20} />, path: '/admin/backup' },
     ];
 
     // Access Control only for Master Admin

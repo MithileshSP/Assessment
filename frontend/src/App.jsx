@@ -38,7 +38,6 @@ import LevelManagement from "./pages/LevelManagement";
 import QuestionBank from "./pages/QuestionBank";
 import AdminLevelReset from "./pages/AdminLevelReset";
 import RestrictionManagement from "./pages/RestrictionManagement";
-import AdminEvaluationTracker from "./pages/AdminEvaluationTracker";
 import AdminAssetManager from "./pages/AdminAssetManager";
 import AdminSchedule from "./pages/AdminSchedule";
 import QuestionEditor from "./pages/QuestionEditor";
@@ -48,6 +47,7 @@ import AdminViolations from "./pages/AdminViolations";
 import AdminFacultyList from "./pages/AdminFacultyList";
 import AdminFacultyDetail from "./pages/AdminFacultyDetail";
 import AdminAccessControl from "./pages/AdminAccessControl";
+import AdminBackup from "./pages/AdminBackup";
 
 // Auth & Components
 import Login from "./pages/Login";
@@ -155,11 +155,11 @@ function AppRoutes() {
         <Route path="/admin/course/:courseId/question/edit/:questionId" element={<RoleRoute requiredRole="admin_or_faculty" redirectTo="/admin/login" permissionId="courses"><QuestionEditor /></RoleRoute>} />
         <Route path="/admin/reset-level" element={<RoleRoute requiredRole="admin" redirectTo="/admin/login" permissionId="reset"><AdminLevelReset /></RoleRoute>} />
         <Route path="/admin/restrictions" element={<RoleRoute requiredRole="admin" redirectTo="/admin/login" permissionId="restrictions"><RestrictionManagement /></RoleRoute>} />
-        <Route path="/admin/evaluation-tracker" element={<RoleRoute requiredRole="admin" redirectTo="/admin/login" permissionId="tracker"><AdminEvaluationTracker /></RoleRoute>} />
         <Route path="/admin/assets" element={<RoleRoute requiredRole="admin" redirectTo="/admin/login" permissionId="assets"><AdminAssetManager /></RoleRoute>} />
         <Route path="/admin/analytics" element={<RoleRoute requiredRole="admin" redirectTo="/admin/login" permissionId="dashboard"><AdminAnalytics /></RoleRoute>} />
         <Route path="/admin/bulk-completion" element={<RoleRoute requiredRole="admin" redirectTo="/admin/login" permissionId="bulk-completion"><AdminBulkCompletion /></RoleRoute>} />
         <Route path="/admin/violations" element={<RoleRoute requiredRole="admin" redirectTo="/admin/login" permissionId="violations"><AdminViolations /></RoleRoute>} />
+        <Route path="/admin/backup" element={<RoleRoute requiredRole="admin" redirectTo="/admin/login" permissionId="results"><AdminBackup /></RoleRoute>} />
         <Route path="/admin/access-control" element={<RoleRoute requiredRole="admin" redirectTo="/admin/login" masterOnly={true}><AdminAccessControl /></RoleRoute>} />
 
         {/* Fallback */}

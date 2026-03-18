@@ -6,7 +6,6 @@ import {
   Check,
   X,
   List,
-  Camera,
   Lightbulb,
   AlertTriangle,
   Info
@@ -15,24 +14,7 @@ import {
 export default function ResultsPanel({ result }) {
   if (!result) return null;
 
-  // Build absolute URLs for screenshots so they load from the backend host
-  const backendOrigin = import.meta.env.VITE_BACKEND_ORIGIN;
-  const apiBase = import.meta.env.VITE_API_URL || '/api';
-  const assetOrigin = (() => {
-    if (backendOrigin) return backendOrigin.replace(/\/$/, '');
-    try {
-      return new URL(apiBase, window.location.origin).origin;
-    } catch (_) {
-      return window.location.origin;
-    }
-  })();
 
-  const resolveUrl = (url) => {
-    if (!url) return url;
-    if (/^https?:\/\//i.test(url)) return url;
-    const normalized = url.startsWith('/') ? url : `/${url}`;
-    return `${assetOrigin}${normalized}`;
-  };
 
   return (
     <div className="space-y-6">
@@ -66,30 +48,14 @@ export default function ResultsPanel({ result }) {
       )}
 
       {/* Score Breakdown */}
-      <div className="grid grid-cols-2 gap-4">
-        <div className="bg-white p-4 rounded-lg border border-gray-200">
-          <div className="text-sm text-gray-600 mb-1">Content</div>
-          <div className="text-2xl font-black text-blue-600">
-            {result.contentScore}%
+      <div className="grid grid-cols-1">
+        <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+          <div className="text-sm text-gray-600 mb-1">Evaluation Score</div>
+          <div className="text-3xl font-black text-blue-600">
+            {result.finalScore}%
           </div>
           <div className="text-xs text-gray-500 mt-1 flex items-center gap-1">
-            {result.content?.passed ? <span className="flex items-center gap-1 text-green-600"><Check size={12} /> Passed</span> : <span className="flex items-center gap-1 text-red-600"><X size={12} /> Failed</span>}
-          </div>
-          <div className="text-xs text-gray-400 mt-1">
-            Weight: 50%
-          </div>
-        </div>
-
-        <div className="bg-white p-4 rounded-lg border border-gray-200">
-          <div className="text-sm text-gray-600 mb-1">Visual</div>
-          <div className="text-2xl font-bold text-green-600">
-            {result.visualScore}%
-          </div>
-          <div className="text-xs text-gray-500 mt-1 flex items-center gap-1">
-            {result.visual?.passed ? <span className="flex items-center gap-1 text-green-600"><Check size={12} /> Passed</span> : <span className="flex items-center gap-1 text-red-600"><X size={12} /> Failed</span>}
-          </div>
-          <div className="text-xs text-gray-400 mt-1">
-            Weight: 50%
+            {result.passed ? <span className="flex items-center gap-1 text-green-600"><Check size={12} /> Requirements Met</span> : <span className="flex items-center gap-1 text-red-600"><X size={12} /> Improvements Needed</span>}
           </div>
         </div>
       </div>
@@ -282,41 +248,7 @@ export default function ResultsPanel({ result }) {
         </div>
       )}
 
-      {/* Screenshots */}
-      {result.visual?.screenshots && (
-        <div className="bg-white p-4 rounded-lg border border-gray-200">
-          <h4 className="font-semibold mb-3 flex items-center gap-2"><Camera size={20} /> Visual Comparison</h4>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <p className="text-xs text-gray-600 mb-2 font-medium">Your Output</p>
-              <img
-                src={resolveUrl(result.visual.screenshots.candidate)}
-                alt="Candidate output"
-                className="w-full border-2 border-gray-300 rounded shadow-sm"
-              />
-            </div>
-            <div>
-              <p className="text-xs text-gray-600 mb-2 font-medium">Expected Output</p>
-              <img
-                src={resolveUrl(result.visual.screenshots.expected)}
-                alt="Expected output"
-                className="w-full border-2 border-gray-300 rounded shadow-sm"
-              />
-            </div>
-          </div>
-          <div className="mt-4">
-            <p className="text-xs text-gray-600 mb-2 font-medium">Differences Highlighted</p>
-            <img
-              src={resolveUrl(result.visual.screenshots.diff)}
-              alt="Diff"
-              className="w-full border-2 border-red-300 rounded shadow-sm"
-            />
-            <p className="text-xs text-gray-500 mt-2 text-center">
-              {result.visual.diffPercentage}% of pixels differ
-            </p>
-          </div>
-        </div>
-      )}
+
 
       {/* Technical Details - Timestamp Only */}
       {result.timestamp && (
