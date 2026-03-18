@@ -88,7 +88,7 @@ async function migrateChallenges() {
 
   for (const challenge of challenges) {
     await query(
-      `INSERT INTO challenges (id, title, difficulty, description, instructions, tags, time_limit, passing_threshold, expected_html, expected_css, expected_js, expected_screenshot_url, course_id, level, created_at, updated_at)
+       `INSERT INTO challenges (id, title, difficulty, description, instructions, tags, time_limit, passing_threshold, expected_html, expected_css, expected_js, course_id, level, created_at, updated_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON DUPLICATE KEY UPDATE
        title = VALUES(title),
@@ -106,7 +106,7 @@ async function migrateChallenges() {
         challenge.expectedSolution?.html || challenge.expectedHtml || '',
         challenge.expectedSolution?.css || challenge.expectedCss || '',
         challenge.expectedSolution?.js || challenge.expectedJs || '',
-        challenge.expectedScreenshotUrl || null,
+
         challenge.courseId || null,
         challenge.level || 1,
         formatDate(challenge.createdAt) || formatDate(new Date()),
@@ -133,7 +133,7 @@ async function migrateSubmissions() {
     }
 
     await query(
-      `INSERT INTO submissions (id, challenge_id, user_id, candidate_name, html_code, css_code, js_code, status, submitted_at, evaluated_at, structure_score, visual_score, content_score, final_score, passed, evaluation_result)
+      `INSERT INTO submissions (id, challenge_id, user_id, candidate_name, html_code, css_code, js_code, status, submitted_at, evaluated_at, structure_score, content_score, final_score, passed, evaluation_result)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON DUPLICATE KEY UPDATE
        status = VALUES(status),
@@ -150,7 +150,7 @@ async function migrateSubmissions() {
         formatDate(submission.submittedAt) || formatDate(new Date()),
         formatDate(submission.evaluatedAt),
         submission.result?.structureScore || 0,
-        submission.result?.visualScore || 0,
+
         submission.result?.contentScore || 0,
         submission.result?.finalScore || 0,
         submission.result?.passed || false,

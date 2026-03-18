@@ -47,32 +47,24 @@ const dbConfig = {
   database:
     process.env.DB_NAME || process.env.DB_DATABASE || "fullstack_test_portal",
   waitForConnections: true,
-  connectionLimit: 50, // Increased from 10 for better concurrency (1000+ users)
+  connectionLimit: 10, // Optimized for multi-replica deployments (3 Nodes * 10 = 30)
   queueLimit: 0,
-  maxIdle: 10, // Maximum idle connections
-  idleTimeout: 60000, // Close idle connections after 60 seconds
+  maxIdle: 5,
+  idleTimeout: 30000,
   enableKeepAlive: true,
   keepAliveInitialDelay: 0,
-  connectTimeout: 10000, // 10 second connection timeout
+  connectTimeout: 10000,
   timezone: '+05:30',
   ...(sslConfig ? { ssl: sslConfig } : {}),
 };
-// console.log("Database configuration:", {
-//   host: dbConfig.host,
-//   port: dbConfig.port,
-//   user: dbConfig.user,
-//   database: dbConfig.database,
-// });
-// Create connection pool
-const pool = mysql.createPool(dbConfig);
 
+const pool = mysql.createPool(dbConfig);
 let isConnected = false;
 
-// Test connection with retries (10 attempts, every 5s = 50s total window)
-async function testConnection(retries = 10, delay = 5000) {
+// Test connection with exponential backoff (Max 20 attempts)
+async function testConnection(retries = 20, delay = 2000) {
   for (let i = 0; i < retries; i++) {
     try {
-      // Use a ping to truly test connectivity
       const connection = await pool.getConnection();
       await connection.ping();
       console.log("✅ MySQL Database connected successfully");
@@ -80,18 +72,18 @@ async function testConnection(retries = 10, delay = 5000) {
       connection.release();
       return true;
     } catch (err) {
-      console.error(`❌ MySQL connection attempt ${i + 1} failed:`, err.message);
+      console.error(`❌ MySQL connection attempt ${i + 1} failed: ${err.message}`);
+      
       if (i === retries - 1) {
-        if (isProduction) {
-          console.error("FATAL: MySQL is required in production! Shutting down...");
-          process.exit(1);
-        }
-        console.log("📁 Using JSON file storage as fallback");
+        console.error("⛔ Max DB connection retries reached. System running in DEGRADED mode.");
         isConnected = false;
         return false;
       }
-      console.log(`⏳ Retrying in ${delay / 1000}s...`);
-      await new Promise(resolve => setTimeout(resolve, delay));
+
+      // Exponential backoff capped at 30s
+      const nextDelay = Math.min(delay * Math.pow(1.5, i), 30000);
+      console.log(`⏳ Retrying in ${Math.round(nextDelay / 1000)}s...`);
+      await new Promise(resolve => setTimeout(resolve, nextDelay));
     }
   }
 }
@@ -110,16 +102,50 @@ async function waitForDB(timeoutMs = 60000) {
 
 testConnection();
 
-// Helper function to execute queries
+// Circuit Breaker State
+const CB_STATE = {
+  CLOSED: 'CLOSED',
+  OPEN: 'OPEN',
+  HALF_OPEN: 'HALF_OPEN'
+};
+
+let circuitState = CB_STATE.CLOSED;
+let failureCount = 0;
+const FAILURE_THRESHOLD = 5;
+const COOLDOWN_MS = 30000; // 30 seconds
+
+function tripCircuit() {
+  if (circuitState === CB_STATE.OPEN) return;
+  console.error("📛 [CircuitBreaker] DB Failure threshold reached. TRIPPING CIRCUIT OPEN.");
+  circuitState = CB_STATE.OPEN;
+  setTimeout(() => {
+    console.log("🟡 [CircuitBreaker] Cooldown finished. Testing circuit (HALF_OPEN).");
+    circuitState = CB_STATE.HALF_OPEN;
+  }, COOLDOWN_MS);
+}
+
+// Helper function to execute queries with Circuit Breaker
 async function query(sql, params) {
   if (USE_JSON) {
     throw new Error('Using JSON file storage (USE_JSON=true)');
   }
+
+  if (circuitState === CB_STATE.OPEN) {
+    throw new Error('⚡ Circuit Breaker: Database is currently overloaded. Please try again in 30 seconds.');
+  }
+
   try {
     const [rows] = await pool.query(sql, params);
+    
+    // Reset on success
+    if (circuitState === CB_STATE.HALF_OPEN) {
+        console.log("✅ [CircuitBreaker] Success in HALF_OPEN. CLOSING CIRCUIT.");
+        circuitState = CB_STATE.CLOSED;
+        failureCount = 0;
+    }
+    
     return rows;
   } catch (error) {
-    // Suppress logs for common migration "already exists" errors
     const isDuplicate = error.code === 'ER_DUP_FIELDNAME' ||
       error.errno === 1060 ||
       error.code === 'ER_DUP_INDEX' ||
@@ -130,6 +156,10 @@ async function query(sql, params) {
 
     if (!isDuplicate) {
       console.error("Database query error:", error);
+      failureCount++;
+      if (failureCount >= FAILURE_THRESHOLD || circuitState === CB_STATE.HALF_OPEN) {
+        tripCircuit();
+      }
     }
     throw error;
   }
@@ -143,6 +173,10 @@ async function queryOne(sql, params) {
 
 // Transaction helper
 async function transaction(callback) {
+  if (circuitState === CB_STATE.OPEN) {
+    throw new Error('⚡ Circuit Breaker: Database overloaded. Transaction aborted.');
+  }
+  
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();
@@ -163,6 +197,7 @@ module.exports = {
   queryOne,
   transaction,
   isConnected: () => isConnected,
+  isCircuitOpen: () => circuitState === CB_STATE.OPEN,
   waitForDB,
   USE_JSON,
 };
