@@ -12,7 +12,8 @@ const SubmissionModel = require('../models/Submission');
 const { query } = require('../database/connection');
 const { verifyToken } = require('../middleware/auth');
 
-const submissionsPath = path.join(__dirname, '../data/submissions.json');
+const nodeID = process.env.HOSTNAME || 'local-node';
+const submissionsPath = path.join(__dirname, `../data/submissions_${nodeID}.json`);
 
 // Helper to load JSON files
 const loadJSON = (filePath) => {
@@ -77,8 +78,7 @@ router.post("/", verifyToken, async (req, res) => {
       }
     }
 
-    // For auto-save, allow empty code (just save current state)
-    if (!isAutoSave && (!code || ((!code.html || code.html.trim() === '') && (!code.js || code.js.trim() === '')))) {
+    if (!isAutoSave && (!code || ((!code.html || code.html.trim() === '') && (!code.css || code.css.trim() === '') && (!code.js || code.js.trim() === '')))) {
       return res.status(400).json({
         error: 'Incomplete content',
         message: 'Your solution must contain at least some code (HTML or JavaScript) before you can submit.'
@@ -154,12 +154,15 @@ router.post("/", verifyToken, async (req, res) => {
       }
     }
 
-    // FINAL SUBMISSION LOGIC
+    // FINAL SUBMISSION LOGIC (Write-Behind Pattern)
+    const submissionId = uuidv4();
     const submissionData = {
-      id: uuidv4(),
+      id: submissionId,
       challengeId,
       userId: userId || 'user-demo-student',
-      candidateName: studentName || 'Anonymous',
+      candidateName: studentName || candidateName || 'Anonymous',
+      courseId,
+      level,
       code: {
         html: code?.html || '',
         css: code?.css || '',
@@ -171,128 +174,28 @@ router.post("/", verifyToken, async (req, res) => {
     };
 
     try {
-      // Check if there's an existing draft to upgrade to 'pending'
-      const existingDraft = await query(
-        "SELECT id FROM submissions WHERE user_id = ? AND challenge_id = ? AND status = 'saved' LIMIT 1",
-        [submissionData.userId, challengeId]
-      );
+      // 1. Push to Queue (BullMQ) for background persistence
+      const { addSubmissionToDbQueue } = require('../services/submissionQueueService');
+      await addSubmissionToDbQueue(submissionData);
 
-      let submissionId;
-      if (existingDraft.length > 0) {
-        // Upgrade draft to pending
-        await query(
-          `UPDATE submissions SET 
-            html_code = ?, css_code = ?, js_code = ?, additional_files = ?,
-            status = ?, submitted_at = CURRENT_TIMESTAMP 
-          WHERE id = ?`,
-          [submissionData.code.html, submissionData.code.css, submissionData.code.js, JSON.stringify(submissionData.code.additionalFiles), SubmissionModel.STATUS.QUEUED, existingDraft[0].id]
-        );
-        submissionId = existingDraft[0].id;
-      } else {
-        // Create new submission
-        const dbSubmission = await SubmissionModel.create({
-          ...submissionData,
-          courseId,
-          level,
-          status: SubmissionModel.STATUS.QUEUED,
-          candidateName: studentName || candidateName
-        });
-        console.log(`[SubmissionsAPI] Successfully created DB record: ${dbSubmission.id}`);
-        submissionId = dbSubmission.id;
-      }
-
-      // Auto-assign to faculty for evaluation (v3.5.0: least-loaded + capacity-aware)
-      try {
-        if (courseId) {
-          // Try course-specific faculty first, then any available faculty
-          let faculty = await query(
-            `SELECT u.id, u.max_capacity,
-              (SELECT COUNT(*) FROM submission_assignments sa WHERE sa.faculty_id = u.id AND sa.status = 'pending') as current_load
-             FROM users u
-             INNER JOIN faculty_course_assignments fca ON u.id = fca.faculty_id
-             WHERE fca.course_id = ? AND u.role = 'faculty' AND u.is_available = TRUE
-             HAVING current_load < u.max_capacity
-             ORDER BY current_load ASC LIMIT 1`,
-            [courseId]
-          );
-
-          if (faculty.length === 0) {
-            faculty = await query(
-              `SELECT u.id, u.max_capacity,
-                (SELECT COUNT(*) FROM submission_assignments sa WHERE sa.faculty_id = u.id AND sa.status = 'pending') as current_load
-               FROM users u
-               WHERE u.role = 'faculty' AND u.is_available = TRUE
-               HAVING current_load < u.max_capacity
-               ORDER BY current_load ASC LIMIT 1`
-            );
-          }
-
-          if (faculty.length > 0) {
-            await query(
-              `INSERT INTO submission_assignments (submission_id, faculty_id, assigned_at, status) 
-               VALUES (?, ?, NOW(), 'pending')
-               ON DUPLICATE KEY UPDATE faculty_id = VALUES(faculty_id), assigned_at = NOW()`,
-              [submissionId, faculty[0].id]
-            );
-            // Audit log
-            try {
-              await query(
-                `INSERT INTO assignment_logs (submission_id, action_type, to_faculty_id, notes) VALUES (?, 'auto_assign', ?, 'On-submit auto-assign')`,
-                [submissionId, faculty[0].id]
-              );
-            } catch (logErr) { console.warn('[Submissions] Audit log failed:', logErr.message); }
-          }
-        }
-      } catch (assignError) {
-        console.error('[Submissions] Faculty assignment error:', assignError.message);
-      }
-
-      // CRITICAL: Link to active test session if exists (prevents orphan submissions)
-      try {
-        const activeSession = await queryOne(
-          `SELECT id FROM test_sessions WHERE user_id = ? AND course_id = ? AND level = ? AND completed_at IS NULL ORDER BY created_at DESC LIMIT 1`,
-          [userId, courseId, level]
-        );
-
-        if (activeSession) {
-          const TestSession = require('../models/TestSession');
-          await TestSession.addSubmission(activeSession.id, submissionId);
-          console.log(`[Submissions] Linked submission ${submissionId} to session ${activeSession.id}`);
-        } else {
-          // Fallback: Check for ANY recent session (even completed) if within last 5 minutes
-          const recentSession = await queryOne(
-            `SELECT id FROM test_sessions WHERE user_id = ? AND course_id = ? AND level = ? AND completed_at > (NOW() - INTERVAL 5 MINUTE) ORDER BY completed_at DESC LIMIT 1`,
-            [userId, courseId, level]
-          );
-          if (recentSession) {
-            const TestSession = require('../models/TestSession');
-            await TestSession.addSubmission(recentSession.id, submissionId);
-            console.log(`[Submissions] Late-linked submission ${submissionId} to completed session ${recentSession.id}`);
-          }
-        }
-      } catch (linkError) {
-        console.error('[Submissions] Failed to link to session:', linkError.message);
-      }
-
-      return res.status(201).json({
-        message: 'Submission received',
-        submissionId: submissionId
+      // 2. Respond immediately
+      return res.status(202).json({
+        message: 'Submission received and queued for processing',
+        submissionId: submissionId,
+        status: 'queued'
       });
-    } catch (dbError) {
-      console.log('Database save failed, using JSON fallback:', dbError.message);
+    } catch (queueError) {
+      console.error('[SubmissionsAPI] Queueing failed, falling back to JSON:', queueError.message);
+      
+      // FALLBACK: Safe local file storage if Redis is down
       const submissions = getSubmissions();
-      const submission = {
-        ...submissionData,
-        evaluatedAt: null,
-        result: null
-      };
-      submissions.push(submission);
+      submissions.push(submissionData);
       saveSubmissions(submissions);
 
-      return res.status(201).json({
-        message: 'Submission received',
-        submissionId: submission.id,
-        submission
+      return res.status(202).json({
+        message: 'Submission received (Fallback Storage)',
+        submissionId: submissionId,
+        status: 'queued'
       });
     }
   } catch (error) {
@@ -615,8 +518,7 @@ router.post('/import', async (req, res) => {
         const htmlCode = row['studentHtml'] || row['student_html'] || row['html_code'] || '';
         const cssCode = row['studentCss'] || row['student_css'] || row['css_code'] || '';
         const jsCode = row['studentJs'] || row['student_js'] || row['js_code'] || '';
-        const studentScreenshot = row['studentScreenshot'] || row['student_screenshot'] || row['user_screenshot'] || null;
-        const expectedScreenshot = row['expectedScreenshot'] || row['expected_screenshot'] || null;
+
         const submittedAt = row['Submitted At'] || row['submitted_at'] || row['submittedAt'] || new Date().toISOString();
 
         // Validate minimum required fields
@@ -688,15 +590,13 @@ router.post('/import', async (req, res) => {
 
         const id = uuidv4();
 
-        // Truncate screenshot paths to match DB limit (500 chars)
-        const truncate = (val, max = 500) => val && val.length > max ? val.substring(0, max) : val;
+
 
         await query(
           `INSERT INTO submissions
             (id, challenge_id, user_id, course_id, level, candidate_name,
-             html_code, css_code, js_code, status, submitted_at,
-             user_screenshot, expected_screenshot)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+             html_code, css_code, js_code, status, submitted_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           [
             id,
             challengeId,
@@ -708,9 +608,7 @@ router.post('/import', async (req, res) => {
             cssCode,
             jsCode,
             'queued',
-            mysqlDate,
-            truncate(studentScreenshot),
-            truncate(expectedScreenshot)
+            mysqlDate
           ]
         );
 

@@ -701,16 +701,21 @@ router.post("/bulk-unblock", verifyAdmin, async (req, res) => {
 
       if (sessionId) {
         const existing = await queryOne(
-          "SELECT id FROM test_attendance WHERE user_id = ? AND test_identifier = ?",
-          [user.id, testIdentifier]
+          "SELECT id FROM test_attendance WHERE user_id = ? AND test_identifier = ? AND session_id = ?",
+          [user.id, testIdentifier, sessionId]
         );
 
         const statusLabel = shouldActivateNow ? 'activated' : 'scheduled';
 
         if (existing) {
+          // If a student is already scheduled for ANOTHER session, we can now have multiple records
+          // BUT if they are scheduled for THIS session, we update it.
+          // Wait, the unique index is (user_id, test_identifier, session_id). 
+          // If session_id is different, it will be a NEW record.
+          
           await query(
-            "UPDATE test_attendance SET session_id = ?, status = 'approved', scheduled_status = ?, is_used = 0, locked = 0, locked_at = NULL, locked_reason = ? WHERE id = ?",
-            [sessionId, statusLabel, `Admin:${statusLabel}`, existing.id]
+            "UPDATE test_attendance SET status = 'approved', scheduled_status = ?, is_used = 0, locked = 0, locked_at = NULL, locked_reason = ? WHERE id = ?",
+            [statusLabel, `Admin:${statusLabel}`, existing.id]
           );
         } else {
           await query(
@@ -731,6 +736,21 @@ router.post("/bulk-unblock", verifyAdmin, async (req, res) => {
   } catch (error) {
     console.error("Bulk unblock error:", error);
     res.status(500).json({ error: "Failed to process bulk unblock" });
+  }
+});
+
+// Bulk block all students (Admin only) - v3.6.0
+router.patch("/bulk-block", verifyAdmin, async (req, res) => {
+  try {
+    const result = await query("UPDATE users SET is_blocked = true WHERE role = 'student'");
+    res.json({ 
+      success: true, 
+      message: "All students have been blocked successfully",
+      affectedRows: result.affectedRows 
+    });
+  } catch (error) {
+    console.error("Bulk block error:", error);
+    res.status(500).json({ error: "Failed to block all students" });
   }
 });
 
@@ -864,10 +884,10 @@ router.patch("/:userId/toggle-block", verifyAdmin, async (req, res) => {
 
     const testIdentifier = 'global'; // Universal session support
 
-    // Check for existing attendance record (by user_id + test_identifier, which is the unique key)
+    // Check for existing attendance record for THIS session
     const existing = await queryOne(
-      "SELECT id, session_id FROM test_attendance WHERE user_id = ? AND test_identifier = ?",
-      [user.id, testIdentifier]
+      "SELECT id, session_id FROM test_attendance WHERE user_id = ? AND test_identifier = ? AND (session_id = ? OR session_id IS NULL)",
+      [user.id, testIdentifier, sessionId]
     );
 
     if (isSessionLive || immediate) {
