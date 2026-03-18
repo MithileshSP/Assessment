@@ -54,12 +54,29 @@ const saveAssignments = (assignments) => {
   return saveJSON(assignmentsPath, assignments);
 };
 
+const { redisConnection } = require('../services/aiQueueService'); // Reusing existing connection
+
 /**
  * GET /api/challenges
  * Get all challenges (without solutions for candidates)
+ * CACHED in Redis for performance
  */
 router.get('/', async (req, res) => {
   try {
+    const CACHE_KEY = 'challenges:public:all';
+    
+    // 1. Try Cache
+    try {
+        const cached = await redisConnection.get(CACHE_KEY);
+        if (cached) {
+            console.log('[Cache] Serving challenges from Redis');
+            return res.json(JSON.parse(cached));
+        }
+    } catch (cacheErr) {
+        console.warn('[Cache] Redis get failed:', cacheErr.message);
+    }
+
+    // 2. Fetch from DB
     let challenges;
     try {
       challenges = await ChallengeModel.findAll();
@@ -82,6 +99,13 @@ router.get('/', async (req, res) => {
       level: challenge.level,
       assets: challenge.assets || { images: [], reference: '' }
     }));
+
+    // 3. Store in Cache (5 min TTL)
+    try {
+        await redisConnection.setex(CACHE_KEY, 300, JSON.stringify(publicChallenges));
+    } catch (cacheErr) {
+        console.warn('[Cache] Redis set failed:', cacheErr.message);
+    }
 
     res.json(publicChallenges);
   } catch (error) {

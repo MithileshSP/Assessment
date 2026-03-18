@@ -543,10 +543,10 @@ router.get('/unblocked-list', verifyAdmin, async (req, res) => {
         const unblocked = await query(`
             SELECT 
                 u.id, u.username, u.full_name, u.email, u.roll_no, u.created_at,
-                ta.attempt_started_at, ta.attempt_submitted_at, ta.is_used
+                ta.attempt_started_at, ta.attempt_submitted_at, ta.is_used, ta.session_id
             FROM users u
             LEFT JOIN (
-                SELECT user_id, attempt_started_at, attempt_submitted_at, is_used
+                SELECT user_id, attempt_started_at, attempt_submitted_at, is_used, session_id
                 FROM test_attendance
                 WHERE (user_id, requested_at) IN (
                     SELECT user_id, MAX(requested_at)
@@ -622,7 +622,7 @@ router.get('/scheduled/:sessionId', verifyAdmin, async (req, res) => {
                     u.username, u.email, u.full_name, u.roll_no, u.is_blocked
              FROM test_attendance ta
              JOIN users u ON ta.user_id = u.id
-             WHERE ta.session_id = ? AND ta.scheduled_status IN('scheduled', 'activated')
+             WHERE ta.session_id = ? AND ta.scheduled_status IN('scheduled', 'activated', 'expired')
              ORDER BY ta.requested_at DESC`,
             [sessionId]
         );

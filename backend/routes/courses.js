@@ -300,7 +300,7 @@ router.get('/:courseId/levels', async (req, res) => {
           css: challenge.expected_css,
           js: challenge.expected_js
         } : (challenge.expectedSolution || {}),
-        expectedScreenshotUrl: challenge.expected_screenshot_url || challenge.expectedScreenshotUrl,
+        expectedScreenshotUrl: null,
         createdAt: challenge.created_at || challenge.createdAt,
         updatedAt: challenge.updated_at || challenge.updatedAt,
         tags: typeof challenge.tags === 'string'

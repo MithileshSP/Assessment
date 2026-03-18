@@ -93,7 +93,7 @@ router.get('/submission/:id', verifyFaculty, async (req, res) => {
                 s.user_id as candidate_name, 
                 c.title as course_title,
                 ch.title as challenge_title,
-                ch.expected_screenshot_url as expected_screenshot,
+
                 ch.expected_html,
                 ch.expected_css,
                 ch.expected_js,
@@ -127,9 +127,18 @@ router.get('/submission/:id', verifyFaculty, async (req, res) => {
                 (evalData.expected_output_score || 0);
         }
 
+        // Get assignment info
+        const assignmentInfo = await db.query(`
+            SELECT sa.status, sa.locked_at, u.full_name as faculty_name
+            FROM submission_assignments sa
+            LEFT JOIN users u ON sa.faculty_id = u.id
+            WHERE sa.submission_id = ?
+        `, [submissionId]);
+
         res.json({
             submission: submission[0],
             evaluation: evalData,
+            assignment: assignmentInfo[0] || null,
             studentFeedback: studentFeedback[0] || null
         });
 
@@ -306,7 +315,7 @@ router.post('/bulk-delete', verifyFaculty, async (req, res) => {
         // We only delete submissions that were evaluated by this faculty (to maintain their history view integrity)
         // If admin, we could potentially allow deleting everything, but the request was "in /faculty/history"
         const sqlFind = `
-            SELECT s.id, s.user_screenshot, s.expected_screenshot, s.diff_screenshot
+            SELECT s.id
             FROM submission_assignments sa
             JOIN submissions s ON sa.submission_id = s.id
             WHERE sa.faculty_id = ? AND sa.status = 'evaluated' AND s.submitted_at < ?
@@ -319,33 +328,8 @@ router.post('/bulk-delete', verifyFaculty, async (req, res) => {
 
         const deletedIds = submissions.map(s => s.id);
 
-        // 2. Delete files from filesystem
-        const screenshotDir = path.join(__dirname, '../screenshots');
-        submissions.forEach(sub => {
-            ['user_screenshot', 'expected_screenshot', 'diff_screenshot'].forEach(field => {
-                if (sub[field]) {
-                    // sub[field] might be a path like /screenshots/xyz.png or a full URL
-                    const filename = path.basename(sub[field]);
-                    // Check standard locations
-                    const possiblePaths = [
-                        path.join(screenshotDir, filename),
-                        path.join(__dirname, '../public', filename), // checking public just in case
-                        path.join(__dirname, '../../frontend/public', filename) // checking frontend public if linked
-                    ];
-
-                    possiblePaths.forEach(p => {
-                        if (fs.existsSync(p)) {
-                            try {
-                                fs.unlinkSync(p);
-                                console.log(`✓ Deleted file: ${p}`);
-                            } catch (err) {
-                                console.error(`Failed to delete file ${p}:`, err.message);
-                            }
-                        }
-                    });
-                }
-            });
-        });
+        // 2. Clear from filesystem
+        // Screenshots are no longer maintained, if any old ones exist, they are ignored here.
 
         // 3. Delete from database
         // Foreign key cascades handle assignments and evaluations
@@ -353,7 +337,7 @@ router.post('/bulk-delete', verifyFaculty, async (req, res) => {
         await db.query(sqlDelete, [deletedIds]);
 
         res.json({
-            message: `Successfully deleted ${submissions.length} submissions and associated files`,
+            message: `Successfully deleted ${submissions.length} submissions`,
             deletedCount: submissions.length
         });
 
@@ -383,8 +367,7 @@ router.get('/export-backup', verifyFaculty, async (req, res) => {
                 s.html_code,
                 s.css_code,
                 s.js_code,
-                s.user_screenshot,
-                ch.expected_screenshot_url as expected_screenshot,
+
                 s.submitted_at
             FROM submissions s
             JOIN users u ON s.user_id = u.id
@@ -403,7 +386,7 @@ router.get('/export-backup', verifyFaculty, async (req, res) => {
         const headers = [
             'Student UID', 'Student Name', 'Email', 'Course', 'Level', 'courseId',
             'title', 'description', 'instructions', 'studentHtml', 'studentCss',
-            'studentJs', 'studentScreenshot', 'expectedScreenshot', 'Submitted At'
+            'studentJs', 'Submitted At'
         ];
         const csvRows = [headers.join(',')]; // Using comma separator for standard Excel compatibility
 
@@ -423,8 +406,6 @@ router.get('/export-backup', verifyFaculty, async (req, res) => {
                 escape(row.html_code),
                 escape(row.css_code),
                 escape(row.js_code),
-                escape(`${req.protocol}://${req.get('host')}${row.user_screenshot}`),
-                escape(row.expected_screenshot),
                 escape(row.submitted_at ? new Date(row.submitted_at).toLocaleString() : '')
             ];
             csvRows.push(csvRow.join(','));

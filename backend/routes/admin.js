@@ -1,5 +1,7 @@
 const express = require('express');
 const router = express.Router();
+const fs = require('fs');
+const path = require('path');
 const db = require('../database/connection');
 const { verifyAdmin } = require('../middleware/auth');
 const GlobalSession = require('../models/GlobalSession');
@@ -227,7 +229,7 @@ router.post('/assign/smart', verifyAdmin, async (req, res) => {
 router.get('/unassigned-submissions', verifyAdmin, async (req, res) => {
   try {
     const submissions = await db.query(`
-      SELECT s.id, s.user_id, u.full_name as student_name, u.email as student_email,
+      SELECT s.id, s.user_id, COALESCE(u.full_name, s.candidate_name, 'Unknown') as student_name, u.email as student_email,
              s.course_id, c.title as course_title, s.level, s.challenge_id,
              ch.title as challenge_title, s.submitted_at, s.status
       FROM submissions s
@@ -488,7 +490,7 @@ router.get('/results', verifyAdmin, async (req, res) => {
     const query = `
             SELECT 
                 s.id, s.candidate_name, s.submitted_at, s.status as final_status,
-                s.structure_score, s.visual_score, s.content_score, s.final_score as auto_score,
+                s.structure_score, s.content_score, s.final_score as auto_score,
                 me.total_score as manual_score,
                 me.code_quality_score, me.requirements_score, me.expected_output_score,
                 u.username as evaluator_name,
@@ -506,7 +508,7 @@ router.get('/results', verifyAdmin, async (req, res) => {
     // Better to just show course/level from submission table if available (it is).
     const simplerQuery = `
             SELECT 
-                s.id, u.full_name as candidate_name, u.id as user_id, u.roll_no, s.submitted_at, s.status as final_status,
+                s.id, COALESCE(u.full_name, s.candidate_name, 'Unknown') as candidate_name, u.id as user_id, u.roll_no, s.submitted_at, s.status as final_status,
                 s.final_score as auto_score,
                 (me.code_quality_score + me.requirements_score + me.expected_output_score) as manual_score,
                 me.code_quality_score, me.requirements_score, me.expected_output_score,
@@ -566,9 +568,9 @@ router.get('/results/export', verifyAdmin, async (req, res) => {
     }
 
     if (search) {
-      whereConditions.push('(u.full_name LIKE ? OR u.email LIKE ? OR u.roll_no LIKE ? OR c.title LIKE ?)');
+      whereConditions.push('(u.full_name LIKE ? OR s.candidate_name LIKE ? OR u.email LIKE ? OR u.roll_no LIKE ? OR c.title LIKE ?)');
       const s = `%${search}%`;
-      queryParams.push(s, s, s, s);
+      queryParams.push(s, s, s, s, s);
     }
 
     if (final_status) {
@@ -604,7 +606,7 @@ router.get('/results/export', verifyAdmin, async (req, res) => {
       SELECT 
         s.id,
         u.roll_no,
-        u.full_name as student_name,
+        COALESCE(u.full_name, s.candidate_name, 'Unknown') as student_name,
         u.email as student_email,
         c.title as course_name,
         s.status as status,
@@ -716,20 +718,22 @@ router.delete('/results/bulk', verifyAdmin, async (req, res) => {
 
     const submissionIds = submissionsToDelete.map(s => s.id);
 
-    // 2. Delete related records
+
+
+    // 3. Delete related records
     // Manual Evaluations
     await db.query(`DELETE FROM manual_evaluations WHERE submission_id IN (?)`, [submissionIds]);
 
     // Submission Assignments
     await db.query(`DELETE FROM submission_assignments WHERE submission_id IN (?)`, [submissionIds]);
 
-    // 3. Delete Submissions
+    // 4. Delete Submissions
     await db.query(`DELETE FROM submissions WHERE id IN (?)`, [submissionIds]);
 
     console.log(`[BulkDelete] Deleted ${submissionIds.length} submissions.`);
 
     res.json({
-      message: `Successfully deleted ${submissionIds.length} submissions.`,
+      message: `Successfully deleted ${submissionIds.length} submissions and associated files.`,
       count: submissionIds.length
     });
 
@@ -924,7 +928,7 @@ router.post('/reset-level', verifyAdmin, async (req, res) => {
  */
 router.post('/submissions/:id/override', verifyAdmin, async (req, res) => {
   const { id } = req.params;
-  const { status, reason } = req.body;
+  const { status, reason, scores } = req.body;
 
   if (!status || !reason) {
     return res.status(400).json({ error: 'Status and reason are required' });
@@ -932,7 +936,7 @@ router.post('/submissions/:id/override', verifyAdmin, async (req, res) => {
 
   try {
     const SubmissionModel = require('../models/Submission');
-    const updated = await SubmissionModel.updateOverride(id, status, reason);
+    const updated = await SubmissionModel.updateOverride(id, status, reason, scores || {}, req.user.id);
 
     if (!updated) {
       return res.status(404).json({ error: 'Submission not found' });
@@ -1329,14 +1333,14 @@ router.get('/all-submissions', verifyAdmin, async (req, res) => {
       params.push(...courseTitleArr);
     }
     if (req.query.studentName) {
-      conditions.push('u.full_name LIKE ?');
-      params.push(`%${req.query.studentName}%`);
+      conditions.push('(u.full_name LIKE ? OR s.candidate_name LIKE ?)');
+      params.push(`%${req.query.studentName}%`, `%${req.query.studentName}%`);
     }
     if (search && search.trim()) {
       const trimmedSearch = search.trim();
-      conditions.push('(u.full_name LIKE ? OR u.email LIKE ? OR u.id LIKE ? OR u.username LIKE ? OR u.roll_no LIKE ? OR s.id LIKE ? OR s.user_id LIKE ?)');
+      conditions.push('(u.full_name LIKE ? OR s.candidate_name LIKE ? OR u.email LIKE ? OR u.id LIKE ? OR u.username LIKE ? OR u.roll_no LIKE ? OR s.id LIKE ? OR s.user_id LIKE ?)');
       const searchTerm = `%${trimmedSearch}%`;
-      params.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
+      params.push(searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm, searchTerm);
     }
 
     const whereClause = conditions.join(' AND ');
@@ -1369,7 +1373,7 @@ router.get('/all-submissions', verifyAdmin, async (req, res) => {
     // Data query
     const dataQuery = `
       SELECT
-        s.id, s.user_id, u.full_name as student_name, u.email as student_email,
+        s.id, s.user_id, COALESCE(u.full_name, s.candidate_name, 'Unknown') as student_name, u.email as student_email,
         s.course_id, c.title as course_title, s.level,
         s.challenge_id, ch.title as challenge_title,
         s.submitted_at, s.status as submission_status,
@@ -1500,27 +1504,13 @@ router.delete('/submissions/:id', verifyAdmin, async (req, res) => {
   const path = require('path');
 
   try {
-    const existing = await db.query(
-      `SELECT user_screenshot, expected_screenshot, diff_screenshot FROM submissions WHERE id = ?`,
+    const existing = await db.queryOne(
+      `SELECT id FROM submissions WHERE id = ?`,
       [id]
     );
 
-    if (!existing || existing.length === 0) {
+    if (!existing) {
       return res.status(404).json({ error: "Submission not found" });
-    }
-
-    // Clean up files asynchronously
-    const files = [
-      existing[0].user_screenshot,
-      existing[0].expected_screenshot,
-      existing[0].diff_screenshot
-    ].filter(Boolean);
-
-    for (const fileUrl of files) {
-      try {
-        const filePath = path.join(__dirname, '..', fileUrl);
-        await fs.unlink(filePath).catch(() => { });
-      } catch (err) { }
     }
 
     // Delete from database (foreign key ON DELETE CASCADE will handle assignments/logs)
@@ -1581,6 +1571,56 @@ router.patch('/users/:id/permissions', verifyAdmin, async (req, res) => {
 });
 
 /**
+ * GET /api/admin/backup/stats
+ * Get storage and database usage statistics
+ */
+router.get('/backup/stats', verifyAdmin, async (req, res) => {
+  try {
+    const [submissionCount] = await db.query("SELECT COUNT(*) as count FROM submissions");
+    const [evalCount] = await db.query("SELECT COUNT(*) as count FROM manual_evaluations");
+    
+
+
+    res.json({
+      database: {
+        submissions: submissionCount.count,
+        evaluations: evalCount.count
+      },
+
+    });
+  } catch (error) {
+    console.error("Backup stats error:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * GET /api/admin/backup/export-all
+ * Export comprehensive backup (JSON)
+ */
+router.get('/backup/export-all', verifyAdmin, async (req, res) => {
+  try {
+    const submissions = await db.query(`
+      SELECT s.*, u.full_name, u.email, u.roll_no, c.title as course_title,
+             me.code_quality_score, me.requirements_score, me.expected_output_score, me.comments as faculty_feedback
+      FROM submissions s
+      LEFT JOIN users u ON s.user_id = u.id
+      LEFT JOIN courses c ON s.course_id = c.id
+      LEFT JOIN manual_evaluations me ON s.id = me.submission_id
+      ORDER BY s.submitted_at DESC
+    `);
+
+    const filename = `full_backup_${new Date().toISOString().slice(0, 10)}.json`;
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(JSON.stringify(submissions, null, 2));
+  } catch (error) {
+    console.error("Full backup export error:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
  * GET /api/admin/menu-items
  * Get all available admin sidebar menu items for the Access Control UI
  */
@@ -1600,6 +1640,7 @@ router.get('/menu-items', verifyAdmin, async (req, res) => {
     { id: 'assets', label: 'Assets' },
     { id: 'bulk-completion', label: 'Bulk Unlock' },
     { id: 'violations', label: 'Violations' },
+    { id: 'backup', label: 'Storage & Backup' },
   ];
   res.json(items);
 });
