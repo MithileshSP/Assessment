@@ -339,7 +339,7 @@ export default function AdminResults() {
     const EXPECTED_FIELDS = [
         'Student UID', 'Student Name', 'Email', 'Course', 'Level', 'courseId',
         'title', 'description', 'instructions', 'studentHtml', 'studentCss',
-        'studentJs', 'studentScreenshot', 'expectedScreenshot', 'Submitted At'
+        'studentJs', 'Submitted At'
     ];
 
     // Define table columns

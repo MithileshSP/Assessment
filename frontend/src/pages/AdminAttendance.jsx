@@ -106,7 +106,7 @@ const AdminAttendance = () => {
         fetchData(true);
         const interval = setInterval(() => {
             fetchData(false);
-        }, 5000);
+        }, 3000); // 3-second poll for "always in refresh" feel
         return () => clearInterval(interval);
     }, []);
 
@@ -117,7 +117,7 @@ const AdminAttendance = () => {
                 const response = await api.get('/users', {
                     params: {
                         role: 'student',
-                        limit: 50,
+                        limit: 200,
                         search: searchQuery
                     }
                 });
@@ -126,7 +126,7 @@ const AdminAttendance = () => {
                     setUsers(response.data.users);
                 } else if (Array.isArray(response.data)) {
                     // Fallback for older API format
-                    setUsers(response.data.slice(0, 50));
+                    setUsers(response.data.slice(0, 200));
                 }
             } catch (err) {
                 console.error("Failed to fetch registry users:", err);
@@ -150,25 +150,41 @@ const AdminAttendance = () => {
     }, [selectedSession]);
 
     const handleToggleBlock = async (userId, currentState) => {
+        // OPTIMISTIC UI UPDATE
+        const updatedUsers = unblockedUsers.filter(u => u.id !== userId);
+        if (currentState === false) { // Means it was unblocked, now we are blocking
+             setUnblockedUsers(updatedUsers);
+        }
+        
         try {
             setSubmitting(true);
             const params = selectedSession ? { sessionId: selectedSession.id } : {};
             const res = await api.patch(`/users/${userId}/toggle-block`, params);
 
-            // Check if scheduled or immediately activated
             if (res.data.scheduled) {
-                addToast('Student scheduled for this session (will activate when session starts)', 'info');
+                addToast('Student scheduled for this session', 'info');
             } else {
-                addToast(currentState ? 'Student unblocked and activated' : 'Student blocked', 'success');
+                addToast(currentState ? 'Student unblocked' : 'Student blocked', 'success');
             }
-
-            // Immediate UI update while waiting for poll
-            if (!res.data.scheduled) {
-                setUsers(prev => prev.map(u => u.id === userId ? { ...u, is_blocked: !currentState } : u));
-            }
+            
             fetchData();
         } catch (error) {
-            addToast('Failed to toggle status', 'error');
+            addToast('Action failed', 'error');
+            fetchData(); // Rollback by fetching fresh data
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const handleCancelSchedule = async (userId) => {
+        if (!selectedSession) return;
+        try {
+            setSubmitting(true);
+            await api.delete(`/attendance/scheduled/${selectedSession.id}/${userId}`);
+            addToast('Schedule cancelled', 'success');
+            fetchData();
+        } catch (error) {
+            addToast('Failed to cancel schedule', 'error');
         } finally {
             setSubmitting(false);
         }
@@ -570,7 +586,10 @@ const AdminAttendance = () => {
                                             <p className="text-[10px] text-slate-400 font-medium">currently writing</p>
                                         </div>
                                         <span className="text-3xl font-bold text-slate-900">
-                                            {unblockedUsers.filter(u => u.attempt_started_at && !u.attempt_submitted_at && !u.is_used).length}
+                                            {selectedSession ? 
+                                                unblockedUsers.filter(u => u.session_id == selectedSession.id && u.attempt_started_at && !u.attempt_submitted_at && !u.is_used).length :
+                                                unblockedUsers.filter(u => u.attempt_started_at && !u.attempt_submitted_at && !u.is_used).length
+                                            }
                                         </span>
                                     </div>
 
@@ -580,7 +599,12 @@ const AdminAttendance = () => {
                                             <p className="text-[10px] text-slate-400 font-medium">hand-ins received</p>
                                         </div>
                                         <span className="text-3xl font-bold text-slate-900">
-                                            {unblockedUsers.filter(u => u.is_used || u.attempt_submitted_at).length}
+                                            {selectedSession ? 
+                                                /* Include both submitted and expired for the session */
+                                                [...unblockedUsers.filter(u => u.session_id == selectedSession.id && (u.is_used || u.attempt_submitted_at)),
+                                                 ...scheduledStudents.filter(s => s.scheduled_status === 'expired')].length :
+                                                unblockedUsers.filter(u => u.is_used || u.attempt_submitted_at).length
+                                            }
                                         </span>
                                     </div>
 
@@ -666,11 +690,16 @@ const AdminAttendance = () => {
                                             </thead>
                                             <tbody className="divide-y divide-slate-50">
                                                 {unblockedUsers
-                                                    .filter(u =>
-                                                        u.full_name?.toLowerCase().includes(sessionSearchQuery.toLowerCase()) ||
-                                                        u.email?.toLowerCase().includes(sessionSearchQuery.toLowerCase()) ||
-                                                        u.roll_no?.toLowerCase().includes(sessionSearchQuery.toLowerCase())
-                                                    )
+                                                    .filter(u => !selectedSession || u.session_id == selectedSession.id)
+                                                    .filter(u => {
+                                                        const query = sessionSearchQuery.toLowerCase();
+                                                        return (
+                                                            u.full_name?.toLowerCase().includes(query) ||
+                                                            u.email?.toLowerCase().includes(query) ||
+                                                            u.roll_no?.toLowerCase().includes(query) ||
+                                                            (u.is_used ? 'submitted' : (u.attempt_started_at ? 'writing' : 'waiting')).includes(query)
+                                                        );
+                                                    })
                                                     .map(user => {
                                                         const isWriting = user.attempt_started_at && !user.attempt_submitted_at && !user.is_used;
                                                         const isSubmitted = user.is_used || user.attempt_submitted_at;
@@ -715,9 +744,9 @@ const AdminAttendance = () => {
                                                                 <td className="px-8 py-5 text-right">
                                                                     <button
                                                                         onClick={() => handleToggleBlock(user.id, false)}
-                                                                        className="px-4 py-2 text-[10px] font-bold text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-md uppercase tracking-wider transition-all border border-transparent hover:border-rose-100"
+                                                                        className="px-6 py-2 bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white rounded-md text-[10px] font-black uppercase tracking-widest transition-all border border-rose-100 active:scale-95 shadow-sm"
                                                                     >
-                                                                        Revoke
+                                                                        Revoke Access
                                                                     </button>
                                                                 </td>
                                                             </tr>
@@ -789,7 +818,7 @@ const AdminAttendance = () => {
                                                             </td>
                                                             <td className="px-8 py-5 text-right">
                                                                 <button
-                                                                    onClick={() => handleToggleBlock(student.user_id, true)}
+                                                                    onClick={() => handleCancelSchedule(student.user_id)}
                                                                     className="px-4 py-2 text-[10px] font-bold text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-md uppercase tracking-wider transition-all border border-transparent hover:border-rose-100"
                                                                 >
                                                                     Cancel
@@ -828,70 +857,88 @@ const AdminAttendance = () => {
                 {/* Manual Unblock Modal - Enterprise Redesign */}
                 {showManualModal && (
                     <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
-                        <div className="bg-white w-full max-w-xl rounded-lg shadow-sm border border-slate-200 overflow-hidden text-left flex flex-col max-h-[85vh] animate-in zoom-in-95 duration-200">
-                            <div className="p-8 relative flex flex-col h-full">
-                                <div className="flex items-center justify-between mb-8">
-                                    <div>
-                                        <h3 className="text-xl font-bold text-slate-900 tracking-tight">Grant Access</h3>
-                                        <p className="text-slate-500 font-medium text-[11px] mt-1">Search student registry for manual authorization.</p>
-                                    </div>
-                                    <button
-                                        onClick={() => setShowManualModal(false)}
-                                        className="w-9 h-9 rounded-md hover:bg-slate-50 text-slate-400 hover:text-slate-900 transition-all flex items-center justify-center border border-transparent hover:border-slate-100"
-                                    >
-                                        <X size={18} />
-                                    </button>
+                        <div className="bg-white w-full max-w-xl rounded-xl shadow-2xl border border-slate-200 overflow-hidden text-left flex flex-col max-h-[85vh] animate-in zoom-in-95 duration-200">
+                            <div className="p-6 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+                                <div>
+                                    <h3 className="text-xl font-bold text-slate-900 tracking-tight">Manual Authorization</h3>
+                                    <p className="text-slate-500 font-medium text-[11px] mt-1 italic text-blue-600">Quick-release for blocked students</p>
                                 </div>
+                                <button
+                                    onClick={() => setShowManualModal(false)}
+                                    className="p-2 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-900 transition-all border border-transparent hover:border-slate-200"
+                                >
+                                    <X size={20} />
+                                </button>
+                            </div>
 
-                                <div className="relative mb-8">
-                                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300">
+                            <div className="p-6 flex flex-col h-full overflow-hidden">
+                                <div className="relative mb-6">
+                                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400">
                                         <Search size={18} />
                                     </div>
                                     <input
                                         type="text"
-                                        placeholder="Search by name, email or ID..."
+                                        placeholder="Search by name, email or roll number..."
                                         value={searchQuery}
                                         onChange={(e) => setSearchQuery(e.target.value)}
-                                        className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-md font-medium text-sm focus:outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/5 transition-all placeholder:text-slate-300"
+                                        autoFocus
+                                        className="w-full pl-12 pr-4 py-3.5 bg-slate-50 border border-slate-200 rounded-xl font-medium text-sm focus:outline-none focus:bg-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 transition-all placeholder:text-slate-300"
                                     />
                                 </div>
 
-                                <div className="overflow-y-auto space-y-2 pr-2 custom-scrollbar flex-1 min-h-[250px]">
-                                    {safeUsers.length > 0 ? (
-                                        safeUsers.map(user => {
-                                            const displayName = user.fullName || user.full_name || user.username;
-                                            const displayId = user.rollNo || user.roll_no || 'No ID';
-                                            return (
-                                                <div key={user.id} className="p-4 rounded-md border border-slate-100 hover:border-blue-100 hover:bg-blue-50/30 flex items-center justify-between group transition-all">
-                                                    <div className="flex items-center gap-4">
-                                                        <div className="w-10 h-10 rounded-md bg-white border border-slate-200 flex items-center justify-center text-slate-700 font-bold text-xs shadow-sm">
-                                                            {displayName?.charAt(0) || 'U'}
-                                                        </div>
-                                                        <div>
-                                                            <p className="font-bold text-slate-900 text-sm leading-tight">{displayName}</p>
-                                                            <div className="flex items-center gap-2 mt-0.5">
-                                                                <span className="text-[9px] font-bold text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded uppercase tracking-wider border border-blue-100/50">{displayId}</span>
-                                                                <p className="text-[11px] text-slate-400 font-medium tracking-tight">{user.email || 'No registry email'}</p>
-                                                            </div>
+                                <div className="overflow-y-auto space-y-2 pr-2 flex-1 custom-scrollbar min-h-[300px]">
+                                    {users.length > 0 ? (
+                                        users.map(user => (
+                                            <div key={user.id} className={`p-4 rounded-xl border flex items-center justify-between group transition-all mb-2 shadow-sm ${!user.isBlocked ? 'bg-emerald-50/30 border-emerald-100' : 'bg-white border-slate-100 hover:border-blue-200 hover:bg-blue-50/20 shadow-slate-200/50'}`}>
+                                                <div className="flex items-center gap-4">
+                                                    <div className={`w-10 h-10 rounded-full border flex items-center justify-center font-bold text-xs shadow-inner group-hover:scale-110 transition-transform ${!user.isBlocked ? 'bg-emerald-100 border-emerald-200 text-emerald-700' : 'bg-slate-50 border-slate-100 text-slate-600'}`}>
+                                                        {user.full_name?.charAt(0) || user.username?.charAt(0) || 'U'}
+                                                    </div>
+                                                    <div>
+                                                        <p className="font-bold text-slate-900 text-sm leading-tight">{user.full_name || user.username}</p>
+                                                        <div className="flex items-center gap-3 mt-1">
+                                                            <span className={`text-[9px] font-black px-2 py-0.5 rounded border tracking-wider ${!user.isBlocked ? 'bg-emerald-100 text-emerald-700 border-emerald-200/50' : 'bg-blue-50 text-blue-600 border-blue-100/50'}`}>ROLL: {user.rollNo || user.roll_no || 'N/A'}</span>
+                                                            <p className="text-[10px] text-slate-400 font-medium truncate max-w-[150px]">{user.email || 'No Email'}</p>
                                                         </div>
                                                     </div>
+                                                </div>
+                                                {user.isBlocked ? (
                                                     <button
-                                                        onClick={() => handleToggleBlock(user.id, true)}
-                                                        className="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-md text-[10px] font-bold uppercase tracking-widest transition-all shadow-sm active:scale-[0.98]"
+                                                        onClick={() => {
+                                                            handleToggleBlock(user.id, true);
+                                                        }}
+                                                        disabled={submitting}
+                                                        className="px-5 py-2.5 bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all shadow-lg shadow-blue-500/20 active:scale-95 flex items-center gap-2"
                                                     >
                                                         Authorize
                                                     </button>
-                                                </div>
-                                            )
-                                        })
+                                                ) : (
+                                                    <div className="flex items-center gap-2 text-emerald-600 px-4">
+                                                        <CheckCircle size={14} />
+                                                        <span className="text-[10px] font-black uppercase tracking-widest">Active</span>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))
                                     ) : (
                                         <div className="py-20 text-center">
-                                            <Search size={32} className="mx-auto mb-4 text-slate-100" />
-                                            <p className="text-slate-500 font-bold text-sm uppercase tracking-widest">No matching records</p>
-                                            <p className="text-slate-400 text-[10px] mt-2 font-medium">Verify credentials and try again.</p>
+                                            <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-dashed border-slate-200">
+                                                <Search size={24} className="text-slate-200" />
+                                            </div>
+                                            <p className="text-slate-500 font-bold text-sm uppercase tracking-widest">No blocked students found</p>
+                                            <p className="text-slate-400 text-[10px] mt-2 font-medium">Try searching by name or roll number</p>
                                         </div>
                                     )}
                                 </div>
+                            </div>
+                            
+                            <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-end">
+                                <button
+                                    onClick={() => setShowManualModal(false)}
+                                    className="px-6 py-2.5 bg-white border border-slate-200 text-slate-600 font-black text-[10px] uppercase tracking-widest hover:bg-slate-50 rounded-lg transition-all shadow-sm"
+                                >
+                                    Finish
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -899,14 +946,14 @@ const AdminAttendance = () => {
             </div>
             <style dangerouslySetInnerHTML={{
                 __html: `
-                .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+                .custom-scrollbar::-webkit-scrollbar { width: 5px; }
                 .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-                .custom-scrollbar::-webkit-scrollbar-thumb { background: #E2E8F0; border-radius: 10px; }
-                .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #CBD5E1; }
-                .scale-in { animation: scaleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1); }
-                @keyframes scaleIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+                .custom-scrollbar::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 10px; }
+                .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
+                @keyframes pulse-soft { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+                .animate-pulse-soft { animation: pulse-soft 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
             `}} />
-        </SaaSLayout >
+        </SaaSLayout>
     );
 };
 

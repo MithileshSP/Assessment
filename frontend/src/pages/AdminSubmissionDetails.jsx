@@ -47,6 +47,11 @@ export default function AdminSubmissionDetails() {
   // Override State
   const [overriding, setOverriding] = useState(false);
   const [overrideReason, setOverrideReason] = useState('');
+  const [overrideScores, setOverrideScores] = useState({
+    codeQuality: 0,
+    requirements: 0,
+    expectedOutput: 0
+  });
 
   // Terminal State
   const [consoleOutput, setConsoleOutput] = useState([]);
@@ -71,21 +76,30 @@ export default function AdminSubmissionDetails() {
     }
   };
 
-  const handleOverride = async (status) => {
+  const handleApplyOverride = async () => {
     if (!overrideReason.trim()) {
       alert('Please provide a reason for the override.');
       return;
     }
+    
+    const totalScore = (overrideScores.codeQuality || 0) + 
+                       (overrideScores.requirements || 0) + 
+                       (overrideScores.expectedOutput || 0);
+    const status = totalScore >= 80 ? 'passed' : 'failed';
+
+    if (!window.confirm(`Applying override with total score ${totalScore}% as ${status.toUpperCase()}. Proceed?`)) return;
+
     try {
       setOverriding(true);
       await api.post(`/admin/submissions/${submissionId}/override`, {
         status,
-        reason: overrideReason
+        reason: overrideReason,
+        scores: overrideScores
       });
       // Refresh
       fetchSubmission();
       setOverrideReason('');
-      alert(`Submission successfully marked as ${status.toUpperCase()}`);
+      alert(`Submission successfully overridden as ${status.toUpperCase()}`);
     } catch (err) {
       alert(err.response?.data?.error || 'Failed to apply override');
     } finally {
@@ -151,10 +165,12 @@ export default function AdminSubmissionDetails() {
   );
 
   const submission = data.submission;
-  const evaluation = data.evaluation || {};
+  const evaluation = data.evaluation;
+  const assignment = data.assignment;
 
-  const autoScore = submission.final_score ?? 0;
-  const manualScore = evaluation.total_score || null;
+  // Use the existence of the evaluation object itself to determine if it's graded
+  const isGraded = !!evaluation;
+  const manualScore = isGraded ? evaluation.total_score : null;
   const finalStatus = submission.status;
 
   return (
@@ -162,41 +178,6 @@ export default function AdminSubmissionDetails() {
       <div className="flex flex-col h-[calc(100vh-56px)] relative bg-slate-50/50">
 
         <div className="flex-1 flex overflow-hidden">
-          {/* Left Panel: Telemetry (Fixed Width) */}
-          <div className="w-[240px] bg-white border-r border-slate-200 overflow-y-auto p-4 shrink-0 flex flex-col">
-            <div className="mb-6">
-              <h3 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-4 flex items-center gap-2">
-                <Activity size={12} />
-                Telemetry
-              </h3>
-              <div className="space-y-6">
-                <div>
-                  <p className="text-[9px] font-semibold text-slate-400 uppercase tracking-wide mb-1.5">Submission ID</p>
-                  <p className="text-xs font-mono text-slate-600 break-all bg-slate-50 p-1.5 rounded border border-slate-100">{submission.id}</p>
-                </div>
-                <div>
-                  <p className="text-[9px] font-semibold text-slate-400 uppercase tracking-wide mb-1.5">Submitted At</p>
-                  <div className="p-2 rounded bg-slate-50 border border-slate-100">
-                    <p className="text-xs font-medium text-slate-700 leading-tight">
-                      {new Date(submission.submitted_at).toLocaleDateString()}<br />
-                      <span className="text-slate-400 text-[10px] block mt-0.5">{new Date(submission.submitted_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                    </p>
-                  </div>
-                </div>
-                {evaluation.evaluator_name && (
-                  <div>
-                    <p className="text-[9px] font-semibold text-slate-400 uppercase tracking-wide mb-1.5">Evaluator</p>
-                    <div className="flex items-center gap-2 p-1.5 bg-slate-50 rounded border border-slate-100">
-                      <div className="w-5 h-5 rounded bg-slate-200 text-slate-600 flex items-center justify-center text-[10px] font-bold">
-                        {evaluation.evaluator_name.charAt(0)}
-                      </div>
-                      <span className="text-xs font-medium text-slate-700">{evaluation.evaluator_name}</span>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
 
           {/* Main Workspace (Flexible Width) */}
           <div className="flex-1 min-w-0 flex flex-col bg-slate-50 relative overflow-hidden">
@@ -254,8 +235,7 @@ export default function AdminSubmissionDetails() {
 
                   {[
                     { id: 'student_live', label: 'Live', icon: Play, color: 'text-emerald-500' },
-                    { id: 'expected_live', label: 'Ref', icon: BookOpen, color: 'text-blue-500' },
-                    { id: 'compare', label: 'Match', icon: MatchIcon, color: 'text-blue-500' }
+                    { id: 'expected_live', label: 'Ref', icon: BookOpen, color: 'text-blue-500' }
                   ].map(tab => (
                     <button
                       key={tab.id}
@@ -273,7 +253,8 @@ export default function AdminSubmissionDetails() {
 
                   {[
                     { id: 'terminal', label: 'Term', icon: Terminal, color: 'text-slate-500' },
-                    { id: 'instructions', label: 'Specs', icon: Info, color: 'text-slate-400' }
+                    { id: 'instructions', label: 'Question', icon: Info, color: 'text-slate-400' },
+                    { id: 'feedback', label: 'Feedback', icon: MatchIcon, color: 'text-indigo-400' }
                   ].map(tab => (
                     <button
                       key={tab.id}
@@ -337,44 +318,56 @@ export default function AdminSubmissionDetails() {
                             <h3 className="text-[10px] font-bold uppercase tracking-wider text-slate-600">Faculty Review</h3>
                           </div>
                         </div>
-                        {manualScore !== null ? (
+                        {isGraded ? (
                           <div className="space-y-6">
                             <div>
                               <div className="flex justify-between items-end mb-2">
-                                <p className="text-[9px] font-bold uppercase text-slate-400 tracking-wider">Human Grade</p>
-                                <p className="text-2xl font-bold text-slate-900">{manualScore}%</p>
+                                <p className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Human Grade</p>
+                                <p className="text-2xl font-black text-slate-900">{manualScore}%</p>
                               </div>
-                              <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                                <div className="h-full bg-emerald-500 rounded-full transition-all duration-1000" style={{ width: `${manualScore}%` }} />
-                              </div>
-                            </div>
-
-                            <div className="grid grid-cols-3 gap-3 py-4 border-y border-slate-100">
-                              <div>
-                                <p className="text-[8px] font-bold text-slate-400 uppercase tracking-wider mb-1">Code</p>
-                                <p className="text-sm font-bold text-slate-800 tabular-nums">{evaluation.code_quality_score || 0}</p>
-                              </div>
-                              <div>
-                                <p className="text-[8px] font-bold text-slate-400 uppercase tracking-wider mb-1">Reqs</p>
-                                <p className="text-sm font-bold text-slate-800 tabular-nums">{evaluation.requirements_score || 0}</p>
-                              </div>
-                              <div>
-                                <p className="text-[8px] font-bold text-slate-400 uppercase tracking-wider mb-1">Output</p>
-                                <p className="text-sm font-bold text-slate-800 tabular-nums">{evaluation.expected_output_score || 0}</p>
+                              <div className="h-2 bg-slate-100 rounded-full overflow-hidden shadow-inner">
+                                <div className={`h-full rounded-full transition-all duration-1000 ${manualScore >= 80 ? 'bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.4)]' : 'bg-rose-500 shadow-[0_0_12px_rgba(244,63,94,0.4)]'}`} style={{ width: `${manualScore}%` }} />
                               </div>
                             </div>
 
-                            <div className="p-4 bg-slate-50 rounded border border-slate-100">
-                              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-2">Remarks</p>
-                              <p className="text-slate-600 text-xs italic leading-relaxed">
+                            <div className="grid grid-cols-3 gap-4 py-6 border-y border-slate-100">
+                              <div className="text-center">
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Quality</p>
+                                <p className="text-lg font-black text-slate-800 tabular-nums">{evaluation.code_quality_score || 0}</p>
+                              </div>
+                              <div className="text-center border-x border-slate-100">
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Reqs</p>
+                                <p className="text-lg font-black text-slate-800 tabular-nums">{evaluation.requirements_score || 0}</p>
+                              </div>
+                              <div className="text-center">
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Output</p>
+                                <p className="text-lg font-black text-slate-800 tabular-nums">{evaluation.expected_output_score || 0}</p>
+                              </div>
+                            </div>
+
+                            <div className="p-5 bg-slate-50 rounded-2xl border border-slate-100">
+                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">FACULTY REMARKS</p>
+                              <p className="text-slate-600 text-sm italic leading-relaxed font-medium">
                                 "{evaluation.comments || 'No comments provided.'}"
                               </p>
                             </div>
                           </div>
                         ) : (
-                          <div className="flex flex-col items-center justify-center py-10 bg-slate-50 rounded border border-slate-100 border-dashed">
-                            <Clock size={24} className="text-slate-300 mb-3" />
-                            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Review In Progress</p>
+                          <div className="flex flex-col items-center justify-center py-14 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
+                            <Clock size={32} className="text-slate-300 mb-4 animate-slow-spin" />
+                            <div className="text-center">
+                              <p className="text-sm font-black text-slate-400 uppercase tracking-[0.2em] mb-2">Review In Progress</p>
+                              {assignment ? (
+                                <div className="space-y-1">
+                                  <p className="text-xs font-bold text-slate-500">Assigned to {assignment.faculty_name}</p>
+                                  <p className="text-[10px] text-slate-400 uppercase tracking-widest">
+                                      Status: <span className="text-blue-500 font-black">{assignment.status.toUpperCase()}</span>
+                                  </p>
+                                </div>
+                              ) : (
+                                <p className="text-xs font-medium text-slate-400 italic">Not yet assigned to a faculty member.</p>
+                              )}
+                            </div>
                           </div>
                         )}
                       </div>
@@ -422,22 +415,6 @@ export default function AdminSubmissionDetails() {
                     }}
                   />
                 </div>
-              ) : activeTab === 'compare' ? (
-                <div className="flex-1 flex overflow-hidden group">
-                  <div className="flex-1 bg-slate-50 p-4 flex flex-col">
-                    <h4 className="text-[9px] font-bold uppercase tracking-wider text-slate-400 mb-2">Candidate Output</h4>
-                    <div className="flex-1 bg-white rounded border border-slate-200 shadow-sm overflow-hidden relative">
-                      <img src={submission.user_screenshot || `/fullstack/screenshots/${submission.id}-candidate.png`} className="absolute inset-0 w-full h-full object-contain" alt="Candidate" onError={(e) => { e.target.onerror = null; e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><text x="10" y="50" fill="gray">No Image</text></svg>'; }} />
-                    </div>
-                  </div>
-                  <div className="w-px bg-slate-200" />
-                  <div className="flex-1 bg-slate-50 p-4 flex flex-col">
-                    <h4 className="text-[9px] font-bold uppercase tracking-wider text-slate-400 mb-2">Reference Output</h4>
-                    <div className="flex-1 bg-white rounded border border-slate-200 shadow-sm overflow-hidden relative">
-                      <img src={submission.expected_screenshot || `/fullstack/screenshots/${submission.id}-expected.png`} className="absolute inset-0 w-full h-full object-contain" alt="Expected" onError={(e) => { e.target.onerror = null; e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><text x="10" y="50" fill="gray">No Image</text></svg>'; }} />
-                    </div>
-                  </div>
-                </div>
               ) : activeTab === 'terminal' ? (
                 <div className="flex-1 bg-slate-50 p-4 overflow-hidden">
                   <TerminalPanel
@@ -450,20 +427,84 @@ export default function AdminSubmissionDetails() {
                   />
                 </div>
               ) : activeTab === 'instructions' ? (
-                <div className="flex-1 overflow-y-auto bg-white p-8">
-                  <div className="max-w-3xl mx-auto space-y-8">
-                    <div>
-                      <h3 className="text-2xl font-bold text-slate-900 mb-3">{submission.challenge_title || 'Technical Challenge'}</h3>
-                      <div className="flex gap-2">
-                        <span className="px-2.5 py-0.5 bg-blue-50 text-blue-600 rounded text-[10px] font-bold uppercase border border-blue-100">{submission.challenge_id}</span>
-                        <span className="px-2.5 py-0.5 bg-slate-50 text-slate-600 rounded text-[10px] font-bold uppercase border border-slate-100">{submission.course_title}</span>
+                <div className="flex-1 overflow-y-auto bg-slate-50/50 p-10">
+                  <div className="max-w-4xl mx-auto space-y-10 text-left">
+                    {/* Question Header: Professional Minimal */}
+                    <div className="bg-white rounded-2xl p-10 border border-slate-200 shadow-sm">
+                      <div className="flex items-center gap-2 mb-6 uppercase tracking-widest font-black text-[8px] text-slate-400">
+                        <Info size={10} />
+                        <span>TECHNICAL QUESTION</span>
+                      </div>
+
+                      <h3 className="text-3xl font-display font-black text-slate-900 tracking-tight leading-tight">
+                        {submission.challenge_title || "Engineering Assessment"}
+                      </h3>
+                      <div className="flex items-center gap-4 mt-8">
+                        <div className="px-3 py-1 rounded-full bg-slate-50 border border-slate-200 text-[8px] font-bold text-slate-500 uppercase tracking-widest">
+                          ID: {submission.challenge_id || 'SYS'}
+                        </div>
+                        <div className="px-3 py-1 rounded-full bg-blue-50 border border-blue-100 text-[8px] font-black text-blue-600 uppercase tracking-widest">
+                          {submission.course_title}
+                        </div>
                       </div>
                     </div>
 
-                    <section>
-                      <h4 className="text-[10px] font-bold uppercase tracking-wider text-slate-900 pb-2 border-b border-slate-100 mb-4">Description</h4>
-                      <div className="text-slate-600 text-sm leading-relaxed whitespace-pre-wrap">{submission.challenge_description}</div>
-                    </section>
+                    {/* Project Content */}
+                    <div className="space-y-10 bg-white rounded-2xl p-10 border border-slate-200 shadow-sm">
+                      {submission.challenge_description && (
+                        <section>
+                          <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-900 border-b border-slate-100 pb-4 mb-6">
+                            01. Project Scope
+                          </h4>
+                          <div className="text-slate-600 leading-relaxed text-[15px] whitespace-pre-wrap font-medium">
+                            {submission.challenge_description}
+                          </div>
+                        </section>
+                      )}
+
+                      <section>
+                        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-900 border-b border-slate-100 pb-4 mb-6">
+                          02. Functional Requirements
+                        </h4>
+                        <div className="text-slate-600 leading-relaxed text-[15px] whitespace-pre-wrap font-medium">
+                          {submission.challenge_instructions || "Standard technical requirements apply for this level."}
+                        </div>
+                      </section>
+                    </div>
+                  </div>
+                </div>
+              ) : activeTab === 'feedback' ? (
+                <div className="flex-1 overflow-y-auto p-6 bg-slate-50/50">
+                  <div className="max-w-3xl mx-auto space-y-6 text-left">
+                    <div className="bg-white rounded-md p-6 border border-slate-200 shadow-sm">
+                      <h3 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-6 flex items-center gap-2">
+                        <User size={12} className="text-indigo-500" />
+                        Student Feedback
+                      </h3>
+                      {data.studentFeedback ? (
+                        <div className="space-y-4">
+                          <div className="flex items-center gap-4">
+                            <div className="flex-1">
+                              <p className="text-[9px] font-bold text-slate-400 uppercase mb-1">Rating</p>
+                              <div className="flex gap-1">
+                                {[1, 2, 3, 4, 5].map(star => (
+                                  <div key={star} className={`w-4 h-4 rounded-full ${star <= data.studentFeedback.rating ? 'bg-amber-400' : 'bg-slate-200'}`} />
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="p-4 bg-indigo-50/30 rounded border border-indigo-100 text-left">
+                            <p className="text-slate-700 text-sm leading-relaxed italic">
+                              "{data.studentFeedback.comments || 'No specific comments provided.'}"
+                            </p>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-center py-12 text-slate-400 italic text-xs">
+                          No student feedback has been submitted yet for this level.
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               ) : null}
@@ -472,61 +513,91 @@ export default function AdminSubmissionDetails() {
 
           {/* Right Panel: Admin Overrides (Fixed Width) */}
           <div className="w-[280px] bg-white border-l border-slate-200 overflow-y-auto p-5 shrink-0 flex flex-col">
-            <h3 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-6 flex items-center gap-2">
-              <ShieldAlert size={12} className="text-amber-500" />
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-6 flex items-center gap-2">
+              <ShieldAlert size={14} className="text-amber-500" />
               Override actions
             </h3>
 
             <div className="space-y-6">
               {submission.admin_override_status && submission.admin_override_status !== 'none' && (
                 <div className="bg-blue-50 rounded-md p-4 border border-blue-100">
-                  <p className="text-[9px] font-bold text-blue-400 uppercase tracking-wider mb-2">Active Override</p>
-                  <p className="text-xs font-bold text-blue-900 capitalize mb-1">{submission.admin_override_status}</p>
-                  <p className="text-[11px] text-blue-700 italic">"{submission.admin_override_reason}"</p>
+                  <p className="text-[10px] font-bold text-blue-400 uppercase tracking-wider mb-2">Active Override</p>
+                  <p className="text-sm font-bold text-blue-900 capitalize mb-1">{submission.admin_override_status}</p>
+                  <p className="text-xs text-blue-700 italic">"{submission.admin_override_reason}"</p>
                 </div>
               )}
 
               <div className="space-y-3">
-                <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Justification</label>
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Score Breakdown</label>
+                <div className="grid grid-cols-1 gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase w-20 text-left">Quality</span>
+                    <input
+                      type="number"
+                      value={overrideScores.codeQuality}
+                      onChange={e => setOverrideScores({ ...overrideScores, codeQuality: Math.min(40, Math.max(0, parseInt(e.target.value) || 0)) })}
+                      className="flex-1 bg-slate-50 border border-slate-200 rounded px-2 py-1.5 text-sm outline-none text-right font-bold text-blue-600"
+                      min="0" max="40"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase w-20 text-left">Reqs</span>
+                    <input
+                      type="number"
+                      value={overrideScores.requirements}
+                      onChange={e => setOverrideScores({ ...overrideScores, requirements: Math.min(25, Math.max(0, parseInt(e.target.value) || 0)) })}
+                      className="flex-1 bg-slate-50 border border-slate-200 rounded px-2 py-1.5 text-sm outline-none text-right font-bold text-blue-600"
+                      min="0" max="25"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold text-slate-400 uppercase w-20 text-left">Output</span>
+                    <input
+                      type="number"
+                      value={overrideScores.expectedOutput}
+                      onChange={e => setOverrideScores({ ...overrideScores, expectedOutput: Math.min(35, Math.max(0, parseInt(e.target.value) || 0)) })}
+                      className="flex-1 bg-slate-50 border border-slate-200 rounded px-2 py-1.5 text-sm outline-none text-right font-bold text-blue-600"
+                      min="0" max="35"
+                    />
+                  </div>
+                  <div className="flex justify-between items-center px-1 border-t border-slate-100 pt-2 mt-1">
+                    <span className="text-[10px] font-bold text-slate-900 uppercase">Total</span>
+                    <span className="text-sm font-black text-blue-600">{overrideScores.codeQuality + overrideScores.requirements + overrideScores.expectedOutput}%</span>
+                  </div>
+                </div>
+
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block mt-4">Justification</label>
                 <textarea
                   value={overrideReason}
                   onChange={e => setOverrideReason(e.target.value)}
                   placeholder="Reason for override..."
-                  className="w-full bg-slate-50 border border-slate-200 rounded-md p-3 text-xs h-24 focus:bg-white focus:border-blue-400 outline-none transition-all resize-none text-slate-700"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-md p-3 text-xs h-20 focus:bg-white focus:border-blue-400 outline-none transition-all resize-none text-slate-700"
                 />
-                <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-3">
                   <button
-                    onClick={() => handleOverride('passed')}
+                    onClick={handleApplyOverride}
                     disabled={overriding}
-                    className="py-2.5 bg-emerald-600 text-white rounded-md text-[10px] font-bold uppercase tracking-wider hover:bg-emerald-700 transition-all shadow-sm disabled:opacity-50 flex items-center justify-center gap-2"
+                    className="w-full py-3 bg-slate-900 text-white rounded-md text-xs font-bold uppercase tracking-wider hover:bg-slate-800 transition-all shadow-sm disabled:opacity-50 flex items-center justify-center gap-2"
                   >
-                    <CheckCircle size={12} /> Pass
-                  </button>
-                  <button
-                    onClick={() => handleOverride('failed')}
-                    disabled={overriding}
-                    className="py-2.5 bg-rose-600 text-white rounded-md text-[10px] font-bold uppercase tracking-wider hover:bg-rose-700 transition-all shadow-sm disabled:opacity-50 flex items-center justify-center gap-2"
-                  >
-                    <XCircle size={12} /> Fail
+                    <ShieldAlert size={14} /> Apply Score Override
                   </button>
                 </div>
               </div>
 
-              {/* Stats Summary */}
               <div className="pt-6 border-t border-slate-100">
-                <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-4">Payload Size</h4>
+                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">Payload Size</h4>
                 <div className="space-y-2">
                   <div className="flex justify-between items-center p-2.5 bg-slate-50 rounded border border-slate-100">
-                    <span className="text-[10px] font-bold text-slate-500 uppercase">HTML</span>
-                    <span className="text-[10px] font-mono text-slate-700">{(submission.html_code || '').length} B</span>
+                    <span className="text-[11px] font-bold text-slate-500 uppercase">HTML</span>
+                    <span className="text-[11px] font-mono text-slate-700">{(submission.html_code || '').length} B</span>
                   </div>
                   <div className="flex justify-between items-center p-2.5 bg-slate-50 rounded border border-slate-100">
-                    <span className="text-[10px] font-bold text-slate-500 uppercase">CSS</span>
-                    <span className="text-[10px] font-mono text-slate-700">{(submission.css_code || '').length} B</span>
+                    <span className="text-[11px] font-bold text-slate-500 uppercase">CSS</span>
+                    <span className="text-[11px] font-mono text-slate-700">{(submission.css_code || '').length} B</span>
                   </div>
                   <div className="flex justify-between items-center p-2.5 bg-slate-50 rounded border border-slate-100">
-                    <span className="text-[10px] font-bold text-slate-500 uppercase">JS</span>
-                    <span className="text-[10px] font-mono text-slate-700">{(submission.js_code || '').length} B</span>
+                    <span className="text-[11px] font-bold text-slate-500 uppercase">JS</span>
+                    <span className="text-[11px] font-mono text-slate-700">{(submission.js_code || '').length} B</span>
                   </div>
                 </div>
               </div>
@@ -541,7 +612,7 @@ export default function AdminSubmissionDetails() {
               <div className="flex items-center gap-3">
                 <span className={`w-2 h-2 rounded-full ${fullScreenView === 'live' ? 'bg-emerald-500' : 'bg-blue-500'} animate-pulse`} />
                 <span className="text-[10px] font-bold text-white/70 uppercase tracking-wider">
-                  {fullScreenView === 'live' ? 'Candidate Review' : 'Reference Specs'}
+                  {fullScreenView === 'live' ? 'Candidate Review' : 'Reference Question'}
                 </span>
               </div>
               <button

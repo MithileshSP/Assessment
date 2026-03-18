@@ -20,6 +20,7 @@ export default function AdminLevelReset() {
     const [users, setUsers] = useState([]);
     const [courses, setCourses] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
+    const [courseSearchTerm, setCourseSearchTerm] = useState('');
     const [selectedUser, setSelectedUser] = useState(null);
     const [selectedCourse, setSelectedCourse] = useState(null);
     const [selectedLevel, setSelectedLevel] = useState(1);
@@ -36,7 +37,7 @@ export default function AdminLevelReset() {
         try {
             setLoading(true);
             const [usersRes, coursesRes] = await Promise.all([
-                api.default.get('/users', { params: { limit: 100 } }),
+                api.default.get('/users', { params: { limit: 200 } }),
                 api.getCourses()
             ]);
             setUsers(usersRes.data.users || []);
@@ -57,7 +58,7 @@ export default function AdminLevelReset() {
             try {
                 setSearching(true);
                 const res = await api.default.get('/users', {
-                    params: { search: searchTerm, limit: 10 }
+                    params: { search: searchTerm, limit: 200 }
                 });
                 setUsers(res.data.users || []);
             } catch (err) {
@@ -73,7 +74,14 @@ export default function AdminLevelReset() {
     const currentUsers = users.filter(u =>
         u.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         u.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        u.email?.toLowerCase().includes(searchTerm.toLowerCase())
+        u.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        u.roll_no?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        u.rollNo?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    const filteredCourses = courses.filter(c =>
+        c.title?.toLowerCase().includes(courseSearchTerm.toLowerCase()) ||
+        c.id?.toLowerCase().includes(courseSearchTerm.toLowerCase())
     );
 
     const handleReset = async () => {
@@ -168,7 +176,7 @@ export default function AdminLevelReset() {
                                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                                     <input
                                         type="text"
-                                        placeholder="Search by name or email..."
+                                        placeholder="Search by name, roll no, or email..."
                                         value={searchTerm}
                                         onChange={(e) => setSearchTerm(e.target.value)}
                                         className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-md text-sm font-bold placeholder:font-medium placeholder:text-slate-400 focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all outline-none"
@@ -182,7 +190,7 @@ export default function AdminLevelReset() {
                                             <p className="text-xs font-bold text-slate-400">Searching...</p>
                                         </div>
                                     )}
-                                    {currentUsers.slice(0, 15).map(user => (
+                                    {currentUsers.slice(0, 50).map(user => (
                                         <button
                                             key={user.id}
                                             onClick={() => setSelectedUser(user)}
@@ -230,8 +238,20 @@ export default function AdminLevelReset() {
                                 {selectedCourse && <CheckCircle className="text-emerald-500" size={24} />}
                             </div>
 
-                            <div className="p-6 flex-1 overflow-y-auto space-y-3 custom-scrollbar">
-                                {courses.map(course => (
+                            <div className="p-6 flex-1 flex flex-col gap-4 overflow-hidden">
+                                <div className="relative">
+                                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                                    <input
+                                        type="text"
+                                        placeholder="Filter courses by title..."
+                                        value={courseSearchTerm}
+                                        onChange={(e) => setCourseSearchTerm(e.target.value)}
+                                        className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-md text-sm font-bold placeholder:font-medium placeholder:text-slate-400 focus:ring-4 focus:ring-violet-500/10 focus:border-violet-500 transition-all outline-none"
+                                    />
+                                </div>
+
+                                <div className="flex-1 overflow-y-auto space-y-3 custom-scrollbar pr-2">
+                                    {filteredCourses.map(course => (
                                     <button
                                         key={course.id}
                                         onClick={() => setSelectedCourse(course)}
@@ -247,11 +267,12 @@ export default function AdminLevelReset() {
                                         </div>
                                     </button>
                                 ))}
-                                {courses.length === 0 && (
-                                    <div className="text-center py-10 border border-dashed border-slate-200 rounded-lg bg-slate-50/50">
-                                        <p className="text-sm font-bold text-slate-400">No courses available.</p>
-                                    </div>
-                                )}
+                                    {filteredCourses.length === 0 && (
+                                        <div className="text-center py-10 border border-dashed border-slate-200 rounded-lg bg-slate-50/50">
+                                            <p className="text-sm font-bold text-slate-400">No matching courses.</p>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         </div>
 
@@ -347,26 +368,42 @@ export default function AdminLevelReset() {
                         </div>
 
                         {/* Execute Button */}
-                        <button
-                            onClick={handleReset}
-                            disabled={!selectedUser || !selectedCourse || resetting}
-                            className={`relative z-10 w-full md:w-auto px-8 py-3.5 rounded-md font-black text-sm uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-3 ${!selectedUser || !selectedCourse || resetting
-                                ? 'bg-slate-800 text-slate-500 cursor-not-allowed shadow-none'
-                                : 'bg-rose-600 hover:bg-rose-500 text-white shadow-lg shadow-rose-600/20 hover:-translate-y-0.5 active:translate-y-0'
-                                }`}
-                        >
-                            {resetting ? (
-                                <>
-                                    <RefreshCw size={18} className="animate-spin" />
-                                    Processing...
-                                </>
-                            ) : (
-                                <>
-                                    <Trash2 size={18} />
-                                    Reset Progress
-                                </>
+                        <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+                            {(selectedUser || selectedCourse) && (
+                                <button
+                                    onClick={() => {
+                                        setSelectedUser(null);
+                                        setSelectedCourse(null);
+                                        setSearchTerm('');
+                                        setCourseSearchTerm('');
+                                        setMessage(null);
+                                    }}
+                                    className="px-6 py-3.5 text-slate-400 hover:text-white font-bold text-[10px] uppercase tracking-widest transition-all"
+                                >
+                                    Clear All
+                                </button>
                             )}
-                        </button>
+                            <button
+                                onClick={handleReset}
+                                disabled={!selectedUser || !selectedCourse || resetting}
+                                className={`relative z-10 px-8 py-3.5 rounded-md font-black text-sm uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-3 ${!selectedUser || !selectedCourse || resetting
+                                    ? 'bg-slate-800 text-slate-500 cursor-not-allowed shadow-none'
+                                    : 'bg-rose-600 hover:bg-rose-500 text-white shadow-lg shadow-rose-600/20 hover:-translate-y-0.5 active:translate-y-0'
+                                    }`}
+                            >
+                                {resetting ? (
+                                    <>
+                                        <RefreshCw size={18} className="animate-spin" />
+                                        Processing...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Trash2 size={18} />
+                                        Reset Progress
+                                    </>
+                                )}
+                            </button>
+                        </div>
                     </div>
 
                 </div>
