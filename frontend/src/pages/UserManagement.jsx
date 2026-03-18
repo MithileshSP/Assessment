@@ -162,6 +162,20 @@ export default function UserManagement() {
     }
   };
 
+  const handleBulkBlock = async () => {
+    if (!window.confirm('Are you sure you want to block ALL students? This will take immediate effect and restrict access for all student accounts.')) return;
+    try {
+      setLoading(true);
+      await api.patch('/users/bulk-block');
+      alert('All students have been blocked successfully');
+      loadUsers();
+    } catch (error) {
+      alert(error.response?.data?.error || 'Failed to bulk block students');
+    } finally {
+      setLoading(false)
+    }
+  };
+
   const handleColFilterChange = (key, value) => {
     setColFilters(prev => ({ ...prev, [key]: typeof value === 'string' ? value.trim() : value }));
   };
@@ -215,6 +229,12 @@ export default function UserManagement() {
             <p className="text-slate-500 mt-1 text-sm font-medium">Directly manage accounts for Students, Faculty, and Admins.</p>
           </div>
           <div className="flex items-center gap-3">
+            <button
+              onClick={handleBulkBlock}
+              className="flex items-center gap-2 px-3 py-1.5 bg-rose-50 border border-rose-200 rounded-md text-xs font-bold text-rose-700 hover:bg-rose-100 transition-colors shadow-sm"
+            >
+              <Lock size={14} /> Block All Students
+            </button>
             <button
               onClick={() => setShowUploadModal(true)}
               className="flex items-center gap-2 px-3 py-1.5 bg-white border border-slate-200 rounded-md text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors shadow-sm"

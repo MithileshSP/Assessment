@@ -687,8 +687,8 @@ export default function LevelChallenge() {
         let c = isCurrent && codeRef.current ? codeRef.current : {
           html: savedAnswer?.html || '', css: savedAnswer?.css || '', js: savedAnswer?.js || '', additionalFiles: savedAnswer?.additionalFiles || {}
         };
-        if (reason === "timeout" && !c.html && !c.js) c.js = "// Automatic submission on timeout";
-        if (c.html || c.js || reason === "timeout") {
+        if (reason === "timeout" && !c.html && !c.js && !c.css) c.js = "// Automatic submission on timeout";
+        if (c.html || c.css || c.js || reason === "timeout") {
           try {
             const r = await api.post("/submissions", { challengeId: question.id, userId: userId, code: c, isFinal: true });
             const sId = r.data.submissionId;
@@ -714,7 +714,7 @@ export default function LevelChallenge() {
 
   const handleSubmit = async () => {
     setSubmitting(true);
-    if ((!code.html || !code.html.trim()) && (!code.js || !code.js.trim())) {
+    if ((!code.html || !code.html.trim()) && (!code.css || !code.css.trim()) && (!code.js || !code.js.trim())) {
       addToast("Please write some code.", "error"); setSubmitting(false); return;
     }
     setUserAnswers(prev => ({ ...prev, [challenge.id]: { ...prev[challenge.id], html: code.html, css: code.css, js: code.js, submitted: true, result: { status: 'saved' } } }));

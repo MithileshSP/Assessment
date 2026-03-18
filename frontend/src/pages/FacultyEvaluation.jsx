@@ -4,7 +4,7 @@ import api from '../services/api';
 import PreviewFrame from '../components/PreviewFrame';
 import ReadOnlyCodeBlock from '../components/ReadOnlyCodeBlock';
 import TerminalPanel from '../components/TerminalPanel';
-import { Terminal, Play, FileText, Code, Palette, File, ChevronRight, Activity, RefreshCw, FileCode, Info, FileInput, BookOpen } from 'lucide-react';
+import { Terminal, Play, FileText, Code, Palette, File, ChevronRight, Activity, RefreshCw, FileCode, Info, FileInput, BookOpen, MessageSquare, User } from 'lucide-react';
 
 const FacultyEvaluation = () => {
     const { submissionId } = useParams();
@@ -167,59 +167,9 @@ const FacultyEvaluation = () => {
             </header>
 
             <div className="flex-1 flex overflow-hidden">
-                {/* Left Panel: Telemetry (12%) */}
-                <div className="w-[12%] bg-white border-r border-slate-200/50 overflow-y-auto p-5 scrollbar-hide">
-                    <div className="mb-8">
-                        <h3 className="text-[9px] font-bold uppercase tracking-[0.2em] text-slate-400 mb-6 flex items-center gap-2">
-                            <Activity size={10} />
-                            TELEMETRY
-                        </h3>
-                        <div className="space-y-8">
-                            <div>
-                                <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mb-3">Outcome</p>
-                                <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border font-black text-[9px] uppercase tracking-widest ${submission.status === 'passed'
-                                    ? 'bg-emerald-50 text-emerald-600 border-emerald-100'
-                                    : 'bg-rose-50 text-rose-600 border-rose-100'
-                                    }`}>
-                                    <div className={`w-1.5 h-1.5 rounded-full ${submission.status === 'passed' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
-                                    {submission.status}
-                                </div>
-                            </div>
-                            <div>
-                                <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mb-3">Time</p>
-                                <div className="p-3 rounded-xl bg-slate-50 border border-slate-100">
-                                    <p className="text-[10px] font-bold text-slate-600 leading-tight">
-                                        {new Date(submission.submitted_at).toLocaleDateString()}<br />
-                                        <span className="text-slate-400 text-[9px] mt-1 block uppercase italic">{new Date(submission.submitted_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                                    </p>
-                                </div>
-                            </div>
-                            {data.studentFeedback && (
-                                <div className="pt-8 border-t border-slate-100 space-y-6">
-                                    <div>
-                                        <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mb-3">Difficulty</p>
-                                        <div className="flex gap-1.5">
-                                            {[1, 2, 3, 4, 5].map(star => (
-                                                <div key={star} className={`w-1.5 h-1.5 rounded-full ${star <= data.studentFeedback.difficulty_rating ? 'bg-amber-400' : 'bg-slate-200'}`} />
-                                            ))}
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mb-3">Clarity</p>
-                                        <div className="flex gap-1.5">
-                                            {[1, 2, 3, 4, 5].map(star => (
-                                                <div key={star} className={`w-1.5 h-1.5 rounded-full ${star <= data.studentFeedback.clarity_rating ? 'bg-blue-500' : 'bg-slate-200'}`} />
-                                            ))}
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </div>
 
                 {/* Main Workspace (70%) */}
-                <div className="flex-1 flex flex-col bg-[#f8fafc] relative overflow-hidden">
+                <div className="flex-1 flex flex-col bg-[#f8fafc] relative overflow-hidden ml-6 border-l border-slate-200/50">
                     {/* Workspace Header: Minimal Unified */}
                     <div className="flex bg-white border-b border-slate-200/50 items-center justify-between px-4 sticky top-0 z-20 h-12">
                         <div className="flex items-center overflow-x-auto scrollbar-hide h-full flex-1 gap-1">
@@ -243,11 +193,9 @@ const FacultyEvaluation = () => {
 
                             <div className="h-4 w-px bg-slate-200 mx-2" />
 
-                            {/* Section: Preview */}
                             {[
                                 { id: 'student_live', label: 'LIVE', icon: Play, color: 'text-emerald-500' },
-                                { id: 'expected_live', label: 'REF', icon: BookOpen, color: 'text-blue-500' },
-                                { id: 'compare', label: 'MATCH', icon: Activity, color: 'text-blue-500' }
+                                { id: 'expected_live', label: 'REF', icon: BookOpen, color: 'text-blue-500' }
                             ].map(tab => (
                                 <button
                                     key={tab.id}
@@ -290,7 +238,8 @@ const FacultyEvaluation = () => {
                             {/* Section: Output & Specs */}
                             {[
                                 { id: 'terminal', label: 'TERMINAL', icon: Terminal, color: 'text-slate-500' },
-                                { id: 'instructions', label: 'QUESTION', icon: Info, color: 'text-slate-400' }
+                                { id: 'instructions', label: 'QUESTION', icon: Info, color: 'text-slate-400' },
+                                { id: 'feedback', label: 'FEEDBACK', icon: MessageSquare, color: 'text-indigo-400' }
                             ].map(tab => (
                                 <button
                                     key={tab.id}
@@ -331,60 +280,7 @@ const FacultyEvaluation = () => {
                     </div>
 
                     <div className="flex-1 overflow-hidden bg-[#0f172a] flex flex-col">
-                        {activeTab === 'compare' ? (
-                            <div className="flex-1 flex flex-col md:flex-row gap-px bg-slate-200 overflow-hidden">
-                                <div className="flex-1 bg-[#f8fafc] p-6 flex flex-col">
-                                    <div className="flex items-center justify-between mb-4">
-                                        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Candidate Output</h4>
-                                        <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 text-[9px] font-black uppercase tracking-widest border border-blue-100">SCREENSHOT</span>
-                                    </div>
-                                    <div className="flex-1 relative rounded-2xl overflow-hidden border border-slate-200 shadow-sm bg-white group transition-all hover:border-blue-200">
-                                        {(submission.user_screenshot || submission.id) ? (
-                                            <img
-                                                src={`${window.location.origin}/fullstack/screenshots/${(submission.user_screenshot || `${submission.id}-candidate.png`).split('/').pop()}`}
-                                                alt="User Screenshot"
-                                                className="absolute inset-0 w-full h-full object-contain"
-                                                onError={(e) => {
-                                                    if (!e.target.src.includes('retry=1') && !e.target.src.includes('data:image')) {
-                                                        e.target.src += '?retry=1';
-                                                    } else {
-                                                        e.target.onerror = null;
-                                                        e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><text x="10" y="50" fill="gray">No Image</text></svg>';
-                                                    }
-                                                }}
-                                            />
-                                        ) : (
-                                            <div className="absolute inset-0 flex items-center justify-center text-slate-400 text-[10px] font-medium uppercase tracking-widest italic bg-slate-50">No screenshot captured</div>
-                                        )}
-                                    </div>
-                                </div>
-                                <div className="flex-1 bg-[#f8fafc] p-6 flex flex-col border-l border-slate-200">
-                                    <div className="flex items-center justify-between mb-4">
-                                        <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Expected Result</h4>
-                                        <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 text-[9px] font-black uppercase tracking-widest border border-emerald-100">REFERENCE</span>
-                                    </div>
-                                    <div className="flex-1 relative rounded-2xl overflow-hidden border border-slate-200 shadow-sm bg-white group transition-all hover:border-emerald-200">
-                                        {(submission.expected_screenshot || submission.id) ? (
-                                            <img
-                                                src={`${window.location.origin}/fullstack/screenshots/${(submission.expected_screenshot || `${submission.id}-expected.png`).split('/').pop()}`}
-                                                alt="Expected Solution"
-                                                className="absolute inset-0 w-full h-full object-contain"
-                                                onError={(e) => {
-                                                    if (!e.target.src.includes('retry=1') && !e.target.src.includes('data:image')) {
-                                                        e.target.src += '?retry=1';
-                                                    } else {
-                                                        e.target.onerror = null;
-                                                        e.target.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><text x="10" y="50" fill="gray">No Image</text></svg>';
-                                                    }
-                                                }}
-                                            />
-                                        ) : (
-                                            <div className="absolute inset-0 flex items-center justify-center text-slate-400 text-[10px] font-medium uppercase tracking-widest italic bg-slate-50">No reference image</div>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-                        ) : activeTab === 'terminal' ? (
+                        {activeTab === 'terminal' ? (
                             <div className="flex-1 overflow-hidden p-8 bg-slate-50">
                                 <TerminalPanel
                                     output={consoleOutput}
@@ -430,7 +326,7 @@ const FacultyEvaluation = () => {
                                     <div className="bg-white rounded-2xl p-10 border border-slate-200">
                                         <div className="flex items-center gap-2 mb-6 uppercase tracking-widest font-black text-[8px] text-slate-400">
                                             <Info size={10} />
-                                            <span>TECHNICAL SPECIFICATION</span>
+                                            <span>TECHNICAL QUESTION</span>
                                         </div>
 
                                         <h3 className="text-3xl font-display font-black text-slate-900 tracking-tight leading-tight">
@@ -499,6 +395,43 @@ const FacultyEvaluation = () => {
                                     }}
                                 />
                             </div>
+                        ) : activeTab === 'feedback' ? (
+                            <div className="flex-1 overflow-y-auto p-10 bg-[#f8fafc]">
+                                <div className="max-w-4xl mx-auto space-y-6 text-left">
+                                    <div className="bg-white rounded-2xl p-10 border border-slate-200 shadow-sm">
+                                        <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-8 flex items-center gap-2">
+                                            <User size={12} className="text-indigo-500" />
+                                            Student Experience Feedback
+                                        </h3>
+                                        {data.studentFeedback ? (
+                                            <div className="space-y-8">
+                                                <div className="flex items-center gap-6">
+                                                    <div>
+                                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Overall Rating</p>
+                                                        <div className="flex gap-1.5">
+                                                            {[1, 2, 3, 4, 5].map(star => (
+                                                                <div key={star} className={`w-5 h-5 rounded-full ${star <= data.studentFeedback.rating ? 'bg-amber-400 shadow-md shadow-amber-400/20' : 'bg-slate-200'}`} />
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className="p-8 bg-indigo-50/30 rounded-2xl border border-indigo-100 text-left">
+                                                    <p className="text-slate-700 text-lg leading-relaxed italic font-medium">
+                                                        "{data.studentFeedback.comments || 'No specific comments provided.'}"
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <div className="text-center py-20 bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
+                                                <MessageSquare size={24} className="mx-auto text-slate-200 mb-4" />
+                                                <p className="text-slate-400 font-medium italic text-sm">
+                                                    No student feedback has been submitted yet for this level.
+                                                </p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
                         ) : (
                             <div className="flex-1 flex flex-col overflow-hidden bg-white">
                                 <div className="flex-1 grid grid-cols-2 divide-x divide-slate-100 overflow-hidden">
@@ -555,56 +488,93 @@ const FacultyEvaluation = () => {
                     </div>
                 </div>
 
-                {/* Right Panel: Scoring (18%) */}
-                <div className="w-[18%] bg-white border-l border-slate-200/50 overflow-y-auto p-5 scrollbar-hide">
-                    <div className="mb-6">
-                        <h3 className="text-[10px] font-bold uppercase tracking-widest text-slate-400">RUBRIX</h3>
-                    </div>
+                {/* Right Panel: Scoring (280px for consistency) */}
+                <div className="w-[280px] bg-white border-l border-slate-200 overflow-y-auto p-5 shrink-0 flex flex-col scrollbar-hide">
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-6 flex items-center gap-2">
+                        <Activity size={14} className="text-blue-500" />
+                        Score Breakdown
+                    </h3>
+                    
                     <div className="space-y-4">
-                        {[
-                            { id: 'codeQuality', label: 'Code Quality', max: 40 },
-                            { id: 'requirements', label: 'Key Requirements', max: 25 },
-                            { id: 'expectedOutput', label: 'Output', max: 35 }
-                        ].map(pod => (
-                            <div key={pod.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
-                                <div className="flex justify-between items-center mb-3">
-                                    <label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{pod.label}</label>
-                                    <span className="text-[8px] font-bold text-slate-300 uppercase tracking-widest">MAX {pod.max}</span>
-                                </div>
-                                <div className="flex items-center gap-3">
-                                    <input
-                                        type="number" min="0" max={pod.max}
-                                        value={scores[pod.id]}
-                                        onChange={e => setScores({ ...scores, [pod.id]: Math.min(pod.max, Math.max(0, parseInt(e.target.value) || 0)) })}
-                                        className="flex-1 h-10 px-3 bg-white border border-slate-200 rounded-lg text-lg font-black text-blue-600 text-center focus:border-blue-400 outline-none transition-all tabular-nums"
-                                    />
-                                    <span className="text-[8px] font-bold text-slate-300 uppercase tracking-tighter">PTS</span>
-                                </div>
+                        <div className="grid grid-cols-1 gap-2">
+                            <div className="flex items-center gap-2">
+                                <span className="text-[10px] font-bold text-slate-400 uppercase w-20 text-left">Quality</span>
+                                <input
+                                    type="number"
+                                    value={scores.codeQuality}
+                                    onChange={e => setScores({ ...scores, codeQuality: Math.min(40, Math.max(0, parseInt(e.target.value) || 0)) })}
+                                    className="flex-1 bg-slate-50 border border-slate-200 rounded px-2 py-1.5 text-sm outline-none text-right font-bold text-blue-600"
+                                    min="0" max="40"
+                                />
                             </div>
-                        ))}
-                        <div className="pt-6 border-t border-slate-100">
-                            <div className="flex justify-between items-center bg-slate-900 p-4 rounded-2xl text-white mb-6">
-                                <div>
-                                    <span className="text-[8px] font-bold uppercase text-slate-400">TOTAL</span>
-                                    <h4 className="text-2xl font-black">{totalScore}</h4>
-                                </div>
-                                <div className={`px-3 py-1 rounded-lg text-[9px] font-bold uppercase tracking-widest ${totalScore >= 80 ? 'bg-emerald-500' : 'bg-rose-500'}`}>
-                                    {totalScore >= 80 ? 'PASS' : 'FAIL'}
-                                </div>
+                            <div className="flex items-center gap-2">
+                                <span className="text-[10px] font-bold text-slate-400 uppercase w-20 text-left">Reqs</span>
+                                <input
+                                    type="number"
+                                    value={scores.requirements}
+                                    onChange={e => setScores({ ...scores, requirements: Math.min(25, Math.max(0, parseInt(e.target.value) || 0)) })}
+                                    className="flex-1 bg-slate-50 border border-slate-200 rounded px-2 py-1.5 text-sm outline-none text-right font-bold text-blue-600"
+                                    min="0" max="25"
+                                />
                             </div>
+                            <div className="flex items-center gap-2">
+                                <span className="text-[10px] font-bold text-slate-400 uppercase w-20 text-left">Output</span>
+                                <input
+                                    type="number"
+                                    value={scores.expectedOutput}
+                                    onChange={e => setScores({ ...scores, expectedOutput: Math.min(35, Math.max(0, parseInt(e.target.value) || 0)) })}
+                                    className="flex-1 bg-slate-50 border border-slate-200 rounded px-2 py-1.5 text-sm outline-none text-right font-bold text-blue-600"
+                                    min="0" max="35"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="flex justify-between items-center px-1 border-y border-slate-100 py-3 mt-4">
+                            <span className="text-[10px] font-bold text-slate-900 uppercase">Total Score</span>
+                            <span className="text-base font-black text-blue-600">{totalScore}%</span>
+                        </div>
+
+                        <div className={`p-4 rounded-xl flex items-center justify-between ${totalScore >= 80 ? 'bg-emerald-50 border border-emerald-100' : 'bg-rose-50 border border-rose-100'}`}>
+                            <span className={`text-xs font-black uppercase tracking-widest ${totalScore >= 80 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                {totalScore >= 80 ? 'PASSED' : 'FAILED'}
+                            </span>
+                            <div className={`w-2 h-2 rounded-full ${totalScore >= 80 ? 'bg-emerald-500' : 'bg-rose-500'} animate-pulse`} />
+                        </div>
+
+                        <div className="space-y-2 mt-6">
+                            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider block">Observer Comments</label>
                             <textarea
                                 value={comments}
                                 onChange={e => setComments(e.target.value)}
-                                className="w-full bg-slate-50 border border-slate-100 rounded-xl p-4 text-xs h-32 focus:bg-white outline-none transition-all resize-none placeholder-slate-300 text-slate-600 mb-6"
-                                placeholder="Final remarks..."
+                                className="w-full bg-slate-50 border border-slate-200 rounded-xl p-4 text-xs h-32 focus:bg-white outline-none transition-all resize-none text-slate-600 placeholder-slate-300"
+                                placeholder="Technical observations..."
                             />
-                            <button
-                                onClick={handleSubmit}
-                                disabled={submitting}
-                                className="w-full py-4 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all disabled:opacity-50"
-                            >
-                                {submitting ? 'DEPLOYING...' : 'FINALIZE EVAL'}
-                            </button>
+                        </div>
+
+                        <button
+                            onClick={handleSubmit}
+                            disabled={submitting}
+                            className="w-full py-4 bg-slate-900 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-800 transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-slate-900/10"
+                        >
+                            {submitting ? 'DEPLOYING...' : 'FINALIZE EVALUATION'}
+                        </button>
+
+                        <div className="pt-8 border-t border-slate-100 mt-4">
+                            <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-4">Payload Size</h4>
+                            <div className="space-y-2">
+                                <div className="flex justify-between items-center p-2.5 bg-slate-50 rounded border border-slate-100">
+                                    <span className="text-[10px] font-bold text-slate-500 uppercase">HTML</span>
+                                    <span className="text-[10px] font-mono text-slate-700">{(submission.html_code || '').length} B</span>
+                                </div>
+                                <div className="flex justify-between items-center p-2.5 bg-slate-50 rounded border border-slate-100">
+                                    <span className="text-[10px] font-bold text-slate-500 uppercase">CSS</span>
+                                    <span className="text-[10px] font-mono text-slate-700">{(submission.css_code || '').length} B</span>
+                                </div>
+                                <div className="flex justify-between items-center p-2.5 bg-slate-50 rounded border border-slate-100">
+                                    <span className="text-[10px] font-bold text-slate-500 uppercase">JS</span>
+                                    <span className="text-[10px] font-mono text-slate-700">{(submission.js_code || '').length} B</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -619,7 +589,7 @@ const FacultyEvaluation = () => {
                             <div className="flex items-center gap-2">
                                 <span className={`w-2 h-2 rounded-full ${fullScreenView === 'live' ? 'bg-emerald-500' : 'bg-blue-500'} animate-pulse`} />
                                 <span className="text-[10px] font-black text-white/50 uppercase tracking-[0.2em]">
-                                    {fullScreenView === 'live' ? 'Candidate Review' : 'Reference Specs'}
+                                    {fullScreenView === 'live' ? 'Candidate Review' : 'Reference Question'}
                                 </span>
                             </div>
                             <div className="h-4 w-px bg-white/10" />

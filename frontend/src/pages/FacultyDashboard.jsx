@@ -11,8 +11,11 @@ import {
     Shuffle,
     X,
     Search,
-    Clock
+    Clock,
+    LayoutList,
+    Trophy
 } from 'lucide-react';
+import DataTable, { StatusBadge } from '../components/DataTable';
 
 const FacultyDashboard = () => {
     const [queue, setQueue] = useState([]);
@@ -29,27 +32,36 @@ const FacultyDashboard = () => {
     const [reallocLoading, setReallocLoading] = useState(false);
     const navigate = useNavigate();
 
-    // Filters and Pagination State from LocalStorage
+    // Unified Filters and Pagination State from LocalStorage
     const [searchQuery, setSearchQuery] = useState(() => localStorage.getItem('fac_searchQuery') || '');
-    const [courseFilter, setCourseFilter] = useState(() => localStorage.getItem('fac_courseFilter') || '');
-    const [levelFilter, setLevelFilter] = useState(() => localStorage.getItem('fac_levelFilter') || '');
     const [currentPage, setCurrentPage] = useState(() => {
         const saved = localStorage.getItem('fac_currentPage');
         return saved ? parseInt(saved, 10) : 1;
     });
-    const rowsPerPage = 5;
+    const [pageSize, setPageSize] = useState(() => {
+        const saved = localStorage.getItem('fac_pageSize');
+        return saved ? parseInt(saved, 10) : 25;
+    });
+    const [sortBy, setSortBy] = useState(() => localStorage.getItem('fac_sortBy') || 'submitted_at');
+    const [sortDir, setSortDir] = useState(() => localStorage.getItem('fac_sortDir') || 'desc');
+    const [filters, setFilters] = useState(() => {
+        const saved = localStorage.getItem('fac_filters');
+        return saved ? JSON.parse(saved) : {};
+    });
 
     // Sync to LocalStorage
     useEffect(() => {
         localStorage.setItem('fac_searchQuery', searchQuery);
-        localStorage.setItem('fac_courseFilter', courseFilter);
-        localStorage.setItem('fac_levelFilter', levelFilter);
         localStorage.setItem('fac_currentPage', currentPage.toString());
-    }, [searchQuery, courseFilter, levelFilter, currentPage]);
+        localStorage.setItem('fac_pageSize', pageSize.toString());
+        localStorage.setItem('fac_sortBy', sortBy);
+        localStorage.setItem('fac_sortDir', sortDir);
+        localStorage.setItem('fac_filters', JSON.stringify(filters));
+    }, [searchQuery, currentPage, pageSize, sortBy, sortDir, filters]);
 
     useEffect(() => {
         setCurrentPage(1);
-    }, [searchQuery, courseFilter, levelFilter]);
+    }, [searchQuery, filters]);
 
     const uniqueCourses = useMemo(() => {
         return [...new Set(queue.map(item => item.course_title))].filter(Boolean);
@@ -60,15 +72,64 @@ const FacultyDashboard = () => {
     }, [queue]);
 
     const filteredQueue = useMemo(() => {
-        return queue.filter(item => {
-            const matchSearch = (item.candidate_name || 'Anonymous User').toLowerCase().includes(searchQuery.toLowerCase());
-            const matchCourse = courseFilter ? item.course_title === courseFilter : true;
-            const matchLevel = levelFilter ? item.level?.toString() === levelFilter : true;
-            return matchSearch && matchCourse && matchLevel;
+        let processed = queue.filter(item => {
+            const matchSearch = searchQuery.trim() === '' ||
+                (item.candidate_name || 'Anonymous User').toLowerCase().includes(searchQuery.toLowerCase()) ||
+                (item.course_title || '').toLowerCase().includes(searchQuery.toLowerCase());
+            return matchSearch;
         });
-    }, [queue, searchQuery, courseFilter, levelFilter]);
 
-    const totalPages = Math.max(1, Math.ceil(filteredQueue.length / rowsPerPage));
+        // Apply advanced column filters
+        Object.entries(filters).forEach(([key, filter]) => {
+            if (!filter) return;
+            if (filter.checked) {
+                processed = processed.filter(r => {
+                    const rowVal = String(r[key] || '');
+                    return filter.checked.some(c => String(c) === rowVal);
+                });
+            } else if (filter.text) {
+                const searchStr = filter.text.toLowerCase();
+                processed = processed.filter(r => {
+                    const val = String(r[key] || '').toLowerCase();
+                    if (filter.textMode === 'equals') return val === searchStr;
+                    if (filter.textMode === 'starts') return val.startsWith(searchStr);
+                    return val.includes(searchStr);
+                });
+            } else if (filter.startDate || filter.endDate) {
+                processed = processed.filter(r => {
+                    if (!r[key] && !r.submitted_at) return false;
+                    const rowDate = new Date(r[key] || r.submitted_at);
+                    if (isNaN(rowDate)) return false;
+
+                    if (filter.startDate) {
+                        const sd = new Date(filter.startDate);
+                        sd.setHours(0, 0, 0, 0);
+                        if (rowDate < sd) return false;
+                    }
+                    if (filter.endDate) {
+                        const ed = new Date(filter.endDate);
+                        ed.setHours(23, 59, 59, 999);
+                        if (rowDate > ed) return false;
+                    }
+                    return true;
+                });
+            } else if (filter.startTime || filter.endTime) {
+                processed = processed.filter(r => {
+                    if (!r.submitted_at) return false;
+                    const rowDate = new Date(r.submitted_at);
+                    const rowTime = rowDate.getHours().toString().padStart(2, '0') + ':' + rowDate.getMinutes().toString().padStart(2, '0');
+
+                    if (filter.startTime && rowTime < filter.startTime) return false;
+                    if (filter.endTime && rowTime > filter.endTime) return false;
+                    return true;
+                });
+            }
+        });
+
+        return processed;
+    }, [queue, searchQuery, filters]);
+
+    const totalPages = Math.max(1, Math.ceil(filteredQueue.length / pageSize));
     
     // Ensure currentPage doesn't exceed totalPages (e.g., if a filter shrinks the visible results)
     useEffect(() => {
@@ -77,8 +138,108 @@ const FacultyDashboard = () => {
         }
     }, [totalPages, currentPage]);
 
-    const startIndex = (Math.min(currentPage, totalPages) - 1) * rowsPerPage;
-    const paginatedQueue = filteredQueue.slice(startIndex, startIndex + rowsPerPage);
+    const startIndex = (Math.min(currentPage, totalPages) - 1) * pageSize;
+    // const paginatedQueue = filteredQueue.slice(startIndex, startIndex + rowsPerPage); // We'll let DataTable handle pagination if we pass full data, or we slice it here. 
+    // Actually, looking at AdminResults.jsx, it passes paginatedResults to DataTable but also passes totalItems.
+    // DataTable expects the data it receives to be the current page's data if totalItems is provided.
+    
+    const handleFilterChange = (key, value) => {
+        setFilters(prev => ({ ...prev, [key]: value }));
+        setCurrentPage(1);
+    };
+
+    // Define table columns
+    const columns = [
+        {
+            key: 'candidate_name',
+            label: 'Candidate / Test',
+            sortable: true,
+            filterable: true,
+            renderCell: (val, row) => (
+                <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-md bg-slate-100 flex items-center justify-center text-slate-500 font-bold uppercase border border-slate-200">
+                        {(row.candidate_name || 'A').charAt(0)}
+                    </div>
+                    <div>
+                        <p className="font-bold text-slate-900 leading-tight text-xs">{row.candidate_name || 'Anonymous'}</p>
+                        <div className="flex items-center gap-2 text-[10px] text-slate-400 mt-0.5">
+                            <FileText size={10} className="text-slate-500" />
+                            <span className="font-bold">{row.course_title}</span>
+                            <span className="bg-slate-100 px-1 rounded text-[9px] uppercase border border-slate-200">L{row.level}</span>
+                        </div>
+                    </div>
+                </div>
+            )
+        },
+        {
+            key: 'submitted_at',
+            label: 'Submitted Date',
+            sortable: true,
+            filterable: true,
+            filterType: 'date-range',
+            renderCell: (val, row) => (
+                <div className="text-slate-600 font-medium text-xs">
+                    {row.submitted_at ? new Date(row.submitted_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
+                </div>
+            )
+        },
+        {
+            key: 'submitted_at_time',
+            label: 'Time',
+            sortable: false,
+            filterable: true,
+            filterType: 'time-range',
+            renderCell: (_, row) => {
+                if (!row.submitted_at) return <span className="text-xs text-slate-400 font-medium">—</span>;
+                const d = new Date(row.submitted_at);
+                return <span className="text-xs text-slate-500 font-medium">
+                    {d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}
+                </span>;
+            }
+        },
+        {
+            key: 'status',
+            label: 'Status',
+            sortable: true,
+            filterable: true,
+            renderCell: (val, row) => (
+                <div className="flex justify-start">
+                    <StatusBadge value={row.status || 'pending'} />
+                </div>
+            )
+        },
+        {
+            key: 'action',
+            label: 'Action',
+            sortable: false,
+            filterable: false,
+            renderCell: (val, row) => (
+                <div className="text-right">
+                    <button
+                        onClick={() => navigate(`/faculty/evaluate/${row.id}`)}
+                        className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-md shadow-blue-600/20 active:scale-95"
+                    >
+                        Evaluate
+                        <ArrowRight size={12} />
+                    </button>
+                </div>
+            )
+        }
+    ];
+
+    // Apply Sorting
+    const sortedQueue = useMemo(() => {
+        if (!sortBy) return filteredQueue;
+        return [...filteredQueue].sort((a, b) => {
+            const valA = a[sortBy] || '';
+            const valB = b[sortBy] || '';
+            if (valA < valB) return sortDir === 'asc' ? -1 : 1;
+            if (valA > valB) return sortDir === 'asc' ? 1 : -1;
+            return 0;
+        });
+    }, [filteredQueue, sortBy, sortDir]);
+
+    const paginatedQueue = sortedQueue.slice(startIndex, startIndex + pageSize);
 
     const showToast = (msg, type = 'success') => {
         setToast({ msg, type });
@@ -233,137 +394,29 @@ const FacultyDashboard = () => {
                 </div>
 
                 {/* Submissions Table */}
-                <div className="bg-white rounded-md border border-slate-200 shadow-sm overflow-hidden">
-                    <div className="px-5 py-4 border-b border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row gap-4 items-center justify-between">
-                        <h3 className="text-sm font-bold text-slate-800 shrink-0">Pending Evaluations</h3>
-
-                        <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto items-center">
-                            <div className="relative w-full sm:w-56">
-                                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                                <input
-                                    type="text"
-                                    placeholder="Search candidate..."
-                                    value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-md text-xs outline-none focus:ring-1 focus:ring-blue-500 transition-all font-medium text-slate-700"
-                                />
-                            </div>
-                            <div className="flex gap-2 w-full sm:w-auto">
-                                <select
-                                    value={courseFilter}
-                                    onChange={(e) => setCourseFilter(e.target.value)}
-                                    className="w-full sm:w-auto px-3 py-2 bg-white border border-slate-200 rounded-md text-xs outline-none focus:ring-1 focus:ring-blue-500 transition-all font-medium text-slate-600 cursor-pointer"
-                                >
-                                    <option value="">All Courses</option>
-                                    {uniqueCourses.map(course => (
-                                        <option key={course} value={course}>{course}</option>
-                                    ))}
-                                </select>
-                                <select
-                                    value={levelFilter}
-                                    onChange={(e) => setLevelFilter(e.target.value)}
-                                    className="w-full sm:w-auto px-3 py-2 bg-white border border-slate-200 rounded-md text-xs outline-none focus:ring-1 focus:ring-blue-500 transition-all font-medium text-slate-600 cursor-pointer"
-                                >
-                                    <option value="">All Levels</option>
-                                    {uniqueLevels.map(level => (
-                                        <option key={level} value={level.toString()}>Level {level}</option>
-                                    ))}
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left">
-                            <thead className="bg-slate-50 text-slate-500 font-bold text-[10px] uppercase tracking-wider border-b border-slate-200">
-                                <tr>
-                                    <th className="px-5 py-3">Candidate</th>
-                                    <th className="px-5 py-3">Course & Level</th>
-                                    <th className="px-5 py-3">Date</th>
-                                    <th className="px-5 py-3">Time</th>
-                                    <th className="px-5 py-3 text-right">Action</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100 text-sm">
-                                {loading ? (
-                                    <tr><td colSpan="5" className="px-5 py-8 text-center text-slate-500 text-xs font-medium">Loading queue...</td></tr>
-                                ) : filteredQueue.length === 0 ? (
-                                    <tr>
-                                        <td colSpan="5" className="px-5 py-12 text-center">
-                                            <div className="flex flex-col items-center gap-2">
-                                                <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center text-slate-400">
-                                                    <CheckCircle size={20} />
-                                                </div>
-                                                <p className="text-slate-500 font-medium text-xs">
-                                                    {queue.length === 0 ? "No pending evaluations" : "No evaluations match your filters"}
-                                                </p>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ) : (
-                                    paginatedQueue.map((item) => (
-                                        <tr key={item.id} className="hover:bg-slate-50 transition-colors group">
-                                            <td className="px-5 py-3">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-7 h-7 rounded bg-slate-100 flex items-center justify-center text-slate-600 font-bold text-[10px] uppercase border border-slate-200">
-                                                        {item.candidate_name?.charAt(0) || 'U'}
-                                                    </div>
-                                                    <span className="font-bold text-slate-700 text-xs">{item.candidate_name || 'Anonymous User'}</span>
-                                                </div>
-                                            </td>
-                                            <td className="px-5 py-3">
-                                                <div className="flex items-center gap-2">
-                                                    <span className="text-slate-600 font-medium text-xs">{item.course_title}</span>
-                                                    <span className="text-blue-600 font-bold bg-blue-50 px-1.5 py-0.5 rounded text-[10px] border border-blue-100">L{item.level}</span>
-                                                </div>
-                                            </td>
-                                            <td className="px-5 py-3 text-slate-500 font-medium text-xs">
-                                                {new Date(item.submitted_at).toLocaleDateString()}
-                                            </td>
-                                            <td className="px-5 py-3 text-slate-500 font-medium text-xs">
-                                                {new Date(item.submitted_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}
-                                            </td>
-                                            <td className="px-5 py-3 text-right">
-                                                <div className="flex items-center justify-end gap-2">
-                                                    <button
-                                                        onClick={() => navigate(`/faculty/evaluate/${item.id}`)}
-                                                        className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20 active:scale-95"
-                                                    >
-                                                        Evaluate
-                                                        <ArrowRight size={14} />
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-
-                    {/* Pagination Footer */}
-                    {!loading && filteredQueue.length > 0 && (
-                        <div className="px-5 py-3 border-t border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row gap-3 items-center justify-between">
-                            <span className="text-[11px] text-slate-500 font-bold uppercase tracking-wider">
-                                Showing {startIndex + 1} to {Math.min(startIndex + rowsPerPage, filteredQueue.length)} of {filteredQueue.length} entries
-                            </span>
-                            <div className="flex gap-2">
-                                <button
-                                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                                    disabled={currentPage === 1}
-                                    className="px-3 py-1.5 bg-white border border-slate-200 rounded text-xs font-bold text-slate-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 transition-colors shadow-sm"
-                                >
-                                    Previous
-                                </button>
-                                <button
-                                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                                    disabled={currentPage === totalPages}
-                                    className="px-3 py-1.5 bg-white border border-slate-200 rounded text-xs font-bold text-slate-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-slate-50 transition-colors shadow-sm"
-                                >
-                                    Next
-                                </button>
-                            </div>
-                        </div>
-                    )}
+                <div className="bg-white rounded-md border border-slate-200 shadow-sm overflow-hidden text-sm">
+                    <DataTable
+                        columns={columns}
+                        data={paginatedQueue}
+                        filterData={queue}
+                        loading={loading}
+                        totalItems={filteredQueue.length}
+                        page={currentPage}
+                        pageSize={pageSize}
+                        onPageChange={setCurrentPage}
+                        onPageSizeChange={(size) => {
+                            setPageSize(size);
+                            setCurrentPage(1);
+                        }}
+                        sortBy={sortBy}
+                        sortDir={sortDir}
+                        onSort={(col, dir) => { setSortBy(col); setSortDir(dir); }}
+                        filters={filters}
+                        onFilterChange={handleFilterChange}
+                        onSearch={setSearchQuery}
+                        searchValue={searchQuery}
+                        emptyMessage="No pending evaluations found."
+                    />
                 </div>
 
                 {/* Re-allocate Faculty Picker Modal */}
