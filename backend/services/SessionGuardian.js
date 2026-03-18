@@ -174,7 +174,7 @@ class SessionGuardian {
                 let endTime = null;
                 let record = null;
 
-                // 2. Find their latest attendance record (regardless of is_used status)
+                // 2. Find their latest attendance record
                 const attendance = await query(
                     `SELECT * FROM test_attendance 
                      WHERE user_id = ?
@@ -183,31 +183,18 @@ class SessionGuardian {
                 );
 
                 if (attendance.length === 0) {
-                    // If unblocked but NO record, check if there are ANY LIVE sessions.
-                    // If no live sessions exist, they have no reason to be unblocked.
-                    const GlobalSession = require("../models/GlobalSession");
-                    const allSessions = await GlobalSession.getAllActive();
-                    const liveSessions = allSessions.filter(s => s.status === 'live');
-                    if (liveSessions.length === 0) {
-                        isExpired = true;
-                        console.log(`🛡️  SessionGuardian: Student ${student.username} is unblocked with no record and no LIVE sessions. Auto-blocking.`);
-                    } else {
-                        continue; // Wait for them to enter an active session
-                    }
+                    // No attendance record found for unblocked student. 
+                    // We DON'T auto-block here to allow for manual/emergency unblocks.
+                    // This is "bypass" mode.
+                    continue; 
                 } else {
                     record = attendance[0];
 
                     if (record.session_id === null || record.session_id === undefined) {
-                        // If unblocked but no session ID, check for currently live sessions only
-                        const GlobalSession = require("../models/GlobalSession");
-                        const allSessions = await GlobalSession.getAllActive();
-                        const liveSessions = allSessions.filter(s => s.status === 'live');
-                        if (liveSessions.length === 0) {
-                            isExpired = true;
-                            console.log(`🛡️  SessionGuardian: Student ${student.username} has attendance but no session_id and no LIVE sessions. Auto-blocking.`);
-                        } else {
-                            continue;
-                        }
+                        // If unblocked but no session ID, they might be manually unblocked 
+                        // for future sessions or as a general bypass. We don't block them.
+                        // They only get blocked when they enter a session and it expires.
+                        continue;
                     } else {
                         // 3. Determine expiration based on session type
                         let startTime = null;
@@ -221,14 +208,11 @@ class SessionGuardian {
                                 endTime = new Date(`${today}T${daily.end_time}`);
                                 if (now > endTime) {
                                     isExpired = true;
-                                    console.log(`🛡️  SessionGuardian: Daily session ${record.session_id} expired at ${endTime.toISOString()}. Student ${student.username} is still unblocked.`);
-                                } else if (now < startTime) {
-                                    isExpired = true;
-                                    console.log(`🛡️  SessionGuardian: Daily session ${record.session_id} hasn't started yet (starts at ${startTime.toISOString()}). Student ${student.username} is unblocked prematurely.`);
+                                    console.log(`🛡️ SessionGuardian: Daily session ${record.session_id} expired. Student ${student.username} auto-blocked.`);
                                 }
                             } else {
+                                // Schedule deleted but record exists? Block to be safe.
                                 isExpired = true;
-                                console.log(`🛡️  SessionGuardian: Daily session ${record.session_id} not found. Auto-blocking ${student.username}.`);
                             }
                         } else {
                             // Manual Global Session
@@ -238,14 +222,11 @@ class SessionGuardian {
                                 endTime = new Date(startTime.getTime() + gs.duration_minutes * 60000);
                                 if (now > endTime || !gs.is_active) {
                                     isExpired = true;
-                                    console.log(`🛡️  SessionGuardian: Manual session ${record.session_id} expired or inactive. Student ${student.username} is still unblocked.`);
-                                } else if (now < startTime) {
-                                    isExpired = true;
-                                    console.log(`🛡️  SessionGuardian: Manual session ${record.session_id} hasn't started yet (starts at ${startTime.toISOString()}). Student ${student.username} is unblocked prematurely.`);
+                                    console.log(`🛡️ SessionGuardian: Manual session ${record.session_id} ended. Student ${student.username} auto-blocked.`);
                                 }
                             } else {
+                                // Session record missing - block as safe default
                                 isExpired = true;
-                                console.log(`🛡️  SessionGuardian: Session ${record.session_id} record not found for student ${student.username}. Assuming expired.`);
                             }
                         }
                     }
@@ -260,7 +241,7 @@ class SessionGuardian {
 
                     // Mark attendance as used if record exists
                     if (record) {
-                        await query("UPDATE test_attendance SET is_used = 1 WHERE id = ?", [record.id]);
+                        await query("UPDATE test_attendance SET is_used = 1, scheduled_status = 'expired' WHERE id = ?", [record.id]);
                     }
 
                     // 5. Find and complete any active test_sessions for this student

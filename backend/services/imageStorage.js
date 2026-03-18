@@ -10,108 +10,10 @@ const { query, queryOne } = require('../database/connection');
 
 class ImageStorageService {
   constructor() {
-    this.screenshotDir = path.join(__dirname, '../screenshots');
     this.assetsDir = path.join(__dirname, '../assets');
-    
-    // Ensure directories exist
-    // [this.screenshotDir, this.assetsDir].forEach(dir => {
-    //   if (!fs.existsSync(dir)) {
-    //     fs.mkdirSync(dir, { recursive: true });
-    //   }
-    // });
   }
 
-  /**
-   * Store screenshot in database for a submission
-   * @param {string} submissionId - Submission ID
-   * @param {string} filePath - Path to screenshot file
-   * @param {string} type - Type: 'user', 'expected', or 'diff'
-   */
-  async storeSubmissionScreenshot(submissionId, filePath, type) {
-    try {
-      if (!fs.existsSync(filePath)) {
-        throw new Error(`File not found: ${filePath}`);
-      }
-
-      // Read file as buffer
-      const fileBuffer = fs.readFileSync(filePath);
-      
-      // Determine column name
-      let column;
-      switch(type) {
-        case 'user':
-          column = 'user_screenshot_data';
-          break;
-        case 'expected':
-          column = 'expected_screenshot_data';
-          break;
-        case 'diff':
-          column = 'diff_screenshot_data';
-          break;
-        default:
-          throw new Error(`Invalid screenshot type: ${type}`);
-      }
-
-      // Store in database
-      await query(
-        `UPDATE submissions SET ${column} = ? WHERE id = ?`,
-        [fileBuffer, submissionId]
-      );
-
-      console.log(`✓ Stored ${type} screenshot for submission ${submissionId} in database`);
-      return true;
-    } catch (error) {
-      console.error(`Failed to store ${type} screenshot in database:`, error.message);
-      return false;
-    }
-  }
-
-  /**
-   * Retrieve screenshot from database
-   * @param {string} submissionId - Submission ID
-   * @param {string} type - Type: 'user', 'expected', or 'diff'
-   * @returns {Buffer|null} - Image buffer
-   */
-  async getSubmissionScreenshot(submissionId, type) {
-    try {
-      let column;
-      switch(type) {
-        case 'user':
-          column = 'user_screenshot_data';
-          break;
-        case 'expected':
-          column = 'expected_screenshot_data';
-          break;
-        case 'diff':
-          column = 'diff_screenshot_data';
-          break;
-        default:
-          throw new Error(`Invalid screenshot type: ${type}`);
-      }
-
-      const result = await queryOne(
-        `SELECT ${column} FROM submissions WHERE id = ?`,
-        [submissionId]
-      );
-
-      if (result && result[column]) {
-        return result[column];
-      }
-      
-      // Fallback to file system if not in database
-      const filename = `${submissionId}-${type}.png`;
-      const filePath = path.join(this.screenshotDir, filename);
-      if (fs.existsSync(filePath)) {
-        console.log(`⚠ Screenshot retrieved from filesystem (not in DB): ${filename}`);
-        return fs.readFileSync(filePath);
-      }
-
-      return null;
-    } catch (error) {
-      console.error(`Failed to retrieve ${type} screenshot:`, error.message);
-      return null;
-    }
-  }
+  
 
   /**
    * Store asset in database
@@ -234,54 +136,7 @@ class ImageStorageService {
     }
   }
 
-  /**
-   * Store expected screenshot for challenge
-   * @param {string} challengeId - Challenge ID
-   * @param {string} filePath - Path to screenshot file
-   */
-  async storeChallengeScreenshot(challengeId, filePath) {
-    try {
-      if (!fs.existsSync(filePath)) {
-        throw new Error(`File not found: ${filePath}`);
-      }
-
-      const fileBuffer = fs.readFileSync(filePath);
-      
-      await query(
-        'UPDATE challenges SET expected_screenshot_data = ? WHERE id = ?',
-        [fileBuffer, challengeId]
-      );
-
-      console.log(`✓ Stored expected screenshot for challenge ${challengeId} in database`);
-      return true;
-    } catch (error) {
-      console.error(`Failed to store challenge screenshot:`, error.message);
-      return false;
-    }
-  }
-
-  /**
-   * Get expected screenshot for challenge
-   * @param {string} challengeId - Challenge ID
-   * @returns {Buffer|null} - Image buffer
-   */
-  async getChallengeScreenshot(challengeId) {
-    try {
-      const result = await queryOne(
-        'SELECT expected_screenshot_data FROM challenges WHERE id = ?',
-        [challengeId]
-      );
-
-      if (result && result.expected_screenshot_data) {
-        return result.expected_screenshot_data;
-      }
-
-      return null;
-    } catch (error) {
-      console.error(`Failed to retrieve challenge screenshot:`, error.message);
-      return null;
-    }
-  }
+  
 
   /**
    * Get MIME type from filename

@@ -37,21 +37,16 @@ const PORT = process.env.PORT || 5000;
 const { applyMigrations } = require("./services/dbMigration");
 
 // Create necessary directories for static files
-const screenshotsDir = path.join(__dirname, "screenshots");
+
 const BUNDLED_ASSETS = path.join(__dirname, "assets");
 const ASSETS_ROOT = process.env.ASSETS_ROOT || BUNDLED_ASSETS;
 
 // Ensure directories exist
-if (!fs.existsSync(screenshotsDir)) fs.mkdirSync(screenshotsDir, { recursive: true });
+
 if (!fs.existsSync(ASSETS_ROOT)) fs.mkdirSync(ASSETS_ROOT, { recursive: true });
 
 // Static file serving BEFORE security middleware (to set custom CORS headers)
-app.use("/screenshots", express.static(screenshotsDir, {
-  setHeaders: function (res, path, stat) {
-    res.setHeader("Access-Control-Allow-Origin", "*");
-    res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
-  }
-}));
+
 
 app.use("/assets", (req, res, next) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -68,7 +63,7 @@ if (ASSETS_ROOT !== BUNDLED_ASSETS) {
 // Security: Helmet for security headers (after static files)
 app.use((req, res, next) => {
   // Skip Helmet for static file routes to allow custom CORS
-  if (req.path.startsWith('/screenshots') || req.path.startsWith('/assets')) {
+  if (req.path.startsWith('/assets')) {
     return next();
   }
   helmet({
@@ -102,8 +97,37 @@ const limiter = rateLimit({
   }
 });
 
+// 0. HEALTH CHECK & METRICS (Observability)
+const { isConnected, isCircuitOpen } = require('./database/connection');
+const { submissionDbQueue } = require('./services/submissionQueueService');
+
+app.get('/health', async (req, res) => {
+  const dbConnected = isConnected();
+  const circuitOpen = isCircuitOpen();
+  
+  let redisStatus = 'disconnected';
+  let queueSize = 0;
+  
+  try {
+    queueSize = await submissionDbQueue.getWaitingCount();
+    redisStatus = 'connected';
+  } catch (e) {}
+
+  const status = (dbConnected && redisStatus === 'connected' && !circuitOpen) ? 200 : 503;
+  
+  res.status(status).json({
+    status: status === 200 ? 'healthy' : 'degraded',
+    timestamp: new Date().toISOString(),
+    services: {
+      database: dbConnected ? (circuitOpen ? 'circuit_open' : 'connected') : 'disconnected',
+      redis: redisStatus,
+      queue_waiting: queueSize
+    }
+  });
+});
+
 // Apply rate limiter to all API routes
-app.use("/api/", limiter);
+app.use(limiter);
 
 // Stricter rate limit for authentication endpoints (always IP based)
 const authLimiter = rateLimit({
@@ -208,8 +232,7 @@ app.get("/health", async (req, res) => {
   res.status(200).json(health);
 });
 
-// Serve static assets (screenshots, reference images)
-// app.use('/screenshots', express.static(path.join(__dirname, 'public/screenshots'))); // REDUNDANT
+
 // app.use('/reference_images', express.static(path.join(__dirname, 'public/reference_images'))); // REDUNDANT
 
 // API Routes
@@ -259,7 +282,7 @@ if (frontendDistPath && fs.existsSync(frontendDistPath)) {
     // Skip API routes, screenshots, assets, and health check
     if (
       req.path.startsWith("/api") ||
-      req.path.startsWith("/screenshots") ||
+
       req.path.startsWith("/assets") ||
       req.path === "/health"
     ) {
@@ -326,9 +349,8 @@ app.listen(PORT, async () => {
   console.log(`   GET  /api/challenges`);
   console.log(`   POST /api/submissions`);
   console.log(`   POST /api/auth/login`);
-  // Background sync to ensure JSON fallback submissions are persisted to MySQL when available
-  // DISABLED FOR PRODUCTION - Comment out to enable demo data syncing
-  // scheduleFallbackSync();
+  // Background sync to reconcile fallback JSON files into MySQL
+  scheduleFallbackSync(120000); // Check every 2 minutes
 });
 
 module.exports = app;
