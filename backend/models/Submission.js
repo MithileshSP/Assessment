@@ -115,41 +115,25 @@ class SubmissionModel {
 
   // Update submission with evaluation result
   static async updateEvaluation(id, evaluationData) {
-    const screenshots = evaluationData.visual?.screenshots || evaluationData.pixel?.screenshots || {};
-    let userScreenshot = screenshots.candidate || null;
-    let expectedScreenshot = screenshots.expected || null;
-    let diffScreenshot = screenshots.diff || null;
-
-    // Truncate to match DB limit (500 chars)
-    if (userScreenshot && userScreenshot.length > 500) userScreenshot = userScreenshot.substring(0, 500);
-    if (expectedScreenshot && expectedScreenshot.length > 500) expectedScreenshot = expectedScreenshot.substring(0, 500);
-    if (diffScreenshot && diffScreenshot.length > 500) diffScreenshot = diffScreenshot.substring(0, 500);
-
     await query(
       `UPDATE submissions SET
        status = ?,
        evaluated_at = NOW(),
        structure_score = ?,
-       visual_score = ?,
+
        content_score = ?,
        final_score = ?,
        passed = ?,
-       evaluation_result = ?,
-       user_screenshot = ?,
-       expected_screenshot = ?,
-       diff_screenshot = ?
+       evaluation_result = ?
        WHERE id = ?`,
       [
         evaluationData.passed ? 'passed' : 'failed',
         evaluationData.structureScore || 0,
-        evaluationData.visualScore || 0,
+
         evaluationData.contentScore || 0,
         evaluationData.finalScore || 0,
         evaluationData.passed || false,
         JSON.stringify(evaluationData),
-        userScreenshot,
-        expectedScreenshot,
-        diffScreenshot,
         id
       ]
     );
@@ -157,8 +141,10 @@ class SubmissionModel {
   }
 
   // Update submission with admin override
-  static async updateOverride(id, status, reason) {
-    console.log(`[SubmissionModel] updateOverride called for ${id} with status ${status}`);
+  static async updateOverride(id, status, reason, scores = {}, adminId = 0) {
+    console.log(`[SubmissionModel] updateOverride called for ${id} with status ${status}, scores:`, scores);
+    
+    // 1. Update submissions table
     const result = await query(
       `UPDATE submissions SET
        status = ?,
@@ -174,6 +160,29 @@ class SubmissionModel {
         id
       ]
     );
+
+    // 2. Also update manual_evaluations table to reflect the override scores if provided
+    if (Object.keys(scores).length > 0) {
+      await query(
+        `INSERT INTO manual_evaluations 
+         (submission_id, faculty_id, code_quality_score, requirements_score, expected_output_score, comments, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, NOW())
+         ON DUPLICATE KEY UPDATE 
+         code_quality_score = VALUES(code_quality_score),
+         requirements_score = VALUES(requirements_score),
+         expected_output_score = VALUES(expected_output_score),
+         comments = CONCAT(IFNULL(comments, ''), '\n[Admin Override]: ', VALUES(comments))` ,
+        [
+          id, 
+          adminId, 
+          scores.codeQuality || 0,
+          scores.requirements || 0,
+          scores.expectedOutput || 0,
+          reason
+        ]
+      );
+    }
+
     console.log(`[SubmissionModel] updateOverride SQL result:`, result);
     const updated = await this.findById(id);
     console.log(`[SubmissionModel] updateOverride findById result:`, updated ? 'Found' : 'Null');
@@ -246,19 +255,7 @@ class SubmissionModel {
 
   // Format submission for response
   static _formatSubmission(submission) {
-    // Convert relative screenshot paths to full URLs for frontend
-    const formatScreenshotUrl = (path) => {
-      if (!path) return null;
-      // If already a full URL, return as-is
-      if (path.startsWith('http://') || path.startsWith('https://')) {
-        return path;
-      }
-      // Rewrite /screenshots/ to /fullstack/screenshots/ for reverse proxy compatibility
-      if (path.startsWith('/screenshots/')) {
-        return '/fullstack' + path;
-      }
-      return path;
-    };
+
 
     const finalStatus = (submission.admin_override_status && submission.admin_override_status !== 'none')
       ? submission.admin_override_status
@@ -287,9 +284,7 @@ class SubmissionModel {
       status: finalStatus,
       submittedAt: submission.submitted_at,
       evaluatedAt: submission.evaluated_at,
-      user_screenshot: formatScreenshotUrl(submission.user_screenshot),
-      expected_screenshot: formatScreenshotUrl(submission.expected_screenshot),
-      diff_screenshot: formatScreenshotUrl(submission.diff_screenshot),
+
       admin_override_status: submission.admin_override_status,
       admin_override_reason: submission.admin_override_reason,
       total_score: submission.final_score || 0,
@@ -313,7 +308,7 @@ class SubmissionModel {
           : { ...submission.evaluation_result, passed: isPassed, finalScore: submission.evaluation_result.finalScore }
       ) : {
         structureScore: submission.structure_score || 0,
-        visualScore: submission.visual_score || 0,
+
         contentScore: submission.content_score || 0,
         finalScore: (submission.final_score || 0),
         passed: isPassed,

@@ -10,6 +10,13 @@ const verifyToken = async (req, res, next) => {
     // 2. Try to get token from HttpOnly cookie
     const tokenFromCookie = req.cookies && req.cookies.authToken;
 
+    // 3. SECURE BYPASS FOR LOAD TESTING
+    const stressKey = req.headers['x-stress-test-key'];
+    if (process.env.ALLOW_STRESS_TEST === 'true' && stressKey && stressKey === process.env.STRESS_TEST_SECRET) {
+        req.user = { id: req.headers['x-stress-test-user-id'] || 'stress-test-student', role: 'student' };
+        return next();
+    }
+
     // Use cookie token if available, fallback to header (migration support)
     const token = tokenFromCookie || tokenFromHeader;
 

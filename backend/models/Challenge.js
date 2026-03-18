@@ -57,8 +57,8 @@ class ChallengeModel {
     const id = challengeData.id || `challenge - ${Date.now()}`;
     console.log(`[ChallengeModel] Creating challenge ${id}, createdBy: ${challengeData.createdBy}`);
     await query(
-      `INSERT INTO challenges(id, title, description, instructions, tags, passing_threshold, html, css, js, additional_files, expected_html, expected_css, expected_js, expected_screenshot_url, course_id, level, points, hints, assets, created_at, created_by, challenge_type, expected_output)
-       VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO challenges(id, title, description, instructions, tags, passing_threshold, html, css, js, additional_files, expected_html, expected_css, expected_js, course_id, level, points, hints, assets, created_at, created_by, challenge_type, expected_output)
+       VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id,
         challengeData.title,
@@ -73,7 +73,6 @@ class ChallengeModel {
         challengeData.expectedHtml || challengeData.expectedSolution?.html || '',
         challengeData.expectedCss || challengeData.expectedSolution?.css || '',
         challengeData.expectedJs || challengeData.expectedSolution?.js || '',
-        challengeData.expectedScreenshotUrl || null,
         challengeData.courseId || null,
         challengeData.level || 1,
         challengeData.points || 100,
@@ -104,7 +103,6 @@ class ChallengeModel {
       expected_html = COALESCE(?, expected_html),
       expected_css = COALESCE(?, expected_css),
       expected_js = COALESCE(?, expected_js),
-      expected_screenshot_url = COALESCE(?, expected_screenshot_url),
       course_id = COALESCE(?, course_id),
       level = COALESCE(?, level),
       points = COALESCE(?, points),
@@ -127,7 +125,6 @@ class ChallengeModel {
         challengeData.expectedHtml !== undefined ? challengeData.expectedHtml : (challengeData.expectedSolution?.html !== undefined ? challengeData.expectedSolution.html : null),
         challengeData.expectedCss !== undefined ? challengeData.expectedCss : (challengeData.expectedSolution?.css !== undefined ? challengeData.expectedSolution.css : null),
         challengeData.expectedJs !== undefined ? challengeData.expectedJs : (challengeData.expectedSolution?.js !== undefined ? challengeData.expectedSolution.js : null),
-        challengeData.expectedScreenshotUrl !== undefined ? challengeData.expectedScreenshotUrl : null,
         challengeData.courseId !== undefined ? challengeData.courseId : null,
         challengeData.level !== undefined ? challengeData.level : null,
         challengeData.points !== undefined ? challengeData.points : null,
@@ -195,7 +192,7 @@ class ChallengeModel {
       expectedHtml: challenge.expected_html,
       expectedCss: challenge.expected_css,
       expectedJs: challenge.expected_js,
-      expectedScreenshotUrl: challenge.expected_screenshot_url,
+      expectedScreenshotUrl: null,
       courseId: challenge.course_id,
       level: challenge.level,
       challengeType: challenge.challenge_type || 'web',
