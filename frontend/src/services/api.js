@@ -7,9 +7,9 @@ import axios from 'axios';
 
 // Use environment variable or relative path
 // Universal API URL: detects if running under /fullstack or root
-// Universal API URL: detects if running under /fullstack or root
-export const BASE_URL = import.meta.env.VITE_API_URL ||
-  (window.location.pathname.startsWith('/fullstack') ? '/fullstack/api' : '/api');
+// Use runtime config (env.json) if available, fallback to env var or root path
+export const BASE_URL = (window.ENV_CONFIG && window.ENV_CONFIG.VITE_API_URL) ||
+  import.meta.env.VITE_API_URL || '/api';
 const API_BASE_URL = BASE_URL;
 
 // Create axios instance
@@ -32,8 +32,8 @@ api.interceptors.response.use(
       if (!currentPath.includes('/login')) {
         console.warn('[API] Session expired or invalid (401). Redirecting to login.');
 
-        // Determine correct login path based on context (fullstack or root)
-        const loginPath = currentPath.startsWith('/fullstack') ? '/fullstack/login' : '/login';
+        // Use /login directly for root hosting
+        const loginPath = '/login';
 
         // Use window.location for hard redirect to ensure state is cleared
         window.location.href = loginPath;

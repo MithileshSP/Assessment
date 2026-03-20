@@ -1309,8 +1309,20 @@ router.get('/all-submissions', verifyAdmin, async (req, res) => {
 
     if (status) {
       const statusArr = status.split(',');
-      conditions.push(`sa.status IN (${statusArr.map(() => '?').join(',')})`);
-      params.push(...statusArr);
+      const hasUnassigned = statusArr.includes('unassigned');
+      
+      if (hasUnassigned) {
+        const otherStatuses = statusArr.filter(s => s !== 'unassigned');
+        if (otherStatuses.length > 0) {
+          conditions.push(`(sa.status IN (${otherStatuses.map(() => '?').join(',')}) OR sa.status IS NULL OR sa.status = 'unassigned')`);
+          params.push(...otherStatuses);
+        } else {
+          conditions.push(`(sa.status IS NULL OR sa.status = 'unassigned')`);
+        }
+      } else {
+        conditions.push(`sa.status IN (${statusArr.map(() => '?').join(',')})`);
+        params.push(...statusArr);
+      }
     }
     if (courseId) {
       const courseArr = courseId.toString().split(',');
@@ -1398,8 +1410,8 @@ router.get('/all-submissions', verifyAdmin, async (req, res) => {
     const summaryQuery = `
       SELECT 
         COUNT(*) as total,
-        SUM(CASE WHEN sa.status = 'pending' OR sa.status IS NULL THEN 1 ELSE 0 END) as pending,
-        SUM(CASE WHEN sa.locked_by IS NOT NULL AND sa.status = 'pending' THEN 1 ELSE 0 END) as evaluating,
+        SUM(CASE WHEN sa.status IS NULL OR sa.status IN ('unassigned', 'assigned', 'reallocated', 'reopened', 'ai_error', 'pending') THEN 1 ELSE 0 END) as pending,
+        SUM(CASE WHEN sa.status IN ('in_progress') OR (sa.locked_by IS NOT NULL AND sa.status IN ('assigned', 'pending')) THEN 1 ELSE 0 END) as evaluating,
         SUM(CASE WHEN sa.status = 'evaluated' THEN 1 ELSE 0 END) as completed
       FROM submissions s
       LEFT JOIN submission_assignments sa ON s.id = sa.submission_id

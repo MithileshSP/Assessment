@@ -104,17 +104,17 @@ const { submissionDbQueue } = require('./services/submissionQueueService');
 app.get('/health', async (req, res) => {
   const dbConnected = isConnected();
   const circuitOpen = isCircuitOpen();
-  
+
   let redisStatus = 'disconnected';
   let queueSize = 0;
-  
+
   try {
     queueSize = await submissionDbQueue.getWaitingCount();
     redisStatus = 'connected';
-  } catch (e) {}
+  } catch (e) { }
 
   const status = (dbConnected && redisStatus === 'connected' && !circuitOpen) ? 200 : 503;
-  
+
   res.status(status).json({
     status: status === 200 ? 'healthy' : 'degraded',
     timestamp: new Date().toISOString(),
@@ -146,15 +146,13 @@ const defaultOrigins = [
   "http://localhost:5173",
   "http://localhost:80",
   "http://localhost:100",
-  "http://192.168.10.5:100",
-  "http://192.168.10.5:7000",
+  "https://fullstackpcdp.bitsathy.ac.in",
   "https://fullstack.bitsathy.ac.in",
 ];
 const criticalOrigins = [
-  "http://192.168.10.5:100",
-  "http://localhost:100",
+  "https://fullstackpcdp.bitsathy.ac.in",
   "https://fullstack.bitsathy.ac.in",
-  "https://pcdp.bitsathy.ac.in",
+  "http://localhost:100",
 ];
 
 let rawOrigins = process.env.ALLOWED_ORIGINS

@@ -1,23 +1,36 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App.jsx";
 import "./styles/index.css";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 
-console.log("%c DEPLOYMENT VERSION: v3.4.28 (Stable) ", "background: #1e293b; color: #3b82f6; font-weight: bold; border-left: 4px solid #3b82f6;");
+const Main = () => {
+  const [config, setConfig] = useState(null);
+  const [error, setError] = useState(null);
 
-const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+  useEffect(() => {
+    fetch('/env.json')
+      .then(res => res.json())
+      .then(data => {
+        window.ENV_CONFIG = data; // Make available globally for services
+        setConfig(data);
+      })
+      .catch(err => {
+        console.error("Failed to load env.json:", err);
+        setError("Configuration failed to load. Please check if env.json exists.");
+      });
+  }, []);
 
-if (!clientId) {
-  console.warn(
-    "VITE_GOOGLE_CLIENT_ID is not set; Google Sign-In will not render correctly."
+  if (error) return <div style={{ padding: '20px', color: 'red' }}>{error}</div>;
+  if (!config) return <div style={{ padding: '20px' }}>Loading configuration...</div>;
+
+  return (
+    <React.StrictMode>
+      <GoogleOAuthProvider clientId={config.VITE_GOOGLE_CLIENT_ID || ""}>
+        <App />
+      </GoogleOAuthProvider>
+    </React.StrictMode>
   );
-}
+};
 
-ReactDOM.createRoot(document.getElementById("root")).render(
-  <React.StrictMode>
-    <GoogleOAuthProvider clientId={clientId || ""}>
-      <App />
-    </GoogleOAuthProvider>
-  </React.StrictMode>
-);
+ReactDOM.createRoot(document.getElementById("root")).render(<Main />);

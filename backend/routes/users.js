@@ -546,57 +546,78 @@ router.post(
       })
       .on("end", async () => {
         try {
+          if (results.length > 500) {
+            if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+            return res.status(400).json({
+              error: `CSV file exceeds maximum limit of 500 rows (found ${results.length}). Please split your file and try again.`
+            });
+          }
+
+          // Optimization: Pre-fetch existing users to avoid per-row DB lookups
+          const emails = results.map(r => r.email).filter(Boolean);
+          const usernames = results.map(r => r.username || (r.email ? r.email.split("@")[0] : null)).filter(Boolean);
+
+          const existingMap = new Map();
+          if (emails.length > 0 || usernames.length > 0) {
+            // Build a query with enough placeholders
+            const emailPlaceholders = emails.map(() => '?').join(',');
+            const usernamePlaceholders = usernames.map(() => '?').join(',');
+
+            const existing = await query(
+              `SELECT id, username, email FROM users WHERE email IN (${emailPlaceholders || "''"}) OR username IN (${usernamePlaceholders || "''"})`,
+              [...emails, ...usernames]
+            );
+
+            existing.forEach(u => {
+              if (u.email) existingMap.set(`email:${u.email.toLowerCase()}`, u);
+              if (u.username) existingMap.set(`username:${u.username.toLowerCase()}`, u);
+            });
+          }
+
           for (let index = 0; index < results.length; index++) {
             const row = results[index];
-            const lineNum = index + 2; // +2 because CSV header is line 1
+            const lineNum = index + 2;
 
-            // Derive username from email if missing
             const derivedUsername = row.username || (row.email ? row.email.split("@")[0] : null);
-
             if (!derivedUsername) {
               errors.push(`Line ${lineNum}: Missing username and no email to derive it from`);
               skipped++;
               continue;
             }
 
-            // Check if email already exists
-            if (row.email) {
-              const existingByEmail = await UserModel.findByEmail(row.email);
-              if (existingByEmail) {
-                // If it exists, update it with new info (like rollNo) instead of skipping
-                try {
-                  await UserModel.update(existingByEmail.id, {
-                    full_name: row.fullName || undefined,
-                    roll_no: row.rollNo || undefined,
-                    username: row.username || undefined
-                  });
-                  added++;
-                  continue;
-                } catch (updateError) {
-                  errors.push(`Line ${lineNum}: Email "${row.email}" exists, but update failed`);
-                  skipped++;
-                  continue;
-                }
+            // Check if email or username already exists using the map
+            const emailKey = row.email ? `email:${row.email.toLowerCase()}` : null;
+            const usernameKey = `username:${derivedUsername.toLowerCase()}`;
+
+            const existingByEmail = emailKey ? existingMap.get(emailKey) : null;
+            const existingByUsername = existingMap.get(usernameKey);
+
+            if (existingByEmail) {
+              try {
+                await UserModel.update(existingByEmail.id, {
+                  full_name: row.fullName || undefined,
+                  roll_no: row.rollNo || undefined,
+                  username: row.username || undefined
+                });
+                added++;
+                continue;
+              } catch (updateError) {
+                errors.push(`Line ${lineNum}: Email "${row.email}" exists, but update failed`);
+                skipped++;
+                continue;
               }
             }
 
-            // Check if username exists
-            const existingUser = await UserModel.findByUsername(derivedUsername);
-            if (existingUser) {
-              errors.push(
-                `Line ${lineNum}: Username "${derivedUsername}" already exists`
-              );
+            if (existingByUsername) {
+              errors.push(`Line ${lineNum}: Username "${derivedUsername}" already exists`);
               skipped++;
               continue;
             }
 
             // Create user
             const newUser = {
-              id: `user-${Date.now()}-${Math.random()
-                .toString(36)
-                .substr(2, 9)}`,
+              id: `user-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
               username: derivedUsername,
-              // Fix: Pass plaintext password, UserModel.create will handle hashing
               password: row.password || null,
               email: row.email || null,
               full_name: row.fullName || "",
@@ -610,6 +631,9 @@ router.post(
             try {
               await UserModel.create(newUser);
               added++;
+              // Add to map so subsequent rows don't try to create same user
+              existingMap.set(`username:${newUser.username.toLowerCase()}`, { id: newUser.id, username: newUser.username });
+              if (newUser.email) existingMap.set(`email:${newUser.email.toLowerCase()}`, { id: newUser.id, email: newUser.email });
             } catch (createError) {
               console.error(`Error creating user from CSV (Line ${lineNum}):`, createError.message);
               errors.push(`Line ${lineNum}: Failed to create user - ${createError.message}`);
@@ -617,10 +641,8 @@ router.post(
             }
           }
 
-          // Clean up uploaded file
-          fs.unlinkSync(req.file.path);
+          if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
 
-          console.log(`CSV processing complete: ${added} added, ${skipped} skipped`);
           res.json({
             added,
             skipped,
@@ -628,11 +650,7 @@ router.post(
             errors: errors.length > 0 ? errors : undefined,
           });
         } catch (error) {
-          // Clean up uploaded file
-          if (fs.existsSync(req.file.path)) {
-            fs.unlinkSync(req.file.path);
-          }
-          console.error("Error processing CSV:", error);
+          if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
           res.status(500).json({ error: "Failed to process CSV file" });
         }
       })
@@ -712,7 +730,7 @@ router.post("/bulk-unblock", verifyAdmin, async (req, res) => {
           // BUT if they are scheduled for THIS session, we update it.
           // Wait, the unique index is (user_id, test_identifier, session_id). 
           // If session_id is different, it will be a NEW record.
-          
+
           await query(
             "UPDATE test_attendance SET status = 'approved', scheduled_status = ?, is_used = 0, locked = 0, locked_at = NULL, locked_reason = ? WHERE id = ?",
             [statusLabel, `Admin:${statusLabel}`, existing.id]
@@ -743,10 +761,10 @@ router.post("/bulk-unblock", verifyAdmin, async (req, res) => {
 router.patch("/bulk-block", verifyAdmin, async (req, res) => {
   try {
     const result = await query("UPDATE users SET is_blocked = true WHERE role = 'student'");
-    res.json({ 
-      success: true, 
+    res.json({
+      success: true,
       message: "All students have been blocked successfully",
-      affectedRows: result.affectedRows 
+      affectedRows: result.affectedRows
     });
   } catch (error) {
     console.error("Bulk block error:", error);

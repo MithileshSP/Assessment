@@ -511,7 +511,19 @@ export default function AdminAssignment() {
 
     const handleExportCSV = async () => {
         try {
-            const res = await api.get('/admin/all-submissions?page=1&limit=10000');
+            const params = new URLSearchParams();
+            params.set('page', '1');
+            params.set('limit', '10000');
+            if (subSearch) params.set('search', subSearch);
+            if (subFilters.assignment_status?.checked?.length) params.set('status', subFilters.assignment_status.checked.join(','));
+            if (subFilters.course?.checked?.length) params.set('courseId', subFilters.course.checked.join(','));
+            if (subFilters.level?.checked?.length) params.set('level', subFilters.level.checked.join(','));
+            if (subFilters.dateRange?.from) params.set('fromDate', subFilters.dateRange.from);
+            if (subFilters.dateRange?.to) params.set('toDate', subFilters.dateRange.to);
+            if (subFilters.timeRange?.start) params.set('startTime', subFilters.timeRange.start);
+            if (subFilters.timeRange?.end) params.set('endTime', subFilters.timeRange.end);
+
+            const res = await api.get(`/admin/all-submissions?${params}`);
             const rows = res.data.data || [];
             if (rows.length === 0) { showToast('No data to export', 'error'); return; }
 
@@ -531,7 +543,7 @@ export default function AdminAssignment() {
             a.download = `submissions_${new Date().toISOString().slice(0, 10)}.csv`;
             a.click();
             URL.revokeObjectURL(url);
-            showToast('CSV exported');
+            showToast('CSV exported (Current View)');
         } catch (e) { showToast('Export failed', 'error'); }
     };
 

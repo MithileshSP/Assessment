@@ -29,6 +29,7 @@ export default function UserManagement() {
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [csvFile, setCsvFile] = useState(null);
+  const [isUploading, setIsUploading] = useState(false);
   const [uploadResult, setUploadResult] = useState(null);
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
@@ -189,13 +190,18 @@ export default function UserManagement() {
     const data = new FormData();
     data.append('file', csvFile);
     try {
+      setIsUploading(true);
+      setUploadResult(null); // Clear previous results
       const response = await api.post('/users/upload-csv', data, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       setUploadResult(response.data);
+      setCsvFile(null); // Clear file after success
       loadUsers();
     } catch (error) {
       alert(error.response?.data?.error || 'Failed to upload CSV');
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -675,10 +681,17 @@ export default function UserManagement() {
                 <div className="flex gap-4">
                   <button
                     onClick={handleCsvUpload}
-                    disabled={!csvFile}
-                    className="flex-1 py-3 bg-blue-600 text-white rounded-md font-bold text-xs uppercase tracking-widest hover:bg-blue-700 disabled:opacity-30 shadow-sm transition-all active:scale-[0.98]"
+                    disabled={!csvFile || isUploading}
+                    className="flex-1 py-3 bg-blue-600 text-white rounded-md font-bold text-xs uppercase tracking-widest hover:bg-blue-700 disabled:opacity-30 shadow-sm transition-all active:scale-[0.98] flex items-center justify-center gap-2"
                   >
-                    Execute Import
+                    {isUploading ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        Importing...
+                      </>
+                    ) : (
+                      'Execute Import'
+                    )}
                   </button>
                   <button
                     onClick={() => window.open(`${BASE_URL}/users/sample-csv`, '_blank')}
