@@ -165,7 +165,7 @@ const AdminDashboard = () => {
             </div>
           </div>
 
-          <div className="flex gap-8 overflow-x-auto pb-4 custom-scrollbar">
+          <div className="flex gap-8 overflow-x-auto pt-10 pb-4 custom-scrollbar">
             {loading ? (
               <div className="w-full h-32 bg-slate-50 animate-pulse rounded-md" />
             ) : (
@@ -184,8 +184,12 @@ const AdminDashboard = () => {
                           key={dIdx}
                           className={`w-3 h-3 rounded-[2px] ${intensity} transition-all hover:ring-2 hover:ring-blue-200 cursor-help relative group/day`}
                         >
-                          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-slate-900 text-white text-[9px] rounded opacity-0 group-hover/day:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none font-bold">
-                            {day.count} Submissions • {day.date.toLocaleDateString()}
+                          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1.5 bg-slate-900 text-white text-[10px] rounded-md opacity-0 group-hover/day:opacity-100 transition-all duration-200 whitespace-nowrap z-50 pointer-events-none font-bold shadow-xl border border-slate-800">
+                            <div className="flex flex-col items-center">
+                              <span className="text-blue-400 text-[9px] uppercase tracking-tighter mb-0.5">{day.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                              <span>{day.count} {day.count === 1 ? 'Submission' : 'Submissions'}</span>
+                            </div>
+                            <div className="absolute top-full left-1/2 -translate-x-1/2 w-2 h-2 bg-slate-900 rotate-45 -mt-1" />
                           </div>
                         </div>
                       );
@@ -259,8 +263,8 @@ const AdminDashboard = () => {
                     </div>
                     <div className="flex items-center gap-4">
                       <span className={`px-2 py-0.5 rounded-md font-bold text-[9px] uppercase tracking-widest border ${sub.status === 'passed' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-                          sub.status === 'failed' ? 'bg-rose-50 text-rose-600 border-rose-100' :
-                            'bg-amber-50 text-amber-600 border-amber-100'
+                        sub.status === 'failed' ? 'bg-rose-50 text-rose-600 border-rose-100' :
+                          'bg-amber-50 text-amber-600 border-amber-100'
                         }`}>
                         {sub.status}
                       </span>

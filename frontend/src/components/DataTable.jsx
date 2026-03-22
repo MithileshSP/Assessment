@@ -62,7 +62,7 @@ export function StatusBadge({ value, customMap }) {
 }
 
 /* ── Filter Popover ───────────────────────────────────────── */
-function FilterPopover({ column, value, onChange, onClose, allValues }) {
+function FilterPopover({ column, value, onChange, onClose, allValues, align = 'left' }) {
     const isDate = column.filterType === 'date-range';
     const isTime = column.filterType === 'time-range';
     const [tab, setTab] = useState(isDate ? 'date' : isTime ? 'time' : 'values');
@@ -112,7 +112,7 @@ function FilterPopover({ column, value, onChange, onClose, allValues }) {
     const uniqueValues = column.filterOptions || [...new Set(allValues || [])].filter(Boolean).sort();
 
     return (
-        <div ref={ref} className="absolute top-full left-0 mt-1 w-64 bg-white border border-slate-200 rounded-md shadow-lg z-50 overflow-hidden animate-fade-in-up" onClick={e => e.stopPropagation()}>
+        <div ref={ref} className={`absolute top-full mt-1 w-64 bg-white border border-slate-200 rounded-md shadow-lg z-50 overflow-hidden animate-fade-in-up ${align === 'right' ? 'right-0' : 'left-0'}`} onClick={e => e.stopPropagation()}>
             {/* Tabs */}
             <div className="flex border-b border-slate-100 bg-slate-50/50">
                 {(isDate ? ['date'] : isTime ? ['time'] : ['values', 'text']).map(t => (
@@ -541,7 +541,7 @@ export default function DataTable({
                                 </th>
                             )}
                             {expandable && <th className="px-2 py-3.5 w-10 border-r border-slate-100/50" />}
-                            {extendedColumns.map(col => (
+                            {extendedColumns.map((col, colIdx) => (
                                 <th
                                     key={col.key}
                                     className={`${paddingClass} text-[11px] font-black uppercase tracking-widest text-slate-500 border-r border-slate-100/50 last:border-r-0`}
@@ -576,6 +576,7 @@ export default function DataTable({
                                                         onChange={onFilterChange}
                                                         onClose={() => setOpenFilter(null)}
                                                         allValues={getColumnValues(col.key)}
+                                                        align={colIdx >= extendedColumns.length - 3 ? 'right' : 'left'}
                                                     />
                                                 )}
                                             </div>

@@ -47,7 +47,7 @@ const dbConfig = {
   database:
     process.env.DB_NAME || process.env.DB_DATABASE || "fullstack_test_portal",
   waitForConnections: true,
-  connectionLimit: 10, // Optimized for multi-replica deployments (3 Nodes * 10 = 30)
+  connectionLimit: 25, // Increased for higher throughput (3 Nodes * 25 = 75 total)
   queueLimit: 0,
   maxIdle: 5,
   idleTimeout: 30000,
@@ -73,7 +73,7 @@ async function testConnection(retries = 20, delay = 2000) {
       return true;
     } catch (err) {
       console.error(`❌ MySQL connection attempt ${i + 1} failed: ${err.message}`);
-      
+
       if (i === retries - 1) {
         console.error("⛔ Max DB connection retries reached. System running in DEGRADED mode.");
         isConnected = false;
@@ -111,7 +111,7 @@ const CB_STATE = {
 
 let circuitState = CB_STATE.CLOSED;
 let failureCount = 0;
-const FAILURE_THRESHOLD = 5;
+const FAILURE_THRESHOLD = 50; // Increased from 5 to 50 for bulk operations
 const COOLDOWN_MS = 30000; // 30 seconds
 
 function tripCircuit() {
@@ -136,14 +136,14 @@ async function query(sql, params) {
 
   try {
     const [rows] = await pool.query(sql, params);
-    
+
     // Reset on success
     if (circuitState === CB_STATE.HALF_OPEN) {
-        console.log("✅ [CircuitBreaker] Success in HALF_OPEN. CLOSING CIRCUIT.");
-        circuitState = CB_STATE.CLOSED;
-        failureCount = 0;
+      console.log("✅ [CircuitBreaker] Success in HALF_OPEN. CLOSING CIRCUIT.");
+      circuitState = CB_STATE.CLOSED;
+      failureCount = 0;
     }
-    
+
     return rows;
   } catch (error) {
     const isDuplicate = error.code === 'ER_DUP_FIELDNAME' ||
@@ -176,7 +176,7 @@ async function transaction(callback) {
   if (circuitState === CB_STATE.OPEN) {
     throw new Error('⚡ Circuit Breaker: Database overloaded. Transaction aborted.');
   }
-  
+
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();
