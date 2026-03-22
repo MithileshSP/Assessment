@@ -57,30 +57,19 @@ const worker = new Worker('ai_grading_queue', async (job) => {
 
         const isHtmlCssCourse = submission.course_id === 'course-html-css' || (submission.challenge_title && submission.challenge_title.toLowerCase().includes('html'));
 
-        let rubric = '';
-        if (isHtmlCssCourse) {
-            rubric = `
-SCORING RUBRIC (TOTAL = 100)
-1. HTML Structure (0-50)
-Evaluate the use of semantic HTML, tags, and overall structure. Be generous: if they attempted to structure the page correctly, award at least 40/50. 
-2. CSS Styling (0-50)
-Evaluate the styling, layout, and visual fidelity. Be generous: ignore minor color differences or pixel-perfect deviations. If it looks "mostly similar", award 40-45/50.
-`;
-        } else {
-            rubric = `
+        const rubric = `
 SCORING RUBRIC (TOTAL = 100)
 1. Code Quality (0-40)
-Generously reward structure and effort. Ignore minor formatting issues. (Typically 35-40 for genuine attempts, 0-10 for trivial snippets).
+Generously reward structure, semantic HTML, and overall code cleanliness. (35-40 for genuine attempts).
 2. Key Requirements (0-25)
-Check if they attempted basic instructions. (Typically 20-25 if they tried).
-3. Output (0-35)
-Functionality works or shows logical intent. (Typically 25-35 if there is any intended output).
+Check if they followed basic instructions and specific challenge goals. (20-25 if they tried).
+3. Output & Styling (0-35)
+Evaluate if the result looks/works as intended. Be forgiving of minor visual differences. (25-35 for mostly correct output).
 `;
-        }
 
-        const hasJS = submission.js_code && submission.js_code.trim().length > 0;
-        const hasUI = (submission.html_code && submission.html_code.trim().length > 0) ||
-            (submission.css_code && submission.css_code.trim().length > 0);
+        const hasJS = (submission.js_code || "").trim().length > 0;
+        const hasUI = ((submission.html_code || "").trim().length > 0) ||
+            ((submission.css_code || "").trim().length > 0);
 
         let focusArea = "General Web Development";
         if (hasJS && !hasUI) focusArea = "Algorithm & Logic (JavaScript)";
@@ -88,20 +77,20 @@ Functionality works or shows logical intent. (Typically 25-35 if there is any in
         else focusArea = "Full Stack Frontend (HTML/CSS/JS)";
 
         const prompt = `
-You are a friendly and encouraging faculty evaluator. Your goal is to provide a "faculty-like" evaluation: 
-- **Be forgiving**: Students are beginners. Do not penalize for minor syntax errors or small visual differences.
+You are a friendly and encouraging faculty evaluator. Your goal is to provide a "faculty-like" evaluation for a beginner student: 
+- **Be forgiving**: Students are beginners. Do not penalize for minor syntax errors, spelling, or small visual differences.
 - **Reward effort**: If a student has made a genuine attempt with many lines of code, they should easily pass (Score 80+).
 - **Correct but helpful**: Point out major logical flaws, but do it constructively. 
-- **Not over-strict**: Do not use "strong" or "harsh" evaluation logic. If the page "looks and works" mostly as expected, give top marks.
+- **Not over-strict**: If the page "looks and works" mostly as expected, give high marks.
 
 Focus Area: ${focusArea}
 Course Context: ${isHtmlCssCourse ? "Focus primarily on the balance between HTML structure and CSS styling." : "General programming evaluation."}
 
 **GRADING PRINCIPLES:**
-1. If the submission shows genuine effort and addresses most requirements: Score **85-100**.
-2. If the submission is incomplete but shows good initial progress: Score **80-84**.
-3. Only fail (Score < 80) if the submission is nearly blank, completely unrelated, or contains only trivial boilerplate.
-4. Aim to match a human faculty's grading style which values understanding and effort over perfection.
+1. Genuine effort/Mostly complete: Score **85-100**.
+2. Partially complete/Good progress: Score **80-84**.
+3. Only fail (Score < 80) if clearly blank or completely unrelated boilerplate.
+4. Value understanding and effort over pixel-perfection.
 
 ---
 
@@ -133,27 +122,26 @@ Passing Score: **80**
 ---
 
 RESPONSE FORMAT
-Return ONLY a valid JSON object:
+Return ONLY a valid JSON object. You MUST include ALL fields listed below even if the value is 0 or an empty array:
 {
-"code_quality": number, // Map HTML Structure here if HTML/CSS course
-"key_requirements": number, // Map CSS Styling here if HTML/CSS course
-"output": number, // Use 0 if rubric is 50/50, or use for logic if applicable
-"output_correctness": 0,
-"best_practices": 0,
-"final_score": number, // Sum of the above
-"major_issues": ["issue1","issue2"],
+"code_quality": number, // Max 40
+"key_requirements": number, // Max 25
+"output": number, // Max 35
+"output_correctness": 0, // Mandatory: use 0
+"best_practices": 0, // Mandatory: use 0
+"final_score": number, // Sum of (code_quality + key_requirements + output)
+"major_issues": ["issue1","issue2"], // Use [] if none
 "feedback": "Encouraging faculty feedback (max 2 sentences). Start with something positive."
 }
 
 Rules:
 * final_score = code_quality + key_requirements + output
-* If HTML/CSS course, distribute the 100 points as 50 (code_quality/HTML) and 50 (key_requirements/CSS).
 `;
 
         let rawResponse;
         try {
             console.log(`[AI Worker] Sending ${submissionId} to GPU API...`);
-            console.log("Sending GPU request with key:", GPU_API_KEY ? `${GPU_API_KEY.slice(0, 5)}***` : 'None');
+            console.log("Sending GPU request with key:", GPU_API_KEY ? `${GPU_API_KEY.slice(0, 5)} *** ` : 'None');
 
             const response = await fetch(GPU_API_URL, {
                 method: 'POST',
@@ -171,8 +159,8 @@ Rules:
 
             rawResponse = await response.json();
         } catch (fetchError) {
-            console.error(`[AI Worker] ⚠️ GPU API failed for ${submissionId}:`, fetchError.message);
-            console.log(`[AI Worker] 🔄 Falling back to Mock Evaluator (v3.6.0-mock)...`);
+            console.error(`[AI Worker] ⚠️ GPU API failed for ${submissionId}: `, fetchError.message);
+            console.log(`[AI Worker] 🔄 Falling back to Mock Evaluator(v3.6.0 - mock)...`);
 
             // Heuristic-based mock response
             const htmlLen = (htmlCode || "").length;
@@ -205,7 +193,7 @@ Rules:
 
         // Verify format
         if (typeof aiResult.final_score !== 'number') {
-            throw new Error(`Invalid AI response schema. Missing final_score.`);
+            throw new Error(`Invalid AI response schema.Missing final_score.`);
         }
 
         // Wrap the result saving in a transaction to mirror manual faculty evaluation
@@ -214,13 +202,13 @@ Rules:
 
             // 1. Insert into manual_evaluations
             await conn.execute(`
-            INSERT INTO manual_evaluations 
-            (submission_id, faculty_id, code_quality_score, requirements_score, expected_output_score, best_practices_score, final_score, major_issues, comments, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
-            ON DUPLICATE KEY UPDATE 
-            code_quality_score=VALUES(code_quality_score), requirements_score=VALUES(requirements_score), 
-            expected_output_score=VALUES(expected_output_score), best_practices_score=VALUES(best_practices_score),
-            final_score=VALUES(final_score), major_issues=VALUES(major_issues), comments=VALUES(comments)
+            INSERT INTO manual_evaluations
+    (submission_id, faculty_id, code_quality_score, requirements_score, expected_output_score, best_practices_score, final_score, major_issues, comments, created_at)
+VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+            ON DUPLICATE KEY UPDATE
+code_quality_score = VALUES(code_quality_score), requirements_score = VALUES(requirements_score),
+    expected_output_score = VALUES(expected_output_score), best_practices_score = VALUES(best_practices_score),
+    final_score = VALUES(final_score), major_issues = VALUES(major_issues), comments = VALUES(comments)
         `, [
                 submissionId,
                 assignment.faculty_id,
@@ -238,21 +226,21 @@ Rules:
             UPDATE submissions 
             SET status = ?, passed = ?, evaluated_at = NOW() 
             WHERE id = ?
-        `, [passed ? 'passed' : 'failed', passed, submissionId]);
+    `, [passed ? 'passed' : 'failed', passed, submissionId]);
 
             // 3. Update assignment
             await conn.execute(`
             UPDATE submission_assignments 
             SET status = 'evaluated', ai_completed_at = NOW(), error_message = NULL
             WHERE id = ?
-        `, [assignmentId]);
+    `, [assignmentId]);
 
             // 4. Log the action
             await conn.execute(`
-            INSERT INTO assignment_logs 
-            (submission_id, action_type, to_faculty_id, actor_role, notes)
-            VALUES (?, 'evaluate_ai', ?, 'system', 'AI evaluation completed successfully')
-        `, [submissionId, assignment.faculty_id]);
+            INSERT INTO assignment_logs
+    (submission_id, action_type, to_faculty_id, actor_role, notes)
+VALUES(?, 'evaluate_ai', ?, 'system', 'AI evaluation completed successfully')
+    `, [submissionId, assignment.faculty_id]);
 
             // 5. Unlock next level logic (identical to human faculty)
             if (passed) {
@@ -261,24 +249,24 @@ Rules:
                 const level = submission.level;
 
                 await conn.execute(`
-                INSERT INTO level_completions 
-                (user_id, course_id, level, total_score, passed, completed_at)
-                VALUES (?, ?, ?, ?, TRUE, NOW())
+                INSERT INTO level_completions
+    (user_id, course_id, level, total_score, passed, completed_at)
+VALUES(?, ?, ?, ?, TRUE, NOW())
                 ON DUPLICATE KEY UPDATE total_score = VALUES(total_score), completed_at = NOW()
-            `, [userId, courseId, level, aiResult.final_score]);
+    `, [userId, courseId, level, aiResult.final_score]);
 
                 await conn.execute(`
-                INSERT INTO user_progress (user_id, course_id, current_level, completed_levels) 
-                VALUES (?, ?, ?, ?) 
-                ON DUPLICATE KEY UPDATE 
-                current_level = GREATEST(current_level, ?),
-                completed_levels = CASE 
+                INSERT INTO user_progress(user_id, course_id, current_level, completed_levels)
+VALUES(?, ?, ?, ?) 
+                ON DUPLICATE KEY UPDATE
+current_level = GREATEST(current_level, ?),
+    completed_levels = CASE 
                     WHEN JSON_SEARCH(IFNULL(completed_levels, JSON_ARRAY()), 'one', ?) IS NULL 
                     THEN JSON_ARRAY_APPEND(IFNULL(completed_levels, JSON_ARRAY()), '$', ?)
-                    ELSE completed_levels 
-                END,
-                last_updated = NOW()
-            `, [
+                    ELSE completed_levels
+END,
+    last_updated = NOW()
+        `, [
                     userId, courseId, level + 1, JSON.stringify([level]),
                     level + 1,
                     level.toString(), level
@@ -290,13 +278,13 @@ Rules:
         return { success: true, score: aiResult.final_score };
 
     } catch (error) {
-        console.error(`[AI Worker] ❌ Grading failed for ${submissionId}:`, error.message);
+        console.error(`[AI Worker] ❌ Grading failed for ${submissionId}: `, error.message);
 
         // Save error state back to assignment so Admin can view it
         await db.query(
             `UPDATE submission_assignments 
-       SET status = 'ai_error', ai_completed_at = NOW(), error_message = ? 
-       WHERE id = ?`,
+       SET status = 'ai_error', ai_completed_at = NOW(), error_message = ?
+    WHERE id = ? `,
             [error.message.substring(0, 1000), assignmentId] // safely truncate
         );
 
@@ -320,8 +308,8 @@ const SubmissionModel = require('./models/Submission');
 const submissionWorker = new Worker('submission_db_queue', async (job) => {
     const data = job.data;
     const { id, challengeId, userId, candidateName, courseId, level, code, status, submittedAt } = data;
-    
-    console.log(`[DB Worker] Persistence: User=${userId}, Challenge=${challengeId}`);
+
+    console.log(`[DB Worker]Persistence: User = ${userId}, Challenge = ${challengeId} `);
 
     try {
         await db.transaction(async (connection) => {
@@ -336,23 +324,23 @@ const submissionWorker = new Worker('submission_db_queue', async (job) => {
 
             let finalSubmissionId = id;
             const mysqlSubmittedAt = submittedAt ? submittedAt.replace('T', ' ').replace(/\..*$/, '').replace('Z', '') : new Date().toISOString().replace('T', ' ').replace(/\..*$/, '').replace('Z', '');
-            
+
             if (existing.length > 0) {
                 // Upgrade draft
                 await connection.execute(
-                    `UPDATE submissions SET 
-                      html_code = ?, css_code = ?, js_code = ?, additional_files = ?,
-                      status = ?, submitted_at = ? 
-                    WHERE id = ?`,
+                    `UPDATE submissions SET
+html_code = ?, css_code = ?, js_code = ?, additional_files = ?,
+    status = ?, submitted_at = ?
+        WHERE id = ? `,
                     [code?.html || '', code?.css || '', code?.js || '', JSON.stringify(code?.additionalFiles || {}), status || 'received', mysqlSubmittedAt, existing[0].id]
                 );
                 finalSubmissionId = existing[0].id;
             } else {
                 // New submission
                 await connection.execute(
-                    `INSERT INTO submissions 
-                      (id, challenge_id, user_id, candidate_name, html_code, css_code, js_code, status, course_id, level, submitted_at, additional_files)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                    `INSERT INTO submissions
+    (id, challenge_id, user_id, candidate_name, html_code, css_code, js_code, status, course_id, level, submitted_at, additional_files)
+VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                     [id || null, challengeId || null, userId || null, candidateName || 'Anonymous', code?.html || '', code?.css || '', code?.js || '', status || 'received', courseId || null, level || null, mysqlSubmittedAt, JSON.stringify(code?.additionalFiles || {})]
                 );
             }
@@ -363,25 +351,25 @@ const submissionWorker = new Worker('submission_db_queue', async (job) => {
                     `SELECT u.id FROM users u
                      INNER JOIN faculty_course_assignments fca ON u.id = fca.faculty_id
                      WHERE fca.course_id = ? AND u.role = 'faculty' AND u.is_available = TRUE
-                     ORDER BY (SELECT COUNT(*) FROM submission_assignments sa WHERE sa.faculty_id = u.id AND sa.status = 'pending') ASC LIMIT 1`,
+                     ORDER BY(SELECT COUNT(*) FROM submission_assignments sa WHERE sa.faculty_id = u.id AND sa.status = 'pending') ASC LIMIT 1`,
                     [courseId]
                 );
 
                 if (faculty.length > 0) {
                     await connection.execute(
-                        `INSERT INTO submission_assignments (submission_id, faculty_id, assigned_at, status) 
-                         VALUES (?, ?, NOW(), 'pending')
+                        `INSERT INTO submission_assignments(submission_id, faculty_id, assigned_at, status)
+VALUES(?, ?, NOW(), 'pending')
                          ON DUPLICATE KEY UPDATE faculty_id = VALUES(faculty_id), assigned_at = NOW()`,
                         [finalSubmissionId, faculty[0].id]
                     );
                 }
             }
         });
-        console.log(`[DB Worker] ✅ Successfully persisted submission ${id}`);
+        console.log(`[DB Worker] ✅ Successfully persisted submission ${id} `);
     } catch (error) {
         // IDEMPOTENCY: Ignore duplicate entry errors
         if (error.code === 'ER_DUP_ENTRY' || error.errno === 1062) {
-            console.warn(`[DB Worker] Duplicate submission detected for User ${userId}. Skipping.`);
+            console.warn(`[DB Worker] Duplicate submission detected for User ${userId}.Skipping.`);
             return { success: true, reason: 'duplicate_idempotent' };
         }
         throw error; // Let BullMQ retry other errors
@@ -406,7 +394,7 @@ process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 submissionWorker.on('failed', (job, err) => {
-    console.error(`[DB Worker Events] Job ${job.id} failed: ${err.message}`);
+    console.error(`[DB Worker Events] Job ${job.id} failed: ${err.message} `);
 });
 
 console.log("🚀 AI & DB Workers started. Listening for jobs...");

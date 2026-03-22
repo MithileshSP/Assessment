@@ -1,6 +1,6 @@
 services:
   portal_mysql:
-    image: gokulv456/assessment-mysql:v3.4.25
+    image: gokulv456/assessment-mysql:v3.6.3
     container_name: portal_mysql
     restart: unless-stopped
     command: --bind-address=0.0.0.0
@@ -36,7 +36,7 @@ services:
       retries: 5
 
   backend:
-    image: gokulv456/assessment-backend:v3.4.27
+    image: gokulv456/assessment-backend:v3.6.3
     restart: unless-stopped
     depends_on:
       portal_mysql:
@@ -72,7 +72,7 @@ services:
       - test-portal-network
 
   worker:
-    image: gokulv456/assessment-backend:v3.4.27
+    image: gokulv456/assessment-backend:v3.6.3
     container_name: portal_ai_worker
     restart: unless-stopped
     command: npm run worker
@@ -96,7 +96,7 @@ services:
       - test-portal-network
 
   frontend:
-    image: gokulv456/assessment-frontend:v3.4.27
+    image: gokulv456/assessment-frontend:v3.6.3
     container_name: portal_frontend
     restart: unless-stopped
     ports:
