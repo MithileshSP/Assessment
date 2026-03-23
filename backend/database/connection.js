@@ -54,7 +54,8 @@ const dbConfig = {
   enableKeepAlive: true,
   keepAliveInitialDelay: 0,
   connectTimeout: 10000,
-  timezone: '+05:30',
+  timezone: '+00:00',
+  dateStrings: ['DATE', 'TIME'],
   ...(sslConfig ? { ssl: sslConfig } : {}),
 };
 

@@ -7,7 +7,7 @@ const multer = require("multer");
 const csv = require("csv-parser");
 const { v4: uuidv4 } = require('uuid');
 const UserModel = require("../models/User");
-const { query } = require("../database/connection");
+const { query, queryOne } = require("../database/connection");
 const { OAuth2Client } = require("google-auth-library");
 const jwt = require("jsonwebtoken");
 const { verifyAdmin, verifyToken } = require("../middleware/auth");
@@ -665,18 +665,19 @@ router.post(
   }
 );
 
-// Bulk unblock users by email (Admin only) - v3.6.0: Pre-Authorization Support
+// Bulk unblock users by email (Admin only)
 router.post("/bulk-unblock", verifyAdmin, async (req, res) => {
   const { emails, sessionId, immediate } = req.body;
 
   if (!emails || !Array.isArray(emails) || emails.length === 0) {
-    return res.status(400).json({ error: "Invalid emails provided" });
+    return res.status(400).json({ error: "No emails provided" });
   }
 
   try {
     let isSessionLive = false;
     let sessionData = null;
 
+    // 1. Resolve Session context
     if (sessionId) {
       if (sessionId.toString().startsWith('daily_')) {
         const dailyId = sessionId.split('_')[1];
@@ -699,57 +700,51 @@ router.post("/bulk-unblock", verifyAdmin, async (req, res) => {
       }
     }
 
-    const testIdentifier = (sessionData && sessionData.course_id && sessionData.level)
-      ? `${sessionData.course_id}_${sessionData.level}`
-      : 'global';
-
-    const usersToProcess = await query("SELECT id, username FROM users WHERE email IN (?)", [emails]);
     const shouldActivateNow = isSessionLive || immediate || !sessionId;
+    const testIdentifier = 'global';
+    let processedCount = 0;
 
-    for (const user of usersToProcess) {
-      if (shouldActivateNow) {
-        // Activate immediately
-        await UserModel.update(user.id, { is_blocked: false });
-        console.log(`[BulkUnblock] Activating user immediately: ${user.username}`);
-      } else {
-        // Keep blocked, but pre-authorize
-        await UserModel.update(user.id, { is_blocked: true });
-        console.log(`[BulkUnblock] User scheduled for future session: ${user.username}`);
+    for (const email of emails) {
+      const trimmedEmail = email.trim();
+      if (!trimmedEmail) continue;
+
+      const user = await queryOne("SELECT id, username FROM users WHERE email = ?", [trimmedEmail]);
+      if (!user) {
+        console.warn(`[BulkUnblock] User not found: ${trimmedEmail}`);
+        continue;
       }
 
+      // Update User Block Status
+      await UserModel.update(user.id, { is_blocked: !shouldActivateNow });
+
+      // Update Attendance Record
       if (sessionId) {
         const existing = await queryOne(
-          "SELECT id FROM test_attendance WHERE user_id = ? AND test_identifier = ? AND session_id = ?",
-          [user.id, testIdentifier, sessionId]
+          "SELECT id FROM test_attendance WHERE user_id = ? AND test_identifier = ?",
+          [user.id, testIdentifier]
         );
 
         const statusLabel = shouldActivateNow ? 'activated' : 'scheduled';
 
         if (existing) {
-          // If a student is already scheduled for ANOTHER session, we can now have multiple records
-          // BUT if they are scheduled for THIS session, we update it.
-          // Wait, the unique index is (user_id, test_identifier, session_id). 
-          // If session_id is different, it will be a NEW record.
-
           await query(
-            "UPDATE test_attendance SET status = 'approved', scheduled_status = ?, is_used = 0, locked = 0, locked_at = NULL, locked_reason = ? WHERE id = ?",
-            [statusLabel, `Admin:${statusLabel}`, existing.id]
+            "UPDATE test_attendance SET session_id = ?, status = 'approved', scheduled_status = ?, is_used = 0, locked = 0, locked_at = NULL, locked_reason = ?, requested_at = NOW() WHERE id = ?",
+            [sessionId, statusLabel, `Admin:${statusLabel}`, existing.id]
           );
         } else {
           await query(
-            "INSERT INTO test_attendance (user_id, test_identifier, session_id, status, scheduled_status, locked, violation_count) VALUES (?, ?, ?, 'approved', ?, 0, 0)",
+            "INSERT INTO test_attendance (user_id, test_identifier, session_id, status, scheduled_status, locked, violation_count, requested_at) VALUES (?, ?, ?, 'approved', ?, 0, 0, NOW())",
             [user.id, testIdentifier, sessionId, statusLabel]
           );
         }
       }
+      processedCount++;
     }
 
     res.json({
       success: true,
-      message: shouldActivateNow
-        ? `Successfully activated ${usersToProcess.length} students`
-        : `Successfully scheduled ${usersToProcess.length} students for future session`,
-      count: usersToProcess.length
+      message: `Bulk operation complete. Processed ${processedCount} students.`,
+      count: processedCount
     });
   } catch (error) {
     console.error("Bulk unblock error:", error);
@@ -904,8 +899,8 @@ router.patch("/:userId/toggle-block", verifyAdmin, async (req, res) => {
 
     // Check for existing attendance record for THIS session
     const existing = await queryOne(
-      "SELECT id, session_id FROM test_attendance WHERE user_id = ? AND test_identifier = ? AND (session_id = ? OR session_id IS NULL)",
-      [user.id, testIdentifier, sessionId]
+      "SELECT id, session_id FROM test_attendance WHERE user_id = ? AND test_identifier = ?",
+      [user.id, testIdentifier]
     );
 
     if (isSessionLive || immediate) {
@@ -915,12 +910,12 @@ router.patch("/:userId/toggle-block", verifyAdmin, async (req, res) => {
 
       if (existing) {
         await query(
-          "UPDATE test_attendance SET session_id = ?, scheduled_status = 'activated', status = 'approved', locked = 0, locked_reason = 'Admin:unblock', is_used = 0 WHERE id = ?",
+          "UPDATE test_attendance SET session_id = ?, scheduled_status = 'activated', status = 'approved', locked = 0, locked_reason = 'Admin:unblock', is_used = 0, requested_at = NOW() WHERE id = ?",
           [sessionId, existing.id]
         );
       } else {
         await query(
-          "INSERT INTO test_attendance (user_id, test_identifier, session_id, status, scheduled_status, locked, violation_count) VALUES (?, ?, ?, 'approved', 'activated', 0, 0)",
+          "INSERT INTO test_attendance (user_id, test_identifier, session_id, status, scheduled_status, locked, violation_count, requested_at) VALUES (?, ?, ?, 'approved', 'activated', 0, 0, NOW())",
           [user.id, testIdentifier, sessionId]
         );
       }
@@ -938,12 +933,12 @@ router.patch("/:userId/toggle-block", verifyAdmin, async (req, res) => {
       // Keep user blocked, but create/update scheduled attendance record
       if (existing) {
         await query(
-          "UPDATE test_attendance SET session_id = ?, scheduled_status = 'scheduled', status = 'approved', locked = 0, locked_reason = 'Admin:scheduled', is_used = 0 WHERE id = ?",
+          "UPDATE test_attendance SET session_id = ?, scheduled_status = 'scheduled', status = 'approved', locked = 0, locked_reason = 'Admin:scheduled', is_used = 0, requested_at = NOW() WHERE id = ?",
           [sessionId, existing.id]
         );
       } else {
         await query(
-          "INSERT INTO test_attendance (user_id, test_identifier, session_id, status, scheduled_status, locked, violation_count) VALUES (?, ?, ?, 'approved', 'scheduled', 0, 0)",
+          "INSERT INTO test_attendance (user_id, test_identifier, session_id, status, scheduled_status, locked, violation_count, requested_at) VALUES (?, ?, ?, 'approved', 'scheduled', 0, 0, NOW())",
           [user.id, testIdentifier, sessionId]
         );
       }
@@ -1358,11 +1353,6 @@ router.post("/bulk-complete", verifyAdmin, async (req, res) => {
   }
 });
 
-// Helper for single row queries
-async function queryOne(sql, params) {
-  const rows = await query(sql, params);
-  return rows.length > 0 ? rows[0] : null;
-}
 
 module.exports = router;
 module.exports.verifyAdmin = verifyAdmin; // Still export from auth.js reference
