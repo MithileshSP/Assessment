@@ -368,7 +368,7 @@ const FacultyEvaluation = () => {
                             </div>
                         ) : activeTab === 'student_live' ? (
                             <div className="flex-1 bg-white relative flex flex-col overflow-hidden">
-                                <div className="absolute top-6 left-6 z-10 px-5 py-2.5 rounded-2xl bg-slate-900 shadow-2xl text-[10px] font-black text-white uppercase tracking-widest">
+                                <div className="absolute bottom-6 right-6 z-10 px-5 py-2.5 rounded-2xl bg-slate-900 shadow-2xl text-[10px] font-black text-white uppercase tracking-widest">
                                     Candidate Preview
                                 </div>
                                 <PreviewFrame
@@ -384,7 +384,7 @@ const FacultyEvaluation = () => {
                             </div>
                         ) : activeTab === 'expected_live' ? (
                             <div className="flex-1 bg-white relative flex flex-col overflow-hidden">
-                                <div className="absolute top-6 left-6 z-10 px-5 py-2.5 rounded-2xl bg-blue-600 shadow-2xl text-[10px] font-black text-white uppercase tracking-widest">
+                                <div className="absolute bottom-6 right-6 z-10 px-5 py-2.5 rounded-2xl bg-blue-600 shadow-2xl text-[10px] font-black text-white uppercase tracking-widest">
                                     Reference System
                                 </div>
                                 <PreviewFrame
