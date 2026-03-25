@@ -12,6 +12,8 @@ const FacultyEvaluation = () => {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('html');
+    const [studentTab, setStudentTab] = useState('html');
+    const [referenceTab, setReferenceTab] = useState('html');
     const [activeCustomFile, setActiveCustomFile] = useState(null);
     const [fullScreenView, setFullScreenView] = useState(null); // 'live' | 'expected' | null
     const [previewHistory, setPreviewHistory] = useState({ canGoBack: false, canGoForward: false, currentFile: 'index.html' });
@@ -181,7 +183,11 @@ const FacultyEvaluation = () => {
                             ].map(tab => (
                                 <button
                                     key={tab.id}
-                                    onClick={() => setActiveTab(tab.id)}
+                                    onClick={() => {
+                                        setActiveTab(tab.id);
+                                        setStudentTab(tab.id);
+                                        setReferenceTab(tab.id);
+                                    }}
                                     className={`px-3 h-8 rounded-lg flex items-center gap-2 text-[8px] font-bold tracking-widest uppercase transition-all ${activeTab === tab.id
                                         ? 'bg-slate-100 text-slate-900 shadow-sm'
                                         : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'}`}
@@ -440,20 +446,28 @@ const FacultyEvaluation = () => {
                                         <div className="flex items-center justify-between px-6 py-3 border-b border-slate-100 bg-slate-50/10">
                                             <div className="flex items-center gap-3">
                                                 <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center border border-slate-200">
-                                                    {activeTab === 'html' ? <Code size={14} className="text-orange-500" /> : activeTab === 'css' ? <Palette size={14} className="text-blue-500" /> : <FileText size={14} className="text-amber-500" />}
+                                                    {studentTab === 'html' ? <Code size={14} className="text-orange-500" /> : studentTab === 'css' ? <Palette size={14} className="text-blue-500" /> : <FileText size={14} className="text-amber-500" />}
                                                 </div>
-                                                <h4 className="text-[10px] font-bold uppercase tracking-widest text-slate-900 leading-none">
-                                                    CANDIDATE {activeTab.toUpperCase()}
-                                                </h4>
+                                                <div className="flex items-center gap-1.5 p-1 bg-white/50 rounded-lg border border-slate-200 shadow-sm">
+                                                    {['html', 'css', 'js'].map(lang => (
+                                                        <button
+                                                            key={lang}
+                                                            onClick={() => setStudentTab(lang)}
+                                                            className={`px-2 py-1 rounded text-[8px] font-black uppercase tracking-tighter transition-all ${studentTab === lang ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                                                        >
+                                                            {lang}
+                                                        </button>
+                                                    ))}
+                                                </div>
                                             </div>
                                             <div className="px-3 py-1 rounded-md bg-slate-100 text-slate-500 text-[8px] font-bold uppercase tracking-widest border border-slate-200">
-                                                SUBMITTED SOURCE
+                                                CANDIDATE SOURCE
                                             </div>
                                         </div>
                                         <div className="flex-1 min-h-0">
                                             <ReadOnlyCodeBlock
-                                                code={activeTab === 'html' ? submission.html_code : activeTab === 'css' ? submission.css_code : submission.js_code}
-                                                language={activeTab}
+                                                code={studentTab === 'html' ? submission.html_code : studentTab === 'css' ? submission.css_code : submission.js_code}
+                                                language={studentTab}
                                                 height="100%"
                                             />
                                         </div>
@@ -464,20 +478,28 @@ const FacultyEvaluation = () => {
                                         <div className="flex items-center justify-between px-6 py-3 border-b border-slate-100 bg-slate-100/10">
                                             <div className="flex items-center gap-3">
                                                 <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center border border-slate-200 shadow-sm">
-                                                    <BookOpen size={14} className="text-blue-600" />
+                                                    {referenceTab === 'html' ? <Code size={14} className="text-orange-500" /> : referenceTab === 'css' ? <Palette size={14} className="text-blue-500" /> : <FileText size={14} className="text-amber-500" />}
                                                 </div>
-                                                <h4 className="text-[10px] font-bold uppercase tracking-widest text-slate-900 leading-none">
-                                                    REFERENCE {activeTab.toUpperCase()}
-                                                </h4>
+                                                <div className="flex items-center gap-1.5 p-1 bg-white/50 rounded-lg border border-slate-200 shadow-sm">
+                                                    {['html', 'css', 'js'].map(lang => (
+                                                        <button
+                                                            key={lang}
+                                                            onClick={() => setReferenceTab(lang)}
+                                                            className={`px-2 py-1 rounded text-[8px] font-black uppercase tracking-tighter transition-all ${referenceTab === lang ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                                                        >
+                                                            {lang}
+                                                        </button>
+                                                    ))}
+                                                </div>
                                             </div>
                                             <div className="px-3 py-1 rounded-md bg-blue-600 text-white text-[8px] font-black uppercase tracking-widest shadow-lg shadow-blue-600/20">
-                                                EXPECTED TARGET
+                                                REFERENCE TARGET
                                             </div>
                                         </div>
                                         <div className="flex-1 min-h-0">
                                             <ReadOnlyCodeBlock
-                                                code={activeTab === 'html' ? submission.expected_html : activeTab === 'css' ? submission.expected_css : submission.expected_js}
-                                                language={activeTab}
+                                                code={referenceTab === 'html' ? submission.expected_html : referenceTab === 'css' ? submission.expected_css : submission.expected_js}
+                                                language={referenceTab}
                                                 height="100%"
                                             />
                                         </div>
