@@ -1064,7 +1064,7 @@ function FacultyCard({ faculty, onClick }) {
                 <div className="grid grid-cols-2 gap-2 mt-auto">
                     <div className="bg-slate-50 rounded-lg p-2 text-center border border-slate-100 group-hover:border-slate-200 transition-colors">
                         <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Assigned</p>
-                        <p className="text-sm font-bold text-slate-900">{faculty.current_load}</p>
+                        <p className="text-sm font-bold text-slate-900">{faculty.total}</p>
                     </div>
                     <div className="bg-slate-50 rounded-lg p-2 text-center border border-slate-100 group-hover:border-slate-200 transition-colors">
                         <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Pending</p>

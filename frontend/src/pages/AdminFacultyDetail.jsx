@@ -140,8 +140,8 @@ export default function AdminFacultyDetail() {
             setSubmissions(facultySubs);
             setStats({
                 total: facultySubs.length,
-                pending: facultySubs.filter(s => !['passed', 'failed'].includes(s.assignment_status)).length,
-                completed: facultySubs.filter(s => ['passed', 'failed'].includes(s.assignment_status)).length
+                pending: facultySubs.filter(s => !['passed', 'failed', 'evaluated'].includes(s.assignment_status)).length,
+                completed: facultySubs.filter(s => ['passed', 'failed', 'evaluated'].includes(s.assignment_status)).length
             });
 
         } catch (e) {
@@ -218,9 +218,9 @@ export default function AdminFacultyDetail() {
 
     // Filter Submissions based on Tab
     const filteredSubmissions = submissions.filter(s => {
-        if (activeTab === 'assigned' && ['passed', 'failed'].includes(s.assignment_status)) return false;
-        if (activeTab === 'pending' && ['passed', 'failed'].includes(s.assignment_status)) return false;
-        if (activeTab === 'history' && !['passed', 'failed'].includes(s.assignment_status)) return false;
+        if (activeTab === 'assigned' && ['passed', 'failed', 'evaluated'].includes(s.assignment_status)) return false;
+        if (activeTab === 'pending' && ['passed', 'failed', 'evaluated'].includes(s.assignment_status)) return false;
+        if (activeTab === 'history' && !['passed', 'failed', 'evaluated'].includes(s.assignment_status)) return false;
         return true;
     });
 
@@ -406,7 +406,7 @@ export default function AdminFacultyDetail() {
                             {/* Quick Stats */}
                             <div className="flex items-center gap-8 w-full sm:w-auto justify-between sm:justify-start">
                                 <div className="text-center">
-                                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-0.5">Assigned</p>
+                                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-0.5">Total</p>
                                     <p className="text-xl font-bold text-slate-900">{stats.total}</p>
                                 </div>
                                 <div className="w-px h-8 bg-slate-200" />
