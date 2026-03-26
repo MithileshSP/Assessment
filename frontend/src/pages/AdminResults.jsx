@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import SaaSLayout from '../components/SaaSLayout';
 import api from '../services/api';
-import { Trophy, Search, Filter, Download, ExternalLink, User, BookOpen, Calendar, Trash2, Upload, X, FileText, CheckCircle, AlertTriangle } from 'lucide-react';
+import { Trophy, Search, Filter, Download, ExternalLink, User, BookOpen, Calendar, Trash2, Upload, X, FileText, CheckCircle, AlertTriangle, Activity } from 'lucide-react';
 import DataTable, { StatusBadge } from '../components/DataTable';
 import SummaryAnalytics from '../components/SummaryAnalytics';
 
@@ -40,6 +40,13 @@ export default function AdminResults() {
     const [importing, setImporting] = useState(false);
     const [importResult, setImportResult] = useState(null);
 
+    // Session Stats state
+    const [sessions, setSessions] = useState({ manual: [], recurring: [] });
+    const [selectedSessionId, setSelectedSessionId] = useState('');
+    const [sessionDate, setSessionDate] = useState(() => new Date().toISOString().split('T')[0]);
+    const [sessionStats, setSessionStats] = useState(null);
+    const [loadingSessionStats, setLoadingSessionStats] = useState(false);
+
     // Persist state to localStorage
     useEffect(() => {
         localStorage.setItem('ar_search', search);
@@ -54,6 +61,7 @@ export default function AdminResults() {
 
     useEffect(() => {
         loadResults();
+        loadSessions(); // Added: Load available sessions
 
         // Auto-refresh polling every 10 seconds
         const intervalId = setInterval(() => {
@@ -62,6 +70,37 @@ export default function AdminResults() {
 
         return () => clearInterval(intervalId);
     }, []);
+
+    // Added: Fetch session stats when selection changes
+    useEffect(() => {
+        if (selectedSessionId && sessionDate) {
+            loadSessionStats();
+        } else {
+            setSessionStats(null);
+        }
+    }, [selectedSessionId, sessionDate]);
+
+    const loadSessions = async () => {
+        try {
+            const response = await api.get('/admin/sessions/all');
+            setSessions(response.data);
+        } catch (error) {
+            console.error('Failed to load sessions:', error);
+        }
+    };
+
+    const loadSessionStats = async () => {
+        try {
+            setLoadingSessionStats(true);
+            const response = await api.get(`/admin/analytics/session-stats?sessionId=${selectedSessionId}&date=${sessionDate}`);
+            setSessionStats(response.data);
+        } catch (error) {
+            console.error('Failed to load session stats:', error);
+            setSessionStats(null);
+        } finally {
+            setLoadingSessionStats(false);
+        }
+    };
 
     const loadResults = async (isBackground = false) => {
         try {
@@ -515,6 +554,71 @@ export default function AdminResults() {
                         <SummaryAnalytics metrics={dynamicStats} type="results" />
                     </div>
                 )}
+
+                {/* Session Specific Analytics Block (NEW) */}
+                <div className="bg-slate-50 border border-slate-200 rounded-lg p-6 mb-8 shadow-sm">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-6">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-lg bg-slate-900 flex items-center justify-center text-white shadow-md">
+                                <Activity size={20} />
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-bold text-slate-900 leading-tight">Session Quick Analysis</h3>
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Real-time engagement metrics</p>
+                            </div>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-3 bg-white p-2 rounded-lg border border-slate-200 shadow-sm">
+                            <div className="flex items-center gap-2 group">
+                                <Calendar size={14} className="text-slate-400 group-focus-within:text-slate-900 transition-colors" />
+                                <input
+                                    type="date"
+                                    value={sessionDate}
+                                    onChange={(e) => setSessionDate(e.target.value)}
+                                    className="text-xs font-bold text-slate-700 outline-none bg-transparent border-none cursor-pointer"
+                                />
+                            </div>
+                            <div className="w-px h-6 bg-slate-100 hidden md:block" />
+                            <div className="flex items-center gap-2 px-1">
+                                <Filter size={14} className="text-slate-400" />
+                                <select
+                                    value={selectedSessionId}
+                                    onChange={(e) => setSelectedSessionId(e.target.value)}
+                                    className="text-xs font-bold text-slate-700 outline-none bg-transparent border-none focus:ring-0 cursor-pointer min-w-[200px]"
+                                >
+                                    <option value="">Select a Session...</option>
+                                    <optgroup label="Manual Sessions">
+                                        {sessions.manual.map(s => (
+                                            <option key={s.id} value={s.id}>
+                                                Manual Session (Level {s.level}) - {new Date(s.start_time).toLocaleDateString()}
+                                            </option>
+                                        ))}
+                                    </optgroup>
+                                    <optgroup label="Daily Recurring">
+                                        {sessions.recurring.map(s => (
+                                            <option key={s.id} value={s.id}>{s.title}</option>
+                                        ))}
+                                    </optgroup>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    {loadingSessionStats ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-pulse">
+                            {[1, 2, 3, 4].map(i => (
+                                <div key={i} className="h-20 bg-slate-200/50 rounded-md border border-slate-200/50" />
+                            ))}
+                        </div>
+                    ) : sessionStats ? (
+                        <SummaryAnalytics metrics={sessionStats} type="session" />
+                    ) : (
+                        <div className="bg-white/50 border border-dashed border-slate-300 rounded-md py-10 flex flex-col items-center justify-center text-slate-400 group hover:border-slate-400 transition-colors">
+                            <Activity size={32} className="mb-2 opacity-20 group-hover:scale-110 transition-transform" />
+                            <p className="text-[11px] font-bold uppercase tracking-[0.2em]">Select a session and date above to see analytics</p>
+                        </div>
+                    )}
+                </div>
 
                 {/* Results Table */}
                 <div className="bg-white rounded-md border border-slate-200 shadow-sm overflow-hidden text-sm">

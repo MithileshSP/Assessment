@@ -32,6 +32,28 @@ router.get('/sessions/active', verifyAdmin, async (req, res) => {
   }
 });
 
+/**
+ * GET /api/admin/sessions/all
+ * Returns all manual and recurring session definitions
+ */
+router.get('/sessions/all', verifyAdmin, async (req, res) => {
+  try {
+    const manualSessions = await db.query("SELECT id, course_id, level, duration_minutes, start_time, is_active FROM global_test_sessions ORDER BY start_time DESC");
+    const recurringSessions = await db.query("SELECT id, start_time, end_time, is_active FROM daily_schedules");
+    
+    res.json({
+      manual: manualSessions,
+      recurring: recurringSessions.map((s, idx) => ({
+        ...s,
+        id: `daily_${s.id}`,
+        title: `Daily Schedule ${idx + 1} (${s.start_time.slice(0, 5)} - ${s.end_time.slice(0, 5)})`
+      }))
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Get Platform Stats
 router.get('/stats', verifyAdmin, async (req, res) => {
   try {
@@ -542,6 +564,53 @@ router.get('/results', verifyAdmin, async (req, res) => {
     });
   } catch (error) {
     console.error("Error fetching results:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * GET /api/admin/analytics/session-stats
+ * Returns Submitted, Remaining, Passed, Failed counts for a specific session and date
+ */
+router.get('/analytics/session-stats', verifyAdmin, async (req, res) => {
+  const { sessionId, date } = req.query;
+
+  if (!sessionId || !date) {
+    return res.status(400).json({ error: 'sessionId and date are required' });
+  }
+
+  try {
+    // 1. Get attendance metrics: Submitted (attempt_submitted_at is not null) vs Remaining
+    // We treat 'approved' or any active status as part of the denominator.
+    const attendanceQuery = `
+      SELECT 
+        COUNT(CASE WHEN attempt_submitted_at IS NOT NULL THEN 1 END) as submitted,
+        COUNT(CASE WHEN attempt_submitted_at IS NULL AND status = 'approved' THEN 1 END) as remaining
+      FROM test_attendance
+      WHERE session_id = ? AND DATE(requested_at) = ?
+    `;
+    const attendance = await db.queryOne(attendanceQuery, [sessionId, date]);
+
+    // 2. Get evaluation metrics: Passed vs Failed
+    // We join submissions with test_attendance to ensure we are looking at the right day's session data
+    const evaluationQuery = `
+      SELECT 
+        COUNT(CASE WHEN s.status = 'passed' THEN 1 END) as passed,
+        COUNT(CASE WHEN s.status = 'failed' THEN 1 END) as failed
+      FROM submissions s
+      JOIN test_attendance ta ON s.user_id = ta.user_id AND DATE(s.submitted_at) = DATE(ta.requested_at)
+      WHERE ta.session_id = ? AND DATE(ta.requested_at) = ? AND s.status != 'saved'
+    `;
+    const evaluations = await db.queryOne(evaluationQuery, [sessionId, date]);
+
+    res.json({
+      submitted: attendance.submitted || 0,
+      remaining: attendance.remaining || 0,
+      passed: evaluations.passed || 0,
+      failed: evaluations.failed || 0
+    });
+  } catch (error) {
+    console.error("Error fetching session stats:", error);
     res.status(500).json({ error: error.message });
   }
 });

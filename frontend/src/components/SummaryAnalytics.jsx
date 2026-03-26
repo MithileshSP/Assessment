@@ -100,5 +100,16 @@ export default function SummaryAnalytics({ metrics, type = 'submissions' }) {
         );
     }
 
+    if (type === 'session') {
+        return (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full animate-in fade-in slide-in-from-top-4 duration-500">
+                <MetricCard icon={FileText} label="Submitted" value={metrics.submitted} color="blue" delay={0} />
+                <MetricCard icon={Clock} label="Remaining" value={metrics.remaining} color="amber" delay={100} />
+                <MetricCard icon={CheckCircle} label="Cleared/Pass" value={metrics.passed} color="emerald" delay={200} />
+                <MetricCard icon={AlertCircle} label="Failed" value={metrics.failed} color="rose" delay={300} />
+            </div>
+        );
+    }
+
     return null;
 }
