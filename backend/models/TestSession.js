@@ -167,15 +167,15 @@ class TestSession {
     };
   }
 
-  static async addSubmission(sessionId, submissionId) {
-    console.log(`[TestSession] Adding submission ${submissionId} to session ${sessionId}`);
+  static async addSubmission(sessionId, submissionId, providedChallengeId = null) {
+    console.log(`[TestSession] Adding submission ${submissionId} to session ${sessionId}, providedChallenge: ${providedChallengeId}`);
     const session = await this.findById(sessionId);
     if (!session) {
       console.error(`[TestSession] Session ${sessionId} not found`);
       throw new Error("Test session not found");
     }
 
-    // Fetch the new submission to know its challenge_id
+    // Attempt to fetch from DB for metadata, but use providedChallengeId as authoritative fallback
     let newSub = null;
     try {
       const newSubRows = await db.query(
@@ -192,15 +192,24 @@ class TestSession {
       const fallback = fallbackData.find(s => s.id === submissionId);
       if (fallback) {
         newSub = mapFallbackSubmission(fallback);
-        console.log(`📄 Found submission ${submissionId} in JSON fallback for addSubmission`);
       }
     }
 
-    if (!newSub) {
-      console.error(`[TestSession] Failed to locate submission ${submissionId} in DB or Fallback`);
-      throw new Error(`Submission ${submissionId} not found in DB or Fallback`);
+    // INDUSTRY GRADE: If still not found (common with BullMQ race conditions), 
+    // construct a minimal object using the provided challenge_id.
+    if (!newSub && providedChallengeId) {
+      console.log(`ℹ️ Constructing minimal link for pending submission ${submissionId}`);
+      newSub = {
+        id: submissionId,
+        challenge_id: providedChallengeId,
+        submitted_at: new Date().toISOString()
+      };
     }
-    console.log(`[TestSession] Found submission info for ${submissionId}, challenge: ${newSub.challenge_id}`);
+
+    if (!newSub) {
+      console.error(`[TestSession] Failed to locate submission ${submissionId} and no challenge_id provided`);
+      throw new Error(`Submission ${submissionId} not found and no challenge_id provided`);
+    }
 
     const currentIds = (Array.isArray(session.submission_ids)
       ? session.submission_ids
@@ -294,7 +303,7 @@ class TestSession {
         structure_score, visual_score, content_score, final_score,
         submitted_at, evaluated_at, evaluation_result
       FROM submissions
-      WHERE id IN (${placeholders})
+      WHERE id IN (${placeholders}) AND is_deleted = 0
       ORDER BY submitted_at ASC
     `;
 

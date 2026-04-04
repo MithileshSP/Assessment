@@ -688,11 +688,18 @@ export default function LevelChallenge() {
           html: savedAnswer?.html || '', css: savedAnswer?.css || '', js: savedAnswer?.js || '', additionalFiles: savedAnswer?.additionalFiles || {}
         };
         if (reason === "timeout" && !c.html && !c.js && !c.css) c.js = "// Automatic submission on timeout";
-        if (c.html || c.css || c.js || reason === "timeout") {
+        // INDUSTRY GRADE: Always attempt submission to ensure 100% audit trail.
+        // We now ignore the empty-code check to capture every student "Finish" action.
+        if (true) { 
           try {
             const r = await api.post("/submissions", { challengeId: question.id, userId: userId, code: c, isFinal: true });
             const sId = r.data.submissionId;
-            if (testSessionId && sId) await api.post(`/test-sessions/${testSessionId}/submissions`, { submission_id: sId });
+            try {
+              if (testSessionId && sId) await api.post(`/test-sessions/${testSessionId}/submissions`, { 
+                submission_id: sId,
+                challenge_id: question.id 
+              });
+            } catch (err) { console.warn('Failed to link submission to session:', err); }
             return sId;
           } catch (e) { return null; }
         }
@@ -701,10 +708,12 @@ export default function LevelChallenge() {
       const results = await Promise.all(submissionRequests);
       const successful = results.filter(id => id);
       if (successful.length > 0) lastSubmissionId = successful[successful.length - 1];
-      if (testSessionId) {
-        let msg = reason === "violations" ? "Violations" : (reason === "timeout" ? "Timeout" : "Manual");
-        await api.put(`/test-sessions/${testSessionId}/complete`, { user_feedback: msg });
-      }
+      try {
+        if (testSessionId) {
+          let msg = reason === "violations" ? "Violations" : (reason === "timeout" ? "Timeout" : "Manual");
+          await api.put(`/test-sessions/${testSessionId}/complete`, { user_feedback: msg });
+        }
+      } catch (err) { console.warn('Failed to mark session complete:', err); }
       localStorage.removeItem(`assessment_${userId}_${courseId}_${level}`);
       if (lastSubmissionId) { navigate(`/student/feedback/${lastSubmissionId}`); return; }
       navigate(`/course/${courseId}`);
@@ -714,9 +723,9 @@ export default function LevelChallenge() {
 
   const handleSubmit = async () => {
     setSubmitting(true);
-    if ((!code.html || !code.html.trim()) && (!code.css || !code.css.trim()) && (!code.js || !code.js.trim())) {
-      addToast("Please write some code.", "error"); setSubmitting(false); return;
-    }
+    // ALLOW EMPTY: We now allow students to submit even if they haven't written code.
+    // This ensures their attempt is recorded in the Admin Results table.
+    // If empty, it will simply be marked as 'saved' and ready for the final finish.
     setUserAnswers(prev => ({ ...prev, [challenge.id]: { ...prev[challenge.id], html: code.html, css: code.css, js: code.js, submitted: true, result: { status: 'saved' } } }));
     setSubmitting(false);
   };

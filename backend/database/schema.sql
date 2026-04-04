@@ -94,7 +94,7 @@ CREATE TABLE IF NOT EXISTS submissions (
     INDEX idx_status (status),
     INDEX idx_submitted_at (submitted_at),
     INDEX idx_course_level (course_id, level),
-    FOREIGN KEY (challenge_id) REFERENCES challenges(id) ON DELETE CASCADE,
+    FOREIGN KEY (challenge_id) REFERENCES challenges(id) ON DELETE SET NULL,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 

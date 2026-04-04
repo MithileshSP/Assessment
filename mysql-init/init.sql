@@ -210,7 +210,7 @@ CREATE TABLE IF NOT EXISTS submissions (
     INDEX idx_challenge_status (challenge_id, status),
     INDEX idx_status_queued (status, submitted_at),
     INDEX idx_course_level_status (course_id, level, status),
-    FOREIGN KEY (challenge_id) REFERENCES challenges(id) ON DELETE CASCADE,
+    FOREIGN KEY (challenge_id) REFERENCES challenges(id) ON DELETE SET NULL,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -347,9 +347,9 @@ CREATE TABLE IF NOT EXISTS assets (
 -- ==========================================
 -- 7. Initial Data (Seeds)
 -- ==========================================
-INSERT IGNORE INTO users (id, username, password, email, full_name, role, is_blocked) VALUES
-('user-admin-1', 'admin', '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9', 'admin@example.com', 'Administrator', 'admin', FALSE),
-('user-faculty-1', 'faculty', '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92', 'faculty@example.com', 'Professor X', 'faculty', FALSE);
+INSERT IGNORE INTO users (id, username, password, password_version, email, full_name, role, is_blocked) VALUES
+('user-admin-1', 'admin', '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9', 'sha256', 'admin@example.com', 'Administrator', 'admin', FALSE),
+('user-faculty-1', 'faculty', '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92', 'sha256', 'faculty@example.com', 'Professor X', 'faculty', FALSE);
 
 INSERT IGNORE INTO courses (id, title, description, total_levels, order_index, tags) VALUES
 ('course-html-css', 'HTML & CSS Mastery', 'Master the fundamentals of web development', 1, 10, '["HTML", "CSS"]'),

@@ -41,7 +41,7 @@ async function addSubmissionToDbQueue(submissionData) {
             'persist_submission',
             submissionData,
             {
-                jobId: `sub_${submissionData.userId}_${submissionData.challengeId}`, // IDEMPOTENCY AT QUEUE LEVEL
+                jobId: `sub_${submissionData.id}`, // UNIQUE SUBMISSION ID (Fix: "Submissions not storing")
             }
         );
         

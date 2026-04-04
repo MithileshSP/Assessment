@@ -20,7 +20,12 @@ router.post('/', verifyToken, async (req, res) => {
         );
 
         // AUTO-BLOCK STUDENT: Ensuring is_blocked = 1 (security redundancy)
-        await query(`UPDATE users SET is_blocked = 1 WHERE id = ?`, [userId]);
+        // Wrapped in try/catch to ensure feedback submission succeeds even if schema is inconsistent
+        try {
+            await query(`UPDATE users SET is_blocked = 1 WHERE id = ?`, [userId]);
+        } catch (blockedErr) {
+            console.warn('⚠️ Security auto-block failed (silent):', blockedErr.message);
+        }
 
         res.json({ success: true });
     } catch (err) {

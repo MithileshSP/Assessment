@@ -25,7 +25,8 @@ export default function StudentFeedback() {
             setSubmitted(true);
         } catch (error) {
             console.error('Feedback submission failed:', error);
-            alert('Failed to submit feedback.');
+            const detailMsg = error.response?.data?.details || error.message;
+            alert(`Failed to submit feedback. Error: ${detailMsg}`);
         } finally {
             setLoading(false);
         }

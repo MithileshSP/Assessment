@@ -1,0 +1,150 @@
+backend-1  | ::ffff:127.0.0.1 - - [01/Apr/2026:08:54:06 +0000] "GET /health HTTP/1.1" 200 133 "-" "curl/7.88.1"
+backend-1  | ::ffff:127.0.0.1 - - [01/Apr/2026:08:54:40 +0000] "GET /health HTTP/1.1" 200 133 "-" "curl/7.88.1"
+backend-1  | ???????  SessionGuardian: Checking 1 unblocked students...
+backend-1  | ::ffff:127.0.0.1 - - [01/Apr/2026:08:55:13 +0000] "GET /health HTTP/1.1" 200 133 "-" "curl/7.88.1"
+backend-1  | ::ffff:127.0.0.1 - - [01/Apr/2026:08:55:46 +0000] "GET /health HTTP/1.1" 200 133 "-" "curl/7.88.1"
+backend-1  | ???????  SessionGuardian: Checking 1 unblocked students...
+backend-1  | ::ffff:127.0.0.1 - - [01/Apr/2026:08:56:20 +0000] "GET /health HTTP/1.1" 200 133 "-" "curl/7.88.1"
+backend-1  | ::ffff:127.0.0.1 - - [01/Apr/2026:08:56:53 +0000] "GET /health HTTP/1.1" 200 133 "-" "curl/7.88.1"
+backend-1  | ???????  SessionGuardian: Checking 1 unblocked students...
+backend-1  | ::ffff:127.0.0.1 - - [01/Apr/2026:08:57:27 +0000] "GET /health HTTP/1.1" 200 133 "-" "curl/7.88.1"
+backend-1  | ::ffff:127.0.0.1 - - [01/Apr/2026:08:58:00 +0000] "GET /health HTTP/1.1" 200 133 "-" "curl/7.88.1"
+backend-1  | ???????  SessionGuardian: Checking 1 unblocked students...
+backend-1  | ::ffff:127.0.0.1 - - [01/Apr/2026:08:58:33 +0000] "GET /health HTTP/1.1" 200 133 "-" "curl/7.88.1"
+backend-1  | ::ffff:127.0.0.1 - - [01/Apr/2026:08:59:07 +0000] "GET /health HTTP/1.1" 200 133 "-" "curl/7.88.1"
+backend-1  | ???????  SessionGuardian: Checking 1 unblocked students...
+backend-1  | ::ffff:127.0.0.1 - - [01/Apr/2026:08:59:40 +0000] "GET /health HTTP/1.1" 200 133 "-" "curl/7.88.1"
+backend-1  | ::ffff:127.0.0.1 - - [01/Apr/2026:09:00:13 +0000] "GET /health HTTP/1.1" 200 133 "-" "curl/7.88.1"
+backend-1  | ???????  SessionGuardian: Checking 1 unblocked students...
+backend-1  | ::ffff:127.0.0.1 - - [01/Apr/2026:09:00:47 +0000] "GET /health HTTP/1.1" 200 133 "-" "curl/7.88.1"
+backend-2  | ::ffff:127.0.0.1 - - [01/Apr/2026:08:59:07 +0000] "GET /health HTTP/1.1" 200 133 "-" "curl/7.88.1"
+backend-1  | ::ffff:172.18.0.8 - - [01/Apr/2026:09:01:16 +0000] "POST /api/auth/login HTTP/1.1" 401 40 "http://localhost:100/login" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
+backend-1  | ::ffff:127.0.0.1 - - [01/Apr/2026:09:01:20 +0000] "GET /health HTTP/1.1" 200 133 "-" "curl/7.88.1"
+backend-2  | ???????  SessionGuardian: Checking 1 unblocked students...
+backend-1  | ???????  SessionGuardian: Checking 1 unblocked students...
+backend-2  | ::ffff:127.0.0.1 - - [01/Apr/2026:08:59:40 +0000] "GET /health HTTP/1.1" 200 133 "-" "curl/7.88.1"
+backend-1  | ::ffff:127.0.0.1 - - [01/Apr/2026:09:01:54 +0000] "GET /health HTTP/1.1" 200 133 "-" "curl/7.88.1"
+backend-2  | ::ffff:127.0.0.1 - - [01/Apr/2026:09:00:14 +0000] "GET /health HTTP/1.1" 200 133 "-" "curl/7.88.1"
+backend-1  | ::ffff:127.0.0.1 - - [01/Apr/2026:09:05:33 +0000] "GET /health HTTP/1.1" 200 133 "-" "curl/7.88.1"
+backend-1  | ???????  SessionGuardian: Checking 1 unblocked students...
+backend-2  | ???????  SessionGuardian: Checking 1 unblocked students...
+backend-1  | ::ffff:127.0.0.1 - - [01/Apr/2026:09:06:05 +0000] "GET /health HTTP/1.1" 200 133 "-" "curl/7.88.1"
+backend-2  | ::ffff:127.0.0.1 - - [01/Apr/2026:09:00:47 +0000] "GET /health HTTP/1.1" 200 133 "-" "curl/7.88.1"
+backend-1  | ::ffff:127.0.0.1 - - [01/Apr/2026:09:06:37 +0000] "GET /health HTTP/1.1" 200 133 "-" "curl/7.88.1"
+backend-2  | ::ffff:172.18.0.8 - - [01/Apr/2026:09:01:14 +0000] "GET /api/auth/me HTTP/1.1" 401 53 "http://localhost:100/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
+backend-1  | ::ffff:172.18.0.8 - - [01/Apr/2026:09:07:05 +0000] "GET /api/auth/me HTTP/1.1" 401 53 "http://localhost:100/login" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
+backend-1  | ???????  SessionGuardian: Checking 1 unblocked students...
+backend-1  | ::ffff:127.0.0.1 - - [01/Apr/2026:09:07:08 +0000] "GET /health HTTP/1.1" 200 133 "-" "curl/7.88.1"
+backend-1  | ::ffff:172.18.0.8 - - [01/Apr/2026:09:07:44 +0000] "POST /api/auth/login HTTP/1.1" 401 40 "http://localhost:100/login" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
+backend-1  | ::ffff:127.0.0.1 - - [01/Apr/2026:09:07:46 +0000] "GET /health HTTP/1.1" 200 133 "-" "curl/7.88.1"
+backend-1  | ???????  SessionGuardian: Checking 1 unblocked students...
+backend-1  | ::ffff:127.0.0.1 - - [01/Apr/2026:09:08:19 +0000] "GET /health HTTP/1.1" 200 133 "-" "curl/7.88.1"
+backend-2  | ::ffff:172.18.0.8 - - [01/Apr/2026:09:01:20 +0000] "POST /api/auth/login HTTP/1.1" 401 40 "http://localhost:100/login" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
+backend-2  | ::ffff:127.0.0.1 - - [01/Apr/2026:09:01:21 +0000] "GET /health HTTP/1.1" 200 133 "-" "curl/7.88.1"
+backend-1  | ::ffff:127.0.0.1 - - [01/Apr/2026:09:08:51 +0000] "GET /health HTTP/1.1" 200 133 "-" "curl/7.88.1"
+backend-2  | ???????  SessionGuardian: Checking 1 unblocked students...
+backend-1  | ???????  SessionGuardian: Checking 1 unblocked students...
+backend-2  | ::ffff:127.0.0.1 - - [01/Apr/2026:09:01:54 +0000] "GET /health HTTP/1.1" 200 133 "-" "curl/7.88.1"
+backend-2  | ::ffff:127.0.0.1 - - [01/Apr/2026:09:05:33 +0000] "GET /health HTTP/1.1" 200 133 "-" "curl/7.88.1"
+backend-1  | ::ffff:127.0.0.1 - - [01/Apr/2026:09:09:25 +0000] "GET /health HTTP/1.1" 200 133 "-" "curl/7.88.1"
+backend-2  | ???????  SessionGuardian: Checking 1 unblocked students...
+backend-1  | ::ffff:127.0.0.1 - - [01/Apr/2026:09:09:53 +0000] "GET /health HTTP/1.1" 200 133 "-" "curl/7.88.1"
+backend-2  | ::ffff:127.0.0.1 - - [01/Apr/2026:09:06:05 +0000] "GET /health HTTP/1.1" 200 133 "-" "curl/7.88.1"
+backend-1  | ???????  SessionGuardian: Checking 1 unblocked students...
+backend-1  | ::ffff:127.0.0.1 - - [01/Apr/2026:09:10:32 +0000] "GET /health HTTP/1.1" 200 133 "-" "curl/7.88.1"
+backend-1  | ::ffff:127.0.0.1 - - [01/Apr/2026:09:11:05 +0000] "GET /health HTTP/1.1" 200 133 "-" "curl/7.88.1"
+backend-1  | ???????  SessionGuardian: Checking 1 unblocked students...
+backend-1  | ::ffff:127.0.0.1 - - [01/Apr/2026:09:11:39 +0000] "GET /health HTTP/1.1" 200 133 "-" "curl/7.88.1"
+backend-1  | ::ffff:127.0.0.1 - - [01/Apr/2026:09:12:12 +0000] "GET /health HTTP/1.1" 200 133 "-" "curl/7.88.1"
+backend-2  | ::ffff:127.0.0.1 - - [01/Apr/2026:09:06:37 +0000] "GET /health HTTP/1.1" 200 133 "-" "curl/7.88.1"
+backend-2  | ???????  SessionGuardian: Checking 1 unblocked students...
+backend-1  | ::ffff:172.18.0.8 - - [01/Apr/2026:09:12:17 +0000] "GET /api/auth/me HTTP/1.1" 401 53 "http://10.10.191.205:100/login" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
+backend-2  | ::ffff:172.18.0.8 - - [01/Apr/2026:09:07:07 +0000] "POST /api/auth/login HTTP/1.1" 401 40 "http://localhost:100/login" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
+backend-1  | ::ffff:172.18.0.8 - - [01/Apr/2026:09:12:42 +0000] "GET /api/auth/me HTTP/1.1" 401 53 "http://localhost:100/login" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
+backend-2  | ::ffff:127.0.0.1 - - [01/Apr/2026:09:07:08 +0000] "GET /health HTTP/1.1" 200 133 "-" "curl/7.88.1"
+backend-2  | ::ffff:127.0.0.1 - - [01/Apr/2026:09:07:46 +0000] "GET /health HTTP/1.1" 200 133 "-" "curl/7.88.1"
+backend-1  | ???????  SessionGuardian: Checking 1 unblocked students...
+backend-1  | ::ffff:127.0.0.1 - - [01/Apr/2026:09:12:45 +0000] "GET /health HTTP/1.1" 200 133 "-" "curl/7.88.1"
+backend-1  | ::ffff:172.18.0.8 - - [01/Apr/2026:09:12:57 +0000] "GET /api/auth/me HTTP/1.1" 401 53 "http://localhost:100/login" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
+backend-1  | ::ffff:127.0.0.1 - - [01/Apr/2026:09:13:19 +0000] "GET /health HTTP/1.1" 200 133 "-" "curl/7.88.1"
+backend-2  | ???????  SessionGuardian: Checking 1 unblocked students...
+backend-2  | ::ffff:127.0.0.1 - - [01/Apr/2026:09:08:19 +0000] "GET /health HTTP/1.1" 200 133 "-" "curl/7.88.1"
+backend-2  | ::ffff:172.18.0.8 - - [01/Apr/2026:09:08:41 +0000] "GET /api/auth/me HTTP/1.1" 401 53 "http://localhost:100/login" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
+backend-2  | ::ffff:127.0.0.1 - - [01/Apr/2026:09:08:52 +0000] "GET /health HTTP/1.1" 200 133 "-" "curl/7.88.1"
+backend-2  | ???????  SessionGuardian: Checking 1 unblocked students...
+backend-2  | ::ffff:127.0.0.1 - - [01/Apr/2026:09:09:25 +0000] "GET /health HTTP/1.1" 200 133 "-" "curl/7.88.1"
+backend-2  | ::ffff:127.0.0.1 - - [01/Apr/2026:09:09:53 +0000] "GET /health HTTP/1.1" 200 133 "-" "curl/7.88.1"
+backend-2  | ???????  SessionGuardian: Checking 1 unblocked students...
+backend-2  | ::ffff:127.0.0.1 - - [01/Apr/2026:09:10:32 +0000] "GET /health HTTP/1.1" 200 133 "-" "curl/7.88.1"
+backend-2  | ::ffff:127.0.0.1 - - [01/Apr/2026:09:11:05 +0000] "GET /health HTTP/1.1" 200 133 "-" "curl/7.88.1"
+backend-2  | ???????  SessionGuardian: Checking 1 unblocked students...
+backend-2  | ::ffff:127.0.0.1 - - [01/Apr/2026:09:11:39 +0000] "GET /health HTTP/1.1" 200 133 "-" "curl/7.88.1"
+backend-2  | ::ffff:127.0.0.1 - - [01/Apr/2026:09:12:12 +0000] "GET /health HTTP/1.1" 200 133 "-" "curl/7.88.1"
+backend-2  | [Global Error] POST /api/auth/login: Not allowed by CORS
+backend-2  | Error: Not allowed by CORS
+backend-2  |     at origin (/app/server.js:187:16)
+backend-2  |     at /app/node_modules/cors/lib/index.js:219:13
+backend-2  |     at optionsCallback (/app/node_modules/cors/lib/index.js:199:9)
+backend-2  |     at corsMiddleware (/app/node_modules/cors/lib/index.js:204:7)
+backend-2  |     at Layer.handle [as handle_request] (/app/node_modules/express/lib/router/layer.js:95:5)
+backend-2  |     at trim_prefix (/app/node_modules/express/lib/router/index.js:328:13)
+backend-2  |     at /app/node_modules/express/lib/router/index.js:286:9
+backend-2  |     at Function.process_params (/app/node_modules/express/lib/router/index.js:346:12)
+backend-2  |     at next (/app/node_modules/express/lib/router/index.js:280:10)
+backend-2  |     at /app/node_modules/express-rate-limit/dist/index.cjs:942:7
+backend-2  | ::ffff:172.18.0.8 - - [01/Apr/2026:09:12:25 +0000] "POST /api/auth/login HTTP/1.1" 500 33 "http://10.10.191.205:100/login" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
+backend-2  | ???????  SessionGuardian: Checking 1 unblocked students...
+backend-2  | ::ffff:172.18.0.8 - - [01/Apr/2026:09:12:43 +0000] "POST /api/auth/login HTTP/1.1" 401 40 "http://localhost:100/login" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
+backend-2  | ::ffff:127.0.0.1 - - [01/Apr/2026:09:12:45 +0000] "GET /health HTTP/1.1" 200 133 "-" "curl/7.88.1"
+backend-2  | ::ffff:172.18.0.8 - - [01/Apr/2026:09:13:05 +0000] "POST /api/auth/login HTTP/1.1" 401 40 "http://localhost:100/login" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
+backend-2  | ::ffff:127.0.0.1 - - [01/Apr/2026:09:13:19 +0000] "GET /health HTTP/1.1" 200 133 "-" "curl/7.88.1"
+backend-3  | ::ffff:127.0.0.1 - - [01/Apr/2026:08:58:33 +0000] "GET /health HTTP/1.1" 200 133 "-" "curl/7.88.1"
+backend-3  | ::ffff:127.0.0.1 - - [01/Apr/2026:08:59:07 +0000] "GET /health HTTP/1.1" 200 133 "-" "curl/7.88.1"
+backend-3  | ???????  SessionGuardian: Checking 1 unblocked students...
+backend-3  | ::ffff:127.0.0.1 - - [01/Apr/2026:08:59:40 +0000] "GET /health HTTP/1.1" 200 133 "-" "curl/7.88.1"
+backend-3  | ::ffff:127.0.0.1 - - [01/Apr/2026:09:00:13 +0000] "GET /health HTTP/1.1" 200 133 "-" "curl/7.88.1"
+backend-3  | ???????  SessionGuardian: Checking 1 unblocked students...
+backend-3  | ::ffff:127.0.0.1 - - [01/Apr/2026:09:00:47 +0000] "GET /health HTTP/1.1" 200 133 "-" "curl/7.88.1"
+backend-3  | ::ffff:172.18.0.8 - - [01/Apr/2026:09:01:14 +0000] "GET /api/auth/me HTTP/1.1" 401 53 "http://localhost:100/login" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
+backend-3  | ::ffff:127.0.0.1 - - [01/Apr/2026:09:01:20 +0000] "GET /health HTTP/1.1" 200 133 "-" "curl/7.88.1"
+backend-3  | ???????  SessionGuardian: Checking 1 unblocked students...
+backend-3  | ::ffff:127.0.0.1 - - [01/Apr/2026:09:01:54 +0000] "GET /health HTTP/1.1" 200 133 "-" "curl/7.88.1"
+backend-3  | ::ffff:127.0.0.1 - - [01/Apr/2026:09:05:33 +0000] "GET /health HTTP/1.1" 200 133 "-" "curl/7.88.1"
+backend-3  | ???????  SessionGuardian: Checking 1 unblocked students...
+backend-3  | ::ffff:127.0.0.1 - - [01/Apr/2026:09:06:05 +0000] "GET /health HTTP/1.1" 200 133 "-" "curl/7.88.1"
+backend-3  | ::ffff:127.0.0.1 - - [01/Apr/2026:09:06:37 +0000] "GET /health HTTP/1.1" 200 133 "-" "curl/7.88.1"
+backend-3  | ::ffff:172.18.0.8 - - [01/Apr/2026:09:07:05 +0000] "GET /api/auth/me HTTP/1.1" 401 53 "http://localhost:100/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
+backend-3  | ???????  SessionGuardian: Checking 1 unblocked students...
+backend-3  | ::ffff:127.0.0.1 - - [01/Apr/2026:09:07:08 +0000] "GET /health HTTP/1.1" 200 133 "-" "curl/7.88.1"
+backend-3  | ::ffff:172.18.0.8 - - [01/Apr/2026:09:07:16 +0000] "POST /api/auth/login HTTP/1.1" 401 40 "http://localhost:100/login" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
+backend-3  | ::ffff:127.0.0.1 - - [01/Apr/2026:09:07:46 +0000] "GET /health HTTP/1.1" 200 133 "-" "curl/7.88.1"
+backend-3  | ???????  SessionGuardian: Checking 1 unblocked students...
+backend-3  | ::ffff:127.0.0.1 - - [01/Apr/2026:09:08:18 +0000] "GET /health HTTP/1.1" 200 133 "-" "curl/7.88.1"
+backend-3  | ::ffff:127.0.0.1 - - [01/Apr/2026:09:08:51 +0000] "GET /health HTTP/1.1" 200 133 "-" "curl/7.88.1"
+backend-3  | ???????  SessionGuardian: Checking 1 unblocked students...
+backend-3  | ::ffff:127.0.0.1 - - [01/Apr/2026:09:09:25 +0000] "GET /health HTTP/1.1" 200 133 "-" "curl/7.88.1"
+backend-3  | ::ffff:127.0.0.1 - - [01/Apr/2026:09:09:53 +0000] "GET /health HTTP/1.1" 200 133 "-" "curl/7.88.1"
+backend-3  | ???????  SessionGuardian: Checking 1 unblocked students...
+backend-3  | ::ffff:127.0.0.1 - - [01/Apr/2026:09:10:32 +0000] "GET /health HTTP/1.1" 200 133 "-" "curl/7.88.1"
+backend-3  | ::ffff:127.0.0.1 - - [01/Apr/2026:09:11:05 +0000] "GET /health HTTP/1.1" 200 133 "-" "curl/7.88.1"
+backend-3  | ???????  SessionGuardian: Checking 1 unblocked students...
+backend-3  | ::ffff:127.0.0.1 - - [01/Apr/2026:09:11:38 +0000] "GET /health HTTP/1.1" 200 133 "-" "curl/7.88.1"
+backend-3  | ::ffff:127.0.0.1 - - [01/Apr/2026:09:12:12 +0000] "GET /health HTTP/1.1" 200 133 "-" "curl/7.88.1"
+backend-3  | ::ffff:172.18.0.8 - - [01/Apr/2026:09:12:17 +0000] "GET /api/auth/me HTTP/1.1" 401 53 "http://10.10.191.205:100/" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
+backend-3  | ::ffff:172.18.0.8 - - [01/Apr/2026:09:12:41 +0000] "GET /api/auth/me HTTP/1.1" 401 53 "http://10.10.191.205:100/login" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
+backend-3  | ???????  SessionGuardian: Checking 1 unblocked students...
+backend-3  | ::ffff:127.0.0.1 - - [01/Apr/2026:09:12:45 +0000] "GET /health HTTP/1.1" 200 133 "-" "curl/7.88.1"
+backend-3  | [Global Error] POST /api/auth/login: Not allowed by CORS
+backend-3  | Error: Not allowed by CORS
+backend-3  |     at origin (/app/server.js:187:16)
+backend-3  |     at /app/node_modules/cors/lib/index.js:219:13
+backend-3  |     at optionsCallback (/app/node_modules/cors/lib/index.js:199:9)
+backend-3  |     at corsMiddleware (/app/node_modules/cors/lib/index.js:204:7)
+backend-3  |     at Layer.handle [as handle_request] (/app/node_modules/express/lib/router/layer.js:95:5)
+backend-3  |     at trim_prefix (/app/node_modules/express/lib/router/index.js:328:13)
+backend-3  |     at /app/node_modules/express/lib/router/index.js:286:9
+backend-3  |     at Function.process_params (/app/node_modules/express/lib/router/index.js:346:12)
+backend-3  |     at next (/app/node_modules/express/lib/router/index.js:280:10)
+backend-3  |     at /app/node_modules/express-rate-limit/dist/index.cjs:942:7
+backend-3  | ::ffff:172.18.0.8 - - [01/Apr/2026:09:12:50 +0000] "POST /api/auth/login HTTP/1.1" 500 33 "http://10.10.191.205:100/login" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
+backend-3  | ::ffff:127.0.0.1 - - [01/Apr/2026:09:13:19 +0000] "GET /health HTTP/1.1" 200 133 "-" "curl/7.88.1"

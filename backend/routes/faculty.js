@@ -356,8 +356,8 @@ router.get('/export-backup', verifyFaculty, async (req, res) => {
         const sql = `
             SELECT 
                 s.user_id as student_uid,
-                u.full_name as student_name,
-                u.email as student_email,
+                COALESCE(u.full_name, s.candidate_name, 'Unknown/Deleted') as student_name,
+                COALESCE(u.email, 'N/A') as student_email,
                 co.title as course_title,
                 s.level,
                 s.course_id,
@@ -370,7 +370,7 @@ router.get('/export-backup', verifyFaculty, async (req, res) => {
 
                 s.submitted_at
             FROM submissions s
-            JOIN users u ON s.user_id = u.id
+            LEFT JOIN users u ON s.user_id = u.id
             LEFT JOIN courses co ON s.course_id = co.id
             LEFT JOIN challenges ch ON s.challenge_id = ch.id
             ORDER BY s.submitted_at DESC
@@ -386,7 +386,7 @@ router.get('/export-backup', verifyFaculty, async (req, res) => {
         const headers = [
             'Student UID', 'Student Name', 'Email', 'Course', 'Level', 'courseId',
             'title', 'description', 'instructions', 'studentHtml', 'studentCss',
-            'studentJs', 'Submitted At'
+            'studentJs', 'Submitted Date', 'Submitted Time'
         ];
         const csvRows = [headers.join(',')]; // Using comma separator for standard Excel compatibility
 
@@ -406,7 +406,8 @@ router.get('/export-backup', verifyFaculty, async (req, res) => {
                 escape(row.html_code),
                 escape(row.css_code),
                 escape(row.js_code),
-                escape(row.submitted_at ? new Date(row.submitted_at).toLocaleString() : '')
+                row.submitted_at ? new Date(row.submitted_at).toLocaleDateString('en-IN') : '',
+                row.submitted_at ? new Date(row.submitted_at).toLocaleTimeString('en-IN', { hour12: true }) : ''
             ];
             csvRows.push(csvRow.join(','));
         }

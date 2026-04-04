@@ -1,0 +1,14 @@
+
+G•Ó MySQL connection attempt 1 failed: connect ECONNREFUSED 172.18.0.5:3306
+> frontend-test-portal-backend@3.6.4 worker
+> node worker.js
+
+=É‹« AI & DB Workers started. Listening for jobs...
+G£‡ MySQL Database connected successfully
+
+> frontend-test-portal-backend@3.6.4 worker
+> node worker.js
+
+=É‹« AI & DB Workers started. Listening for jobs...
+G≈¶ Retrying in 2s...
+G£‡ MySQL Database connected successfully

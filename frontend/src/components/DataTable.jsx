@@ -45,6 +45,9 @@ const STATUS_COLORS = {
     reopened: { bg: 'bg-rose-50', text: 'text-rose-700', dot: 'bg-rose-500' },
     unassigned: { bg: 'bg-slate-50', text: 'text-slate-500', dot: 'bg-slate-300' },
     pending: { bg: 'bg-amber-50', text: 'text-amber-700', dot: 'bg-amber-500' },
+    received: { bg: 'bg-slate-100', text: 'text-slate-600', dot: 'bg-slate-400' },
+    queued: { bg: 'bg-amber-50', text: 'text-amber-600', dot: 'bg-amber-400' },
+    evaluating: { bg: 'bg-indigo-50', text: 'text-indigo-700', dot: 'bg-indigo-500' },
     passed: { bg: 'bg-emerald-50', text: 'text-emerald-700', dot: 'bg-emerald-500' },
     failed: { bg: 'bg-rose-50', text: 'text-rose-700', dot: 'bg-rose-500' },
 };

@@ -61,13 +61,13 @@ router.get('/:id', async (req, res) => {
 // Add a submission to test session (INVALIDATE CACHE)
 router.post('/:id/submissions', async (req, res) => {
   try {
-    const { submission_id } = req.body;
+    const { submission_id, challenge_id } = req.body;
 
     if (!submission_id) {
       return res.status(400).json({ error: 'Missing submission_id' });
     }
 
-    const session = await TestSession.addSubmission(req.params.id, submission_id);
+    const session = await TestSession.addSubmission(req.params.id, submission_id, challenge_id);
     
     // Invalidate Cache
     try {

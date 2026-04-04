@@ -102,7 +102,7 @@ function FacultySubmissionsList({ facultyId }) {
     };
 
     const cols = [
-        { key: 'student_name', label: 'Student', renderCell: (v, r) => <div><p className="font-medium text-xs text-slate-900">{v || 'Anonymous'}</p><p className="text-[10px] text-slate-500">{r.student_email}</p></div> },
+        { key: 'student_name', label: 'Student', renderCell: (v, r) => <div><p className="font-medium text-xs text-slate-900">{r.candidate_name || v || 'Anonymous'}</p><p className="text-[10px] text-slate-500">{r.student_email}</p></div> },
         { key: 'course_title', label: 'Course', renderCell: (v) => <span className="text-xs text-slate-600">{v}</span> },
         { key: 'level', label: 'Lvl', width: '50px', renderCell: (v) => <span className="px-1.5 py-0.5 bg-slate-100 rounded text-[10px] font-bold text-slate-600">{v}</span> },
         { key: 'assignment_status', label: 'Status', renderCell: (v) => <StatusBadge value={v} /> },
@@ -382,8 +382,9 @@ export default function AdminAssignment() {
 
     // Load on tab switch
     useEffect(() => {
-        if (activeTab === 'dashboard') loadDashboard();
-        else if (activeTab === 'roster') loadDashboard();
+        if (['dashboard', 'roster', 'submissions'].includes(activeTab)) {
+            loadDashboard();
+        }
     }, [activeTab, loadDashboard]);
 
     useEffect(() => {
@@ -633,7 +634,7 @@ export default function AdminAssignment() {
                         {(v || '?')[0].toUpperCase()}
                     </div>
                     <div>
-                        <p className="font-semibold text-slate-900 text-xs">{v || 'Anonymous'}</p>
+                        <p className="font-semibold text-slate-900 text-xs">{row.candidate_name || v || 'Anonymous'}</p>
                         <p className="text-[10px] text-slate-400">{row.student_email}</p>
                     </div>
                 </div>
@@ -649,6 +650,14 @@ export default function AdminAssignment() {
             filterOptions: subFilterOptions.levels,
             renderCell: (v) => (
                 <span className="inline-block px-1.5 py-0.5 bg-slate-100 rounded text-[10px] font-bold text-slate-500">{v ?? '-'}</span>
+            )
+        },
+        {
+            key: 'attempt_number', label: 'Attempt', width: '70px',
+            renderCell: (v) => (
+                <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold ${v > 1 ? 'bg-amber-50 text-amber-600 border border-amber-100' : 'bg-slate-50 text-slate-400 border border-slate-100'}`}>
+                    #{v || 1}
+                </span>
             )
         },
         {

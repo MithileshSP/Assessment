@@ -9,7 +9,8 @@ const mysql = require("mysql2/promise");
 
 // Check if we should use JSON files instead of MySQL
 const isProduction = process.env.NODE_ENV === "production";
-const USE_JSON = process.env.USE_JSON === "true" || (!process.env.DB_HOST && !isProduction);
+const USE_JSON = process.env.USE_JSON === "true"; // Only use JSON if explicitly requested
+const USE_JSON_FALLBACK = !process.env.DB_HOST && !isProduction; // Internal flag for diagnostic warning
 
 // Helper: normalize inline certificates ("\n" -> newline) or load from file
 function loadCertificate(certValue) {

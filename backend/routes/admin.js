@@ -509,26 +509,45 @@ router.patch('/faculty/:id/capacity', verifyAdmin, async (req, res) => {
 // Get Aggregated Results (Auto + Manual)
 router.get('/results', verifyAdmin, async (req, res) => {
   try {
-    const query = `
-            SELECT 
-                s.id, s.candidate_name, s.submitted_at, s.status as final_status,
-                s.structure_score, s.content_score, s.final_score as auto_score,
-                me.total_score as manual_score,
-                me.code_quality_score, me.requirements_score, me.expected_output_score,
-                u.username as evaluator_name,
-                c.title as course_title,
-                t.level
-            FROM submissions s
-            LEFT JOIN manual_evaluations me ON s.id = me.submission_id
-            LEFT JOIN users u ON me.faculty_id = u.id
-            LEFT JOIN courses c ON s.course_id = c.id
-            LEFT JOIN test_sessions t ON s.id = JSON_UNQUOTE(JSON_EXTRACT(t.submission_ids, '$[0]')) -- Approximation if 1 sub per session
-            ORDER BY s.submitted_at DESC
-        `;
+    const { sessionId, date, search, fromDate, toDate } = req.query;
+    
+    let whereConditions = ["s.status != 'saved'"];
+    let queryParams = [];
 
-    // Note: test_sessions join is tricky with JSON arrays. 
-    // Better to just show course/level from submission table if available (it is).
-    const simplerQuery = `
+    // Filter by Session (Quick Filter)
+    if (sessionId && date) {
+      if (sessionId.startsWith('daily_')) {
+        const scheduleId = sessionId.replace('daily_', '');
+        // INDUSTRY GRADE: For recurring daily schedules, we filter by the time range of that specific schedule on the selected date.
+        // We include a 1-minute safety buffer (start-1m to end+1m).
+        whereConditions.push(`s.submitted_at BETWEEN 
+          (SELECT DATE_SUB(CONCAT(?, ' ', start_time), INTERVAL 1 MINUTE) FROM daily_schedules WHERE id = ?) AND
+          (SELECT DATE_ADD(CONCAT(?, ' ', end_time), INTERVAL 1 MINUTE) FROM daily_schedules WHERE id = ?)`);
+        queryParams.push(date, scheduleId, date, scheduleId);
+      } else {
+        // Explicit Session ID (Manual Sessions)
+        // INDUSTRY GRADE: Match by explicit session_id OR fallback to time-range with 1-min safety buffer for manual sessions.
+        whereConditions.push(`(s.session_id = ? OR (
+          s.course_id = (SELECT course_id FROM global_test_sessions WHERE id = ?) AND
+          s.submitted_at BETWEEN 
+            (SELECT DATE_SUB(start_time, INTERVAL 1 MINUTE) FROM global_test_sessions WHERE id = ?) AND
+            (SELECT DATE_ADD(DATE_ADD(start_time, INTERVAL (SELECT duration_minutes FROM global_test_sessions WHERE id = ?) MINUTE), INTERVAL 1 MINUTE) FROM global_test_sessions WHERE id = ?)
+        ))`);
+        queryParams.push(sessionId, sessionId, sessionId, sessionId, sessionId);
+      }
+    } else {
+      // Standard date filters if no session selected
+      if (fromDate) { whereConditions.push('DATE(s.submitted_at) >= ?'); queryParams.push(fromDate); }
+      if (toDate) { whereConditions.push('DATE(s.submitted_at) <= ?'); queryParams.push(toDate); }
+    }
+
+    if (search) {
+      whereConditions.push('(u.full_name LIKE ? OR s.candidate_name LIKE ? OR u.email LIKE ? OR u.roll_no LIKE ? OR c.title LIKE ?)');
+      const s = `%${search}%`;
+      queryParams.push(s, s, s, s, s);
+    }
+
+    const query = `
             SELECT 
                 s.id, COALESCE(u.full_name, s.candidate_name, 'Unknown') as candidate_name, u.id as user_id, u.roll_no, s.submitted_at, s.status as final_status,
                 s.final_score as auto_score,
@@ -542,11 +561,11 @@ router.get('/results', verifyAdmin, async (req, res) => {
             LEFT JOIN manual_evaluations me ON s.id = me.submission_id
             LEFT JOIN users ue ON me.faculty_id = ue.id
             LEFT JOIN courses c ON s.course_id = c.id
-            WHERE s.status != 'saved'
+            WHERE ${whereConditions.join(' AND ')}
             ORDER BY s.submitted_at DESC
         `;
 
-    const results = await db.query(simplerQuery);
+    const results = await db.query(query, queryParams);
 
     // Summary Statistics for Results
     const summary = {
@@ -558,10 +577,7 @@ router.get('/results', verifyAdmin, async (req, res) => {
       manuallyEvaluated: results.filter(r => r.manual_score !== null).length
     };
 
-    res.json({
-      data: results,
-      summary
-    });
+    res.json({ data: results, summary });
   } catch (error) {
     console.error("Error fetching results:", error);
     res.status(500).json({ error: error.message });
@@ -570,7 +586,7 @@ router.get('/results', verifyAdmin, async (req, res) => {
 
 /**
  * GET /api/admin/analytics/session-stats
- * Returns Submitted, Remaining, Passed, Failed counts for a specific session and date
+ * Returns Attended, Submitted, Not Submitted counts for a specific session and date
  */
 router.get('/analytics/session-stats', verifyAdmin, async (req, res) => {
   const { sessionId, date } = req.query;
@@ -580,34 +596,85 @@ router.get('/analytics/session-stats', verifyAdmin, async (req, res) => {
   }
 
   try {
-    // 1. Get attendance metrics: Submitted (attempt_submitted_at is not null) vs Remaining
-    // We treat 'approved' or any active status as part of the denominator.
-    const attendanceQuery = `
-      SELECT 
-        COUNT(CASE WHEN attempt_submitted_at IS NOT NULL THEN 1 END) as submitted,
-        COUNT(CASE WHEN attempt_submitted_at IS NULL AND status = 'approved' THEN 1 END) as remaining
-      FROM test_attendance
-      WHERE session_id = ? AND DATE(requested_at) = ?
-    `;
-    const attendance = await db.queryOne(attendanceQuery, [sessionId, date]);
+    let attended = 0;
+    let submitted = 0;
+    let startTime = null;
+    let endTime = null;
+    let courseId = null;
 
-    // 2. Get evaluation metrics: Passed vs Failed
-    // We join submissions with test_attendance to ensure we are looking at the right day's session data
-    const evaluationQuery = `
-      SELECT 
-        COUNT(CASE WHEN s.status = 'passed' THEN 1 END) as passed,
-        COUNT(CASE WHEN s.status = 'failed' THEN 1 END) as failed
-      FROM submissions s
-      JOIN test_attendance ta ON s.user_id = ta.user_id AND DATE(s.submitted_at) = DATE(ta.requested_at)
-      WHERE ta.session_id = ? AND DATE(ta.requested_at) = ? AND s.status != 'saved'
-    `;
-    const evaluations = await db.queryOne(evaluationQuery, [sessionId, date]);
+    // 1. Fetch Timing Data Upfront
+    if (sessionId.startsWith('daily_')) {
+      const scheduleId = sessionId.replace('daily_', '');
+      const schedule = await db.queryOne("SELECT start_time, end_time FROM daily_schedules WHERE id = ?", [scheduleId]);
+      if (schedule) {
+        startTime = schedule.start_time;
+        endTime = schedule.end_time;
+      }
+    } else {
+      const manualSession = await db.queryOne("SELECT course_id, start_time, duration_minutes FROM global_test_sessions WHERE id = ?", [sessionId]);
+      if (manualSession) {
+        courseId = manualSession.course_id;
+        startTime = manualSession.start_time; // Full ISO string
+        // Manual sessions are easier to handle with direct session_id first
+      }
+    }
+
+    if (sessionId.startsWith('daily_')) {
+      // 2a. Get Attended (For Daily Schedule: Match session_id OR time-of-day on that date)
+      const attendedQuery = `
+        SELECT COUNT(DISTINCT user_id) as count 
+        FROM test_attendance 
+        WHERE (session_id = ? AND DATE(requested_at) = ?) OR (
+          DATE(requested_at) = ? AND 
+          TIME(requested_at) BETWEEN DATE_SUB(?, INTERVAL 1 MINUTE) AND DATE_ADD(?, INTERVAL 1 MINUTE)
+        )
+      `;
+      const attendedRes = await db.queryOne(attendedQuery, [sessionId, date, date, startTime, endTime]);
+      attended = attendedRes.count || 0;
+
+      // 3a. Get Submitted (For Daily Schedule: Match session_id OR time-of-day on that date)
+      const submittedQuery = `
+        SELECT COUNT(DISTINCT user_id) as count 
+        FROM submissions 
+        WHERE status != 'saved' AND (
+          session_id = ? OR (
+            DATE(submitted_at) = ? AND 
+            TIME(submitted_at) BETWEEN DATE_SUB(?, INTERVAL 1 MINUTE) AND DATE_ADD(?, INTERVAL 1 MINUTE)
+          )
+        )
+      `;
+      const submittedRes = await db.queryOne(submittedQuery, [sessionId, date, startTime, endTime]);
+      submitted = submittedRes.count || 0;
+    } else {
+      // 2b. Get Attended (For Manual Session: Strict ID + Date)
+      const attendedQuery = `
+        SELECT COUNT(DISTINCT user_id) as count 
+        FROM test_attendance 
+        WHERE session_id = ? AND DATE(requested_at) = ?
+      `;
+      const attendedRes = await db.queryOne(attendedQuery, [sessionId, date]);
+      attended = attendedRes.count || 0;
+
+      // 3b. Get Submitted (For Manual Session: ID OR Course+Time fallback)
+      const submittedQuery = `
+        SELECT COUNT(DISTINCT user_id) as count 
+        FROM submissions 
+        WHERE status != 'saved' AND (
+          session_id = ? OR (
+            course_id = ? AND 
+            DATE(submitted_at) = DATE(?) AND
+            TIME(submitted_at) BETWEEN TIME(?) AND DATE_ADD(TIME(?), INTERVAL 120 MINUTE)
+          )
+        )
+      `;
+      const submittedRes = await db.queryOne(submittedQuery, [sessionId, courseId, startTime, startTime, startTime]);
+      submitted = submittedRes.count || 0;
+    }
 
     res.json({
-      submitted: attendance.submitted || 0,
-      remaining: attendance.remaining || 0,
-      passed: evaluations.passed || 0,
-      failed: evaluations.failed || 0
+      attended,
+      submitted,
+      notSubmitted: Math.max(0, attended - submitted)
     });
   } catch (error) {
     console.error("Error fetching session stats:", error);
@@ -704,13 +771,15 @@ router.get('/results/export', verifyAdmin, async (req, res) => {
     }
 
     // Build CSV content
-    const headers = ['Roll No', 'Student Name', 'Email', 'Course', 'Status', 'Code Quality', 'Key Requirements', 'Output Score', 'Total Score', 'Faculty Feedback', 'Test Date'];
+    const headers = ['Roll No', 'Student Name', 'Email', 'Course', 'Status', 'Code Quality', 'Key Requirements', 'Output Score', 'Total Score', 'Faculty Feedback', 'Submitted Date', 'Submitted Time'];
     const csvRows = [headers.join(',')];
 
     const submissionIds = [];
     for (const row of results) {
       submissionIds.push(row.id);
-      const testDate = row.test_date ? new Date(row.test_date).toLocaleDateString('en-IN') : '';
+      const sDate = row.test_date ? new Date(row.test_date) : null;
+      const subDate = sDate ? sDate.toLocaleDateString('en-IN') : '';
+      const subTime = sDate ? sDate.toLocaleTimeString('en-IN', { hour12: true }) : '';
       const csvRow = [
         `="${(row.roll_no || '').replace(/"/g, '""')}"`, // Use ="text" to preserve leading zeros in Excel
         `"${(row.student_name || 'Anonymous').replace(/"/g, '""')}"`,
@@ -722,7 +791,8 @@ router.get('/results/export', verifyAdmin, async (req, res) => {
         row.expected_output_score || 0,
         row.score || 0,
         `"${(row.faculty_feedback || '').replace(/"/g, '""')}"`,
-        testDate
+        subDate,
+        subTime
       ];
       csvRows.push(csvRow.join(','));
     }
@@ -754,7 +824,7 @@ router.get('/results/export', verifyAdmin, async (req, res) => {
  * DELETE /api/admin/results/bulk
  * Bulk delete submissions by date range
  */
-router.delete('/results/bulk', verifyAdmin, async (req, res) => {
+router.post('/results/bulk', verifyAdmin, async (req, res) => {
   try {
     const { fromDate, toDate } = req.query;
 
@@ -778,28 +848,22 @@ router.delete('/results/bulk', verifyAdmin, async (req, res) => {
     const whereClause = whereConditions.join(' AND ');
 
     // 1. Get IDs to be deleted
-    const selectQuery = `SELECT id FROM submissions WHERE ${whereClause}`;
+    const selectQuery = `SELECT id FROM submissions WHERE ${whereClause} AND is_deleted = 0`;
     const submissionsToDelete = await db.query(selectQuery, queryParams);
 
     if (submissionsToDelete.length === 0) {
-      return res.json({ message: 'No submissions found for the selected date range.', count: 0 });
+      return res.json({ message: 'No active submissions found for the selected date range.', count: 0 });
     }
 
     const submissionIds = submissionsToDelete.map(s => s.id);
 
+    // 2. Soft Delete Submissions (Industrial Grade)
+    await db.query(
+      `UPDATE submissions SET is_deleted = 1, deleted_at = NOW() WHERE id IN (?)`,
+      [submissionIds]
+    );
 
-
-    // 3. Delete related records
-    // Manual Evaluations
-    await db.query(`DELETE FROM manual_evaluations WHERE submission_id IN (?)`, [submissionIds]);
-
-    // Submission Assignments
-    await db.query(`DELETE FROM submission_assignments WHERE submission_id IN (?)`, [submissionIds]);
-
-    // 4. Delete Submissions
-    await db.query(`DELETE FROM submissions WHERE id IN (?)`, [submissionIds]);
-
-    console.log(`[BulkDelete] Deleted ${submissionIds.length} submissions.`);
+    console.log(`[BulkSoftDelete] Soft-deleted ${submissionIds.length} submissions.`);
 
     res.json({
       message: `Successfully deleted ${submissionIds.length} submissions and associated files.`,
@@ -1298,23 +1362,67 @@ router.post('/bulk-delete', verifyAdmin, async (req, res) => {
 
     let deletedCount = 0;
     await db.transaction(async (conn) => {
-      // 1. Delete associated assignment logs
-      await conn.execute(`DELETE FROM assignment_logs WHERE submission_id IN (${idPlaceholders})`, submissionIds);
-
-      // 2. Delete manual evaluations
-      await conn.execute(`DELETE FROM manual_evaluations WHERE submission_id IN (${idPlaceholders})`, submissionIds);
-
-      // 3. Delete submission assignments
-      await conn.execute(`DELETE FROM submission_assignments WHERE submission_id IN (${idPlaceholders})`, submissionIds);
-
-      // 4. Finally delete the submissions themselves
-      const [result] = await conn.execute(`DELETE FROM submissions WHERE id IN (${idPlaceholders})`, submissionIds);
+      // Soft Delete: Keep logs and assignments but hide the submission
+      const [result] = await conn.execute(
+        `UPDATE submissions SET is_deleted = 1, deleted_at = NOW() WHERE id IN (${idPlaceholders})`,
+        submissionIds
+      );
       deletedCount = result.affectedRows;
     });
 
-    res.json({ success: true, deleted: deletedCount, message: `Successfully deleted ${deletedCount} submissions` });
+    res.json({ success: true, deleted: deletedCount, message: `Successfully moved ${deletedCount} submissions to Trash` });
   } catch (error) {
     console.error("Bulk delete error:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * POST /api/admin/submissions/:id/restore
+ * Restores a soft-deleted submission
+ */
+router.post('/submissions/:id/restore', verifyAdmin, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await db.query(
+      `UPDATE submissions SET is_deleted = 0, deleted_at = NULL WHERE id = ?`,
+      [id]
+    );
+
+    if ((result.affectedRows || result) === 0) {
+      return res.status(404).json({ error: 'Submission not found or already active' });
+    }
+
+    res.json({ success: true, message: 'Submission restored successfully' });
+  } catch (error) {
+    console.error("Restore error:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * POST /api/admin/submissions/bulk-restore
+ * Restores multiple soft-deleted submissions
+ */
+router.post('/submissions/bulk-restore', verifyAdmin, async (req, res) => {
+  try {
+    const { submissionIds } = req.body;
+    if (!submissionIds || !Array.isArray(submissionIds) || submissionIds.length === 0) {
+      return res.status(400).json({ error: 'No submission IDs provided' });
+    }
+
+    const [result] = await db.query(
+      `UPDATE submissions SET is_deleted = 0, deleted_at = NULL WHERE id IN (?)`,
+      [submissionIds]
+    );
+
+    res.json({ 
+      success: true, 
+      count: result.affectedRows || submissionIds.length, 
+      message: `Successfully restored ${result.affectedRows || submissionIds.length} submissions` 
+    });
+  } catch (error) {
+    console.error("Bulk restore error:", error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -1353,10 +1461,17 @@ router.get('/all-submissions', verifyAdmin, async (req, res) => {
     const page = Math.max(1, parseInt(req.query.page) || 1);
     const limit = Math.min(100, Math.max(1, parseInt(req.query.limit) || 25));
     const offset = (page - 1) * limit;
-    const { status, courseId, level, search, sortBy, sortDir, fromDate, toDate, startTime, endTime } = req.query;
+    const { status, courseId, level, search, sortBy, sortDir, fromDate, toDate, startTime, endTime, sessionId, date } = req.query;
 
     // Build WHERE
+    const { showDeleted } = req.query;
     const conditions = ["s.status != 'saved'"];
+    
+    if (showDeleted === 'true') {
+      conditions.push("s.is_deleted = 1");
+    } else {
+      conditions.push("s.is_deleted = 0");
+    }
     const params = [];
 
     if (fromDate) {
@@ -1375,22 +1490,39 @@ router.get('/all-submissions', verifyAdmin, async (req, res) => {
       conditions.push('TIME(s.submitted_at) <= ?');
       params.push(endTime);
     }
+    if (sessionId) {
+      conditions.push('s.session_id = ?');
+      params.push(sessionId);
+    }
+    if (date) {
+      conditions.push('DATE(s.submitted_at) = ?');
+      params.push(date);
+    }
 
     if (status) {
       const statusArr = status.split(',');
       const hasUnassigned = statusArr.includes('unassigned');
+      const hasPassed = statusArr.includes('passed');
+      const hasFailed = statusArr.includes('failed');
+      const hasQueued = statusArr.includes('queued');
       
-      if (hasUnassigned) {
-        const otherStatuses = statusArr.filter(s => s !== 'unassigned');
-        if (otherStatuses.length > 0) {
-          conditions.push(`(sa.status IN (${otherStatuses.map(() => '?').join(',')}) OR sa.status IS NULL OR sa.status = 'unassigned')`);
-          params.push(...otherStatuses);
-        } else {
-          conditions.push(`(sa.status IS NULL OR sa.status = 'unassigned')`);
-        }
-      } else {
-        conditions.push(`sa.status IN (${statusArr.map(() => '?').join(',')})`);
-        params.push(...statusArr);
+      const conditions_status = [];
+      
+      // Handle special status flags
+      if (hasPassed) conditions_status.push('s.passed = 1');
+      if (hasFailed) conditions_status.push('s.passed = 0');
+      if (hasQueued) conditions_status.push("s.status = 'queued'");
+      if (hasUnassigned) conditions_status.push('sa.status IS NULL OR sa.status = \'unassigned\'');
+      
+      // Handle standard sa.status values
+      const otherStatuses = statusArr.filter(s => !['unassigned', 'passed', 'failed', 'queued'].includes(s));
+      if (otherStatuses.length > 0) {
+        conditions_status.push(`sa.status IN (${otherStatuses.map(() => '?').join(',')})`);
+        params.push(...otherStatuses);
+      }
+      
+      if (conditions_status.length > 0) {
+        conditions.push(`(${conditions_status.join(' OR ')})`);
       }
     }
     if (courseId) {
@@ -1430,10 +1562,14 @@ router.get('/all-submissions', verifyAdmin, async (req, res) => {
     const validSorts = {
       submitted_at: 's.submitted_at',
       student_name: 'u.full_name',
+      candidate_name: 'COALESCE(u.full_name, s.candidate_name, \'Unknown\')',
       course: 'c.title',
+      course_title: 'c.title',
       level: 's.level',
+      attempt_number: 's.attempt_number',
       status: 'sa.status',
-      faculty: 'f.full_name'
+      faculty: 'f.full_name',
+      final_status: 's.passed'
     };
     const orderCol = validSorts[sortBy] || 's.submitted_at';
     const orderDir = sortDir === 'asc' ? 'ASC' : 'DESC';
@@ -1446,6 +1582,7 @@ router.get('/all-submissions', verifyAdmin, async (req, res) => {
       LEFT JOIN users u ON s.user_id = u.id
       LEFT JOIN users f ON sa.faculty_id = f.id
       LEFT JOIN courses c ON s.course_id = c.id
+      LEFT JOIN challenges ch ON s.challenge_id = ch.id
       WHERE ${whereClause}
     `;
     const [countResult] = await db.query(countQuery, params);
@@ -1454,16 +1591,31 @@ router.get('/all-submissions', verifyAdmin, async (req, res) => {
     // Data query
     const dataQuery = `
       SELECT
-        s.id, s.user_id, COALESCE(u.full_name, s.candidate_name, 'Unknown') as student_name, u.email as student_email,
+        s.id, s.user_id, 
+        COALESCE(u.full_name, s.candidate_name, 'Unknown') as candidate_name,
+        COALESCE(u.full_name, s.candidate_name, 'Unknown') as student_name,
+        u.email as student_email,
         s.course_id, c.title as course_title, s.level,
         s.challenge_id, ch.title as challenge_title,
         s.submitted_at, s.status as submission_status,
+        s.attempt_number, s.ip_address, s.user_agent,
         sa.id as assignment_id, sa.faculty_id, sa.status as assignment_status,
+        me.total_score as manual_score, me.code_quality_score, me.requirements_score, me.expected_output_score,
+        COALESCE(
+          CASE 
+            WHEN sa.status = 'evaluated' THEN (CASE WHEN s.passed = 1 THEN 'passed' ELSE 'failed' END)
+            WHEN s.status = 'queued' THEN 'queued'
+            WHEN sa.status IN ('in_progress', 'assigned', 'pending') OR (sa.locked_by IS NOT NULL) THEN 'evaluating'
+            ELSE COALESCE(sa.status, s.status, 'unassigned')
+          END, 
+          'unassigned'
+        ) as final_status,
         sa.version, sa.locked_by, sa.locked_at, sa.reallocation_count,
         sa.submission_weight,
-        f.full_name as faculty_name, f.email as faculty_email
+        f.full_name as faculty_name, f.full_name as evaluator_name, f.email as faculty_email
       FROM submissions s
       LEFT JOIN submission_assignments sa ON s.id = sa.submission_id
+      LEFT JOIN manual_evaluations me ON s.id = me.submission_id
       LEFT JOIN users u ON s.user_id = u.id
       LEFT JOIN users f ON sa.faculty_id = f.id
       LEFT JOIN courses c ON s.course_id = c.id
@@ -1480,12 +1632,17 @@ router.get('/all-submissions', verifyAdmin, async (req, res) => {
       SELECT 
         COUNT(*) as total,
         SUM(CASE WHEN sa.status IS NULL OR sa.status IN ('unassigned', 'assigned', 'reallocated', 'reopened', 'ai_error', 'pending') THEN 1 ELSE 0 END) as pending,
-        SUM(CASE WHEN sa.status IN ('in_progress') OR (sa.locked_by IS NOT NULL AND sa.status IN ('assigned', 'pending')) THEN 1 ELSE 0 END) as evaluating,
-        SUM(CASE WHEN sa.status = 'evaluated' THEN 1 ELSE 0 END) as completed
+        SUM(CASE WHEN sa.status IN ('in_progress', 'assigned', 'pending') OR (sa.locked_by IS NOT NULL) THEN 1 ELSE 0 END) as evaluating,
+        SUM(CASE WHEN sa.status = 'evaluated' THEN 1 ELSE 0 END) as completed,
+        SUM(CASE WHEN s.passed = 1 THEN 1 ELSE 0 END) as passed,
+        SUM(CASE WHEN s.passed = 0 AND (sa.status = 'evaluated' OR sa.status IS NULL) THEN 1 ELSE 0 END) as failed,
+        SUM(CASE WHEN s.status = 'queued' OR sa.status = 'pending' THEN 1 ELSE 0 END) as queued
       FROM submissions s
       LEFT JOIN submission_assignments sa ON s.id = sa.submission_id
       LEFT JOIN users u ON s.user_id = u.id
+      LEFT JOIN users f ON sa.faculty_id = f.id
       LEFT JOIN courses c ON s.course_id = c.id
+      LEFT JOIN challenges ch ON s.challenge_id = ch.id
       WHERE ${whereClause}
     `;
     const [summaryResult] = await db.query(summaryQuery, params);

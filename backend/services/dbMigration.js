@@ -141,7 +141,7 @@ async function applyMigrations() {
     await queryWithRetry(`
       CREATE TABLE IF NOT EXISTS submissions (
         id VARCHAR(100) PRIMARY KEY,
-        challenge_id VARCHAR(100) NOT NULL,
+        challenge_id VARCHAR(100) NULL,
         user_id VARCHAR(100) NOT NULL,
         course_id VARCHAR(100),
         level INT,
@@ -166,11 +166,17 @@ async function applyMigrations() {
         admin_override_reason TEXT,
         is_exported TINYINT(1) DEFAULT 0,
         exported_at TIMESTAMP NULL,
+
+        attempt_number INT DEFAULT 1,
+        ip_address VARCHAR(45) NULL,
+        user_agent TEXT NULL,
+
         INDEX idx_user_challenge (user_id, challenge_id),
         INDEX idx_status (status),
         INDEX idx_course_level (course_id, level),
         INDEX idx_submissions_session (session_id, status),
-        FOREIGN KEY (challenge_id) REFERENCES challenges(id) ON DELETE CASCADE,
+        INDEX idx_attempt (user_id, challenge_id, attempt_number),
+        FOREIGN KEY (challenge_id) REFERENCES challenges(id) ON DELETE SET NULL,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
@@ -183,8 +189,9 @@ async function applyMigrations() {
     await addColumn("ALTER TABLE submissions ADD COLUMN admin_override_status ENUM('passed', 'failed', 'none') DEFAULT 'none'");
     await addColumn("ALTER TABLE submissions ADD COLUMN admin_override_reason TEXT");
 
-    // v4.1.0: Enforce Idempotency on Submissions
-    // 1. Cleanup legacy duplicate submissions (keep latest)
+    // v4.1.0: Enforce Idempotency on Submissions (DEPRECATED: Now allowing multi-date retakes)
+    // 1. Cleanup legacy duplicate submissions (keep latest) - REMOVED to prevent data loss
+    /*
     await queryWithRetry(`
       DELETE s1 FROM submissions s1
       INNER JOIN submissions s2 
@@ -192,15 +199,56 @@ async function applyMigrations() {
       AND s1.user_id = s2.user_id 
       AND s1.challenge_id = s2.challenge_id
     `);
+    */
 
-    // 2. Add Unique Constraint
+    // 2. Remove Unique Constraint and replace with regular INDEX (v4.1.1)
     try {
-      await queryWithRetry("ALTER TABLE submissions DROP INDEX idx_user_challenge");
-    } catch (e) { }
-    await addColumn("ALTER TABLE submissions ADD UNIQUE KEY idx_user_challenge_unique (user_id, challenge_id)");
+      await queryWithRetry("ALTER TABLE submissions DROP INDEX idx_user_challenge_unique");
+    } catch (e) {
+      // If it doesn't exist, ignore
+    }
+    await addColumn("ALTER TABLE submissions ADD INDEX idx_user_challenge (user_id, challenge_id)");
 
     await addColumn("ALTER TABLE submissions ADD COLUMN exported_at TIMESTAMP NULL");
     await addColumn("ALTER TABLE submissions ADD INDEX idx_submissions_session (session_id, status)");
+
+    // v4.2.0: Industry Grade Persistence & Metadata tracking
+    console.log('🔄 Applying v4.2.0: Submission Persistence & Metadata Migration...');
+    
+    // 1. Ensure challenge_id allows NULL (for persistence)
+    try {
+      await queryWithRetry("ALTER TABLE submissions MODIFY COLUMN challenge_id VARCHAR(100) NULL");
+    } catch (e) { /* already null or error */ }
+
+    // 2. Adjust Foreign Key (Change CASCADE to SET NULL)
+    try {
+      // Find and drop old constraint (supports both named and default MySQL names)
+      const constraints = await queryWithRetry(`
+        SELECT CONSTRAINT_NAME FROM information_schema.KEY_COLUMN_USAGE 
+        WHERE TABLE_NAME = 'submissions' AND COLUMN_NAME = 'challenge_id' 
+        AND REFERENCED_TABLE_NAME IS NOT NULL
+      `);
+      
+      for (const row of constraints) {
+        await queryWithRetry(`ALTER TABLE submissions DROP FOREIGN KEY ${row.CONSTRAINT_NAME}`);
+      }
+      
+      await queryWithRetry("ALTER TABLE submissions ADD CONSTRAINT fk_submission_challenge FOREIGN KEY (challenge_id) REFERENCES challenges(id) ON DELETE SET NULL");
+      console.log('✅ Updated submission foreign key to ON DELETE SET NULL');
+    } catch (e) {
+      console.warn('⚠️ Could not update foreign key constraint:', e.message);
+    }
+
+    // 3. Add Industry Grade Metadata Columns
+    await addColumn("ALTER TABLE submissions ADD COLUMN attempt_number INT DEFAULT 1");
+    await addColumn("ALTER TABLE submissions ADD COLUMN ip_address VARCHAR(45) NULL");
+    await addColumn("ALTER TABLE submissions ADD COLUMN user_agent TEXT NULL");
+    await addColumn("ALTER TABLE submissions ADD INDEX idx_attempt (user_id, challenge_id, attempt_number)");
+
+    // v4.3.0: Soft-Deletion & Restoration Logic
+    await addColumn("ALTER TABLE submissions ADD COLUMN is_deleted BOOLEAN DEFAULT FALSE");
+    await addColumn("ALTER TABLE submissions ADD COLUMN deleted_at TIMESTAMP NULL");
+    await addColumn("ALTER TABLE submissions ADD INDEX idx_deleted (is_deleted)");
 
     // 2. Schedule & Sessions
     await queryWithRetry(`
@@ -340,6 +388,36 @@ async function applyMigrations() {
         FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
+
+    await queryWithRetry(`
+      CREATE TABLE IF NOT EXISTS student_feedback (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id VARCHAR(100) NOT NULL,
+        submission_id VARCHAR(100) NOT NULL,
+        difficulty_rating INT NOT NULL COMMENT '1-5 scale',
+        clarity_rating INT NOT NULL COMMENT '1-5 scale',
+        comments TEXT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY idx_user_sub (user_id, submission_id),
+        INDEX idx_submission (submission_id),
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    // Self-healing: Drop legacy Foreign Key if it exists (Fixes race conditions during test completion)
+    try {
+      const constraints = await queryWithRetry(`
+        SELECT CONSTRAINT_NAME FROM information_schema.KEY_COLUMN_USAGE 
+        WHERE TABLE_NAME = 'student_feedback' AND COLUMN_NAME = 'submission_id' 
+        AND REFERENCED_TABLE_NAME IS NOT NULL
+      `);
+      for (const row of constraints) {
+        await queryWithRetry(`ALTER TABLE student_feedback DROP FOREIGN KEY ${row.CONSTRAINT_NAME}`);
+        console.log(`✅ Successfully dropped legacy feedback constraint: ${row.CONSTRAINT_NAME}`);
+      }
+    } catch (e) {
+      console.warn('⚠️ Could not check/drop legacy feedback constraint:', e.message);
+    }
 
     // 4. Assets & Logging
     await queryWithRetry(`

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import SaaSLayout from '../components/SaaSLayout';
 import api from '../services/api';
-import { Trophy, Search, Filter, Download, ExternalLink, User, BookOpen, Calendar, Trash2, Upload, X, FileText, CheckCircle, AlertTriangle, Activity } from 'lucide-react';
+import { Trophy, Search, Filter, Download, ExternalLink, User, BookOpen, Calendar, Trash2, Upload, X, FileText, CheckCircle, AlertTriangle, Activity, RotateCcw, LifeBuoy } from 'lucide-react';
 import DataTable, { StatusBadge } from '../components/DataTable';
 import SummaryAnalytics from '../components/SummaryAnalytics';
 
@@ -25,12 +25,15 @@ export default function AdminResults() {
         const saved = localStorage.getItem('ar_pageSize');
         return saved ? parseInt(saved, 10) : 25;
     });
-    const [sortBy, setSortBy] = useState(() => localStorage.getItem('ar_sortBy') || '');
-    const [sortDir, setSortDir] = useState(() => localStorage.getItem('ar_sortDir') || 'asc');
+    const [sortBy, setSortBy] = useState(() => localStorage.getItem('ar_sortBy') || 'submitted_at');
+    const [sortDir, setSortDir] = useState(() => localStorage.getItem('ar_sortDir') || 'desc');
     const [filters, setFilters] = useState(() => {
         const saved = localStorage.getItem('ar_filters');
         return saved ? JSON.parse(saved) : {};
     });
+    const [showTrash, setShowTrash] = useState(false);
+    const [totalItems, setTotalItems] = useState(0);
+    const [healthStats, setHealthStats] = useState({ total: 0, passed: 0, failed: 0 });
 
     // Import state
     const fileInputRef = useRef(null);
@@ -43,7 +46,7 @@ export default function AdminResults() {
     // Session Stats state
     const [sessions, setSessions] = useState({ manual: [], recurring: [] });
     const [selectedSessionId, setSelectedSessionId] = useState('');
-    const [sessionDate, setSessionDate] = useState(() => new Date().toISOString().split('T')[0]);
+    const [sessionDate, setSessionDate] = useState('');
     const [sessionStats, setSessionStats] = useState(null);
     const [loadingSessionStats, setLoadingSessionStats] = useState(false);
 
@@ -60,25 +63,15 @@ export default function AdminResults() {
     }, [search, fromDate, toDate, page, pageSize, sortBy, sortDir, filters]);
 
     useEffect(() => {
-        loadResults();
         loadSessions(); // Added: Load available sessions
-
-        // Auto-refresh polling every 10 seconds
+        
+        // Auto-refresh polling every 20 seconds for background updates
         const intervalId = setInterval(() => {
-            loadResults(true); // pass true to indicate background refresh
-        }, 10000);
+            loadResults(true); 
+        }, 20000);
 
         return () => clearInterval(intervalId);
     }, []);
-
-    // Added: Fetch session stats when selection changes
-    useEffect(() => {
-        if (selectedSessionId && sessionDate) {
-            loadSessionStats();
-        } else {
-            setSessionStats(null);
-        }
-    }, [selectedSessionId, sessionDate]);
 
     const loadSessions = async () => {
         try {
@@ -89,31 +82,56 @@ export default function AdminResults() {
         }
     };
 
-    const loadSessionStats = async () => {
-        try {
-            setLoadingSessionStats(true);
-            const response = await api.get(`/admin/analytics/session-stats?sessionId=${selectedSessionId}&date=${sessionDate}`);
-            setSessionStats(response.data);
-        } catch (error) {
-            console.error('Failed to load session stats:', error);
-            setSessionStats(null);
-        } finally {
-            setLoadingSessionStats(false);
-        }
-    };
 
     const loadResults = async (isBackground = false) => {
         try {
             if (!isBackground) setLoading(true);
-            const response = await api.get('/admin/results');
+            
+            // Build query params for server-side processing
+            const params = new URLSearchParams();
+            params.append('page', page);
+            params.append('limit', pageSize);
+            if (search) params.append('search', search);
+            if (sortBy) params.append('sortBy', sortBy);
+            if (sortDir) params.append('sortDir', sortDir);
+            if (showTrash) params.append('showDeleted', 'true');
+            if (selectedSessionId) params.append('sessionId', selectedSessionId);
+            if (sessionDate) params.append('date', sessionDate);
+
+            // Add advanced filters
+            Object.entries(filters).forEach(([key, filter]) => {
+                if (!filter) return;
+                if (filter.checked) params.append(key, filter.checked.join(','));
+                else if (filter.text) params.append(key, filter.text);
+                else if (filter.startDate) params.append('fromDate', filter.startDate);
+                else if (filter.endDate) params.append('toDate', filter.endDate);
+                else if (filter.startTime) params.append('startTime', filter.startTime);
+                else if (filter.endTime) params.append('endTime', filter.endTime);
+            });
+            
+            const response = await api.get(`/admin/all-submissions?${params.toString()}`);
             setResults(response.data.data || []);
-            setStats(response.data.summary || null);
+            setTotalItems(response.data.pagination?.total || 0);
+            
+            if (response.data.summary) {
+                setStats(response.data.summary);
+                setHealthStats({
+                    total: response.data.summary.total || 0,
+                    passed: response.data.summary.passed || 0,
+                    failed: response.data.summary.failed || 0
+                });
+            }
         } catch (error) {
             console.error('Failed to load results:', error);
         } finally {
             if (!isBackground) setLoading(false);
         }
     };
+
+    // Auto-refresh and state-driven loading
+    useEffect(() => {
+        loadResults();
+    }, [page, pageSize, sortBy, sortDir, filters, search, showTrash, selectedSessionId, sessionDate]);
 
     const handleFilterChange = (key, value) => {
         setFilters(prev => ({ ...prev, [key]: value }));
@@ -191,13 +209,8 @@ export default function AdminResults() {
             return;
         }
 
-        const confirmMsg = `Are you sure you want to delete visible results for the selected date range?\n\nDate Range: ${fromDate || 'Beginning'} to ${toDate || 'Now'}\n\nTHIS ACTION CANNOT BE UNDONE.`;
+        const confirmMsg = `Are you sure you want to move selected results to the Trash?\n\nDate Range: ${fromDate || 'Beginning'} to ${toDate || 'Now'}`;
         if (!window.confirm(confirmMsg)) {
-            return;
-        }
-
-        // Double confirmation for safety
-        if (!window.confirm("Verify: This will permanently remove submissions, scores, and faculty assignments for the selected period. Confirm deletion?")) {
             return;
         }
 
@@ -208,15 +221,24 @@ export default function AdminResults() {
             if (toDate) params.append('toDate', toDate);
 
             setLoading(true);
-            const response = await api.delete(`/admin/results/bulk?${params.toString()}`);
+            const response = await api.post(`/admin/results/bulk?${params.toString()}`); // Use POST for soft-delete
 
-            alert(response.data.message || 'Bulk delete completed.');
+            alert(response.data.message || 'Items moved to Trash.');
             loadResults(); // Refresh table
         } catch (error) {
             console.error('Bulk delete failed:', error);
             alert(error.response?.data?.error || 'Failed to perform bulk delete.');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleRestore = async (id) => {
+        try {
+            await api.post(`/admin/submissions/${id}/restore`);
+            loadResults();
+        } catch (error) {
+            alert('Restore failed: ' + (error.response?.data?.error || error.message));
         }
     };
 
@@ -283,96 +305,9 @@ export default function AdminResults() {
         }
     };
 
-    // Client-side filtering, sorting, and pagination
-    let processed = results.filter(r => {
-        const s = (search || '').trim().toLowerCase();
-        if (s) {
-            const cName = String(r.candidate_name || '').toLowerCase();
-            const cTitle = String(r.course_title || '').toLowerCase();
-            const eName = String(r.evaluator_name || '').toLowerCase();
-            const uId = String(r.user_id || '').toLowerCase();
-            const rollNo = String(r.roll_no || '').toLowerCase();
-            if (!cName.includes(s) && !cTitle.includes(s) && !eName.includes(s) && !uId.includes(s) && !rollNo.includes(s)) return false;
-        }
-        return true;
-    });
-
-    // Apply advanced column filters
-    Object.entries(filters).forEach(([key, filter]) => {
-        if (!filter) return;
-        if (filter.checked) {
-            // Check case-insensitively or exact match depending on the data type
-            processed = processed.filter(r => {
-                const rowVal = String(r[key] || '');
-                return filter.checked.some(c => String(c) === rowVal);
-            });
-        } else if (filter.text) {
-            const searchStr = filter.text.toLowerCase();
-            processed = processed.filter(r => {
-                const val = String(r[key] || '').toLowerCase();
-                if (filter.textMode === 'equals') return val === searchStr;
-                if (filter.textMode === 'starts') return val.startsWith(searchStr);
-                return val.includes(searchStr);
-            });
-        } else if (filter.startDate || filter.endDate) {
-            processed = processed.filter(r => {
-                if (!r[key] && !r.submitted_at) return false;
-                const rowDate = new Date(r[key] || r.submitted_at);
-                if (isNaN(rowDate)) return false;
-
-                if (filter.startDate) {
-                    const sd = new Date(filter.startDate);
-                    sd.setHours(0, 0, 0, 0);
-                    if (rowDate < sd) return false;
-                }
-                if (filter.endDate) {
-                    const ed = new Date(filter.endDate);
-                    ed.setHours(23, 59, 59, 999);
-                    if (rowDate > ed) return false;
-                }
-                return true;
-            });
-        } else if (filter.startTime || filter.endTime) {
-            processed = processed.filter(r => {
-                if (!r.submitted_at) return false;
-                const rowDate = new Date(r.submitted_at);
-                const rowTime = rowDate.getHours().toString().padStart(2, '0') + ':' + rowDate.getMinutes().toString().padStart(2, '0');
-
-                if (filter.startTime && rowTime < filter.startTime) return false;
-                if (filter.endTime && rowTime > filter.endTime) return false;
-                return true;
-            });
-        }
-    });
-
-    // Sort
-    if (sortBy) {
-        processed.sort((a, b) => {
-            const valA = a[sortBy] || '';
-            const valB = b[sortBy] || '';
-            if (valA < valB) return sortDir === 'asc' ? -1 : 1;
-            if (valA > valB) return sortDir === 'asc' ? 1 : -1;
-            return 0;
-        });
-    }
-
-    const totalItems = processed.length;
-    const startIndex = (page - 1) * pageSize;
-    const paginatedResults = processed.slice(startIndex, startIndex + pageSize);
-
-    // Calculate dynamic stats for the summary cards
-    const dynamicStats = {
-        total: processed.length,
-        passed: processed.filter(r => r.final_status === 'passed').length,
-        failed: processed.filter(r => r.final_status === 'failed').length
-    };
-
-    // Reset to page 1 if filtered results are less than current page offset
-    useEffect(() => {
-        if (totalItems > 0 && startIndex >= totalItems) {
-            setPage(1);
-        }
-    }, [totalItems, startIndex]);
+    // Server-side mode: data is already filtered and paginated
+    const paginatedResults = results;
+    const dynamicStats = stats || { total: 0, passed: 0, failed: 0 };
 
     // Expected CSV fields for matching display
     const EXPECTED_FIELDS = [
@@ -405,6 +340,23 @@ export default function AdminResults() {
             )
         },
         {
+            key: 'course_title',
+            label: 'Course',
+            sortable: true,
+            filterable: true,
+            renderCell: (v) => <span className="font-medium text-slate-600 text-xs">{v || '—'}</span>
+        },
+        {
+            key: 'attempt_number',
+            label: 'Attempt',
+            sortable: true,
+            renderCell: (v) => (
+                <span className="bg-slate-50 text-slate-500 font-bold px-1.5 py-0.5 rounded text-[10px] border border-slate-200">
+                    #{v || 1}
+                </span>
+            )
+        },
+        {
             key: 'final_status',
             label: 'Final Status',
             sortable: true,
@@ -413,6 +365,7 @@ export default function AdminResults() {
                 { label: 'PASSED', value: 'passed' },
                 { label: 'FAILED', value: 'failed' },
                 { label: 'EVALUATING', value: 'evaluating' },
+                { label: 'QUEUED', value: 'queued' },
                 { label: 'REOPENED', value: 'reopened' },
                 { label: 'UNASSIGNED', value: 'unassigned' }
             ],
@@ -494,13 +447,24 @@ export default function AdminResults() {
             sortable: false,
             filterable: false,
             renderCell: (val, row) => (
-                <div className="text-right flex justify-end">
-                    <button
-                        onClick={() => navigate(`/admin/submission/${row.id}`)}
-                        className="p-1.5 text-slate-400 hover:text-slate-900 transition-colors bg-transparent hover:bg-slate-100 rounded-md"
-                    >
-                        <ExternalLink size={16} />
-                    </button>
+                <div className="text-right flex justify-end gap-2">
+                    {showTrash ? (
+                        <button
+                            onClick={() => handleRestore(row.id)}
+                            className="p-1.5 text-emerald-600 hover:text-emerald-700 transition-colors bg-emerald-50 hover:bg-emerald-100 rounded-md border border-emerald-100"
+                            title="Restore Submission"
+                        >
+                            <RotateCcw size={16} />
+                        </button>
+                    ) : (
+                        <button
+                            onClick={() => navigate(`/admin/submission/${row.id}`)}
+                            className="p-1.5 text-slate-400 hover:text-slate-900 transition-colors bg-transparent hover:bg-slate-100 rounded-md"
+                            title="View Details"
+                        >
+                            <ExternalLink size={16} />
+                        </button>
+                    )}
                 </div>
             )
         }
@@ -536,22 +500,37 @@ export default function AdminResults() {
                             <Download size={14} /> Export CSV
                         </button>
                         <button
+                            onClick={() => setShowTrash(!showTrash)}
+                            className={`flex items-center gap-2 px-3 py-1.5 border rounded-md text-xs font-bold transition-all shadow-sm ${showTrash 
+                                ? 'bg-amber-50 border-amber-200 text-amber-700' 
+                                : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+                        >
+                            <LifeBuoy size={14} className={showTrash ? 'animate-spin-slow' : ''} /> {showTrash ? 'Hide Trash' : 'View Trash'}
+                        </button>
+                        <button
                             onClick={handleBulkDelete}
-                            disabled={!fromDate && !toDate}
-                            className={`flex items-center gap-2 px-3 py-1.5 border rounded-md text-xs font-bold transition-colors shadow-sm ${(!fromDate && !toDate)
+                            disabled={!fromDate && !toDate || showTrash}
+                            className={`flex items-center gap-2 px-3 py-1.5 border rounded-md text-xs font-bold transition-colors shadow-sm ${(!fromDate && !toDate || showTrash)
                                 ? 'bg-slate-50 border-slate-200 text-slate-300 cursor-not-allowed'
                                 : 'bg-white border-rose-200 text-rose-600 hover:bg-rose-50 hover:border-rose-300'}`}
-                            title={(!fromDate && !toDate) ? "Select a date range to enable" : "Bulk Delete"}
+                            title={showTrash ? "Cannot delete while in trash view" : (!fromDate && !toDate) ? "Select a date range to enable" : "Move to Trash"}
                         >
                             <Trash2 size={14} /> Delete
                         </button>
                     </div>
                 </div>
 
-                {/* Live Stats */}
+                {/* Live Stats (Restored to Old Design) */}
                 {!loading && (
-                    <div className="mb-6">
-                        <SummaryAnalytics metrics={dynamicStats} type="results" />
+                    <div className="mb-8">
+                        <SummaryAnalytics 
+                            metrics={{
+                                total: healthStats.total,
+                                passed: healthStats.passed,
+                                failed: healthStats.failed
+                            }} 
+                            type="results" 
+                        />
                     </div>
                 )}
 
@@ -568,7 +547,7 @@ export default function AdminResults() {
                             </div>
                         </div>
 
-                        <div className="flex flex-wrap items-center gap-3 bg-white p-2 rounded-lg border border-slate-200 shadow-sm">
+                        <div className="flex flex-wrap items-center gap-3 bg-white p-2 rounded-lg border border-slate-200 shadow-sm relative">
                             <div className="flex items-center gap-2 group">
                                 <Calendar size={14} className="text-slate-400 group-focus-within:text-slate-900 transition-colors" />
                                 <input
@@ -601,23 +580,17 @@ export default function AdminResults() {
                                     </optgroup>
                                 </select>
                             </div>
+                            {(selectedSessionId || sessionDate) && (
+                                <button 
+                                    onClick={() => { setSelectedSessionId(''); setSessionDate(''); loadResults(); }}
+                                    className="absolute -top-3 -right-2 bg-slate-900 text-white p-1 rounded-full shadow-lg hover:bg-slate-700 transition-colors flex items-center justify-center"
+                                    title="Reset All Quick Filters"
+                                >
+                                    <X size={10} />
+                                </button>
+                            )}
                         </div>
                     </div>
-
-                    {loadingSessionStats ? (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-pulse">
-                            {[1, 2, 3, 4].map(i => (
-                                <div key={i} className="h-20 bg-slate-200/50 rounded-md border border-slate-200/50" />
-                            ))}
-                        </div>
-                    ) : sessionStats ? (
-                        <SummaryAnalytics metrics={sessionStats} type="session" />
-                    ) : (
-                        <div className="bg-white/50 border border-dashed border-slate-300 rounded-md py-10 flex flex-col items-center justify-center text-slate-400 group hover:border-slate-400 transition-colors">
-                            <Activity size={32} className="mb-2 opacity-20 group-hover:scale-110 transition-transform" />
-                            <p className="text-[11px] font-bold uppercase tracking-[0.2em]">Select a session and date above to see analytics</p>
-                        </div>
-                    )}
                 </div>
 
                 {/* Results Table */}

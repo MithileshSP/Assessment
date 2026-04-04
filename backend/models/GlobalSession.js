@@ -1,4 +1,4 @@
-const { query, queryOne } = require('../database/connection');
+const { query, queryOne, transaction } = require('../database/connection');
 
 class GlobalSession {
     /**

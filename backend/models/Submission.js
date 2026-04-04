@@ -70,6 +70,15 @@ class SubmissionModel {
     return submissions.map(s => this._formatSubmission(s));
   }
 
+  // Count submissions by challenge
+  static async countByChallenge(challengeId) {
+    const result = await queryOne(
+      'SELECT COUNT(*) as count FROM submissions WHERE challenge_id = ?',
+      [challengeId]
+    );
+    return result.count;
+  }
+
   // Create new submission
   static async create(submissionData) {
     const id = submissionData.id || `sub-${Date.now()}`;
@@ -90,21 +99,26 @@ class SubmissionModel {
     const submittedAt = formatDateTime(submissionData.submittedAt);
 
     const result = await query(
-      `INSERT INTO submissions (id, challenge_id, user_id, course_id, level, candidate_name, html_code, css_code, js_code, status, submitted_at, additional_files)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO submissions 
+        (id, challenge_id, user_id, course_id, level, session_id, candidate_name, html_code, css_code, js_code, status, submitted_at, additional_files, attempt_number, ip_address, user_agent)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id,
         submissionData.challengeId,
         submissionData.userId || 'user-demo-student',
         submissionData.courseId || null,
         submissionData.level || null,
+        submissionData.sessionId || null,
         submissionData.candidateName || 'Anonymous',
         submissionData.code?.html || '',
         submissionData.code?.css || '',
         submissionData.code?.js || '',
         submissionData.status || SubmissionModel.STATUS.QUEUED,
         submittedAt,
-        JSON.stringify(submissionData.code?.additionalFiles || {})
+        JSON.stringify(submissionData.code?.additionalFiles || {}),
+        submissionData.attemptNumber || 1,
+        submissionData.ipAddress || null,
+        submissionData.userAgent || null
       ]
     );
     console.log(`[SubmissionModel] INSERT result for ${id}:`, result?.affectedRows || result);
@@ -284,6 +298,9 @@ class SubmissionModel {
       status: finalStatus,
       submittedAt: submission.submitted_at,
       evaluatedAt: submission.evaluated_at,
+      attemptNumber: submission.attempt_number || 1,
+      ipAddress: submission.ip_address,
+      userAgent: submission.user_agent,
 
       admin_override_status: submission.admin_override_status,
       admin_override_reason: submission.admin_override_reason,

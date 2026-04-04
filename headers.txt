@@ -1,0 +1,28 @@
+HTTP/1.1 400 Bad Request
+Server: nginx/1.29.7
+Date: Wed, 01 Apr 2026 08:55:10 GMT
+Content-Type: application/json; charset=utf-8
+Content-Length: 33
+Connection: keep-alive
+Cross-Origin-Opener-Policy: same-origin-allow-popups
+Origin-Agent-Cluster: ?1
+Referrer-Policy: no-referrer
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+X-Content-Type-Options: nosniff
+X-DNS-Prefetch-Control: off
+X-Download-Options: noopen
+X-Frame-Options: SAMEORIGIN
+X-Permitted-Cross-Domain-Policies: none
+X-XSS-Protection: 0
+RateLimit-Policy: 50;w=900
+RateLimit-Limit: 50
+RateLimit-Remaining: 48
+RateLimit-Reset: 763
+X-RateLimit-Limit: 50
+X-RateLimit-Remaining: 48
+X-RateLimit-Reset: 1775034474
+Vary: Origin, Accept-Encoding
+Access-Control-Allow-Credentials: true
+ETag: W/"21-Fau8GdrOCOyGNNH/IiTxy2DuMu0"
+X-Proxy-Target: backend-api
+

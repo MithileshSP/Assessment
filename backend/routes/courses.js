@@ -962,6 +962,16 @@ router.delete('/questions/:questionId', verifyFaculty, async (req, res) => {
   try {
     const { questionId } = req.params;
 
+    // Check if challenge has submissions before deleting
+    const submissionCount = await SubmissionModel.countByChallenge(questionId);
+    if (submissionCount > 0) {
+      return res.status(400).json({ 
+        error: 'Cannot delete question with existing submissions',
+        details: `This question has ${submissionCount} student submissions. Deleting it would result in data loss.`,
+        suggestedAction: 'Please archive the question or clear submissions first if you are absolutely sure.'
+      });
+    }
+
     // Delete from database
     await ChallengeModel.delete(questionId);
 

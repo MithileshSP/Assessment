@@ -177,13 +177,21 @@ const corsOptions = {
 
     const normalizedOrigin = origin.replace(/\/$/, "");
 
+    const isInternalIp = 
+      normalizedOrigin.startsWith("http://10.") || 
+      normalizedOrigin.startsWith("https://10.") || 
+      normalizedOrigin.startsWith("http://192.168.") || 
+      normalizedOrigin.startsWith("https://192.168.");
+
     if (
       allowedOrigins.indexOf(normalizedOrigin) !== -1 ||
       isLocalhostOrigin ||
+      isInternalIp ||
       process.env.NODE_ENV !== "production"
     ) {
       callback(null, true);
     } else {
+      console.warn(`[CORS] Request from BLOCKED origin: ${normalizedOrigin}`);
       callback(new Error("Not allowed by CORS"));
     }
   },
